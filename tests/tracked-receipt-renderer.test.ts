@@ -1,4 +1,3 @@
-import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import type { CanonicalPlanDraftCommand } from "../src/kernel/plan-draft-command-digest.ts";
 import { canonicalPlanContentDigest } from "../src/plan-admission/diff-fence.ts";
@@ -57,9 +56,8 @@ function command(
     planId: "PLAN-L7-435-drive-plan-admission-impl",
     path: sourcePath,
   },
-  sourceFile?: string,
 ): PlanDraftCommand<TrackedReceiptDraftPayload> {
-  const parsed = parseLegacyPlanSource(sourceFile ? readFileSync(sourceFile, "utf8") : sourceSeed);
+  const parsed = parseLegacyPlanSource(sourceSeed);
   if (!parsed) throw new Error("test source invalid");
   const content = `---\n${parsed.rawFrontmatter.replace(parsed.planId, identity.planId)}\n---\n${parsed.body}`;
   return {
