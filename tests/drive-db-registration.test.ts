@@ -94,9 +94,7 @@ describe("drive DB registration lint", () => {
       unmappedCatalogDocs: ["new-mode.md"],
     });
     expect(unmapped.ok).toBe(false);
-    expect(unmapped.violations).toEqual([
-      { reason: "mode_catalog_unmapped", mode: "new-mode.md" },
-    ]);
+    expect(unmapped.violations).toEqual([{ reason: "mode_catalog_unmapped", mode: "new-mode.md" }]);
 
     const missingDb = analyzeDriveDbRegistration(null);
     expect(missingDb.ok).toBe(false);
