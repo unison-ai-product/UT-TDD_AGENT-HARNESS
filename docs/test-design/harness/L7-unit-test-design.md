@@ -2022,7 +2022,7 @@ CI の実行集合の改訂 (#1168、方針は #1078 issuecomment-6265568869): �
 - doc lane の `plan lint` と、`test:doc-lane` の `tests/plan-lint.test.ts`。doc lane の検査は `readability` と `rule-drift` を残す。
   step 名は `doc lane checks (readability / rule-drift)` とする。
 
-Green で直す oracle の期待: `CANDIDATE-U-CIPOL-030` (d) 欠番化、`CANDIDATE-U-CIPOL-039` と `E-729-doc` の doc lane 集合、
+Green で直す oracle の期待: CANDIDATE-U-CIPOL-030 (d) 欠番化、CANDIDATE-U-CIPOL-039 と `E-729-doc` の doc lane 集合、
 `U-DPROT-024` / `U-DPROT-025` (c) / `U-DPROT-026` の step 位置。
 
 既存 fixture の付け替え (期待 reason の変更。新規 ID は振らない):
