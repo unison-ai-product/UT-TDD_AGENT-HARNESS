@@ -249,7 +249,7 @@ describe("IT-ASSET-04: in-memory skill catalog scan", () => {
   });
 });
 
-describe("IT-ASSET-01/02: roster registry and guard consistency", () => {
+describe("roster registry and guard consistency", () => {
   it("scans agent markdown into deterministic roster rows with filename-stem IDs", () => {
     const repo = mkdtempSync(join(tmpdir(), "ut-roster-"));
     try {

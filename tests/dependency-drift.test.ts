@@ -195,7 +195,7 @@ describe("dependency-drift and regression expansion (PLAN-REVERSE-42)", () => {
     );
   });
 
-  it("IT-ASSET-03: runtime may import the roster boundary through agent-slots only", () => {
+  it("runtime may import the roster boundary through agent-slots only", () => {
     const result = analyzeDependencyDrift({
       sourceDocs: [
         {
@@ -224,7 +224,7 @@ describe("dependency-drift and regression expansion (PLAN-REVERSE-42)", () => {
     );
   });
 
-  it("IT-ASSET-03: roster reverse imports and guard-to-roster imports fail closed", () => {
+  it("roster reverse imports and guard-to-roster imports fail closed", () => {
     const result = analyzeDependencyDrift({
       sourceDocs: [
         {
@@ -256,7 +256,7 @@ describe("dependency-drift and regression expansion (PLAN-REVERSE-42)", () => {
     );
   });
 
-  it("IT-ASSET-03: real repo keeps runtime roster boundary acyclic and one-way", () => {
+  it("real repo keeps runtime roster boundary acyclic and one-way", () => {
     const result = analyzeDependencyDrift(loadDependencyDriftInput(process.cwd()));
 
     expect(result.findings).not.toContainEqual(

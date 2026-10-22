@@ -57,7 +57,7 @@ L4 基本設計の各設計要素が L9 総合テスト (ST-*) で被覆され�
 |---|---|---|---|
 | ST-ARCH-01 | 依存方向 schema 一方向・循環禁止 (§3) | 循環 import 導入 → 検出 (D-03=0) | dependency lint (L7) |
 | ST-ARCH-02 | fail-close (§2/§5) | guard/lint/gate が exit≠0 で停止 | vitest 統合 |
-| ST-ARCH-03 | agent-guard hook 配線 (§6) | PreToolUse(Agent) で model 明示・floor 検証 (#1002) | vitest agent-guard (既存) |
+| ST-ARCH-03 | agent-guard hook 配線 (§6) | PreToolUse(Agent) で型の閉集合・model 明示・fable 禁止を検証 (#1002) | vitest agent-guard (既存) |
 | ST-ARCH-04 | CLI ↔ module 統合 (§3.1) | status/doctor/plan/vmodel end-to-end | vitest CLI 統合 |
 
 ### §1.3 ST-FUNC (function.md 由来 — コマンド / workflow end-to-end)
@@ -78,19 +78,16 @@ L4 基本設計の各設計要素が L9 総合テスト (ST-*) で被覆され�
 
 > 個別 FR の AC レベル受入は L12 受入テスト (AT-*) が担う。L9 は **複数 FR/module をまたぐ統合挙動**を対象 (L12 との責務分界)。駆動モデルの状態遷移 pseudocode / CLI signature は L4 §3.6 で L5/L6 へ defer のため、ST-FUNC は **system 粒度の遷移成立・合流先・優先度・サインオフ**を対象 (関数粒度の単体は L7 U-* が担う)。
 
-### §1.3.1 ST-ASSET (function.md §1.1 由来 — 内部資産 roster/command system 挙動、A-85)
+### §1.3.1 ST-ASSET (function.md §1.1 由来 — 内部資産 command system 挙動、A-85)
 
 > L4=L9 総合テスト粒度で**書ける範囲のみ**。関数粒度 (各 subcommand signature / capability resolver アルゴリズム) は仕様未確定のため **placeholder + 依存明示** (back-fill 対象、§4)。
 
 | ST-ID (候補) | 検証対象 (function §1.1) | 想定シナリオ (system 粒度) | 機械検証 (carry) |
 |---|---|---|---|
-| ST-ASSET-01 | roster registry SSoT (FR-L1-46) | `.claude/agents/*.md` (層1) を roster が読み、全 subagent が roster metadata に登録される (孤児 subagent = 0) | vitest roster (L7) |
-| ST-ASSET-02 | roster ↔ guard allowlist 整合 | roster の allowlist と agent-guard enforcement が一致 (二重定義・乖離 0、不一致→fail-close) | vitest 統合 (agent-guard 既存 + roster) |
-| ST-ASSET-03 | 内部資産 command end-to-end (FR-L1-48) | `ut-tdd roster list/check` / `ut-tdd asset` が system として動く | vitest CLI 統合 |
+| ST-ASSET-03 | 内部資産 command end-to-end (FR-L1-48) | `ut-tdd asset` が system として動き、`ut-tdd roster list/check` は存在しない (unknown command) | vitest CLI 統合 |
 | ST-ASSET-05 | skills building block (FR-L1-47、architecture §3) | 実装済みの L7 証跡: `src/assets/catalog.ts#scanSkillCatalog` / `catalogAutomationAssets` (`ut-tdd asset catalog`) と `src/skill-engine/recommend.ts#recommendSkillsForPlan` / `recommendSkillsForText` (`ut-tdd skill suggest`)。projection 経由の asset は引き続き `src/state-db/projection-writer.ts` を通る。配線の無かった `src/workflow/contracts.ts#catalogSkills` / `#recommendSkills` / `#suggestSkillInjection` は #1084 で退役した。 | `tests/asset-catalog.test.ts` + `tests/skill-recommend.test.ts` + vitest skills + dependency lint |
-| ST-ASSET-06 | 内部資産 drift lint (FR-L1-49、architecture §4.1) | Current hard gate slice is implemented: legacy source/path residue / legacy runtime delegation residue / docs-skills vacancy / guard allowlist missing agent docs → fail-close. Roster capability resolution is covered by ST-ASSET-07 evidence. | vitest `asset-drift` rule (implemented) |
-| ST-ASSET-07 | roster↔guard 整合 (Critical-2、function §1.1) | Implemented L7 evidence: `src/runtime/agent-slots.ts#resolveRosterCapability` resolves role/capability from roster snapshots without provider credentials, and guard allowlist drift remains fail-closed through `src/lint/asset-drift.ts`. | `tests/agent-slots.test.ts` U-FR-L1-46 + `tests/asset-drift.test.ts` |
-| **ST-ASSET-04 (placeholder、欠番は意図的)** | **各 subcommand / skill recommender / drift 判定の関数仕様** | L6 now has function-level signatures / U-* oracles for the implemented asset-drift slice. Remaining system-test detail for unimplemented roster / skill recommender / command surfaces is **implementation-detail carry**, not a Phase 2 blocker. | A-118 carry: L7/L9 back-fill when roster/skills command surfaces materialize |
+| ST-ASSET-06 | 内部資産 drift lint (FR-L1-49、architecture §4.1) | Current hard gate slice is implemented: legacy source/path residue / legacy runtime delegation residue / docs-skills vacancy → fail-close. | vitest `asset-drift` rule (implemented) |
+| **ST-ASSET-04 (placeholder、欠番は意図的)** | **各 asset subcommand / skill recommender / drift 判定の関数仕様** | L6 now has function-level signatures / U-* oracles for the implemented asset-drift slice. Remaining system-test detail for unimplemented skill recommender / asset command surfaces is **implementation-detail carry**, not a Phase 2 blocker. | A-118 carry: L7/L9 back-fill when skill / asset command surfaces materialize |
 
 ### §1.4 ST-EXT (external-if.md 由来 — 境界統合 / degradation)
 
@@ -108,12 +105,11 @@ L4 基本設計の各設計要素が L9 総合テスト (ST-*) で被覆され�
 - data.md §6 不変条件 10 件 → 被覆対応 (m-3 明示): 逆ピラミッド/4-artifact 系 → **ST-DATA-01**、V_MODEL_PAIRS/集約境界系 → **ST-DATA-02**、§7 集約間整合 6 件 → **ST-DATA-03**、state schema↔src/schema 系 → **ST-DATA-04**、**review 前置証跡 (IMP-071、PLAN-L4-06 追加) → ST-DATA-05**、§1.1/§8.1 宣言型 spec IR / DB projection 境界 → **ST-DATA-06** (既存 10 不変条件 + U3 IR 境界を 6 ST に束ねて全数被覆、孤児 0)
 - architecture.md §3 依存方向 / §2 品質目標 → ST-ARCH-01〜04
 - function.md §3 workflow オーケストレーション (Forward spine + 9 駆動モデル + 2 工程専門) → ST-FUNC-01 (遷移) / ST-FUNC-01b (Forward 合流) / §3.2 routing 優先度 → ST-FUNC-04 / §3.2 mode↔kind → ST-FUNC-05 / §3.1 サインオフ + §3.6 execution mode 別 review tier → ST-FUNC-06 / §3.4 skill (FR-12) → ST-FUNC-07 / §3.6 execution mode degradation → ST-EXT-02 (external-if §4 と共有) / §7 依存 → ST-FUNC-02。孤児 0 (9 駆動 + spine + 工程専門 2 + routing + skill + execution mode 3+1 パターンが全て被覆)
-- **function.md §1.1 C12 内部資産 roster/command (FR-L1-46/48) → ST-ASSET-01〜03 / architecture §3 skills (FR-L1-47) → ST-ASSET-05 / architecture §4.1 drift lint (FR-L1-49) → ST-ASSET-06/07 implemented evidence (`src/runtime/agent-slots.ts`, `src/assets/catalog.ts`, `src/lint/asset-drift.ts`)**
+- **function.md §1.1 C12 内部資産 command (FR-L1-48) の `ut-tdd asset` 残存と `roster list/check` 廃止を ST-ASSET-03 で確認 / architecture §3 skills (FR-L1-47) → ST-ASSET-05 (`src/assets/catalog.ts`, `src/skill-engine/recommend.ts`) / architecture §4.1 drift lint (FR-L1-49) → ST-ASSET-06 (`src/lint/asset-drift.ts`)**
 - external-if.md §3 境界 4 / §4 degradation → ST-EXT-01〜04
 - external-if.md §2/§3/§4 CLI user boundary (PLAN-REVERSE-395) → ST-EXT-05
 - **security.md §5-§9 (脅威モデル/供給網/鍵・秘密/監査ログ、PLAN-L4-29) → ST-EXT-06** (ZIP-DOC-102 相当の security verification 接続、孤児 0 に含める)
-- 従来baselineの孤児0は維持する。D0-R frontierの量閉じは§9.1のST-RGK-05/06/12/14で再確認し、
-  未実装Red oracleをGreen evidenceと数えない。No active ST-ASSET L7 carry remains in this document.
+- 従来baselineの孤児0は維持する。roster capability の実装証跡は本書の ST-ASSET coverage に含めず、ST-ASSET-04 は明示的な placeholder carry とする。D0-R frontierの量閉じは§9.1のST-RGK-05/06/12/14で再確認し、未実装Red oracleをGreen evidenceと数えない。
 
 ## §3 trace (④ → ②)
 
