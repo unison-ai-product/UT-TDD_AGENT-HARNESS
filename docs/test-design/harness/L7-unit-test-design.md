@@ -2001,7 +2001,7 @@ content-addressed path を citation してから `U-*` へ昇格する。
 | --- | --- | --- | --- |
 | `CANDIDATE-U-CIPOL-028` | 正常系 | 実 repo workflow そのまま | `analyzeGithubCiPolicy().ok=true`。`jobs.preflight` が存在し、4 runtime 脚の `needs` が `preflight`、aggregate `needs` が `preflight` + 4 脚 |
 | `CANDIDATE-U-CIPOL-029` | preflight 欠落 / 形 | (a) `jobs.preflight` 削除 (b) `runs-on: windows-latest` (c) job-level `if: false` (d) `continue-on-error: true` (e) `timeout-minutes` 追加 | 全件 `invalid_preflight_gate`、`ok=false` |
-| `CANDIDATE-U-CIPOL-030` | preflight manifest 完全一致 | (a) typecheck step 削除 (b) lint step 削除 (c) guard step 削除 (d) admission step 削除 (e) typecheck を lint の後へ移動 (f) guard / admission / lint いずれかの `if: ${{ !cancelled() }}` 削除 (g) typecheck の `if` (lane=='full') を削除 = lane 無条件化 (h) typecheck の `if` を `${{ !cancelled() && steps.classify.outputs.lane == 'full' }}` へ変更 | 全件 `invalid_preflight_gate` (detail = manifest 不一致)。(g) は doc lane へ typecheck を足す振る舞い変更 (D3 案 C) の負例。(h) は加えて `forbidden_lane_skip_step` (non-canonical lane condition、`jobs.preflight`) |
+| `CANDIDATE-U-CIPOL-030` | preflight manifest 完全一致 | (a) typecheck step 削除 (b) lint step 削除 (c) guard step 削除 (d) 欠番 (旧 admission step の削除。`plan admission-check` step を契約から外したため、本案は対象 step なし。#1168) (e) typecheck を lint の後へ移動 (f) guard / lint いずれかの `if: ${{ !cancelled() }}` 削除 (g) typecheck の `if` (lane=='full') を削除 = lane 無条件化 (h) typecheck の `if` を `${{ !cancelled() && steps.classify.outputs.lane == 'full' }}` へ変更 | 全件 `invalid_preflight_gate` (detail = manifest 不一致)。(g) は doc lane へ typecheck を足す振る舞い変更 (D3 案 C) の負例。(h) は加えて `forbidden_lane_skip_step` (non-canonical lane condition、`jobs.preflight`) |
 | `CANDIDATE-U-CIPOL-031` | 脚の needs 束縛 | 4 脚それぞれについて (a) `needs` 削除 (b) `needs: [preflight, node-generation-linux]` (c) `needs: other` | (a)(b)(c) とも該当脚の `invalid_preflight_gate` (`jobs.<leg>.needs must equal preflight`)。(a) は加えて exact keys で `missing_runtime_leg` |
 | `CANDIDATE-U-CIPOL-032` | Linux 脚から軽量 step の再流入禁止 | Linux 脚へ `lint (biome)` / `typecheck (tsc --noEmit)` を再追加 | `missing_runtime_leg` (Linux manifest 不一致)。二重化を manifest で拒否 |
 | `CANDIDATE-U-CIPOL-033` | Windows typecheck 維持 | Windows 脚から `typecheck (tsc --noEmit)` step を削除 | `missing_runtime_leg` (Windows manifest 不一致)。D2 の mutation |
@@ -2011,7 +2011,19 @@ content-addressed path を citation してから `U-*` へ昇格する。
 | `U-CIPOL-018` (改訂) | 結果行列 | `aggregateHarnessResultsPass` に `preflight` ∈ {failure, cancelled, skipped} × 脚 success | preflight が success 以外なら false。全 success のみ true |
 | `CANDIDATE-U-CIPOL-037` | required step の評価対象 | preflight から `npm run lint` を消し Linux 脚にも無い状態 | `missing_step` (`lint`) が依然出る。評価対象が preflight + Linux の和であること (既存 `U-CIPOL-012` = runtime profile 独立性とは別 oracle) |
 | `CANDIDATE-U-CIPOL-038` | preflight の lane producer | (a) preflight の classify step 削除 (typecheck の lane 条件は残す) (b) classify に `shell: bash` 付与 (c) classify に `if: ${{ !cancelled() }}` 付与 (d) classify を 2 個に複製 (e) preflight に job-level `env.GITHUB_OUTPUT` 付与 (f) `node-generation-linux` の任意 step に `if: ${{ steps.classify.outputs.lane == 'full' }}` 付与 (g) aggregate の任意 step に同条件付与 | (a)〜(e) は `missing_lane_producer` (detail `jobs.preflight requires the canonical classify producer with no explicit shell` / GITHUB_OUTPUT 上書き)、(a)〜(d) は加えて `invalid_preflight_gate`。(f)(g) は `missing_lane_producer` (detail `jobs.<name> references steps.classify.outputs.lane without owning the canonical classify producer`)。classify を持たない job での lane skip を 1 経路も残さない |
-| `CANDIDATE-U-CIPOL-039` | lane 別実行集合の不変 (refactor の behavior invariant fence) | 実 repo workflow を解析し、各 step を `if` で分類 (`LANE_FULL_ONLY_IF` = full のみ、`LANE_DOC_ONLY_IF` = doc のみ、それ以外 = 両 lane)、setup 系 / classify / job summary を除いた check 名集合を Linux 面 (preflight ∪ `harness-check-linux`) と Windows 脚で lane 別に算出 | PLAN-L7-729 §不変条件 の表 (= 改訂前 `harness-check.yml` の lane 別集合) と完全一致。特に doc lane の Linux 面 = {guard, admission, doc lane checks, doc lane source doctor, lint} で typecheck を含まない。負例: preflight typecheck の lane 条件削除で doc 集合に typecheck が現れ不一致 |
+| `CANDIDATE-U-CIPOL-039` | lane 別実行集合の不変 (refactor の behavior invariant fence) | 実 repo workflow を解析し、各 step を `if` で分類 (`LANE_FULL_ONLY_IF` = full のみ、`LANE_DOC_ONLY_IF` = doc のみ、それ以外 = 両 lane)、setup 系 / classify / job summary を除いた check 名集合を Linux 面 (preflight ∪ `harness-check-linux`) と Windows 脚で lane 別に算出 | PLAN-L7-729 §不変条件 の表 (= 改訂前 `harness-check.yml` の lane 別集合) と完全一致。特に doc lane の Linux 面 = {guard, doc lane checks (readability / rule-drift), doc lane source doctor, lint} (旧 admission と doc lane の `plan lint` は #1168 で契約から外した) で typecheck を含まない。負例: preflight typecheck の lane 条件削除で doc 集合に typecheck が現れ不一致 |
+
+CI の実行集合の改訂 (#1168、方針は #1078 issuecomment-6265568869): 実 manifest の契約と各 oracle の契約は分けて扱う。
+本節の preflight 構成と現行の 3 job 基準構成 (`harness-check-linux` / `harness-check-windows` / `node-generation-*` と aggregate) は
+すでに異なる。次の 2 点は構成の違いによらず契約から外す。
+
+- `plan admission-check` step。`design-protection` step の位置は admission に依存させず、直前を `branch-type guard (commitlint / poc / hotfix)`、
+  直後を `typecheck (tsc --noEmit)` とする (`docs/design/harness/L6-function-design/design-protection-diff-gate.md` §7)。
+- doc lane の `plan lint` と、`test:doc-lane` の `tests/plan-lint.test.ts`。doc lane の検査は `readability` と `rule-drift` を残す。
+  step 名は `doc lane checks (readability / rule-drift)` とする。
+
+Green で直す oracle の期待: CANDIDATE-U-CIPOL-030 (d) 欠番化、CANDIDATE-U-CIPOL-039 と `E-729-doc` の doc lane 集合、
+`U-DPROT-024` / `U-DPROT-025` (c) / `U-DPROT-026` の step 位置。
 
 既存 fixture の付け替え (期待 reason の変更。新規 ID は振らない):
 
@@ -2034,7 +2046,7 @@ Actions 実 run の証跡 (unit oracle ではなく PLAN AC-4 / AC-5 の受入�
 | --- | --- | --- |
 | E-729-neg | 軽量 check (例: biome format 違反) を意図的に含む PR head | `preflight`=failure、4 脚=skipped、`harness-check`=failure、aggregate の失敗 step = result guard |
 | E-729-pos | 通常 PR head (full lane) | 全 job success、preflight 所要と run 壁時計を記録 |
-| E-729-doc | doc lane の PR head | preflight の classify = doc、typecheck は skipped、guard / admission / lint は実行され success。Linux/Windows 脚は doc lane step のみ (改訂前と同じ実行集合) |
+| E-729-doc | doc lane の PR head | preflight の classify = doc、typecheck は skipped、guard / lint は実行され success。Linux/Windows 脚は doc lane step のみ (改訂前と同じ実行集合) |
 
 `pull_request`を単に含む文字列検査だけではGreenにしない。YAML構造でbase filter不在を検査し、
 source workflow / source template / Pack template / setup builtinのどれか1 artifactだけの更新を完了扱いにしない。
