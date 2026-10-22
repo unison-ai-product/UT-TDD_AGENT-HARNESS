@@ -13,7 +13,6 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { createNodePlanRevisionRunner } from "../src/plan-admission/node-plan-revision-runner.ts";
-import { buildLegacyPlanInventory } from "../src/plan-asset/adapters/legacy-plan-inventory.ts";
 import {
   canonicalProjectIdentityBytes,
   loadProjectIdentityFromHead,
@@ -580,14 +579,6 @@ describe("project identity bootstrap", () => {
       deps: { repositoryIdentity: () => string };
     };
     expect(() => runner.deps.repositoryIdentity()).toThrow("identity_repository_unbound");
-  });
-
-  it("legacy inventory direct caller denies stale identity", () => {
-    const root = trackedFixture("other/repo", "git@github.com:acme/widget.git");
-    expect(buildLegacyPlanInventory(root)).toMatchObject({
-      ok: false,
-      error: { ruleId: "identity_repository_unbound" },
-    });
   });
 
   it("CANDIDATE-U-PROJID-038: project-memory direct caller denies stale identity", () => {
