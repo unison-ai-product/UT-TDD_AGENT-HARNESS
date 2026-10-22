@@ -17,6 +17,12 @@ import { parseLegacyPlanSource } from "../src/plan-asset/adapters/legacy-plan-in
 
 const sourcePath = "docs/plans/PLAN-L7-435-drive-plan-admission-impl.md";
 const projectionPath = "docs/governance/plan-admission-receipts.json";
+const sourceSeed = `---
+plan_id: PLAN-L7-435-drive-plan-admission-impl
+title: tracked receipt renderer fixture
+---
+Synthetic source seed for tracked receipt renderer tests.
+`;
 const emptyProjection = JSON.stringify({ schema_version: TRACKED_RECEIPT_SCHEMA, records: [] });
 const forward: PlanAdmissionRequest = {
   routeSignal: "forward",
@@ -51,9 +57,9 @@ function command(
     planId: "PLAN-L7-435-drive-plan-admission-impl",
     path: sourcePath,
   },
-  sourceFile = sourcePath,
+  sourceFile?: string,
 ): PlanDraftCommand<TrackedReceiptDraftPayload> {
-  const parsed = parseLegacyPlanSource(readFileSync(sourceFile, "utf8"));
+  const parsed = parseLegacyPlanSource(sourceFile ? readFileSync(sourceFile, "utf8") : sourceSeed);
   if (!parsed) throw new Error("test source invalid");
   const content = `---\n${parsed.rawFrontmatter.replace(parsed.planId, identity.planId)}\n---\n${parsed.body}`;
   return {
@@ -128,7 +134,6 @@ describe("TrackedReceiptRenderer", () => {
           planId: "PLAN-REVERSE-435-drive-plan-admission-backfill",
           path: "docs/plans/PLAN-REVERSE-435-drive-plan-admission-backfill.md",
         },
-        "docs/plans/PLAN-REVERSE-435-drive-plan-admission-backfill.md",
       ),
       receipt,
     );
@@ -185,7 +190,6 @@ describe("TrackedReceiptRenderer", () => {
           planId: "PLAN-REVERSE-435-drive-plan-admission-backfill",
           path: "docs/plans/PLAN-REVERSE-435-drive-plan-admission-backfill.md",
         },
-        "docs/plans/PLAN-REVERSE-435-drive-plan-admission-backfill.md",
       ),
       receipt,
     );
