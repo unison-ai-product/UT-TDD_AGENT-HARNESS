@@ -115,6 +115,7 @@ const CLEAN_REQUIRED_PATHS = [
   "NOTICE",
   "package.json",
   ".node-version",
+  "docs/governance/oracle-test-trace-baseline.json",
   "src/cli.ts",
   "src/setup/index.ts",
   ...COMMON_FILES.filter((entry) => entry.template.startsWith("adapter/")).map(
@@ -179,6 +180,7 @@ const CLEAN_ALLOW_FILES = new Set([
   "docs/governance/repository-structure.md",
   "docs/governance/ut-tdd-agent-harness-concept_v3.1.md",
   "docs/governance/ut-tdd-agent-harness-requirements_v1.2.md",
+  "docs/governance/oracle-test-trace-baseline.json",
   "package.json",
   "tsconfig.json",
   "vitest.config.ts",

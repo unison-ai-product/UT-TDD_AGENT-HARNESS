@@ -104,7 +104,6 @@ import {
   checkMemorySync,
   checkMergedPlanStatus,
   checkOracleTestTrace,
-  checkPlanArtifactExistence,
   checkTrackedCanonical,
 } from "./source-trace.ts";
 import { checkTestRepositoryIsolation } from "./test-repository-isolation.ts";
@@ -168,7 +167,6 @@ export function buildDoctorCheckDefinitionGroups(
         full("module-drift", () => checkModuleDrift(deps.repoRoot)),
         full("merged-plan-status", () => checkMergedPlanStatus(deps.repoRoot)),
         full("memory-sync", () => checkMemorySync(deps.repoRoot)),
-        full("plan-artifact-existence", () => checkPlanArtifactExistence(deps.repoRoot)),
         full("asset-drift", () => checkAssetDrift(deps.repoRoot)),
         full("skill-assignment", () => checkSkillAssignment(deps.repoRoot)),
         full("descent-obligation", () => checkDescentObligation(deps.repoRoot)),

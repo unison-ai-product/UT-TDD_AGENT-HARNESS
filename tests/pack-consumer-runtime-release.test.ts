@@ -394,6 +394,7 @@ async function createProducerFixture(
     ".node-version",
     "src/cli.ts",
     "src/setup/index.ts",
+    "docs/governance/oracle-test-trace-baseline.json",
     "docs/templates/adapter/AGENTS.md",
     "docs/templates/adapter/CLAUDE.md",
     "docs/templates/adapter/.codex/config.toml",

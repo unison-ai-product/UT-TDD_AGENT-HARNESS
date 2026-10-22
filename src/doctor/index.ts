@@ -128,7 +128,6 @@ export {
   checkImplPlanTrace,
   checkMergedPlanStatus,
   checkOracleTestTrace,
-  checkPlanArtifactExistence,
   checkTrackedCanonical,
 } from "./source-trace.ts";
 export { checkTestRepositoryIsolation } from "./test-repository-isolation.ts";

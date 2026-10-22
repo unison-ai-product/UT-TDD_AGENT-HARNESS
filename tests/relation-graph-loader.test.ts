@@ -232,7 +232,7 @@ describe("loadRelationGraphSourceSet", () => {
     }
   });
 
-  it.fails.each([
+  it.each([
     "confirmed",
     "completed",
     "accepted",
