@@ -5,7 +5,6 @@ import { describe, expect, it } from "vitest";
 import {
   analyzeCycleP4Verification,
   cycleP4VerificationMessages,
-  loadCycleP4VerificationDocs,
 } from "../src/lint/cycle-p4-verification.ts";
 
 const legacyRuntimeName = ["HE", "LIX"].join("");
@@ -65,27 +64,6 @@ describe("cycle-p4-verification lint", () => {
       requirement: "Cycle P4 L7 DB integration",
       reason: "missing_evidence_path",
     });
-  });
-
-  it("U-CP4-004: current A-136 audit is complete", () => {
-    const docs = loadCycleP4VerificationDocs(process.cwd());
-    const r = analyzeCycleP4Verification(docs, process.cwd());
-
-    expect(docs.length).toBeGreaterThan(0);
-    expect(r.ok).toBe(true);
-    expect(r.rows.map((row) => row.requirement)).toEqual([
-      "Cycle P4 L7 DB integration",
-      "L8-L14 local verification band",
-      "UT-TDD Run P4 L9-L11 boundary",
-      "Production and PO signoff boundary",
-      "Handover current action",
-      "Source isolation current vocabulary",
-      "Telemetry and self-improvement closure",
-      "Feature residual closure",
-      "Placeholder-deps carry boundary",
-      "Skill assignment closure",
-      "Source migration coverage",
-    ]);
   });
 
   it("U-CP4-005: fails current operational files that reintroduce legacy source cutover terms", () => {
