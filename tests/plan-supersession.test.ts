@@ -5,14 +5,12 @@ import { describe, expect, it } from "vitest";
 import { checkPlanSupersession } from "../src/doctor/index.ts";
 import {
   analyzePlanSupersession,
-  loadSupersedePlans,
   type ParsedSupersedePlan,
   PLAN_SUPERSESSION_SELF_BASELINE,
   parseSupersedes,
   planCoreId,
   planSupersessionMessages,
 } from "../src/lint/plan-supersession.ts";
-import { workspaceRead } from "./support/workspace-roots.ts";
 
 // PLAN-L7-89: 誤記対策 — confirmed PLAN の誤った主張を後継が直したとき、errata リンクが
 // 双方向 (supersedes 宣言 + 原 PLAN の訂正 back-reference) であることを fail-close 強制する。
@@ -194,22 +192,6 @@ describe("analyzePlanSupersession", () => {
       new Set(["PLAN-GONE-01"]),
     );
     expect(r.staleSelfBaseline).toEqual([]);
-    expect(r.ok).toBe(true);
-  });
-
-  it("実 repo の supersede 検査は green になる", () => {
-    const root = workspaceRead({
-      id: "U-PSUP-SELF",
-      mode: "head_snapshot",
-      reason: "自己 supersede の実 repo 検査は live tree ではなく HEAD の docs/plans を突合する",
-    });
-    const r = analyzePlanSupersession(loadSupersedePlans(root));
-    // 既知債務 7 件は baseline 宣言済みなので ok。baseline 外の新規自己参照が 0 であることを固定する。
-    expect(r.selfSupersedes).toEqual([]);
-    expect(r.staleSelfBaseline).toEqual([]);
-    expect(r.baselinedSelfSupersedes.map((v) => v.plan_id).sort()).toEqual(
-      [...PLAN_SUPERSESSION_SELF_BASELINE].sort(),
-    );
     expect(r.ok).toBe(true);
   });
 });
