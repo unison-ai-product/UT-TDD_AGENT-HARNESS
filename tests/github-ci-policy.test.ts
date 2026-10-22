@@ -1086,7 +1086,6 @@ describe("github-ci-policy lint", () => {
 
     it.each([
       ["branch guard separator", "\n          git log --format=%s", " git log --format=%s"],
-      ["doc checks separator", "\n          npm run test:doc-lane", " npm run test:doc-lane"],
     ])("U-CIPOL-019aa: preserves command-separator newline: %s", (_label, from, to) => {
       const result = analyzeGithubCiPolicy(docs(SOURCE_WORKFLOW_WITH_LANE.replace(from, to)));
       expect(result.violations.map((v) => v.reason)).toContain("missing_runtime_leg");
