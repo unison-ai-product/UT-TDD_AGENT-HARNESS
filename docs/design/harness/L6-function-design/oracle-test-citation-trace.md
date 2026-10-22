@@ -68,8 +68,10 @@ forward 側の `referenced` 集合は既存契約を維持する。reverse 側�
 ## 6. `deliverable-plan-trace` gate の退役契約 (Issue #1170)
 
 > **状態**: この節は `deliverable-plan-trace` doctor gate を退役させる契約である (Issue #1170、PLAN 機構の撤去
-> #1078 / #1168 の一部)。旧 §6 の Issue #958 draft (test file 所有証拠を test-design 引用で補う規則) は
-> **未実装のまま撤回**した。§2〜§5 の formal oracle citation 契約は書き換えない。退役の実装は §6.5 の 2 PR で入れる。
+> #1078 / #1168 の一部)。旧 §6 の Issue #958 契約 (test file 所有証拠を test-design 引用で補う規則) は
+> 実装済みである (`src/lint/deliverable-plan-trace.ts` の `loadDeliverablePlanTraceInput` が formal / candidate の
+> 宣言と引用を結合し、`tests/deliverable-plan-trace.test.ts` が正式 `U-DPTOWN-*` で検証している)。この規則と正式 oracle を
+> **gate とともに退役させる**。§2〜§5 の formal oracle citation 契約は書き換えない。退役の実装は §6.5 の 2 PR で入れる。
 
 ### 6.1 退役する範囲
 
@@ -97,10 +99,11 @@ forward 側の `referenced` 集合は既存契約を維持する。reverse 側�
 
 `scripts/` と `.github/` には参照が無い。
 
-### 6.3 撤回するもの
+### 6.3 退役させる規則と撤回するもの
 
-- 旧 §6 (Issue #958 draft) の test-design 所有証拠規則と、`docs/test-design/harness/L7-deliverable-plan-trace-test-design.md`
-  の `U-DPTOWN-001`〜`U-DPTOWN-009` は、**実装されないまま撤回する**。
+- 旧 §6 (Issue #958) の test-design 所有証拠規則 (実装済み) と、`docs/test-design/harness/L7-deliverable-plan-trace-test-design.md`
+  の正式 oracle `U-DPTOWN-001`〜`U-DPTOWN-009` (通常テストで検証済み) を、**gate とともに退役させる**。未実装 draft の
+  撤回ではなく、実装済みの規則と正式 oracle の退役として扱う。
 - 所有の代替となる gate、台帳、検査は**設けない**。成果物の所有を機械で決める仕組みは、退役後は存在しない。
 - `src/lint/deliverable-plan-trace.ts:92` の相対 root の不具合は**修正しない**。gate とともに消える。doctor は絶対 root を
   渡すため、退役前の実害も無い。
@@ -122,7 +125,7 @@ legacy migration の退役 (#1256 / #1257) と同じ 2 PR で進める。design-
 1. **PR-1 (非実装: `docs/test-design/` と `tests/` のみ)**:
    `docs/test-design/harness/L7-deliverable-plan-trace-test-design.md` の `U-DPTOWN-001`〜`U-DPTOWN-009` 宣言を撤去し、
    同時に `tests/deliverable-plan-trace.test.ts` の同 ID ラベルを外す。テスト本体は残す。
-   `L7-deliverable-plan-trace-test-design.md` は削除せず、宣言表を撤回の注記 (本節 §6.3 への参照) に置き換えて退役記録として残す
+   `L7-deliverable-plan-trace-test-design.md` は削除せず、宣言表を退役の注記 (本節 §6.3 への参照) に置き換えて退役記録として残す
    (PR-2 は `src/` を含むため design-protection gate により test-design を変更・削除できず、文書を消すなら PR-1 しかない。
    §6.3 が本文書を参照するため記録として残す)。宣言と引用を同じ PR で
    外すのは、`oracle-test-trace` が未引用の宣言と未宣言の引用をそれぞれ違反にするためである。
@@ -131,11 +134,13 @@ legacy migration の退役 (#1256 / #1257) と同じ 2 PR で進める。design-
      `tests/doctor.test.ts` の roster / fail-closed 表の該当エントリ (`checkDeliverablePlanTrace` の import、
      fail-closed 表の行、output ID 一覧の `"deliverable-plan-trace"`)。
    - §6.1 と §6.2 の src、doctor 配線、台帳、生成スクリプトを削除する。
-   - `docs/governance/oracle-test-trace-baseline.json` の legacy 一覧から、最後の引用テストが消える
+   - `docs/governance/oracle-test-trace-baseline.json` の **`citations`** 一覧から、最後の引用テストが消える
      `U-L7-450-W2-003` / `U-L7-450-W2-004` / `U-L7-450-W3-001` / `U-L7-450-W3-002` / `U-L7-450-W4-001` を外す。
      5 件は test-design に宣言が無く、`tests/deliverable-plan-trace.test.ts` だけが引用している
-     (`git grep -n "<ID>" -- src tests docs/test-design` で各 1 件を実測)。他の legacy ID は、まだ別のテストが引用して
-     いる場合があるため触れない。
+     (`git grep -n "<ID>" -- src tests docs/test-design` で各 1 件を実測)。5 件は baseline の `legacy` / `widened` には無く
+     `citations` にだけある (baseline JSON を解析して各 ID で確認)。`citations` に残したままテストを消すと、
+     `src/lint/oracle-test-trace.ts` の `analyzeCitationTrace` が stale citation baseline として違反にする。
+     他の ID は、まだ別のテストが引用している場合があるため触れない。
    - prose を掃除する: `AGENTS.md`、`.claude/CLAUDE.md`、`skills/gate-planning.md` の `deliverable-plan-trace` /
      `duplicate-artifact-ownership` / `orphan-deliverable` への言及。
    - PLAN-L7-450 の `generates` から退役した成果物の行を外す。これは PLAN 凍結 (`CLAUDE.md` §PLAN Filing Rules)

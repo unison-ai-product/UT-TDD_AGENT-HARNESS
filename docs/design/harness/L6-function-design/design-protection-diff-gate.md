@@ -257,7 +257,7 @@ test-design の書き換えの多くは、`CANDIDATE-*` を正式 ID へ昇格�
 3. **実装 PR**: テストファイルの `it.fails` を `it` に戻して Green にする。
 
 順序を 1 → 2 にする理由は、doctor の `oracle-test-trace` が正式 ID を宣言したら同じ変更でテストの引用を要求し (未引用の宣言は baseline 外の違反になる)、候補 ID には引用を要求しないためである (`src/lint/oracle-test-trace.ts` の `CANDIDATE-*` 除外)。昇格だけを先に入れると、引用するテストが無いので CI が赤になる (PR #985 の 3c30fced で実測)。
-どのテストファイルが開発 repo を読むかは、実装レーンが `test-repository-isolation` の判定 (登録が要るか) で確定する。テストの subject や CLI の解決に `process.cwd()` を使うファイルも、この判定では読取ありになる (PR #985 で実測)。1 の新しいテストファイルの deliverable owner 登録 (PLAN-L6-834 の `generates` へ canonical `plan revise` で足す) は `deliverable-plan-trace` gate の要件だが、同 gate は退役が確定している (`oracle-test-citation-trace.md` §6)。退役の実装 PR が merge されるまでは現行どおり要り、merge 後は不要になる。
+どのテストファイルが開発 repo を読むかは、実装レーンが `test-repository-isolation` の判定 (登録が要るか) で確定する。テストの subject や CLI の解決に `process.cwd()` を使うファイルも、この判定では読取ありになる (PR #985 で実測)。1 の新しいテストファイルの所有証拠は、test-design の宣言 (正式 ID または候補 ID) をテスト名で引用することで満たす。`deliverable-plan-trace` gate の `loadDeliverablePlanTraceInput` は、宣言と結合した引用を持つテストファイルを所有済みとして扱う。PLAN 凍結 (`CLAUDE.md` §PLAN Filing Rules) の間は、PLAN の `generates` へ `plan revise` で足す登録を所有証拠に使わない。同 gate は退役が確定しており (`oracle-test-citation-trace.md` §6)、退役の実装 PR の merge 後は所有証拠そのものが要らなくなる。
 実装 PR は src/ を含むので、昇格や登録のために test-design を書き換えると §4 で拒否される。
 
 ## 11. 根拠
