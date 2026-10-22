@@ -523,11 +523,7 @@ node src/cli.ts github guard --head-ref "$HEAD_REF" --base-ref "$BASE_REF" --pr-
       },
       run: "npm run test",
     }),
-    run(
-      "doc lane checks (readability / rule-drift)",
-      "npm run test:doc-lane",
-      LANE_DOC_ONLY_IF,
-    ),
+    run("doc lane checks (readability / rule-drift)", "npm run test:doc-lane", LANE_DOC_ONLY_IF),
     run(
       "doc lane source doctor",
       "node src/cli.ts doctor --profile source-doc-lane",
