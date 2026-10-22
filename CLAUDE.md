@@ -186,7 +186,8 @@ PLAN への依存をこれ以上増やさない**。この節の規則は、PLAN
 
 - **新規 PLAN の起票と `plan revise` を止める**。
 - **新しい作業の正本は設計文書 (`docs/design/` / `docs/test-design/`) と GitHub Issue** にする。方式判断・
-  契約・受け入れ条件は設計文書か Issue に書き、新しい PLAN を作って持たせない。
+  契約・受け入れ条件の本文は設計文書に書き、Issue (作業チケット、`docs/governance/github-issue-hierarchy.md` §6) は
+  その path と revision を指すだけにする。新しい PLAN を作って持たせない。
 - **PLAN への参照を新しく足さない**。新規の契約・gate・コード・文書は、PLAN ID や `docs/plans/` 内の
   実体を要件にせず、Issue または設計文書の節を参照する (例: #848 の `retirement_plan` は PLAN
   撤去後に成り立たない形のため、Issue / 設計文書参照へ改める — 別 PR で扱う)。
@@ -194,7 +195,7 @@ PLAN への依存をこれ以上増やさない**。この節の規則は、PLAN
   同じ例外を適用する。PR 本文に例外の根拠を書く。
 - **PLAN を宛先とする既存の指示の読み替え**: §運用規律の再締結 1 や §PR スコープ規律 2 などが
   「PLAN の設計判断節」へ方式を freeze すると書く箇所は、凍結中は宛先を設計文書 (`docs/design/` /
-  `docs/test-design/`) または Issue に読み替える。工程 (実装前の pair-freeze、改訂の cross-review) は
+  `docs/test-design/`) に読み替える (Issue は参照の置き場であり、契約本文を書かない)。工程 (実装前の pair-freeze、改訂の cross-review) は
   そのまま守る。
 - 既存 PLAN の削除・物理撤去は本節の範囲外 (#1078 の後続段で行う)。
 
