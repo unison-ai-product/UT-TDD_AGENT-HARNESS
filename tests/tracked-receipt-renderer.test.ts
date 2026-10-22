@@ -1,4 +1,3 @@
-import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import type { CanonicalPlanDraftCommand } from "../src/kernel/plan-draft-command-digest.ts";
 import { canonicalPlanContentDigest } from "../src/plan-admission/diff-fence.ts";
@@ -17,6 +16,21 @@ import { parseLegacyPlanSource } from "../src/plan-asset/adapters/legacy-plan-in
 
 const sourcePath = "docs/plans/PLAN-L7-435-drive-plan-admission-impl.md";
 const projectionPath = "docs/governance/plan-admission-receipts.json";
+const sourceSeed = `---
+plan_id: PLAN-L7-435-drive-plan-admission-impl
+title: tracked receipt renderer fixture
+kind: impl
+drive: agent
+layer: L7
+parent_design: PLAN-L6-435-renderer-design-fixture
+confirmed_reverse_type: code
+agent_slots:
+  - role: tl
+    slot_label: renderer-fixture
+dependencies: {}
+---
+Synthetic source seed for tracked receipt renderer tests.
+`;
 const emptyProjection = JSON.stringify({ schema_version: TRACKED_RECEIPT_SCHEMA, records: [] });
 const forward: PlanAdmissionRequest = {
   routeSignal: "forward",
@@ -51,9 +65,8 @@ function command(
     planId: "PLAN-L7-435-drive-plan-admission-impl",
     path: sourcePath,
   },
-  sourceFile = sourcePath,
 ): PlanDraftCommand<TrackedReceiptDraftPayload> {
-  const parsed = parseLegacyPlanSource(readFileSync(sourceFile, "utf8"));
+  const parsed = parseLegacyPlanSource(sourceSeed);
   if (!parsed) throw new Error("test source invalid");
   const content = `---\n${parsed.rawFrontmatter.replace(parsed.planId, identity.planId)}\n---\n${parsed.body}`;
   return {
@@ -128,7 +141,6 @@ describe("TrackedReceiptRenderer", () => {
           planId: "PLAN-REVERSE-435-drive-plan-admission-backfill",
           path: "docs/plans/PLAN-REVERSE-435-drive-plan-admission-backfill.md",
         },
-        "docs/plans/PLAN-REVERSE-435-drive-plan-admission-backfill.md",
       ),
       receipt,
     );
@@ -185,7 +197,6 @@ describe("TrackedReceiptRenderer", () => {
           planId: "PLAN-REVERSE-435-drive-plan-admission-backfill",
           path: "docs/plans/PLAN-REVERSE-435-drive-plan-admission-backfill.md",
         },
-        "docs/plans/PLAN-REVERSE-435-drive-plan-admission-backfill.md",
       ),
       receipt,
     );
