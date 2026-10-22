@@ -27,7 +27,13 @@ function collectCandidateIds(text: string): string[] {
     if (!match) return null;
 
     const remainder = source.slice(match[0].length);
-    if (/^\s*(?:\.\.|\/|,|、)\s*CANDIDATE-/.test(remainder)) return null;
+    if (
+      /^\s*(?:\.\.|\/|,|、|〜|～)\s*`?(?:CANDIDATE-[A-Z0-9]+(?:-[A-Z0-9]+)*-)?[0-9]{3}`?(?=$|[^A-Z0-9])/.test(
+        remainder,
+      )
+    ) {
+      return null;
+    }
     if (surface === "heading") {
       return remainder.length === 0 || /^\s/.test(remainder) ? match[2] : null;
     }
@@ -61,7 +67,10 @@ function collectCandidateIds(text: string): string[] {
     }
 
     if (!/^\s*\|/.test(line)) continue;
-    const firstCell = line.replace(/^\s*\|/, "").split("|")[0]?.trim();
+    const firstCell = line
+      .replace(/^\s*\|/, "")
+      .split("|")[0]
+      ?.trim();
     if (!firstCell || /^:?-{3,}:?$/.test(firstCell)) continue;
     const id = declaredCandidateId(firstCell, "table");
     if (id) candidateIds.push(id);
