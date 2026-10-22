@@ -65,75 +65,94 @@ forward 側の `referenced` 集合は既存契約を維持する。reverse 側�
 - doctor と static gate は既存 `oracle-test-trace` analyzer の結果をそのまま hard gate として
   投影し、別の検出経路を増やさない。
 
-## 6. `deliverable-plan-trace` における test file 所有証拠 (Issue #958 draft)
+## 6. `deliverable-plan-trace` gate の退役契約 (Issue #1170)
 
-> **状態**: この節は Issue #958 の追加契約 draft であり、既存 §2〜§5 の formal oracle citation 契約を
-> 書き換えない。対になる候補 oracle は `docs/test-design/harness/L7-deliverable-plan-trace-test-design.md`
-> に置く。L6 の `pair_artifact` は既存の共有 index のまま維持する。
+> **状態**: この節は `deliverable-plan-trace` doctor gate を退役させる契約である (Issue #1170、PLAN 機構の撤去
+> #1078 / #1168 の一部)。旧 §6 の Issue #958 契約 (test file 所有証拠を test-design 引用で補う規則) は
+> 実装済みである (`src/lint/deliverable-plan-trace.ts` の `loadDeliverablePlanTraceInput` が formal / candidate の
+> 宣言と引用を結合し、`tests/deliverable-plan-trace.test.ts` が正式 `U-DPTOWN-*` で検証している)。この規則と正式 oracle を
+> **gate とともに退役させる**。§2〜§5 の formal oracle citation 契約は書き換えない。退役の実装は §6.5 の 2 PR で入れる。
 
-### 6.1 適用範囲と所有条件
+### 6.1 退役する範囲
 
-この追加規則が補う対象は `tests/**/*.test.ts` の deliverable ownership だけである。対象 test file は、次の
-いずれか 1 つで所有証拠を持つ:
+`deliverable-plan-trace` は、成果物 (`scripts/` / `.claude/` / `tests/` 等) の所有を PLAN frontmatter の
+`generates` と test-design の引用から決める doctor gate である。PLAN を撤去するとこの gate には判定の拠り所が
+残らないため、次をまとめて退役させる。
 
-1. 既存どおり、PLAN の `generates[].artifact_path` が対象 path と一致する。
-2. `docs/test-design/` の oracle 宣言と、対象 file 内の同じ ID を持つ static test-label citation が一致する。
+| 区分 | 退役するもの |
+|---|---|
+| 関数 | `src/lint/deliverable-plan-trace.ts` の `analyzeDeliverablePlanTrace` / `analyzeDeliverableTraceGate` / `loadDeliverablePlanTraceInput` / `deliverablePlanTraceMessages` (ファイルごと) |
+| doctor 配線 | `src/doctor/source-trace.ts` の `checkDeliverablePlanTrace`、`src/doctor/index.ts` の re-export、`src/doctor/check-definition-groups.ts` の import と `full("deliverable-plan-trace", ...)`、`src/doctor/profiles.ts` の `FULL_DOCTOR_OUTPUT_IDS` の `"deliverable-plan-trace"` (`src/doctor/db-projection.ts` の `knownDoctorGateIds` はこの一覧を参照するだけで、個別の編集は要らない) |
+| 台帳と生成物 | `docs/governance/deliverable-trace-debt-audit.md`、参照元のない生成スクリプト `src/trace/generate-deliverable-trace-debt-audit.ts` |
+| finding | `orphan-deliverable` / `stale-deliverable-trace-debt` / `duplicate-artifact-ownership` |
 
-2 の所有証拠は `oracle-test-trace` の既存 `collectOracleDeclarationSites` / `collectOracleCitationSites` が持つ
-ID・test-design 宣言元 path・test file path・行番号を対応付け、その test file path を `tracedPaths` に加える。
-test-design 文書 path は provenance として保持するが、`ownersByPath` には加えない。コメント、fixture/body、
-dynamic label、未宣言 ID は所有証拠にならない。formal oracle の宣言と citation は既存の exact-ID /
-duplicate / baseline 規則に従う。
+### 6.2 `artifact-ownership` も退役させる
 
-候補 ID (`CANDIDATE-*`) は未実装 oracle のままであり、formal oracle の宣言集合・citation 集合・
-`OracleCitationSite` へ混ぜない。候補 label が所有証拠になるのは、この gate に限り、`docs/test-design/`
-内の canonical な候補宣言表で ID 専用セル全体が候補 ID と完全一致し、対象 file の同じ候補 ID を持つ
-static test label citation が対応する場合だけである。候補宣言も formal 宣言と同じ canonical table row/cell
-境界で認定し、本文の記述、ID 範囲、再引用、他セルへの埋め込み、部分文字列一致は宣言に数えない。
-候補専用 collection は候補 ID を formal declaration sites に混ぜない。宣言元文書 path と static citation の
-test file path を対応付け、test file path を `tracedPaths` に加える。候補専用経路では、
-既存の `describe` / `it` / `test` static-label surface と §2 の chained/modifier label の lexical boundary を使い、
-さらに Red の `it.fails("...")` / `test.fails("...")` の静的 label も所有証拠として認める。この追加は候補専用で、
-既存 formal collector の結果を変えず、候補の形式的な昇格・実装完了も意味しない。
-dynamic label、fixture/body、comment は候補の所有証拠にならない。formal collector の結果と §2〜§5 の規則は
-変えず、L7 宣言に test path 文字列を重ねて要求しない。
+`src/lint/artifact-ownership.ts` (`analyzeArtifactOwnership`、finding `duplicate-artifact-ownership`) も同時に退役する。
+検出するのは PLAN `generates` の重複だけで、PLAN を撤去すると意味を失うためである。実測 (`git grep -n
+"artifact-ownership\|analyzeArtifactOwnership" -- src scripts .github tests`) で参照元は次の 3 つだけで、
+他の live consumer は無い。
 
-この OR により、新規 test file は PLAN 所有または test-design 所有のどちらかで trace できる。既存の
-test artifact 集合、`scripts/` / `.claude/` の扱い、ledger による既存 debt ratchet は本節の対象外であり、
-別 Issue #1088 が scripts/.claude の ownership を扱う。expired `promote_by` の ledger 行は本節で変更せず、
-別 Issue #1089 の対象とする。ledger の新規 debt 追加・期限延長・期限到来による自動昇格は行わず、既存 debt
-は縮小のみを許す。
+- `src/lint/deliverable-plan-trace.ts` (本 gate。import と呼び出し)
+- `src/trace/generate-deliverable-trace-debt-audit.ts` (どの script / test / CI からも呼ばれない生成スクリプト)
+- `tests/artifact-ownership.test.ts` (`artifact-ownership.ts` 自身の単体テスト)
 
-既存 L6 `design-protection-diff-gate.md` §10.3 が開発 repo を読む新 test file に要求する
-PLAN-L6-834 `generates` 登録は、その test file の deliverable owner 条件に限り、本節の test-design trace
-でも満たせる。これは未実装目標契約であり、現在の `deliverable-plan-trace` checker はなお PLAN owner に依存する。
-§10.3 の `repositoryReadContracts` 登録責務と登録 + Red → 昇格 → Green の順序は変えず、PLAN-L6-834 を含む
-他の PLAN 要件も変更しない。
+`scripts/` と `.github/` には参照が無い。
 
-### 6.2 所有者 provenance と重複判定
+### 6.3 退役させる規則と撤回するもの
 
-test-design 宣言元 path は引用元 provenance として保持する。test-design 由来の所有証拠は
-`tracedPaths` だけに加え、`ownersByPath` は従来どおり PLAN `generates` の owner ID だけを保持する。
-`duplicate-artifact-ownership` の入力と判定、baseline の適用は変更せず、PLAN `generates` 同士の既存重複だけを
-同じ規則で検出する。複数の test-design 文書が同じ test file を引用することは正当な trace であり、
-重複所有ではない。同じ formal ID の宣言重複は既存 `oracle-test-trace` の責務である。
+- 旧 §6 (Issue #958) の test-design 所有証拠規則 (実装済み) と、`docs/test-design/harness/L7-deliverable-plan-trace-test-design.md`
+  の正式 oracle `U-DPTOWN-001`〜`U-DPTOWN-009` (通常テストで検証済み) を、**gate とともに退役させる**。未実装 draft の
+  撤回ではなく、実装済みの規則と正式 oracle の退役として扱う。
+- 所有の代替となる gate、台帳、検査は**設けない**。成果物の所有を機械で決める仕組みは、退役後は存在しない。
+- `src/lint/deliverable-plan-trace.ts:92` の相対 root の不具合は**修正しない**。gate とともに消える。doctor は絶対 root を
+  渡すため、退役前の実害も無い。
 
-PLAN owner と test-design owner を同じ `ownersByPath` に union する案は採らない。origin/main `8d0d1bac`
-の実 repo を既存 formal collectors で照合したとき、宣言 citation を持つ test file 186 件中 183 件は既に
-PLAN owner を持っていた。この owner path を同じ vector に加えると、既存 duplicate analyzer をそのまま使っても
-ledger 外の `duplicate-artifact-ownership` が 140 件増える。これは2種の独立した代替 trace を誤って重複所有と
-扱うためであり、test-design path は `tracedPaths` のみへ反映し、PLAN 重複の入力・結果を不変にする。
+### 6.4 退役後の不変条件
 
-### 6.3 工程
+- `oracle-test-trace` の契約 (§2〜§5) と実装は変えない。
+- 新しい gate、finding、台帳を足さない。
+- 残存参照の検査は、退役した識別子 (`deliverable-plan-trace`、`duplicate-artifact-ownership`、`artifact-ownership`、
+  `deliverable-trace-debt-audit`) が `docs/governance/candidates/**`、`docs/archive/**`、`.ut-tdd/**`、`docs/plans/**`
+  以外に残らないことを確かめる。除外する 4 つは履歴・候補・実行時状態・退役対象の PLAN であり、退役の対象外である。
+  退役の記録として、本節自身と `design-protection-diff-gate.md` の退役注記が識別子を名指しする分は残存に数えない。
 
-pair の次は contract → Red → Green → Refactor の順とする。Red は専用 L7 test-design の候補だけを引用し、
-正式 oracle への昇格は別の後続工程とする。`it.fails` の Red 登録を formal oracle citation と見なさない。
+### 6.5 工程 (2 PR)
+
+legacy migration の退役 (#1256 / #1257) と同じ 2 PR で進める。design-protection gate の制約上、設計の PR と
+`src/` を含む PR は分ける。
+
+1. **PR-1 (非実装: `docs/test-design/` と `tests/` のみ)**:
+   `docs/test-design/harness/L7-deliverable-plan-trace-test-design.md` の `U-DPTOWN-001`〜`U-DPTOWN-009` 宣言を撤去し、
+   同時に `tests/deliverable-plan-trace.test.ts` の同 ID ラベルを外す。テスト本体は残す。
+   `L7-deliverable-plan-trace-test-design.md` は削除せず、宣言表を退役の注記 (本節 §6.3 への参照) に置き換えて退役記録として残す
+   (PR-2 は `src/` を含むため design-protection gate により test-design を変更・削除できず、文書を消すなら PR-1 しかない。
+   §6.3 が本文書を参照するため記録として残す)。宣言と引用を同じ PR で
+   外すのは、`oracle-test-trace` が未引用の宣言と未宣言の引用をそれぞれ違反にするためである。
+2. **PR-2 (実装)**:
+   - テストを削除する: `tests/deliverable-plan-trace.test.ts`、`tests/artifact-ownership.test.ts`、
+     `tests/doctor.test.ts` の roster / fail-closed 表の該当エントリ (`checkDeliverablePlanTrace` の import、
+     fail-closed 表の行、output ID 一覧の `"deliverable-plan-trace"`)。
+   - §6.1 と §6.2 の src、doctor 配線、台帳、生成スクリプトを削除する。
+   - `docs/governance/oracle-test-trace-baseline.json` の **`citations`** 一覧から、最後の引用テストが消える
+     `U-L7-450-W2-003` / `U-L7-450-W2-004` / `U-L7-450-W3-001` / `U-L7-450-W3-002` / `U-L7-450-W4-001` を外す。
+     5 件は test-design に宣言が無く、`tests/deliverable-plan-trace.test.ts` だけが引用している
+     (`git grep -n "<ID>" -- src tests docs/test-design` で各 1 件を実測)。5 件は baseline の `legacy` / `widened` には無く
+     `citations` にだけある (baseline JSON を解析して各 ID で確認)。`citations` に残したままテストを消すと、
+     `src/lint/oracle-test-trace.ts` の `analyzeCitationTrace` が stale citation baseline として違反にする。
+     他の ID は、まだ別のテストが引用している場合があるため触れない。
+   - prose を掃除する: `AGENTS.md`、`.claude/CLAUDE.md`、`skills/gate-planning.md` の `deliverable-plan-trace` /
+     `duplicate-artifact-ownership` / `orphan-deliverable` への言及。
+   - PLAN-L7-450 の `generates` から退役した成果物の行を外す。これは PLAN 凍結 (`CLAUDE.md` §PLAN Filing Rules)
+     の例外 (撤去作業そのものに必要な場合) に当たるので、PR 本文に根拠を書く。
+   - `tests/doctor.test.ts` の `test-repository-isolation` の mode_calls が変わらないかを、削除後に確認する。
+3. PR-2 の後に、§6.4 の残存参照検査を `git grep` で確かめる。
 
 ## 7. Forward / reverse citation baseline の正本と縮小専用 ratchet（Issue #1099 草案）
 
 > **状態**: Issue #1099 の契約 draft。専用の supplemental 候補設計は
 > `docs/test-design/harness/L7-oracle-test-trace-baseline-test-design.md` に置く。
-> 既存 §2〜§5 の reverse test-label citation、§6 の deliverable ownership、または
+> 既存 §2〜§5 の reverse test-label citation、または
 > `docs/test-design/harness/L7-unit-test-design.md` の共通 index を置き換えない。本節と専用 L7 は本文で相互参照し、
 > 新たな V-model pair_artifact を宣言しない。
 
