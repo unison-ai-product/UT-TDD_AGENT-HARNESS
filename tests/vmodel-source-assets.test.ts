@@ -1,4 +1,11 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -12,11 +19,71 @@ function read(relativePath: string): string {
 }
 
 function collectCandidateIds(text: string): string[] {
-  return [...text.matchAll(/`(CANDIDATE-[A-Z0-9-]+-[0-9]{3})`/g)].map((match) => match[1]);
+  const candidateIds: string[] = [];
+  let fence: { marker: "`" | "~"; length: number } | null = null;
+
+  const declaredCandidateId = (source: string, surface: "heading" | "table"): string | null => {
+    const match = /^(`?)(CANDIDATE-[A-Z0-9]+(?:-[A-Z0-9]+)*-[0-9]{3})\1/.exec(source);
+    if (!match) return null;
+
+    const remainder = source.slice(match[0].length);
+    if (/^\s*(?:\.\.|\/|,|、)\s*CANDIDATE-/.test(remainder)) return null;
+    if (surface === "heading") {
+      return remainder.length === 0 || /^\s/.test(remainder) ? match[2] : null;
+    }
+
+    if (remainder.length === 0 || /^\s*$/.test(remainder)) return match[2];
+    return /^\s*(?:\([^)]*\)|（[^）]*）|—.*)$/.test(remainder) ? match[2] : null;
+  };
+
+  for (const line of text.split(/\r?\n/)) {
+    const fenceMarker = /^\s{0,3}(`{3,}|~{3,})/.exec(line)?.[1];
+    if (fenceMarker) {
+      const marker = fenceMarker[0] as "`" | "~";
+      const closingFence = /^\s{0,3}(`{3,}|~{3,})\s*$/.exec(line)?.[1];
+      if (!fence) fence = { marker, length: fenceMarker.length };
+      else if (
+        closingFence &&
+        fence.marker === closingFence[0] &&
+        closingFence.length >= fence.length
+      ) {
+        fence = null;
+      }
+      continue;
+    }
+    if (fence) continue;
+
+    const heading = /^\s{0,3}#{1,6}\s+(.+?)\s*#*\s*$/.exec(line);
+    if (heading) {
+      const id = declaredCandidateId(heading[1], "heading");
+      if (id) candidateIds.push(id);
+      continue;
+    }
+
+    if (!/^\s*\|/.test(line)) continue;
+    const firstCell = line.replace(/^\s*\|/, "").split("|")[0]?.trim();
+    if (!firstCell || /^:?-{3,}:?$/.test(firstCell)) continue;
+    const id = declaredCandidateId(firstCell, "table");
+    if (id) candidateIds.push(id);
+  }
+
+  return candidateIds;
 }
 
 function readCandidateDocuments(root: string): [string, ...string[]] {
-  return [readFileSync(resolve(root, "docs/test-design/harness/L7-unit-test-design.md"), "utf8")];
+  const harnessDir = resolve(root, "docs/test-design/harness");
+  const indexName = "L7-unit-test-design.md";
+  const entries = readdirSync(harnessDir, { withFileTypes: true });
+  const indexEntry = entries.find((entry) => entry.isFile() && entry.name === indexName);
+  if (!indexEntry) throw new Error(`Missing regular index document: ${indexName}`);
+  const documentNames = entries
+    .filter((entry) => entry.isFile() && /^L7-.*\.md$/.test(entry.name) && entry.name !== indexName)
+    .map((entry) => entry.name)
+    .sort();
+  return [
+    readFileSync(resolve(harnessDir, indexName), "utf8"),
+    ...documentNames.map((name) => readFileSync(resolve(harnessDir, name), "utf8")),
+  ];
 }
 
 function withCandidateDocuments(
@@ -320,7 +387,7 @@ describe("checked Vモデル source assets", () => {
     );
   });
 
-  it.fails("U-DOCSPLIT-026: repeated citations are not candidate declarations", () => {
+  it("U-DOCSPLIT-026: repeated citations are not candidate declarations", () => {
     const id = "CANDIDATE-U-DOCSPLIT-900";
     const markdown = candidateIndex([
       `| \`${id}\` | declared once |`,
@@ -357,8 +424,7 @@ describe("checked Vモデル source assets", () => {
             );
           },
         );
-      if (marker === "quoted") it(title, check);
-      else it.fails(title, check);
+      it(title, check);
     }
   }
 
@@ -375,11 +441,10 @@ describe("checked Vモデル source assets", () => {
           );
         },
       );
-    if (marker === "quoted") it(title, check);
-    else it.fails(title, check);
+    it(title, check);
   }
 
-  it.fails("U-DOCSPLIT-026: adjacent direct-child L7 files are read", () => {
+  it("U-DOCSPLIT-026: adjacent direct-child L7 files are read", () => {
     const splitCandidate = "CANDIDATE-U-DOCSPLIT-900";
     const index = candidateIndex();
     const splitDoc = [
@@ -431,11 +496,7 @@ describe("checked Vモデル source assets", () => {
               expectedCandidateIds(id, id),
             );
           });
-        if (placement === "same-file" && firstMarker === "quoted" && secondMarker === "quoted") {
-          it(title, check);
-        } else {
-          it.fails(title, check);
-        }
+        it(title, check);
       }
     }
   }
@@ -460,11 +521,7 @@ describe("checked Vモデル source assets", () => {
               expectedCandidateIds(id, id),
             );
           });
-        if (placement === "same-file" && firstMarker === "quoted" && secondMarker === "quoted") {
-          it(title, check);
-        } else {
-          it.fails(title, check);
-        }
+        it(title, check);
       }
     }
   }
@@ -509,7 +566,7 @@ describe("checked Vモデル source assets", () => {
           );
         },
       );
-    it.fails(title, check);
+    it(title, check);
   }
 
   for (const kind of ["range", "enumeration"] as const) {
@@ -533,8 +590,7 @@ describe("checked Vモデル source assets", () => {
               );
             },
           );
-        if (marker === "quoted") it.fails(title, check);
-        else it(title, check);
+        it(title, check);
       }
     }
   }
