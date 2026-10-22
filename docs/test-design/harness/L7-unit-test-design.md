@@ -2209,7 +2209,7 @@ cross-provider比較除去、E9/E11いずれかのgate除去を全てkillする�
 | `U-HOOKEXEC-006` | setup / Pack parity | source、built-in、docs template、fresh consumer materialization の executable+argv が一致する。 |
 | `U-HOOKEXEC-007` | doctor fail-close | shell-form command、argv 欠落/追加/並替え、command spoofing、argv の shell operator を個別に検出する。 |
 | `U-HOOKEXEC-008` | Windows native smoke | project-local Node wrapper (`.ut-tdd/bin/ut-tdd.mjs`) が `spawnSync(process.execPath, ...)` の直接 executable spawn と `windowsHide: true` を使い、shell host token (`sh.exe` / `bash.exe` / `cmd.exe` / `powershell.exe` / `pwsh.exe` / dispatch 用 `conhost.exe`) を含まない。process-tree ancestry の実測はこの oracle の主張に含めない。entrypoint 欠落時は exit 127 で fail-close し、hook outcome は既存契約どおりである。 |
-| `U-HOOKEXEC-009` | Node TypeScript launcher floor | `package.json#engines.node` は無フラグ TypeScript execution が有効な `>=22.18` を要求し、22.6〜22.17を対応済みと宣言しない。 |
+| `U-HOOKEXEC-009` | Node TypeScript launcher floor | 無フラグ TypeScript execution の下限は Node 22.18 であり、`package.json#engines.node` はこの下限を満たす範囲（下限が 22.18 以上）でなければならない。22.6〜22.17を対応済みと宣言しない。`engines.node` の実際の範囲は `>=24.22.1 <25` で、22 系を対応範囲に含めない（`internal-processing.md` §Node toolchain authority、Issue #1255）。 |
 | `U-HOOKEXEC-010` | Windows custody debt boundary | **退役 (PLAN 機構撤去 = #1168 A4 / #1078)**: hook PLAN の Windows debt 注記 (Issue #134 / Windows Job Object / 未解消境界) を読んで照合する検査は要求から外す。既存の非 PLAN 設計文書に同 debt 事実の記述は無いため、移管先は設けない。維持するのは U-HOOKEXEC-001..009 の launcher argv / Node floor / native spawn (`windowsHide: true`) の製品回帰。 |
 
 実行対応は `tests/hook-native-launcher.test.ts`、`tests/project-hook.test.ts`、
