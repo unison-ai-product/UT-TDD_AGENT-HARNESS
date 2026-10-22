@@ -8,7 +8,7 @@ import { REVIEWED_REKEY_DECISIONS } from "../../src/plan-asset/application/legac
 import { headPlanDocCount } from "./head-plan-doc-count.ts";
 
 describe("legacy PLAN HEAD inventory", () => {
-  it("U-PA-019: inventories every HEAD PLAN losslessly with unique asset identities", () => {
+  it("inventories every HEAD PLAN losslessly with unique asset identities", () => {
     const result = buildLegacyPlanInventory(process.cwd());
     expect(result.ok).toBe(true);
     if (!result.ok) return;
@@ -34,7 +34,7 @@ describe("legacy PLAN HEAD inventory", () => {
     ).toBe(true);
   });
 
-  it("U-PA-020: materializes all current numeric-core collisions without auto-selection", () => {
+  it("materializes all current numeric-core collisions without auto-selection", () => {
     const result = buildLegacyPlanInventory(process.cwd());
     if (!result.ok) throw new Error(result.error.ruleId);
     const reviewedGroups = new Map<string, string[]>();
@@ -47,7 +47,7 @@ describe("legacy PLAN HEAD inventory", () => {
     expect(result.value.collisionGroups.every((group) => group.planIds.length > 1)).toBe(true);
   });
 
-  it("U-PA-021: produces a deterministic inventory digest from the same HEAD", () => {
+  it("produces a deterministic inventory digest from the same HEAD", () => {
     const first = buildLegacyPlanInventory(process.cwd());
     const second = buildLegacyPlanInventory(process.cwd());
     expect(second).toEqual(first);

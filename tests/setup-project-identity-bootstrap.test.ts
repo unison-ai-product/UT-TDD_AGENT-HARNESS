@@ -31,7 +31,7 @@ const expectedCandidateIds = new Set([
   ...Array.from(
     { length: 41 },
     (_, index) => `CANDIDATE-U-PROJID-${String(index + 1).padStart(3, "0")}`,
-  ),
+  ).filter((_, index) => index + 1 !== 37),
   "CANDIDATE-P-PROJID-001",
   "CANDIDATE-P-PROJID-002",
   "CANDIDATE-P-PROJID-003",
@@ -582,7 +582,7 @@ describe("project identity bootstrap", () => {
     expect(() => runner.deps.repositoryIdentity()).toThrow("identity_repository_unbound");
   });
 
-  it("CANDIDATE-U-PROJID-037: legacy inventory direct caller denies stale identity", () => {
+  it("legacy inventory direct caller denies stale identity", () => {
     const root = trackedFixture("other/repo", "git@github.com:acme/widget.git");
     expect(buildLegacyPlanInventory(root)).toMatchObject({
       ok: false,
