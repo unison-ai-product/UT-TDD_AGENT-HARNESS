@@ -96,9 +96,9 @@ function withProtectionStep(content: string): string {
     const existing = steps.filter((step) => step.run?.includes("github design-protection"));
     if (existing.length > 1) throw new Error("fixture contains duplicate design-protection steps");
     if (existing.length === 1) return;
-    const admissionIndex = steps.findIndex((step) => step.run?.includes("plan admission-check"));
-    if (admissionIndex < 0) throw new Error("fixture is missing the admission step");
-    steps.splice(admissionIndex + 1, 0, designStep() as WorkflowStep);
+    const branchGuardIndex = steps.findIndex((step) => step.name?.startsWith("branch-type guard"));
+    if (branchGuardIndex < 0) throw new Error("fixture is missing the branch-type guard step");
+    steps.splice(branchGuardIndex + 1, 0, designStep() as WorkflowStep);
   });
 }
 
@@ -218,13 +218,13 @@ describe("design-protection L7 candidate Red (PR #981)", () => {
         }),
       ],
       [
-        "before admission",
+        "before branch-type guard",
         mutateWorkflow(proposed, (workflow) => {
           const steps = workflow.jobs["harness-check-linux"].steps;
           const index = steps.findIndex((step) => step.run?.includes("github design-protection"));
           const [step] = steps.splice(index, 1);
-          const admission = steps.findIndex((item) => item.run?.includes("plan admission-check"));
-          steps.splice(admission, 0, step);
+          const branchGuard = steps.findIndex((item) => item.name?.startsWith("branch-type guard"));
+          steps.splice(branchGuard, 0, step);
         }),
       ],
       [
