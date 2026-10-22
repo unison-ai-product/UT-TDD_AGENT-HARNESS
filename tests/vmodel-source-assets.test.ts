@@ -23,12 +23,12 @@ function collectCandidateIds(text: string): string[] {
   let fence: { marker: "`" | "~"; length: number } | null = null;
 
   const declaredCandidateId = (source: string, surface: "heading" | "table"): string | null => {
-    const match = /^(`?)(CANDIDATE-[A-Z0-9]+(?:-[A-Z0-9]+)*-[0-9]{3})\1/.exec(source);
+    const match = /^(`?)(CANDIDATE-[A-Z0-9-]+-[0-9]{3})\1/.exec(source);
     if (!match) return null;
 
     const remainder = source.slice(match[0].length);
     if (
-      /^\s*(?:\.\.|\/|,|、|〜|～)\s*`?(?:CANDIDATE-[A-Z0-9]+(?:-[A-Z0-9]+)*-)?[0-9]{3}`?(?=$|[^A-Z0-9])/.test(
+      /^\s*(?:\.\.|\/|,|、|〜|～)\s*`?(?:CANDIDATE-[A-Z0-9-]+-)?[0-9]{3}`?(?=$|[^A-Z0-9])/.test(
         remainder,
       )
     ) {
