@@ -13,7 +13,7 @@ export interface RepositoryReadContract {
 
 const CONTRACT_ROWS = `
 agent-guard-delegation-boundary:1
-asset-catalog:3 asset-drift:1 backfill-pairing:2 cited-command-existence:1 cli-surface:2 cli:1
+asset-catalog:3 asset-drift:1 backfill-pairing:2 cited-command-existence:1 cli-surface:1 cli:1
 advisory-strict-gate-aging:4
 codex-hook-adapter:5 coding-rules:1 context-doc-router:2 cycle-p4-verification:3 db-currency:1 db-projection-coverage:1 db-projection-ingestion:3
 dependency-drift:4 descent-obligation:3 distribution-acceptance:1 distribution-scratch-ignore:1 doctor-runtime-surface:2 doctor:25
@@ -41,7 +41,7 @@ global-setup.ts:1 support/workspace-roots.ts:3
 global-setup-fence:1 vitest-snapshot-runner:3
 hook-native-launcher:1 claude-memory-terminal-gc:1 release-version-identity:2 windows-ci-single-snapshot:2 pack-authoring-template-scope:2
 profile/tracked-loader:2
-plan-asset/ledger-schema:4 plan-asset/legacy-inventory:5 plan-asset/legacy-migration-dry-run:13 plan-asset/project-identity-loader:1
+plan-asset/ledger-schema:4 plan-asset/project-identity-loader:1
 disposition/git-authoring-provenance:3 disposition/projection:6 disposition/tracked-target-registry:2
   forward-escape-issue-contract:2
   pack-consumer-runtime-release:4 release-consumer-vmodel-template:1
