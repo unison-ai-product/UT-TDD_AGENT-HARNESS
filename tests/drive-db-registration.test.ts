@@ -46,6 +46,63 @@ describe("drive DB registration lint", () => {
     expect(driveDbRegistrationMessages(r)[0]).toContain("legacy_hook_orphans=99");
   });
 
+  // Regression for docs/design/harness/L6-function-design/function-spec.md Appendix D §D.4.
+  it("accepts a planless registry while retaining DB and mode-catalog failures", () => {
+    const empty: DriveDbRegistrationStats = {
+      planCount: 0,
+      expectedPlanCount: 0,
+      planRegistryFingerprint: "sha256:empty",
+      expectedPlanRegistryFingerprint: "sha256:empty",
+      driveRuns: 0,
+      plansWithoutDriveRun: 0,
+      workflowRuns: 0,
+      workflowOrphans: 0,
+      modelRuns: 0,
+      modelOrphans: 0,
+      skillRecommendations: 0,
+      skillRecommendationOrphans: 0,
+      skillInvocations: 0,
+      skillInvocationOrphans: 0,
+      registeredHookEvents: 0,
+      hookOrphans: 0,
+      modes: [],
+      expectedModes: [],
+      unmappedCatalogDocs: [],
+    };
+
+    const allZero = analyzeDriveDbRegistration(empty);
+    expect(allZero.ok).toBe(true);
+    expect(allZero.violations).toEqual([]);
+    expect(driveDbRegistrationMessages(allZero)[0]).toContain("plans=0");
+
+    const planlessLegacy = analyzeDriveDbRegistration({
+      ...empty,
+      expectedPlanCount: 1,
+      planRegistryFingerprint: "sha256:stale",
+      expectedPlanRegistryFingerprint: "sha256:current",
+      workflowOrphans: 1,
+      modelOrphans: 1,
+      skillRecommendationOrphans: 1,
+      skillInvocationOrphans: 1,
+      expectedModes: undefined,
+    });
+    expect(planlessLegacy.ok).toBe(true);
+    expect(planlessLegacy.violations).toEqual([]);
+
+    const unmapped = analyzeDriveDbRegistration({
+      ...empty,
+      unmappedCatalogDocs: ["new-mode.md"],
+    });
+    expect(unmapped.ok).toBe(false);
+    expect(unmapped.violations).toEqual([
+      { reason: "mode_catalog_unmapped", mode: "new-mode.md" },
+    ]);
+
+    const missingDb = analyzeDriveDbRegistration(null);
+    expect(missingDb.ok).toBe(false);
+    expect(missingDb.violations).toEqual([{ reason: "missing_db" }]);
+  });
+
   it("U-DDBREG-002: fails when current drive execution projection is missing or orphaned", () => {
     const r = analyzeDriveDbRegistration({
       ...compliant,
