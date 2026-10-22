@@ -138,7 +138,7 @@ describe("PLAN-L7-450 W4/W3 deliverable trace", () => {
 });
 
 describe("Issue #958 test-design owner candidates", () => {
-  it("U-DPTOWN-001: PLAN generates remains a valid owner", () => {
+  it("PLAN generates remains a valid owner", () => {
     const root = createTraceFixture();
     try {
       const target = "tests/new.test.ts";
@@ -166,7 +166,7 @@ describe("Issue #958 test-design owner candidates", () => {
     }
   });
 
-  describe("U-DPTOWN-002: formal declaration and static citation own a test", () => {
+  describe("formal declaration and static citation own a test", () => {
     let root: string;
     let input: ReturnType<typeof loadDeliverablePlanTraceInput>;
     let declarations: ReturnType<typeof collectOracleDeclarationSites>;
@@ -200,12 +200,12 @@ describe("Issue #958 test-design owner candidates", () => {
       );
     });
 
-    it("U-DPTOWN-002: formal oracle trace supplies test ownership", () => {
+    it("formal oracle trace supplies test ownership", () => {
       expect(input.tracedPaths.has(target)).toBe(true);
     });
   });
 
-  describe("U-DPTOWN-003: candidate it.fails citation owns the probe test", () => {
+  describe("candidate it.fails citation owns the probe test", () => {
     let root: string;
     let input: ReturnType<typeof loadDeliverablePlanTraceInput>;
     let declarations: ReturnType<typeof collectOracleDeclarationSites>;
@@ -239,12 +239,12 @@ describe("Issue #958 test-design owner candidates", () => {
       expect(citations.some((site) => site.id === candidateId)).toBe(false);
     });
 
-    it("U-DPTOWN-003: candidate it.fails trace owns its test file", () => {
+    it("candidate it.fails trace owns its test file", () => {
       expect(input.tracedPaths.has(target)).toBe(true);
     });
   });
 
-  it("U-DPTOWN-004: undeclared candidate and formal IDs do not supply ownership", () => {
+  it("undeclared candidate and formal IDs do not supply ownership", () => {
     const candidateRoot = createTraceFixture();
     const formalRoot = createTraceFixture();
     try {
@@ -282,7 +282,7 @@ describe("Issue #958 test-design owner candidates", () => {
     }
   });
 
-  it("U-DPTOWN-005: body, comment, and dynamic labels are not candidate citations", () => {
+  it("body, comment, and dynamic labels are not candidate citations", () => {
     const root = createTraceFixture();
     try {
       const candidateId = "CANDIDATE-U-ZZPROBE-905";
@@ -327,7 +327,7 @@ describe("Issue #958 test-design owner candidates", () => {
     }
   });
 
-  it("U-DPTOWN-006: test-design trace does not join PLAN duplicate owners", () => {
+  it("test-design trace does not join PLAN duplicate owners", () => {
     const root = createTraceFixture();
     try {
       const target = "tests/plan-and-formal-owner.test.ts";
@@ -363,7 +363,7 @@ describe("Issue #958 test-design owner candidates", () => {
     }
   });
 
-  it("U-DPTOWN-007: tests helper files outside .test.ts are not deliverable artifacts", () => {
+  it("tests helper files outside .test.ts are not deliverable artifacts", () => {
     const root = createTraceFixture();
     try {
       const target = "tests/helper.ts";
@@ -387,7 +387,7 @@ describe("Issue #958 test-design owner candidates", () => {
     }
   });
 
-  it("U-DPTOWN-008: candidate owner scope does not expand to scripts or .claude", () => {
+  it("candidate owner scope does not expand to scripts or .claude", () => {
     const root = createTraceFixture();
     try {
       const scriptPath = "scripts/candidate-probe.ts";
@@ -412,7 +412,7 @@ describe("Issue #958 test-design owner candidates", () => {
     }
   });
 
-  it("U-DPTOWN-009: prose-only and other-cell candidate references do not declare", () => {
+  it("prose-only and other-cell candidate references do not declare", () => {
     const proseRoot = createTraceFixture();
     const partialRoot = createTraceFixture();
     try {
