@@ -292,6 +292,8 @@ calls.
 
 ## PLAN Rules
 
+PLAN 凍結 (新規起票・改訂・参照追加の停止、#1166) の規律は `CLAUDE.md` §PLAN Filing Rules (PLAN 凍結) を正本とする。
+
 These filing rules previously existed only in `.claude/CLAUDE.md`, so this
 runtime never received them (measured 2026-07-28: `route_signal` / `generates` /
 `plan_id` appeared 0 times in this file). They are shared workflow, not

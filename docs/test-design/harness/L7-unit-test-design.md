@@ -142,12 +142,12 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 | U-HOVER-002 | `buildPointer` | **純関数**。`digest_summary` = 対象 digest の commits/files/failures **件数**集計 / **`digests` 非空なら active_plan の null/非 null に関わらず集計 / `digests` 空のときのみ `digest_summary=null`** / `active_plan` は scope 値を透過 (null 可) / `updated_at=now`。**edge: `active_plan=null` だが `digests` 非空 → digest_summary は集計値 (null にしない)** |
 | U-HOVER-005 | `handoverStale` | **純関数**。`updated_at=null`/parse 不能 → true / 24h 超 → true / 24h 以内 → false / **境界 (now-updated_at=24h ちょうど) は stale でない (`>` 判定)** / **具体 oracle: `now`/`updated_at` を UTC ISO8601 で与え `Date.parse` 数値差分で判定 (辞書順比較でない)** |
 | U-HOVER-006 | `setActivePlan` + `inferPlanFromCommit` | `setActivePlan` が `.ut-tdd/state/current-plan` を書き `resolveActivePlan` が同値を読む (**round-trip**) / **`null`+`removeFile` 有 → file 削除で clear / `null`+`removeFile` 無 → 空文字書込 → `resolveActivePlan` が空文字を null 相当に落とす (両 clear 経路を検証)** / `inferPlanFromCommit`: `PLAN-L6-06-...` 抽出 / 非該当文字列 → null / **`-F -` heredoc 様 (本文に PLAN 文字列なし) → null** |
-| U-HOVER-007 | `runHandover` (orchestration) | **`dryRun=true` → md/CURRENT.json を書かず `content` を返す (`written=[]`、非破壊)** / 通常 → md **追記** (既存上書きしない) + CURRENT.json 更新 / **`complete=true` → CURRENT.json の `status==="completed"` かつ `active_plan === (args.planId ?? scope.active_plan)`** |
+| U-HOVER-007 | `runHandover` (orchestration) | **`dryRun=true` → 何も書かない (`written=[]`、非破壊)** / 通常 → CURRENT.json 更新 (md の追記・`content` の返却は §5.1 で撤去。散文を作らない契約は U-STCHAN-019 が持つ) / **`complete=true` → CURRENT.json の `status==="completed"` かつ `active_plan === (args.planId ?? scope.active_plan)`** |
 | U-HOVER-008 | `sameFamilyPlan` / `dedupeDigests` (IMP-048) | `sameFamilyPlan`: 同一 id → true / bare ⊂ slug (`-` 境界付き prefix) → true / `bare が slug の prefix だが `-` 境界でない (例: `PLAN-L7-0` vs `PLAN-L7-04`) → false (誤マッチ防止)` / 無関係 → false / **対称 (a,b)=(b,a)**。`dedupeDigests`: 同 family の bare/slug ゴーストを **最長 id** へ union 集約 (commits/files_touched/sessions の union、files_touched は重複除去) / 無関係 PLAN は別 group のまま残す / **推移的マージ: bare 無しで slug 2 種 + bare が後着でも全部 1 group へ収束 (順序非依存)** |
 | U-HOVER-009 | `resolveHandoverScope` scopeToActive (IMP-048) | 既定 (option 無し): `dedupeDigests` のみ → bare/slug は 1 件に畳まれ別 PLAN は残る (digest 数 = family 数 + 無関係 PLAN 数) / `scopeToActive: true`: **active family の digest のみへ絞る** / **scopeToActive だが active family が digest に無い → 全件 fallback (空 handover 回避)** |
 | U-HOVER-010 | `readPointer` / `checkHandoverDiscipline` (IMP-047) | `readPointer`: 不在 → null / 壊れ JSON → null / 正常 → object。`checkHandoverDiscipline`: **活動なし (digest 空) → 警告ゼロ (規律対象外)** / 活動あり + CURRENT.json 不在 → `"handover 未生成"` warn / 活動あり + fresh pointer (同 family) → 警告ゼロ / 活動あり + stale pointer → `"stale"` を含む warn / 活動あり + pointer が別 plan → `"drift"` を含む warn / **活動あり + fresh pointer だが `active_plan=null` (完了済正常形) → drift 無音 (I-2: null は family 比較から除外)** |
 | U-HOVER-011 | `checkHandoverBypass` の署名照合 (IMP-078 gap①、state-channel-consolidation §5.2) | pointer 不在 → 警告ゼロ (discipline 担当) / `generated_by` 欠落 (手書き pointer) → `"bypass"` warn / `generated_by` 一致 + `latest_doc` なしの pointer → 警告ゼロ。md 照合 (`latest_doc` の `# Session Handover` 数 > `doc_entry_count` → `"mismatch"` warn) と `countHandoverEntries` は §5.1 の撤去対象 (`latest_doc` / `doc_entry_count` の廃止に伴い oracle から外す。旧 pointer の残骸が md を持っていても警告しない契約は U-STCHAN-021 が持つ) |
-| U-HOVER-012 | `resolveHandoverScope` scopeToSession / `latestSessionId` (IMP-078 gap④) | `scopeToSession`: 指定 session が触れた digest のみへ絞る / 該当無し → 全件 fallback (空 handover 回避)。`latestSessionId`: session jsonl 群から最新 event ts の session_id を返す / 不在 → null / 壊れ行 skip。**runHandover の readPlanMeta family 解決 (gap⑤): bare plan_id digest でも slug PLAN file を解決し kind を埋める (unknown 防止)** |
+| U-HOVER-012 | `resolveHandoverScope` scopeToSession / `latestSessionId` (IMP-078 gap④) | `scopeToSession`: 指定 session が触れた digest のみへ絞る / 該当無し → 全件 fallback (空 handover 回避)。`latestSessionId`: session jsonl 群から最新 event ts の session_id を返す / 不在 → null / 壊れ行 skip。runHandover の readPlanMeta family 解決 (gap⑤) は、`readPlanMeta` が scaffold の §1 を描く専用部品で §5.1 の撤去対象のため oracle から外した |
 | U-HOVER-015 | `runHandover` marker reconcile (drift 恒久解消、PLAN-L7-83) | **`complete=true` → `current-plan` marker を clear** (`resolveActivePlan→null`) し `checkHandoverDiscipline` が drift を出さない / **`--plan X` の in_progress → marker = X へ同期** (override 由来 drift 解消) / **plain in_progress (`--plan` 無し) → marker 無変更** (無駄書き回避) / **`dryRun=true` → marker を書かない** (非破壊不変)。reconcile した marker path は `written` に計上 (透明性) |
 
 ### §1.8.1 U-MEMORY (共有 memory / PLAN-L7-189)
@@ -235,7 +235,7 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 | U-VTRIG-002 | `analyzeVerificationGroups` (frozen) | draft 0 + 孤児0 + confirmed≥1 → frozen=true / placeholder は park で発火を妨げない / draft 1+ → frozen=false |
 | U-VTRIG-003 | `analyzeVerificationGroups` (孤児) | 層群に pair 孤児 → frozen=false |
 | U-VTRIG-004 | `verificationGroupMessages` | frozen → `"freeze 完了"`+`"検証サイクル発火可"`+park 表示 / 未 → `"Forward 進行中"` |
-| U-VTRIG-005 | `loadPairDocs`+`analyzeVerificationGroups` (実 repo ガード) | L0-L3 frozen=true (A-100、L2 park) / L4-L6 frozen=false |
+| U-VTRIG-005 | `loadPairDocs`+`analyzeVerificationGroups` (実 repo ガード) | L0-L3 frozen=true (A-100、L2 park) / L4-L6 frozen=true (実 repo は draft 0 / pair 孤児 0 / confirmed ≥ 1。件数は固定しない。frozen は pair-doc の状態だけから導く)。PLAN 証跡 map は渡さない (pair-doc の状態のみで判定) |
 
 ### §1.15 U-REVIEW / U-XREVIEW / U-TORDER (review 前置の機械強制、IMP-071 + IMP-076 + IMP-077)
 
@@ -296,11 +296,16 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 
 ### §1.16.0b U-IPT (implementation-to-design source trace / PLAN-REVERSE-40)
 
-> ペア = `module-drift.md` §3.2 の `analyzeImplPlanTrace` addendum。PLAN と再帰的な設計文書本文から実装 path への trace を検証する。
+> ペア = `module-drift.md` §3.2 の `analyzeImplPlanTrace` addendum。再帰的な設計文書本文から src への所有 (module 単位、PLAN は入力にしない) を検証する。`CANDIDATE-U-IPT-007..011` は #1169 の契約改訂 (#1078 A5) の oracle で、Red で `it.fails` として入れ、Green で実装する。U-IPT-001..005 は `src/lint/oracle-test-citation-baseline.ts` の stale baseline が #1099 で解消するまで宣言しない。
 
 | U-ID | 対象関数 | DbC oracle |
 |---|---|---|
 | U-IPT-006 | `loadImplPlanTraceInput` + `analyzeImplPlanTrace` (recursive design-source trace) | 孤立 fixture に `src/runtime/windows-hide.ts` と `src/doctor/windows-hide.ts` の source files を置き、PLAN に path を含めず、深い階層の `docs/design/harness/L6-function-design/fixture.md` だけに両 path を記載する → 両 path が `tracedPaths` に含まれ、`orphans=[]` / `ok=true`。loader が再帰的な設計本文を読まないと path が欠落し、orphan が出て失敗する。 |
+| `CANDIDATE-U-IPT-007` | `loadImplPlanTraceInput` + `analyzeImplPlanTrace` (実 repo guard、module 単位) | 実 repo で、tracked の `.ts` を持つ `src/` 直下の全 module (測定時 40 件、origin/main `28ab6b138`) が、`docs/design/**/*.md` の本文で `src/<module>/` として名指しされている。`src/` 直下の単体ファイル (測定時は `cli.ts` / `secret.ts` / `stable-id.ts`) は path が完全一致で現れる。→ `orphans=[]`、baseline は空。mutation: architecture §3.1 の 1 module の行を消す、または実 repo に未名指しの `src/<new>/x.ts` を足す → その module の全ファイルが orphan になり失敗する。 |
+| `CANDIDATE-U-IPT-008` | `analyzeImplPlanTrace` (positive fixture: module 名指し) | 孤立 fixture に `src/foo/a.ts` と `src/foo/b.ts` を置き、PLAN は置かず、設計文書 1 本に `src/foo/` だけを書く (個別の file path は書かない) → 2 件とも所有され `orphans=[]` / `ok=true`。mutation: matcher を file path の完全一致に戻す → 2 件が orphan になり失敗する。`src/foo/*.ts` の glob 形でも同じ結果になること (先頭が `src/foo/` なので名指しに数える)。 |
+| `CANDIDATE-U-IPT-009` | `analyzeImplPlanTrace` (negative: 未名指し module) | 孤立 fixture に `src/foo/a.ts` と `src/bar/c.ts` を置き、設計文書は `src/foo/` だけを名指しする → `orphans=["src/bar/c.ts"]` / `ok=false`。`foo/src/bar/` のような別 path の一部は名指しに数えない (直前の文字の条件)。mutation: 名指し判定を常に真にする → orphan が出ず失敗する。 |
+| `CANDIDATE-U-IPT-010` | `loadImplPlanTraceInput` + `analyzeImplPlanTrace` (negative: PLAN は入力ではない) | 孤立 fixture に `src/bar/c.ts` を置き、`docs/plans/PLAN-X.md` の本文に `src/bar/` と `src/bar/c.ts` の両方を書き、設計文書には書かない → `orphans=["src/bar/c.ts"]` / `ok=false`。mutation: loader が `docs/plans/*.md` を読む → orphan が消え失敗する。 |
+| `CANDIDATE-U-IPT-011` | `analyzeImplPlanTrace` (top-level 単体ファイルは path 完全一致だけ) | 孤立 fixture に `src/cli.ts` と `src/secret.ts` を置き、設計文書に `src/cli.ts` だけを書く → `orphans=["src/secret.ts"]` / `ok=false`。`src/` 直下の単体ファイルは module 名指し (`src/<module>/`) では所有されない。mutation: 単体ファイルを module 規則で判定する (`src/` 直下を 1 module とみなす) → `src/secret.ts` が所有され失敗する。 |
 
 ### §1.16.1 U-CHGIMPACT (code change impact lint = コード変更時の設計・テスト更新漏れ検出)
 
@@ -334,7 +339,7 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 | U-RELGRAPH-003 | projection sanitization | MCP evidence, browser/tool fixtures, provider transcript-like fields, secret-like values, and screenshot/trace blobs are not copied into projection rows; only classification, counts, evidence path, and redacted summary remain. |
 | U-RELGRAPH-004 | `analyzeRelationImpact` source change | changed `src/**` node expands to sibling test, L6 design contract, L7 unit oracle, PLAN, and reverse/backprop guard actions. |
 | U-RELGRAPH-005 | `analyzeRelationImpact` docs/DB change | changed design/test-design/physical-data node expands to paired artifact, DB table nodes where applicable, PLAN DoD, and trace-freeze evidence actions without requiring source tests unless a behavioral contract edge exists. Real-repo loader coverage includes `docs/templates/adapter/` Claude/Codex hook, subagent, and command templates as design nodes so distribution template changes do not fall back with `missing-projection`. |
-| U-RELGRAPH-006 | missing projection coverage | changed node with no graph projection or stale edge returns `ok=false` and a finding; it must not silently fall back to the weaker `analyzeChangeImpact` result. |
+| U-RELGRAPH-006 | missing projection coverage | changed node with no graph projection or stale edge returns `ok=false` and a finding; it must not silently fall back to the weaker `analyzeChangeImpact` result. #1168 の退役目標では、完了を主張する PLAN (`confirmed` / `completed` / `accepted`) の `generates` 先の実在だけを graph projection / edge freshness の要求から外す。他の stale edge と missing-projection の拒否は維持する。 |
 | U-RELGRAPH-007 | `exportRelationDiagram` Mermaid | same graph snapshot emits deterministic Mermaid with stable node order, stable edge labels, and no raw evidence payload. |
 | U-RELGRAPH-008 | optional diagram adapters | DOT/D2 requested without installed adapter returns an unavailable-adapter finding and does not install or invoke tools implicitly. |
 | U-RELGRAPH-009 | `collectVerificationEvidenceProjection` valid evidence | A-125 `verification-evidence-v1` records become `verification_profiles`, `verification_recommendations`, `mcp_server_runs`, and `external_tool_findings` projection rows with evidence paths. |
@@ -436,7 +441,7 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 
 | ID | Target | Oracle |
 |---|---|---|
-| U-VTRIG-005-L7 | `VERIFICATION_GROUPS` L0-L7 | real repo guard surface includes `実装検証サイクルゲート` and the L0-L7 group is frozen. |
+| U-VTRIG-005-L7 | `VERIFICATION_GROUPS` L0-L7 | real repo guard surface includes `実装検証サイクルゲート` and the L0-L7 group is frozen. frozen は pair-doc の状態 (draft 0 かつ pair 孤児 0 かつ confirmed ≥ 1) だけから決まり、automation PLAN の証跡を入力にしない。`requiredPlanIds` / `missingPlanIds` / PLAN 証跡 map を使わずに `(docs, orphans)` だけを渡しても、confirmed だけの L1〜L6 なら frozen=true になる。負の対照: draft が 1 件、または pair 孤児が 1 件あると frozen=false になる。 |
 
 > **Status (PLAN-L7-43, 2026-06-11)**: U-VTRIG-005 now asserts L0-L7 / `実装検証サイクルゲート` in `tests/vmodel-pair.test.ts`; `doctor` surfaces the implementation verification cycle gate.
 
@@ -622,45 +627,45 @@ SMB/NFS/OneDrive をまたぐ strict lease、heartbeat、clock-skew 耐性は主
 
 #### Issue #848: FR retirement-aware coverage (正式 ID、Red)
 
-> Owner は既存の PLAN-L6-21 / PLAN-L7-22 / REVERSE-21 を維持する (control issue #848、6158936589; oracle-to-FR declaration binding decision 6159675813)。この追補は退役FRをregistryから消さず、既存 `fr-unit-coverage.md` のactive FR判定を維持したまま、retired rowの根拠とoracle接続を検証するための候補test designである。入力fieldと値の契約はL6 `fr-unit-coverage.md` に従い、`fr_state` が `retired` のとき `retirement_plan` にPLAN IDまたはpathを要求し、そのPLANをrepo内で一意に解決する。L7は別schemaや追加の `tracked` 条件を導入しない。
+> Owner は既存の PLAN-L6-21 / PLAN-L7-22 / REVERSE-21 を維持する (control issue #848、6158936589; oracle-to-FR declaration binding decision 6159675813)。この追補は退役FRをregistryから消さず、既存 `fr-unit-coverage.md` のactive FR判定を維持したまま、retired rowの根拠とoracle接続を検証するための候補test designである。入力fieldと値の契約はL6 `fr-unit-coverage.md` に従い、`fr_state` が `retired` のとき `retirement_ref` に、設計文書参照（`<path>#<見出し>`）またはIssue参照（`#N`）の閉じた文法の参照を要求する。PLANへの参照は文法外であり、PLANの撤去後も成り立つ。L7は別schemaや追加の `tracked` 条件を導入しない。
 >
-> retired rowを受理する条件は、(1) registry row自身が `fr_state=retired` を明示、(2) `retirement_plan` がL6契約どおりrepo内で一意に解決し、その文書の `plan_id` と参照が一致、(3) coverageが参照するexact candidate/formal IDがこのtest-designの対応表に同じ状態で宣言され、oracle declaration行の対象/期待欄にregistry rowと同じ完全なFR IDが明記され、(4) 宣言にそのoracle IDを引用する実test pathが結び付き、pathが解決可能な実test fileで本文に同じexact oracle IDのtest引用が存在、の全てである。宣言行で対象FRが欠落または別FRならfail-closeする。test本文にはoracle IDの引用を要求するが、FR ID引用は要求しない。候補ID宣言・formal ID宣言・coverage引用・実test引用は別々の面として照合し、本文中の言及、bare numeric PLAN ID、似た接頭辞、既存shared helperだけでは代用しない。formalへ昇格するときはcoverage / declaration / test引用の3面を同時に切り替え、片面だけの昇格は拒否する。
+> retired rowを受理する条件は、(1) registry row自身が `fr_state=retired` を明示、(2) `retirement_ref` がL6契約の閉じた文法に合致し、設計文書参照ならpathが実在して見出しが完全一致でちょうど1つ、Issue参照なら書式が正しい、(3) coverageが参照するexact candidate/formal IDがこのtest-designの対応表に同じ状態で宣言され、oracle declaration行の対象/期待欄にregistry rowと同じ完全なFR IDが明記され、(4) 宣言にそのoracle IDを引用する実test pathが結び付き、pathが解決可能な実test fileで本文に同じexact oracle IDのtest引用が存在、の全てである。宣言行で対象FRが欠落または別FRならfail-closeする。test本文にはoracle IDの引用を要求するが、FR ID引用は要求しない。候補ID宣言・formal ID宣言・coverage引用・実test引用は別々の面として照合し、本文中の言及、bare numeric参照、似た接頭辞、既存shared helperだけでは代用しない。formalへ昇格するときはcoverage / declaration / test引用の3面を同時に切り替え、片面だけの昇格は拒否する。
 >
 > 既存U-FRCOV-001..006とactive/通常FRの `U-FR-L1-NN` 完全一致は不変。L6の退役分岐が免除するのはこの通常formal-oracle一致要件だけで、L6 spec path・named unit contract・type body/pseudocodeまたは有効な `explicit_l7_defer` のsubstance要件を退役ラベルで迂回しない。退役状態の根拠欠落・未知状態は通常FRの例外経路にしない。doctor gateとdescent-obligationの `loadFrUnitCoverageOracles` readerは同じ退役行を同じ基準で受理/拒否する。readerの表面上の行一致だけでtyped/substance欠落を覆い隠してはならない。
 >
-> **状態**: 下記 `U-FRCOV-007..023` は正式IDへ昇格済みで、`tests/l6-fr-coverage.test.ts` が各IDを実testとして引用する。`it.fails` は実装 (Green) が入るまでの Red 状態であり、実装は未着手である。既存の正式U-FRCOV-001..006を変更・置換しない。
+> **状態**: 下記 `U-FRCOV-007..026` は正式IDへ昇格済みで、`tests/l6-fr-coverage.test.ts` が各IDを実testとして引用する。`it.fails` は実装 (Green) が入るまでの Red 状態であり、実装は未着手である。既存の正式U-FRCOV-001..006を変更・置換しない。
 
 | Test ID | 対象 / 実test引用予定 | 期待 (各negativeは記載した条件だけを変え、他条件は有効fixtureのまま保つ) |
 |---|---|---|
 | U-FRCOV-007 | `analyzeL6FrCoverage`; `tests/l6-fr-coverage.test.ts` の通常FR互換test | active/通常FRは従来どおりregistryとcoverageに存在し、coverage oracleが `U-FR-L1-NN` とFR IDに完全一致し、参照L6 specとunit-contract substanceも満たすときだけ通る。候補退役IDだけを通常FRのoracle欄へ置いた反例は `unit_oracle_match` 相当で拒否する。U-FRCOV-001..006の既存期待は変わらない。 |
-| U-FRCOV-008 | retirement-aware analyzer; `tests/l6-fr-coverage.test.ts` のcandidate-positive test | 既知retired registry row (`FR-L1-NN`)、canonical repo内で一意に解決する退役PLAN、coverageのcandidate IDと一致する本表宣言が揃い、宣言行の対象/期待欄が同じ完全な `FR-L1-NN` を示し、実testがそのcandidate oracle IDを引用するfixtureは候補状態として受理する。test本文にFR ID引用は要求しない。candidate acceptanceでありformal acceptanceや現PLANの実装完了を意味しない。 |
-| U-FRCOV-009 | retirement-aware analyzer; `tests/l6-fr-coverage.test.ts` のformal-positive fixture test | formal状態のfixtureではcoverageのexact formal ID、formal宣言、実test中のoracle ID引用が三面すべて同じで、retired rowと解決済PLANも有効なら受理する。formal宣言行の対象/期待欄にはretired rowと同じ完全な `FR-L1-NN` を置く。test本文にFR ID引用は要求しない。candidate文字列が残るfixture、またはformal面の一つだけが未昇格ならpositive例にしない。 |
-| U-FRCOV-010 | retirement evidence validation; `tests/l6-fr-coverage.test.ts` のmissing-plan test | 有効なretired state・exact declaration・test引用を保ち、retirement PLAN参照だけを欠落させたfixtureを拒否する。状態値だけを根拠にcoverage済みとしない。 |
-| U-FRCOV-011 | PLAN resolver; `tests/l6-fr-coverage.test.ts` のunresolved-path test | それ以外はU-FRCOV-008と同一に保ち、退役PLAN参照だけを存在しない/解決不能なtargetへ変更したfixtureを拒否する。宣言済みIDや実testがあってもPLAN解決を代替しない。 |
-| U-FRCOV-012 | PLAN resolver; `tests/l6-fr-coverage.test.ts` のambiguous-identity test | PLAN参照が同じnumeric suffix等を持つ複数のPLANへ解釈できるfixtureを拒否する。L6契約どおり、参照と文書 `plan_id` がrepo内で一意に解決するpositive fixtureは維持し、曖昧なID/pathを推測解決しない。 |
-| U-FRCOV-013 | candidate declaration resolver; `tests/l6-fr-coverage.test.ts` のcandidate-undeclared test | retired row、解決PLAN、coverage candidate ID、実test引用を揃えたうえで、candidate対応表の宣言行だけを除くfixtureを拒否する。本文のproseにIDを一度書いただけではdeclarationとして数えない。 |
-| U-FRCOV-014 | formal declaration resolver; `tests/l6-fr-coverage.test.ts` のformal-undeclared test | retired row、PLAN解決、coverageのformal ID、実test引用を揃え、formal対応表の宣言だけを欠落させたfixtureを拒否する。別状態のcandidate宣言や本文中のformal ID言及で補完しない。 |
-| U-FRCOV-015 | test-reference resolver; `tests/l6-fr-coverage.test.ts` のmissing-test-citation test | state・PLAN・exact candidate/formal declaration・coverage参照を有効にしたまま、IDを引用する解決可能な実test fileまたは実test caseだけを欠くfixtureを拒否する。L7のtest-design記述自体を実test citationとして扱わない。 |
+| U-FRCOV-008 | retirement-aware analyzer; `tests/l6-fr-coverage.test.ts` のcandidate-positive test | 既知retired registry row (`FR-L1-NN`)、canonical repo内で一意に解決する退役根拠（`retirement_ref`）、coverageのcandidate IDと一致する本表宣言が揃い、宣言行の対象/期待欄が同じ完全な `FR-L1-NN` を示し、実testがそのcandidate oracle IDを引用するfixtureは候補状態として受理する。test本文にFR ID引用は要求しない。candidate acceptanceでありformal acceptanceや実装完了を意味しない。 |
+| U-FRCOV-009 | retirement-aware analyzer; `tests/l6-fr-coverage.test.ts` のformal-positive fixture test | formal状態のfixtureではcoverageのexact formal ID、formal宣言、実test中のoracle ID引用が三面すべて同じで、retired rowと解決済の退役根拠も有効なら受理する。formal宣言行の対象/期待欄にはretired rowと同じ完全な `FR-L1-NN` を置く。test本文にFR ID引用は要求しない。candidate文字列が残るfixture、またはformal面の一つだけが未昇格ならpositive例にしない。 |
+| U-FRCOV-010 | retirement evidence validation; `tests/l6-fr-coverage.test.ts` のmissing-ref test | 有効なretired state・exact declaration・test引用を保ち、`retirement_ref` だけを欠落（空欄）させたfixtureを拒否する。状態値だけを根拠にcoverage済みとしない。 |
+| U-FRCOV-011 | retirement_ref resolver; `tests/l6-fr-coverage.test.ts` のunresolved-path test | それ以外はU-FRCOV-008と同一に保ち、`retirement_ref` の設計文書pathだけを存在しないfileへ変更したfixtureを拒否する（拒否分類 (c)）。宣言済みIDや実testがあっても退役根拠の解決を代替しない。 |
+| U-FRCOV-012 | retirement_ref grammar/ambiguity resolver; `tests/l6-fr-coverage.test.ts` のout-of-grammar/ambiguous test | 正例は設計文書参照（pathと見出しが一意）とIssue参照 `#848`。負例は、同一文書に同じ見出しが2つ（拒否分類 (e)）、文法外の短縮形・不正形（`848` / `Issue 848` / `#0` / `#12abc` / `# 848`）、PLAN参照（PLAN ID、および参照先と見出しが実在する `docs/plans/` 配下のpath。許可prefix外）。2形式以外は全て文法外として拒否し（拒否分類 (b)）、PLAN専用の検知規則は持たない。曖昧な参照を推測解決しない。 |
+| U-FRCOV-013 | candidate declaration resolver; `tests/l6-fr-coverage.test.ts` のcandidate-undeclared test | retired row、解決済の退役根拠、coverage candidate ID、実test引用を揃えたうえで、candidate対応表の宣言行だけを除くfixtureを拒否する。本文のproseにIDを一度書いただけではdeclarationとして数えない。 |
+| U-FRCOV-014 | formal declaration resolver; `tests/l6-fr-coverage.test.ts` のformal-undeclared test | retired row、退役根拠の解決、coverageのformal ID、実test引用を揃え、formal対応表の宣言だけを欠落させたfixtureを拒否する。別状態のcandidate宣言や本文中のformal ID言及で補完しない。 |
+| U-FRCOV-015 | test-reference resolver; `tests/l6-fr-coverage.test.ts` のmissing-test-citation test | state・退役根拠・exact candidate/formal declaration・coverage参照を有効にしたまま、IDを引用する解決可能な実test fileまたは実test caseだけを欠くfixtureを拒否する。L7のtest-design記述自体を実test citationとして扱わない。 |
 | U-FRCOV-016 | exact test-reference resolver; `tests/l6-fr-coverage.test.ts` のwrong-test-id test | 実testは存在するが、test caseが別のcandidate/formal IDを引用するfixtureを拒否する。coverageとdeclarationのexact IDが一致している条件は維持し、似たprefixや同一番号の別IDを対応済みにしない。 |
-| U-FRCOV-017 | three-surface promotion agreement; `tests/l6-fr-coverage.test.ts` のpartial-promotion tests | 有効なcandidate-positive fixtureから、coverageだけ、declarationだけ、実test引用だけをformal IDへ切り替える1面formalの3 caseに加え、coverage+declaration、coverage+実test引用、declaration+実test引用をformal IDへ切り替える2面formalの3 caseを独立に作り、計6 caseすべてを拒否する。各caseで記載した面以外のtuple条件とretired state/PLANは有効なcandidate状態に保ち、三面が同時に切り替わらないpartial promotionを許さない。 |
+| U-FRCOV-017 | three-surface promotion agreement; `tests/l6-fr-coverage.test.ts` のpartial-promotion tests | 有効なcandidate-positive fixtureから、coverageだけ、declarationだけ、実test引用だけをformal IDへ切り替える1面formalの3 caseに加え、coverage+declaration、coverage+実test引用、declaration+実test引用をformal IDへ切り替える2面formalの3 caseを独立に作り、計6 caseすべてを拒否する。各caseで記載した面以外のtuple条件とretired state/退役根拠は有効なcandidate状態に保ち、三面が同時に切り替わらないpartial promotionを許さない。 |
 | U-FRCOV-018 | state/source-reader/doctor-descent consistency; `tests/l6-fr-coverage.test.ts` とdescent reader統合testの予定 | 独立fixtureで、未知のregistry stateだけを与えた場合、および既知retired stateでも退役根拠だけを欠く場合はdoctorが拒否し、通常FRへfallbackしない。`loadFrUnitCoverageOracles` / descent-obligation readerもdoctorと同じ有効・無効判定を返す。さらにU-FRCOV-006既存反例（`DeferredInput -> DeferredResult` だけで `{ field: type }` blockがない `explicit_l7_defer` row）にretired/candidate labelを付けてもsubstance errorを隠せず、source readerがそのFRを検証済みとして除外しない。各negative fixtureは他のtuple面をvalidに保つ。 |
-| U-FRCOV-019 | retirement evidence validation; `tests/l6-fr-coverage.test.ts` のactive-state/stray-plan test予定 | `fr_state=active` のregistry rowに `retirement_plan` だけを非空値で与え、それ以外のactive coverage・oracle・L6 spec・unit-contract条件を有効にしたfixtureを拒否する。active状態を退役例外へ読み替えず、L6のactive + 空欄／未指定規則を単独で検証する。 |
-| U-FRCOV-020 | oracle declaration resolver; `tests/l6-fr-coverage.test.ts` のambiguous-double-declaration test予定 | 有効なretired row、PLAN根拠、coverage oracle、実test pathと同一ID引用を保ち、そのexact oracle IDだけを同じ状態の対応表に二重宣言し、宣言ごとに異なる解決可能な実test pathを結び付けたfixtureを拒否する。宣言の優先順位を推測せず、L6の曖昧な二重宣言fail-closeを単独で検証する。 |
-| U-FRCOV-021 | PLAN resolver; `tests/l6-fr-coverage.test.ts` のresolved-plan-id-mismatch test予定 | `retirement_plan` pathがrepo内のPLAN文書へ一意に解決する一方、その文書frontmatterの `plan_id` が参照ID（およびfilenameから特定されるPLAN ID）と異なるfixtureを拒否する。retired state、oracle宣言・test引用、その他のcoverage条件は有効に保ち、解決済み文書のID不一致だけを単独で検証する。 |
-| U-FRCOV-022 | oracle declaration resolver; `tests/l6-fr-coverage.test.ts` のmissing-target-FR test予定 | retired row、解決PLAN、coverage oracle、宣言されたexact oracle ID、同IDを引用する実testを有効に保ち、oracle declaration行の対象/期待欄に対象FR完全IDが欠ける点だけを変えて拒否する。実test本文のoracle ID引用を維持し、FR引用を要求しない。 |
-| U-FRCOV-023 | oracle declaration resolver; `tests/l6-fr-coverage.test.ts` のwrong-target-FR test予定 | retired row、解決PLAN、coverage oracle、宣言されたexact oracle ID、同IDを引用する実testを有効に保ち、oracle declaration行の対象/期待欄だけを別FRの完全IDに変えて拒否する。実test本文のoracle ID引用を維持し、FR引用を要求しない。 |
+| U-FRCOV-019 | retirement evidence validation; `tests/l6-fr-coverage.test.ts` のactive-state/stray-ref test予定 | `fr_state=active` のregistry rowに `retirement_ref` だけを非空値で与え、それ以外のactive coverage・oracle・L6 spec・unit-contract条件を有効にしたfixtureを拒否する。active状態を退役例外へ読み替えず、L6のactive + 空欄／未指定規則を単独で検証する。 |
+| U-FRCOV-020 | oracle declaration resolver; `tests/l6-fr-coverage.test.ts` のambiguous-double-declaration test予定 | 有効なretired row、退役根拠、coverage oracle、実test pathと同一ID引用を保ち、そのexact oracle IDだけを同じ状態の対応表に二重宣言し、宣言ごとに異なる解決可能な実test pathを結び付けたfixtureを拒否する。宣言の優先順位を推測せず、L6の曖昧な二重宣言fail-closeを単独で検証する。 |
+| U-FRCOV-021 | retirement_ref heading resolver; `tests/l6-fr-coverage.test.ts` のheading-absent test | `retirement_ref` の設計文書pathは実在するが、参照する見出しがその文書に存在しない（別の節だけがある）fixtureを拒否する（拒否分類 (d)）。加えて見出し resolver の変異を検出する: 通常の `## 見出し` が1つだけの文書は受理（有効な双子）し、見出し行に見えても数えない形だけの文書、すなわち ``` fence 内のみ、`~~~` fence 内のみ、setext 見出し（`=====` / `-----` 下線）のみは拒否する（分類 d）。全行へ ATX 正規表現を当てる実装や setext を数える実装は拒否例を受理するため検出される。retired state、oracle宣言・test引用、その他のcoverage条件は有効に保ち、見出し不在だけを単独で検証する。 |
+| U-FRCOV-022 | oracle declaration resolver; `tests/l6-fr-coverage.test.ts` のmissing-target-FR test予定 | retired row、解決済の退役根拠、coverage oracle、宣言されたexact oracle ID、同IDを引用する実testを有効に保ち、oracle declaration行の対象/期待欄に対象FR完全IDが欠ける点だけを変えて拒否する。実test本文のoracle ID引用を維持し、FR引用を要求しない。 |
+| U-FRCOV-023 | oracle declaration resolver; `tests/l6-fr-coverage.test.ts` のwrong-target-FR test予定 | retired row、解決済の退役根拠、coverage oracle、宣言されたexact oracle ID、同IDを引用する実testを有効に保ち、oracle declaration行の対象/期待欄だけを別FRの完全IDに変えて拒否する。実test本文のoracle ID引用を維持し、FR引用を要求しない。 |
 
-#### Issue #848: oracle 宣言行の識別規則 (candidate、Red)
+#### Issue #848: oracle 宣言行の識別規則 (formal、Red)
 
 > 正本は L6 `fr-unit-coverage.md` の「宣言行の識別規則」。上記 U-FRCOV-007..023 の「candidate対応表」「formal対応表」「宣言表」は、表や見出しの種別ではなく、同規則の **宣言行** を指す。状態はIDの接頭辞 (`CANDIDATE-U-` = candidate、`U-` = formal) だけで決まり、節の見出しと表ヘッダ第1列名には依存しない。実L7を全件走査した実測: 第1セルが `U-*` / `CANDIDATE-U-*` の表行は1306行・1305 ID、ヘッダ第1列は10種以上、列数は2〜5、IDの重複は `U-PHOVER-002` の1件のみ（退役と無関係）。
 >
-> 下記3件は識別規則を殺すmutantを持つcandidate oracleである。実装 (Green) が入るまで `tests/l6-fr-coverage.test.ts` の `it.fails` がRedを保持する。既存U-FRCOV-007..023のtest本体と期待値は変えない。
+> 下記3件 (U-FRCOV-024..026) は正式IDへ昇格済みで、識別規則を殺すmutantを持つoracleである。実装 (Green) が入るまで `tests/l6-fr-coverage.test.ts` の `it.fails` がRedを保持する。既存U-FRCOV-007..023のtest本体と期待値は変えない。
 
 | ID | 入力 / 独立変異 | 期待 / 実行対応 |
 |---|---|---|
-| CANDIDATE-U-FRCOV-024 | 有効candidate-positive fixtureの宣言行を、見出しが無関係な節に置き、ヘッダ第1列を `ID` / `oracle` / `test_id` へ変えた3 caseと、第1セルをcode記法で囲んだcase。負例は、(a) 2列表に同じ内容を畳んだ行、(b) 第1セルがproseでIDは第2セルだけの行、(c) fenced code block内の表 | 正例は全て受理、負例は全て拒否。`tests/l6-fr-coverage.test.ts` |
-| CANDIDATE-U-FRCOV-025 | 宣言行の第2列以降のFR IDだけを変える。正例は `FR-L1-05`（code記法あり・prose内）。負例は `XFR-L1-05`、`FR-L1-050`、`FR-L1-5`、`FR-L1-05` と `FR-L1-06` の併記 | 正例は受理、負例は全て拒否（完全境界、別FR併記もfail-close）。`tests/l6-fr-coverage.test.ts` |
-| CANDIDATE-U-FRCOV-026 | 宣言行の実test path欄だけを変える。正例は `:行番号` 接尾辞付きとcode記法付き、および同じIDを引用する2つの実test file。負例は、tests path tokenが無い、2つのtokenの一方が未解決、正規化すると実在してIDを引用するfileへ届く `..` 入りtoken（例: `tests/fixture/../fixture/retired.test.ts`、`..` だけが拒否理由）、実fileがIDを引用しない | 正例は受理、負例は全て拒否（全tokenが解決可能で全fileがIDを引用）。`tests/l6-fr-coverage.test.ts` |
+| U-FRCOV-024 | 有効candidate-positive fixtureの宣言行を、見出しが無関係な節に置き、ヘッダ第1列を `ID` / `oracle` / `test_id` へ変えた3 caseと、第1セルをcode記法で囲んだcase。負例は、(a) 2列表に同じ内容を畳んだ行、(b) 第1セルがproseでIDは第2セルだけの行、(c) fenced code block内の表 | 正例は全て受理、負例は全て拒否。`tests/l6-fr-coverage.test.ts` |
+| U-FRCOV-025 | 宣言行の第2列以降のFR IDだけを変える。正例は `FR-L1-05`（code記法あり・prose内）。負例は `XFR-L1-05`、`FR-L1-050`、`FR-L1-5`、`FR-L1-05` と `FR-L1-06` の併記 | 正例は受理、負例は全て拒否（完全境界、別FR併記もfail-close）。`tests/l6-fr-coverage.test.ts` |
+| U-FRCOV-026 | 宣言行の実test path欄だけを変える。正例は `:行番号` 接尾辞付きとcode記法付き、および同じIDを引用する2つの実test file。負例は、tests path tokenが無い、2つのtokenの一方が未解決、正規化すると実在してIDを引用するfileへ届く `..` 入りtoken（例: `tests/fixture/../fixture/retired.test.ts`、`..` だけが拒否理由）、実fileがIDを引用しない | 正例は受理、負例は全て拒否（全tokenが解決可能で全fileがIDを引用）。`tests/l6-fr-coverage.test.ts` |
 
 
 ### §1.21 U-FR-L1-21 (test perspective gate)
@@ -800,7 +805,7 @@ SMB/NFS/OneDrive をまたぐ strict lease、heartbeat、clock-skew 耐性は主
 - **skill-index.md §7 配布 repo の skill 配置 / runtime asset 境界 → U-SETUP-009a / U-MODELID-SSOT** (配布 adapter の `model:` frontmatter と `MODEL_IDS` SSoT drift を unit test で固定。孤児 0)
 - **handover-mechanism.md §2.3 関数 (resolveHandoverScope/buildPointer/handoverStale/writePointer/setActivePlan/inferPlanFromCommit/runHandover) → U-HOVER-001〜002 / 005〜007** (scaffoldFromDigests / renderHandoverScaffold は state-channel-consolidation §5.1 で撤去対象。003 / 004 の宣言を撤去した) (add-feature 差分、PLAN-L6-06。writePointer は U-HOVER-007 orchestration 経路で被覆。session-log への限定 amendment = setActivePlan/inferPlanFromCommit 配線は U-HOVER-006 で被覆。孤児 0)
 - **handover IMP-048/047 差分 (sameFamilyPlan/dedupeDigests/resolveHandoverScope scopeToActive/readPointer/checkHandoverDiscipline) → U-HOVER-008〜010** (IMP-048 dedup + scopeToActive、IMP-047 readPointer/discipline。孤児 0)
-- **handover IMP-078 品質増分 (checkHandoverBypass 署名照合/resolveHandoverScope scopeToSession/latestSessionId/readPlanMeta family 解決/活性化 activePlanStale 連動) → U-HOVER-011〜012 + U-SLOG-006** (gap① bypass / gap② stale / gap③ commit hash / gap④ session-scope / gap⑤ unknown-kind。PLAN-L6-16/L7-17。readPlanMeta は U-HOVER-012 runHandover 経路に内包。孤児 0)
+- **handover IMP-078 品質増分 (checkHandoverBypass 署名照合/resolveHandoverScope scopeToSession/latestSessionId/活性化 activePlanStale 連動) → U-HOVER-011〜012 + U-SLOG-006** (gap① bypass / gap② stale / gap③ commit hash / gap④ session-scope。gap⑤ unknown-kind の oracle (readPlanMeta family 解決) は scaffold の停止に伴い state-channel-consolidation §5.1 で撤去した。PLAN-L6-16/L7-17。孤児 0)
 - **handover PLAN-L7-83 drift 増分 (runHandover marker reconcile) → U-HOVER-015** (marker reconcile (complete→clear / --plan→sync / dryRun 非破壊)。PLAN-L7-83。孤児 0。A-138 ITEM-4 の slim stub と累積上限の oracle U-HOVER-013 / 014 は、scaffold の停止に伴い state-channel-consolidation §5.1 で撤去した)
 - **agent-slots.md §2.3 関数 (loadSlots/fireSlot/releaseSlot/releaseOldestGuardSlot/sweepStaleGuardSlots/listActiveSlots/listStaleSlots/peakParallel/exceedsParallelLimit/recordGuardFire) → U-SLOT-001〜008** (add-feature 差分、IMP-050 + IMP-106 SubagentStop release。nodeAgentSlotsDeps は実 I/O deps で unit では mock 代替。孤児 0)
 - **module-drift.md §2-§3 関数 (parseListedModules/scanActualModules/analyzeModuleDrift/loadModuleDocs/moduleDriftMessages) → U-MDRIFT-001〜005** (add-feature 差分、PLAN-L7-16/IMP-075。moduleDriftMessages は U-MDRIFT-003/004 経路 + 専用 assert で被覆、loadModuleDocs は U-MDRIFT-005 実 repo ガードに内包。孤児 0)
@@ -1422,15 +1427,15 @@ TVMS-015 は VMS-015 の工程 live state / 固定4段 SessionStart digest contr
 | `U-PA-031` | sequence/kind/time/identity/source digest mutation | `reduceLegacyMigration` | first observed・連続列・非減少時刻・immutable provenance違反を全件拒否 |
 | `U-PA-032` | 各append境界fault injection | migration transaction port | event/current/asset/revision/alias/receiptの全table delta 0 |
 | `U-PA-033` | valid ledger close→file reopen/rebuild | migration reconstruct | state/event/payload/provenance digest集合が完全一致 |
-| `U-PA-034` | source commitのHEAD PLAN全件 | `LegacyMigrationDryRun` | inventoryとrecordがexactly-once bijection、total=emitted、legacy ID重複0 |
+| `U-PA-034` | source commitのHEAD PLAN全件 | `LegacyMigrationDryRun` | inventoryとrecordがexactly-once bijection、total=emitted、legacy ID重複0。完了を主張する PLAN (`confirmed` / `completed` / `accepted`) の `generates` artifact_path がHEADに実在することはdry-run条件にしない |
 | `U-PA-035` | reviewed collision manifest | decision resolver | migrated=HEAD全件-rekeyed、pending=0。manifest欠落・余剰・group不一致はfail-close |
 | `U-PA-036` | 別legacy IDを返すdecision port | dry-run record join | `plan-migration-preview-id-mismatch`、finding 1件以上 |
 | `U-PA-037` | 同一HEAD・同一manifestを2回実行 | dry-run report | record順、finding順、inventory/report digest完全一致 |
-| `U-PA-038` | HEAD exact file / directory family / hollow / missing | `HeadTargetRegistry` | 非空fileと非空familyのみ存在判定、hollow/missingを拒否 |
+| `U-PA-038` | HEAD exact file / directory family / hollow / missing | `HeadTargetRegistry` | 一般のHEAD target (role/design target等) は非空fileと非空familyのみ存在判定し、hollow/missingを拒否する。完了を主張する PLAN (`confirmed` / `completed` / `accepted`) の `generates` artifact_path の実在判定には適用しない |
 | `U-PA-039` | record source commit/path/OID/content digest | 独立Git object oracle | `commit:path` OIDと実blob bytes SHA-256がrecordと一致 |
 | `U-PA-040` | 全agent slot + 7 role contract | role contract loader/projection | role全単射、全slot contractRef付与、HEAD contract blob非空。未知role/欠落は拒否 |
 | `U-PA-041` | item ledgerの全`target_slot` edge | HEAD document catalog resolver | 全slot ref解決、存在しないslotはglobal findingでfail-close |
-| `U-PA-042` | `plan migration-dry-run --json` | CLI public surface | exit 0、`total=emitted=HEAD PLAN件数`、`migrated=total-rekeyed`、pending/finding 0のJSON契約 |
+| `U-PA-042` | `plan migration-dry-run --json` | CLI public surface | exit 0、`total=emitted=HEAD PLAN件数`、`migrated=total-rekeyed`、pending/finding 0のJSON契約。完了を主張する PLAN (`confirmed` / `completed` / `accepted`) の `generates` artifact_path の実在は件数・成功判定に含めない |
 | `U-PA-043` | `leaseMs`付きreservation commandを初回/再送 | `ReservationService` + versioned key-ring/clock port | raw tokenを返しDB/event/current/receipt保存0、再送はclock進行後も同一token/expiry、異payloadはconflict |
 | `U-PA-044` | reservation event/current/receipt各append直後にfault注入 | `PlanLedger.reserve` transaction | 各例外後にevent/current/receiptのdelta 0、次の正常commandは成功 |
 | `U-PA-045` | 複数kind/producer/subject/revision/commit/expiry/exit/claims outcomeを組合せたevidence全履歴 | `EvidenceRecord` / `EvidencePolicy` | policy定義と評価contextを分離し、typed claimsRuleに適合するactive frontierだけをmin/max cardinalityへ数え、requirement別missing/rejected IDをstable順で返す |
@@ -1787,31 +1792,31 @@ docs/test-design/harness/L7-claude-inbox-explicit-ack-test-design.md を参照�
 
 | ID | 対象境界 | 詳細 |
 | --- | --- | --- |
-| CANDIDATE-U-INBOXACK-001 | ID 指定の exact entry ACK | 詳細 pair 001 |
-| CANDIDATE-U-INBOXACK-002 | foreign project / workspace / session deny | 詳細 pair 002 |
-| CANDIDATE-U-INBOXACK-003 | generation / session authority deny | 詳細 pair 003 |
-| CANDIDATE-U-INBOXACK-004 | preview 後の entry bytes drift | 詳細 pair 004 |
-| CANDIDATE-U-INBOXACK-005 | before 境界と不正日時 | 詳細 pair 005 |
-| CANDIDATE-U-INBOXACK-006 | 承認前の inbox 追加 | 詳細 pair 006 |
-| CANDIDATE-U-INBOXACK-007 | 欠落・malformed・重複・束縛不能 | 詳細 pair 007 |
-| CANDIDATE-U-INBOXACK-008 | 同一 ACK retry と既存 v1 terminal | 詳細 pair 008 |
-| CANDIDATE-U-INBOXACK-009 | 異identity / malformed terminal | 詳細 pair 009 |
-| CANDIDATE-U-INBOXACK-010 | review ACK と通常 Memory ACK | 詳細 pair 010 |
-| CANDIDATE-U-INBOXACK-011 | ACK 対象外 artifact 不変 | 詳細 pair 011 |
-| CANDIDATE-U-INBOXACK-012 | claim 後 crash と terminal recovery | 詳細 pair 012 |
-| CANDIDATE-U-INBOXACK-013 | v1 / v2 schema と未知値 | 詳細 pair 013 |
-| CANDIDATE-U-INBOXACK-014 | delivery と ACK の共有 claim CAS | 詳細 pair 014 |
-| CANDIDATE-U-INBOXACK-015 | preview canonicalization / digest | 詳細 pair 015 |
-| CANDIDATE-U-INBOXACK-016 | actor / approvedAt / digest audit | 詳細 pair 016 |
-| CANDIDATE-U-INBOXACK-017 | 対象外 entry を含む全 inbox drift | 詳細 pair 017 |
-| CANDIDATE-U-INBOXACK-018 | 既存 claim disposition | 詳細 pair 018 |
-| CANDIDATE-U-INBOXACK-019 | 並行 Stop と anchor claim CAS | 詳細 pair 019 |
-| CANDIDATE-U-INBOXACK-020 | anchor crash / replay / old waiter | 詳細 pair 020 |
-| CANDIDATE-U-INBOXACK-021 | schema と identity binding | 詳細 pair 021 |
-| CANDIDATE-U-INBOXACK-022 | immutable approval descriptor | 詳細 pair 022 |
-| CANDIDATE-U-INBOXACK-023 | snapshot / preview JSON validation | 詳細 pair 023 |
-| CANDIDATE-U-INBOXACK-024 | CLI surface と hook 限定 claim | 詳細 pair 024 |
-| CANDIDATE-U-INBOXACK-025 | descriptor selection・terminal-conflict skip / 7日 cleanup | 詳細 pair 025 |
+| 参照: CANDIDATE-U-INBOXACK-001 | ID 指定の exact entry ACK | 詳細 pair 001 |
+| 参照: CANDIDATE-U-INBOXACK-002 | foreign project / workspace / session deny | 詳細 pair 002 |
+| 参照: CANDIDATE-U-INBOXACK-003 | generation / session authority deny | 詳細 pair 003 |
+| 参照: CANDIDATE-U-INBOXACK-004 | preview 後の entry bytes drift | 詳細 pair 004 |
+| 参照: CANDIDATE-U-INBOXACK-005 | before 境界と不正日時 | 詳細 pair 005 |
+| 参照: CANDIDATE-U-INBOXACK-006 | 承認前の inbox 追加 | 詳細 pair 006 |
+| 参照: CANDIDATE-U-INBOXACK-007 | 欠落・malformed・重複・束縛不能 | 詳細 pair 007 |
+| 参照: CANDIDATE-U-INBOXACK-008 | 同一 ACK retry と既存 v1 terminal | 詳細 pair 008 |
+| 参照: CANDIDATE-U-INBOXACK-009 | 異identity / malformed terminal | 詳細 pair 009 |
+| 参照: CANDIDATE-U-INBOXACK-010 | review ACK と通常 Memory ACK | 詳細 pair 010 |
+| 参照: CANDIDATE-U-INBOXACK-011 | ACK 対象外 artifact 不変 | 詳細 pair 011 |
+| 参照: CANDIDATE-U-INBOXACK-012 | claim 後 crash と terminal recovery | 詳細 pair 012 |
+| 参照: CANDIDATE-U-INBOXACK-013 | v1 / v2 schema と未知値 | 詳細 pair 013 |
+| 参照: CANDIDATE-U-INBOXACK-014 | delivery と ACK の共有 claim CAS | 詳細 pair 014 |
+| 参照: CANDIDATE-U-INBOXACK-015 | preview canonicalization / digest | 詳細 pair 015 |
+| 参照: CANDIDATE-U-INBOXACK-016 | actor / approvedAt / digest audit | 詳細 pair 016 |
+| 参照: CANDIDATE-U-INBOXACK-017 | 対象外 entry を含む全 inbox drift | 詳細 pair 017 |
+| 参照: CANDIDATE-U-INBOXACK-018 | 既存 claim disposition | 詳細 pair 018 |
+| 参照: CANDIDATE-U-INBOXACK-019 | 並行 Stop と anchor claim CAS | 詳細 pair 019 |
+| 参照: CANDIDATE-U-INBOXACK-020 | anchor crash / replay / old waiter | 詳細 pair 020 |
+| 参照: CANDIDATE-U-INBOXACK-021 | schema と identity binding | 詳細 pair 021 |
+| 参照: CANDIDATE-U-INBOXACK-022 | immutable approval descriptor | 詳細 pair 022 |
+| 参照: CANDIDATE-U-INBOXACK-023 | snapshot / preview JSON validation | 詳細 pair 023 |
+| 参照: CANDIDATE-U-INBOXACK-024 | CLI surface と hook 限定 claim | 詳細 pair 024 |
+| 参照: CANDIDATE-U-INBOXACK-025 | descriptor selection・terminal-conflict skip / 7日 cleanup | 詳細 pair 025 |
 
 ### Issue #444 terminal GC backfill (PLAN-REVERSE-600)
 
@@ -3131,7 +3136,7 @@ oracle の詳細 (入力・期待・殺す mutation・fixture・required evidenc
 |---|---|---|
 | `CANDIDATE-U-PH-001..008` | `docs/design/harness/L6-function-design/confirmed-document-placeholder-detection.md` | `docs/test-design/harness/L7-confirmed-document-placeholder-detection-test-design.md` §3 |
 | `CANDIDATE-U-PH-010..024` | `docs/design/harness/L6-function-design/confirmed-document-placeholder-detection.md` | `docs/test-design/harness/L7-confirmed-document-placeholder-detection-test-design.md` §4 |
-| `CANDIDATE-U-PH-025` | `docs/design/harness/L6-function-design/confirmed-document-placeholder-detection.md` | `docs/test-design/harness/L7-confirmed-document-placeholder-detection-test-design.md` §4 |
+| 参照: `CANDIDATE-U-PH-025` | `docs/design/harness/L6-function-design/confirmed-document-placeholder-detection.md` | `docs/test-design/harness/L7-confirmed-document-placeholder-detection-test-design.md` §4 |
 
 ## 共有メモリのエピソード回収 (Issue #963 / PLAN-L6-97) — 索引
 
@@ -3192,6 +3197,7 @@ oracle の詳細 (入力・期待・殺す mutation・fixture・required evidenc
 | CANDIDATE-U-CTRACE-016〜018、025 | 必須集合 (要求・画面・機能) の空集合拒否 (#880) | 専用文書 §3 |
 | CANDIDATE-U-CTRACE-019〜022、026 | harness 専用文書を読まないこと、2 つの入口の一致、core 文書の欠落と doc_type_id 不一致の fail-close、L3 PLAN 検査をしないこと | 専用文書 §3 |
 | CANDIDATE-U-CTRACE-023〜024 | 章見出しと必須列の freeze、章の範囲外の表を読まないこと | 専用文書 §3 |
+| CANDIDATE-U-CTRACE-027〜041 | L1 の BR / UX / 画面 / consumer の要求と画面が L3 の設計文書へ降りていること (降下検査、#1196)、除外台帳、退役 ID、空集合 | 専用文書 §3 |
 
 上表の ID は backtick 無し表記である。候補台帳への再掲ではなく専用文書への参照であり、U-VMSRC-009 の一意性検査の対象外とする。
 正規 `U-CTRACE-*` への昇格と Red test は、src/ も scripts/ も含まない PR (契約 PR + Red) で入れる (`design-protection-diff-gate.md` §10.2)。

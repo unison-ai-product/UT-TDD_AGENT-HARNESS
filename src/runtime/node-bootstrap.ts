@@ -638,19 +638,26 @@ export async function buildNodeGeneration(
     assertReviewedExternalImports(externalImports(meta));
     if (!existsSync(compiled) || statSync(compiled).size === 0)
       throw new NodeBootstrapError("node-bootstrap-compiled-cli-missing");
-    const sourcePaths = Object.keys(meta.inputs ?? {})
+    const sourceInputs = Object.keys(meta.inputs ?? {})
       .map((path) => inputPath(root, path, "node-bootstrap-source-path-escape"))
-      .filter(({ relative: relativePath }) => !isNodeModulesInput(relativePath))
-      .map(({ absolute: source, relative: relativePath }) => {
-        try {
-          execFileSync("git", ["-C", root, "ls-files", "--error-unmatch", "--", relativePath], {
-            stdio: "ignore",
-          });
-        } catch {
-          throw new NodeBootstrapError("node-bootstrap-source-untracked");
-        }
-        return source;
-      });
+      .filter(({ relative: relativePath }) => !isNodeModulesInput(relativePath));
+    if (sourceInputs.length > 0) {
+      let trackedPathsOutput: string;
+      try {
+        trackedPathsOutput = execFileSync("git", ["-C", root, "ls-files", "-z"], {
+          encoding: "utf8",
+          stdio: ["ignore", "pipe", "pipe"],
+        });
+      } catch {
+        throw new NodeBootstrapError("node-bootstrap-source-untracked");
+      }
+      const trackedPaths = new Set(
+        trackedPathsOutput.split("\0").filter((path) => path.length > 0),
+      );
+      if (sourceInputs.some(({ relative: relativePath }) => !trackedPaths.has(relativePath)))
+        throw new NodeBootstrapError("node-bootstrap-source-untracked");
+    }
+    const sourcePaths = sourceInputs.map(({ absolute: source }) => source);
     if (sourcePaths.length === 0) sourcePaths.push(resolve(root, "src/cli.ts"));
     const sources = sourcePaths
       .map((path) => ({ path: slash(relative(root, path)), sha256: hashFile(path) }))

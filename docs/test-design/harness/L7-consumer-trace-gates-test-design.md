@@ -12,11 +12,10 @@ updated: 2026-10-13
 ## 1. 位置付け
 
 対になる設計文書は `docs/design/harness/L6-function-design/consumer-trace-gates.md` である。
-本書はその §3 分岐、§5 読む文書、§6 表の固定と抽出、§7 trace 規則と空集合、§8 出力、§10 不変条件を検証する oracle を定義する。
+本書はその §3 分岐、§5 読む文書、§6 表の固定と抽出、§7 trace 規則と空集合、§8 出力、§10 不変条件に加え、§13 の L1 から L3 への降下検査 (issue #1196、CANDIDATE-U-CTRACE-027〜041) を検証する oracle を定義する。
 共有の `docs/test-design/harness/L7-unit-test-design.md` には索引 (§consumer trace gate) だけを置き、本書が詳細の正本である。
 
-この pair-freeze では候補 ID (`CANDIDATE-U-CTRACE-*`) だけを宣言する。
-正式 ID `U-CTRACE-*` への 1:1 の昇格と Red のテスト (`it.fails`) は、src/ も scripts/ も含まない契約 PR + Red で入れる (`design-protection-diff-gate.md` §10.2)。実装 PR は `it.fails` を `it` に戻して Green にするだけで、本書には触れない。
+この pair-freeze では候補 ID (`CANDIDATE-U-CTRACE-*`) を宣言した。本変更では旧候補 `CANDIDATE-U-CTRACE-001` だけを正式 ID `U-CTRACE-001` へ 1:1 で昇格し、対応する Red テスト (`it.fails`) を記録する。他の候補 ID は候補のまま維持する。実装 PR は `it.fails` を `it` に戻して Green にするだけで、本書には触れない。
 U-RCDEV-027 (v)(vi) の改訂も同じ契約 PR + Red で行う (設計文書 §9.1)。
 
 ## 2. fixture
@@ -32,7 +31,7 @@ U-RCDEV-027 (v)(vi) の改訂も同じ契約 PR + Red で行う (設計文書 §
 
 | Candidate | 入力 | 期待 | 殺す mutation |
 | --- | --- | --- | --- |
-| `CANDIDATE-U-CTRACE-001` | (a) 実 repo (harness layout) に G1-trace と G3-trace をかける。(b) temp の harness layout fixture で、harness 分岐の検査を 1 つずつだけ欠かせた 4 通りの入力を作る: (b1) L3 PLAN が `PLAN-L1-01/02/03` の requires を欠く、(b2) L1 screen-requirements §5.1 に画面へ対応しない BR が 1 件ある、(b3) L3 functional-requirements に見出し `### FR-99:` の FR を 1 件足し、`AC-FR-99-*` をどの文書 (L3 functional-requirements / business-detail / nfr-grade) にも置かない (L1 に `FR-L1-99` は置かない)、(b4) L1 NFR のうち 1 件が L3 nfr-grade に無い | (a) 現行の `analyzeG1Trace` / `analyzeG3Trace` と同じ `ok` と messages (`g1-trace - OK (business=…, screens=…, p0Fr=…, l3Plans=…)` の形)。`consumer column trace` を含まない。(b1)〜(b4) はそれぞれ `ok=false` で、対応する違反を 1 件だけ返す: (b1) L3 PLAN requires の欠落、(b2) orphan business、(b3) `orphanL3Fr = [FR-99]` (`src/lint/g3-trace.ts` の R2、FR→AC の検査)、(b4) orphan NFR | 実 repo を consumer 分岐へ流す ((a) が変わる) / harness 分岐の検査を 1 つでも落とす (落とした検査に対応する (b1)〜(b4) の行が `ok=true` になる。実 repo の正常文書だけでは削除を検出できないため (b) を置く) |
+| `U-CTRACE-001` | (a) 実 repo (harness layout) に G1-trace と G3-trace をかける。(b) temp の harness layout fixture で、harness 分岐の検査を 1 つずつだけ欠かせた 3 通りの入力を作る: (b1) L1 screen-requirements §5.1 に画面へ対応しない BR が 1 件ある、(b2) L3 functional-requirements に見出し `### FR-99:` の FR を 1 件足し、`AC-FR-99-*` をどの文書 (L3 functional-requirements / business-detail / nfr-grade) にも置かない (L1 に `FR-L1-99` は置かない)、(b3) L1 NFR のうち 1 件が L3 nfr-grade に無い。(c) 有効な G1 trace を保ったまま、L3 PLAN の requires が欠落 / 不完全な版と `docs/plans/` が無い版を作る | (a) G1 の結果は BR / UX 13 件、15 画面、P0 FR 19 件のまま pass し、PLAN 由来の `l3Plans` / `missingL3Requires` を API / message に含めない。G3 は既存の `ok` と messages を保つ。(b1)〜(b3) はそれぞれ `ok=false` で、対応する違反を 1 件だけ返す: orphan business、`orphanL3Fr = [FR-99]` (`src/lint/g3-trace.ts` の R2、FR→AC の検査)、orphan NFR。(c) requires 欠落 / 不完全でも G1 の trace 結果は PLAN あり / なしで同一 | 実 repo を consumer 分岐へ流す ((a) が変わる) / harness 分岐の残る検査を 1 つでも落とす (対応する (b1)〜(b3) が `ok=true`) / G1 が PLAN を読むか、PLAN の有無または requires 内容で G1 結果を変える ((c) が不一致)。正常な実 repo だけでは retired PLAN dependency の再導入を検出できないため (b)(c) を置く |
 | `CANDIDATE-U-CTRACE-002` | temp に `docs/design/harness/` と consumer の 4 文書の両方を置く | harness 分岐になる (harness 専用文書が無いので現行どおり `required doc not created` で赤) | 分岐を consumer 文書の有無で決める (consumer 分岐で green になる) |
 | `CANDIDATE-U-CTRACE-003` | consumer layout、L1 `REQ-01`〜`03`、L2 `SC-001`〜`003`、L3 `F-01`〜`03`、L12 `AT-01`〜`03`、全参照が実在 | G1 / G3 とも `ok=true`。G1 message は `requirements=3, screens=3, functions=3`、G3 は `requirements=3, functions=3, tests=3`、いずれも `consumer column trace` を含む | 画面 ID を `(?:PM\|HM\|GD)-\d{2}` で抽出する (#971、screens=0 で赤) |
 | `CANDIDATE-U-CTRACE-004` | 003 と同じ形で ID を `要求A`、`画面-あ1`、`FUNC_x`、`受入9` にする | 003 と同じ `ok=true` と件数 | 抽出に prefix の正規表現を使う |
@@ -57,12 +56,29 @@ U-RCDEV-027 (v)(vi) の改訂も同じ契約 PR + Red で行う (設計文書 §
 | `CANDIDATE-U-CTRACE-023` | 実 repo の 4 テンプレートを読み、設計文書 §6.1 の章見出しと必須列が全てあることを確かめる。加えて、003 の fixture で (a) 各表の必須列を 1 つずつ改名 (例: `展開先` → `展開`)、(b) 各章見出しを 1 つずつ改名した版を作る | 実テンプレートでは全て見つかる。(a)(b) は全ての版で `ok=false`、`required_table_missing:<doc_type_id>:<章見出し>` | header を ID 列だけで判定する ((a) の参照列の改名が通る) / 見出しを部分一致で探す / テンプレート側の改名に定数が追随しないまま通る |
 | `CANDIDATE-U-CTRACE-024` | 003 の L2 に、テンプレートの `diagrams.yaml` 節 (`SC-001 サインアップ` など) を残し、さらに第5章の下に同じ 5 列の表を置いて `SC-900` を書く | screens=3、`SC-900` を ID に数えない | 文書全体から表を探す / 章の範囲を次の同レベル見出しで切らない |
 | `CANDIDATE-U-CTRACE-025` | 4 テンプレートを何も書き足さずに consumer layout に置く | G1 / G3 とも `ok=false`。理由は `empty_required_set` の 3 種 (G1) / 2 種 (G3) | placeholder だけの文書を green にする |
-| `CANDIDATE-U-CTRACE-026` | 003 の fixture に `docs/plans/PLAN-L3-01-x.md` (`related_l1_screen` を含み `requires` を欠く) を置く。別に `docs/plans/` 自体が無い版も作る | 両方とも consumer 分岐で `ok=true` (`l3Plans` の検査をしない) | consumer 分岐で `missingL3Requires` を評価する |
+| `CANDIDATE-U-CTRACE-026` | 003 と同じ有効な consumer fixture で (a) `docs/plans/PLAN-L3-01-x.md` (`related_l1_screen` を含み `requires` を欠く) を置く版、(b) `docs/plans/` 自体が無い版を作る | 両方の consumer G1 trace が `ok=true` であり、messages も (a)(b) で同一。PLAN 由来の `l3Plans` / `missingL3Requires` を API / message に含めない | consumer G1 が PLAN directory / PLAN file を読む、または PLAN の有無 / `requires` 内容で結果を変える。両方を失敗させて同一とする実装も拒否する |
+| `CANDIDATE-U-CTRACE-027` | 降下検査 (設計文書 §13) の正例。harness layout の fixture で、L1 に `BR-01` `BR-02` `UX-01`、画面 `PM-01` `HM-01` を置き、L3 の対象文書に各 ID を単独で 1 回ずつ書く。`analyzeL1L3Descent` をかける | `ok=true`、`violations` は 0 件、`totals` は `br=2, ux=1, screens=2`、message は `l1-l3-descent - OK` を含む | L3 を読まずに常に PASS にする / ID の抽出を `extractG1BusinessIds` / `extractG1ScreenIds` と別の形にして件数がずれる |
+| `CANDIDATE-U-CTRACE-028` | 027 から、L3 のどの対象文書にも現れない BR を 1 件 (`BR-09`)、UX を 1 件 (`UX-09`)、画面を 1 件 (`HM-09`) 足す。ID は L1 の表にだけ置く | `ok=false`、`l3_descent_missing:br:BR-09`、`l3_descent_missing:ux:UX-09`、`l3_descent_missing:screen:HM-09` を辞書順で全件返す。最初の 1 件で打ち切らない | 種別の一部 (画面など) を検査しない / 最初の欠落で打ち切る |
+| `CANDIDATE-U-CTRACE-029` | 027 から、L1 に `BR-01` を置き、L3 には `BR-010` と `XBR-01Y` だけを (別々の 2 版で) 書く。`BR-01` の単独の引用は無い | どちらの版も `l3_descent_missing:br:BR-01` を返す | 部分文字列一致や前後を見ない一致で数える (`BR-010` の `BR-01` や `XBR-01Y` の `BR-01` が降りたことになる) |
+| `CANDIDATE-U-CTRACE-030` | 027 から、`BR-02` の引用を `BR-01〜03` と `BR-01～03` (全角チルダ) の範囲表記だけにする (L3 には `BR-02` の単独の引用が無い) | どちらも `l3_descent_missing:br:BR-02` を返す (harness は範囲を数えない、設計文書 §13.3)。範囲を数えない決定 (設計文書 §13.9 DEC-2) の oracle である。加えて `BR-01〜05` の `BR-01` を単語境界だけで数える実装が通らないことを、`BR-01` の直後が `〜` / `～` / `~` の 3 通りで確かめる | 範囲表記の途中の ID を降下に数える / 単語境界だけで照合して範囲の先頭 (`BR-01`) を数える |
+| `CANDIDATE-U-CTRACE-031` | 028 の 3 件の欠落に対し、設計文書 §13.5 の除外台帳に `BR-09` `UX-09` `HM-09` を 5 列とも埋めて書く (reader で台帳の表を注入する)。さらに (a) `BR-09` の `理由` を空にした版、(b) 台帳に L1 に無い `BR-99` を足した版、(c) 台帳の `UX-09` が L3 に降りてしまった版を作る | 台帳が正しい版は `ok=true`、`excluded=3`。(a) は `exclusion_invalid:BR-09:理由`、(b) は `exclusion_stale:BR-99`、(c) は `exclusion_stale:UX-09`。いずれも `ok=false` | 必須列が空の除外を通す / 腐った台帳の行を無視する / 除外を `src/` の許可リストや PLAN から読む (台帳が設計文書の表だけであることを、reader が要求した path で確かめる) |
+| `CANDIDATE-U-CTRACE-032` | 退役 ID の扱い。L1 の画面要求に、旧 ID `SCR-01` を退役表 (§1 の外) に置き、L3 には書かない。`BR-NN` に似ない `XX-01` も L1 の別の節に置く | `SCR-01` と `XX-01` は検査対象にならず、`ok=true` | 文書全体から ID を拾って退役 ID まで必須にする / 抽出を §1 の表に限らない |
+| `CANDIDATE-U-CTRACE-033` | 実 repo (harness layout) に `analyzeL1L3Descent` をかけ、結果を設計文書 §13.6 の測定値と照合する。加えて同じ実 repo に既存の `analyzeDescentObligations` をかけ、FR-L1 の L1 から L3 の欠落が 0 件であることを確かめる | Green 前の前提を満たした後で `ok=true`、BR 10 件・UX 3 件・画面 15 件が検査され、`excluded` は台帳の行数と一致する。FR-L1 は `analyzeL1L3Descent` の `totals` に含まれず、`descent-obligation` 側の欠落は 0 件。Green の前提 (§13.6 の 9 件の解消) が未了の間は `it.fails` で `BR-01`〜`BR-07` と `UX-02` `UX-03` の欠落を固定する | 実 repo の欠落を実装側の許可リストで消して通す / FR を二重に数える / 契約と実測の件数が食い違う |
+| `CANDIDATE-U-CTRACE-034` | 空集合と読み取り。(a) L1 の business 文書から BR / UX が 0 件取れる fixture、(b) L3 の対象文書が 1 本も無い fixture、(c) `README.md` と `roadmap.md` にだけ `BR-01` が書かれた fixture | (a) は `empty_l1_set:br` と `empty_l1_set:ux`、(b) は `missing_l3_docs`、(c) は `l3_descent_missing:br:BR-01` (索引と工程表は降下先に数えない)。いずれも `ok=false` | 空集合を孤児 0 として PASS にする / L3 が読めない状態を PASS にする / `README.md` / `roadmap.md` を降下先に数える |
+| `CANDIDATE-U-CTRACE-035` | consumer の降下 D1。003 の fixture で、L3 の各 `機能一覧` 行の `トレース元` を `REQ-01` `REQ-02` `REQ-03` と対応させた版 (正例) と、`REQ-03` をどの `トレース元` にも書かない版 (負例)。さらに `トレース元` を `REQ-01〜03` (範囲表記) にした版 | 正例は `ok=true`。負例は `l3_descent_missing:DOC-L1-REQUIREMENTS:REQ-03`。範囲表記の版は `REQ-01`〜`REQ-03` 全てが降りた扱いで `ok=true` (consumer は §6.3 で範囲を展開する) | D1 を省く / L1 の `展開先` だけを見て L3 の引用を確かめない / consumer で範囲を展開しない |
+| `CANDIDATE-U-CTRACE-036` | consumer の降下 D2。003 の fixture で、L2 の各 `画面ID` の `関連機能` に `F-0n` を書いた版 (正例) と、`SC-003` の `関連機能` を `REQ-03` (要求だけ) にした版 (負例)。ID の体系を `要求A` `画面-あ1` `FUNC_x` に替えた版も作る | 正例は `ok=true`。負例は `l3_descent_missing:DOC-L2-SCREEN:SC-003`。ID を替えた版も正例と同じ結果。`関連機能` に実在しない token (T2 の `dangling_reference`) がある行には、降下の理由を重ねて返さない (T2 の理由 1 件だけ) | D2 を省く / `関連機能` に要求 ID があるだけで降りた扱いにする / consumer の画面 ID を `(?:PM\|HM\|GD)-\d{2}` で拾う (#971) |
+| `CANDIDATE-U-CTRACE-037` | consumer の読み取り (#972)。003 の fixture を fake reader で読み、`analyzeL1L3Descent` をかける。さらに 4 テンプレートを何も書き足さずに置いた版を作る | 003 の fixture は `ok=true` で、consumer 分岐では harness 専用の path (019 と同じ集合、harness 分岐だけが読む除外台帳の設計文書 path を含む) の要求は 0 件。テンプレートのままの版は `ok=false` で、理由は 025 と同じ `empty_required_set` が先に出て、降下の理由を重ねて返さない | consumer で harness 専用文書を読む / 空集合に対して降下の理由を大量に出す |
+| `CANDIDATE-U-CTRACE-038` | 027 から、`BR-02` の単独の引用を frontmatter が `status: placeholder` の L3 文書だけに置いた版と、`status: park` の文書だけに置いた版を作る | どちらも `l3_descent_missing:br:BR-02` を返す (placeholder / park の文書は数えない、設計文書 §13.3) | status を見ずに全 L3 文書の引用を数える |
+| `CANDIDATE-U-CTRACE-039` | 027 の fixture を基にするが、L1 の business 文書の表に `BR-01` と `BR-05` を置く (027 の L1 には `BR-05` が無いので、本行で明示して足す)。L3 の対象文書での `BR-01` と `BR-05` の引用は範囲だけにし、単独の引用を置かない。範囲の書き方を 4 版に分ける: (a) `BR-01〜BR-05`、(b) `BR-01〜05`、(c) `BR-01～05` (全角チルダ)、(d) `BR-01~05` | 全ての版で `l3_descent_missing:br:BR-05` と `l3_descent_missing:br:BR-01` を返す (範囲の末尾も先頭も数えない、設計文書 §13.3)。L1 に実在する ID だけを期待に使う | 範囲の末尾側を引用に数える (`BR-05` を末尾の書き方で拾う)。L1 に `BR-05` が無い入力では抽出されず、この mutation と正しい実装を区別できない |
+| `CANDIDATE-U-CTRACE-040` | 027 から、`BR-02` を (a) active の文書で単独に引用し、同じ ID を別の文書の範囲表記 `BR-01〜03` の中にも書き、さらに (b) status が placeholder の文書にも書く | `ok=true`。`BR-02` は active の文書の単独の引用で降りた扱いになる。範囲と placeholder の引用が混ざっていても、有効な引用を打ち消さない | 範囲表記や placeholder の文書が同じ ID にあると、単独の引用まで無効にする |
+| `CANDIDATE-U-CTRACE-041` | 除外台帳がデータ行を持たない (見出し行と区切り行だけ) 設計文書を reader で注入し、027 の fixture (欠落なし) にかける | `ok=true`、`excluded=0`、`exclusion_invalid` と `exclusion_stale` を返さない | 台帳が空であること自体を違反にする / 空の台帳を `exclusion_invalid` にする |
+
+001(c) の各版は、全て `ok=true` であり、PLAN 由来の `l3Plans` / `missingL3Requires` を API / message に含めず、同じ trace 結果と messages を返すことを要求する。全版を `ok=false` にして同一性だけを満たす実装は拒否する。
 
 ## 4. Gate and scope fence
 
-- 本書の oracle は consumer 分岐の G1-trace / G3-trace と、harness 分岐の挙動不変だけを扱う。layer pair gate、doctor、projection-writer、L1 第5章 非機能要求、L3 の ZIP-DOC-043 節は対象外 (設計文書 §11)。
-- harness 分岐の挙動不変は 001 と、既存の `tests/g1-trace.test.ts` / `tests/g3-trace.test.ts` が無変更で green であることで確かめる。既存 oracle を再定義しない。
+- 本書の oracle は consumer 分岐の G1-trace / G3-trace と、harness 分岐の挙動不変だけを扱う。layer pair gate、doctor、projection-writer、L1 第5章 非機能要求、L3 の ZIP-DOC-043 節は対象外 (設計文書 §11)。 降下検査 (027〜041) の入口は G1-trace の追加の規則である (設計文書 §13.9 DEC-1)。027〜041 は `analyzeL1L3Descent` を直接呼び、入口の配線 (`l1-l3-descent - ...` の行が別の行として足され、`g1-trace - OK (...)` の行が変わらないこと) は、実装 PR の gate-static の基準の更新で確かめる。027〜041 の候補 ID は未昇格で、正式 ID への昇格と Red テストは後続の契約 PR + Red で行う。
+- harness 分岐の保持対象は 001 と `tests/g1-trace.test.ts` / `tests/g3-trace.test.ts` で確かめる。A4 の PLAN 専用 G1 退役に伴い U-G1 の `missingL3Requires` 期待と `l3Plans` 出力期待は意図的に改訂する。G1 OK message は設計文書 §8 の3件形式に固定し、`tests/g1-trace.test.ts` の U-G1 と既存 oracle `tests/gate-static.test.ts:53` / `tests/pack-canary-acceptance.test.ts:2017` の期待を更新する。`scripts/pack-canary-acceptance.mjs:215` は business / screens / p0Fr の各件数を `>=1` とする既存ガードを保つ。一方、BR / screen / P0 FR trace の orphan fail-close と OT-45 R1〜R3 の件数条件は保持し、G3 の既存 oracle / expectation は変更しない。U-CTRACE-001 の (b2)(b3) を保持するため、既存 G3 test を変更せず通常の独立負例2件だけ `tests/g3-trace.test.ts` に追加する。これは後続の consumer trace 実装による変更と分けて扱う。
 - consumer 分岐の PASS は、件数の下限を持たない列参照 trace の PASS である。OT-45 の PASS の証拠に流用しない (設計文書 §4)。
 - 契約 PR + Red で `src/lint/consumer-trace.ts` がまだ無いために import が失敗して `it.fails` が成立しても、各規則の Red の証拠にならない。実装 PR は、候補ごとに規則を 1 本だけ殺す mutation を入れて Red になることを確かめ、そのログを §5 に残す。
 
@@ -71,5 +87,13 @@ U-RCDEV-027 (v)(vi) の改訂も同じ契約 PR + Red で行う (設計文書 §
 実装 PR は次を残す。
 
 - 各 candidate の Red→Green ログ (mutation を入れた Red の再現を含む)。
-- 既存の `tests/g1-trace.test.ts` / `tests/g3-trace.test.ts` が無変更で green であること。改訂後の U-RCDEV-027 が green であること。
+- A4 Red→Green 後の `tests/g1-trace.test.ts` で、PLAN なし / 不完全 PLAN によって有効な G1 trace が変わらず、BR / screen / P0 FR の orphan は引き続き fail-close すること。`tests/g3-trace.test.ts` の既存テストは変更せず green を保ち、U-CTRACE-001 の (b2)(b3) に対応する通常負例2件も green であること。改訂後の U-RCDEV-027 が green であること。これらは後続の consumer trace 実装 PR での挙動変更と混同しない。
+- A4 Red→Green では、実 repo の非PLAN件数が13 / 15 / 19と表示され、canary parser の3件すべてが `>=1` のままであることを確認する。共有 gate serialization の形式・合否を保ち、退役対象の PLAN 専用判定を除いて G3 と BR / screen / P0 FR の orphan fail-close は変わらないことを確認する。
 - typecheck / Biome、Linux / Windows / aggregate CI の run ID、exact HEAD、非著者 closing receipt digest。
+
+### A4 の移行: PLAN 専用 G1 検査の退役
+
+- 契約変更の対象は U-G1 の L3 PLAN `requires` 判定と `l3Plans` / `missingL3Requires` の API・message surface だけである。代替の L1→L3 全件 trace lint は追加しない。
+- 契約 PR + Red で、PLAN が無い / 不完全でも有効な G1 trace が pass し、BR / screen / P0 FR の orphan は fail-close する期待を先行させる。OT-45 R1〜R3 の 13 / 15 / 19 件条件を保持する。
+- G1 OK message から `l3Plans` を除き、非PLAN件数3値を設計文書 §8 の順序で残す。これ以外に G1 の退役範囲を広げない。共有テスト `gate-static.test.ts` の改訂は他 PR と直列にする。
+- 本契約 PR は docs-only であり実装しない。Green ではじめて G1 の PLAN reader と retired fields / messages を除く。

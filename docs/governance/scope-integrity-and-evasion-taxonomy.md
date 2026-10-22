@@ -14,7 +14,7 @@
 | 3 | 実装中 (scope の無宣言変更) | DoD 項目の削除・書き換え、スコープ節の縮小、「非対象」の後付け拡大 | **検出器なし** — git diff でしか見えず、review が見落とせば素通り | **穴 → PLAN-L7-314** |
 | 4 | 検証 (部分実行の全体主張) | targeted 実行で full を主張 / 出力を tail で切る / green の再刻印 | green_commands (scope/exit_code/digest) + digest 検査 (L7-132/194、v2 で anchor 化 L7-303)。**scope=full の真偽検証は無い** | 部分 (穴は §2 B6) |
 | 5 | レビュー (自己承認の質) | 縮小済みスコープを「完了」として承認 / cross-review の省略 | review_evidence 必須 + tests_green_at≤reviewed_at 不変条件 + cross-review 規約 | 防御あり (質は人/モデル依存) |
-| 6 | 完了宣言 (bookkeeping) | DoD 未消化のまま status 終端 / 完了主張と実体の乖離 | plan-dod + plan-completion-drift + plan-artifact-existence | **防御あり** |
+| 6 | 完了宣言 (bookkeeping) | DoD 未消化のまま status 終端 / 完了主張と実体の乖離 | 現行: `plan-dod` + `plan-completion-drift` + `plan-artifact-existence`。後者は A4 bounded retirement の対象 (#1168) | **退役後は前 2 gate のみ。PLAN 生成物の存在・非空は機械保証されず、残る 2 gate はその保証を代替しない** |
 | 7 | 繰延 (先送りの偽装) | 「将来やる」と言って台帳に載せない / parked の永久放置 | version-up certificate (機械宣言) + defer ledger。放置検出は v2 (L7-307 aging) | 部分 (v2 で強化) |
 
 **矮小化の定義**: DoD を名目的に満たす最小実装で「完了」を主張すること。防御は二層 — 機械層は「DoD の機械 oracle 必須化」(L7-304/305 + oracle 強度系 L6-29) で名目充足の余地を減らし、実体層は review (cross-runtime) が substance を読む。機械だけでは防げないことを明記する (`coverage ≠ substance` は自動化の限界宣言でもある)。
