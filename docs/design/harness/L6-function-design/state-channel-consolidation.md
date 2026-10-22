@@ -289,7 +289,7 @@ classifyMemoryAdd({ kind, durableReason }) =
 これは A4 の PLAN 専用検査退役方針を適用した bounded slice であり、実装 Green は #1241 で完了した。以下はその契約である。なお、旧 `LegacyMigrationDryRun` に属していた検査 (`plan-generated-target-invalid` と role/design target の missing/hollow 拒否を含む) は、#1257 で dry-run の実装ごと退役した。
 
 - doctor の registry・出力・選択経路から `plan-artifact-existence` を除く。専用 lint 本体、専用テスト、adapter/re-export、および `U-MEMCUT-015` を含む当該検査への依存も、後続 Green で除去する。
-- relation graph の完了を主張する PLAN (`confirmed` / `completed` / `accepted`) の `generates` 先の不在だけを理由とする stale 判定、および旧 `LegacyMigrationDryRun` の `plan-generated-target-missing` 判定も退役する。graph loader/projection と他の edge の stale 判定、generated path の形の検査 (`plan-generated-target-invalid`)、role/design target に対する一般の missing/hollow 拒否は残す。対の契約は `module-drift.md` と `function-spec.md`、oracle 境界は共有 `L7-unit-test-design.md` に置く。
+- relation graph の完了を主張する PLAN (`confirmed` / `completed` / `accepted`) の `generates` 先の不在だけを理由とする stale 判定、および旧 `LegacyMigrationDryRun` の `plan-generated-target-missing` 判定も退役する。graph loader/projection と他の edge の stale 判定は残す (A4 当時は generated path の形の検査 `plan-generated-target-invalid` と role/design target に対する一般の missing/hollow 拒否も残す境界だったが、これらは旧 `LegacyMigrationDryRun` に属しており、#1257 で dry-run の実装ごと退役した)。対の契約は `module-drift.md` と `function-spec.md`、oracle 境界は共有 `L7-unit-test-design.md` に置く。
 - 判定そのものを退役するため、旧 `LegacyMigrationDryRun`（#1168 / PR #1257 で実装ごと退役）が完了主張として扱っていた `confirmed` / `completed` / `accepted` のいずれにも `plan-generated-target-missing` を残さない。graph でも既存 `generates` edge の実在要求を退役し、status 別の代替検査は追加しない。
 - PLAN ファイルとその履歴は変更しない。phantom 例外、allowlist、stub、skip は追加しない。
 - `plan-dod` と `plan-completion-drift` を含む他の gate の挙動は変更しない。それらを成果物存在・非空の保証とみなさない。

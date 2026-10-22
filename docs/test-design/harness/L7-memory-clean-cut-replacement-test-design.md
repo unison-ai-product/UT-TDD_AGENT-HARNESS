@@ -159,7 +159,7 @@ updated: 2026-10-21
 
 ## 9. A4: PLAN `generates` の成果物実在要求の退役 (bounded)
 
-この節は A4 の PLAN `generates` の成果物実在要求を、doctor・relation graph・legacy migration dry-run の 3 面から退役する。`plan-artifact-existence` doctor check は全体を退役し、他の 2 面は該当する判定だけを退役する。代替 gate、stub、特定 path の例外は追加しない。memory corpus の置換契約、graph loader / projection 自体、他種の edge の stale 判定、role/design target の missing/hollow 拒否には広げない。`plan-generated-target-invalid` と一般の `HeadTargetRegistry` の意味は保持する。
+この節は A4 の PLAN `generates` の成果物実在要求を、doctor・relation graph・legacy migration dry-run の 3 面から退役する。`plan-artifact-existence` doctor check は全体を退役し、他の 2 面は該当する判定だけを退役する。代替 gate、stub、特定 path の例外は追加しない。memory corpus の置換契約、graph loader / projection 自体、他種の edge の stale 判定、role/design target の missing/hollow 拒否には広げない。A4 当時は `plan-generated-target-invalid` と一般の `HeadTargetRegistry` の意味を保持する境界だった (これらは legacy dry-run に属しており、後に #1257 で dry-run の実装ごと退役した)。
 
 | 正式 oracle | 所有 PR | Stimulus / mutation | 独立 oracle |
 | --- | --- | --- | --- |
