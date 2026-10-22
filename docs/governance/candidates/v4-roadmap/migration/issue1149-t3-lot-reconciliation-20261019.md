@@ -1,8 +1,7 @@
 # T3 ロット 照合記録 (issue #1149 / #1078、2026-10-19)
 
 処分 JSON `06_PLAN_DISPOSITION_FIRST_PASS.json` で `status` が `completed` の 26 件と `archived` の 3 件のうち、
-三者照合 (PLAN ⇔ 設計文書 ⇔ コード) を実施し、最終化できた 7 件の記録である。正本は
-`docs/design/harness/L6-function-design/plan-retirement-gate.md` §3.3。
+三者照合 (PLAN ⇔ 設計文書 ⇔ コード) を実施し、最終化できた 7 件の記録である。照合の基準は当時の目標契約 §3.3 であり、この契約は撤去済みである (#1170、#1078 issuecomment-6265568869)。
 
 - `consistent`: PLAN・設計文書・コードの三者が一致する。
 - `plan-stale`: PLAN 側だけが古く、設計文書とコードが正しい。
