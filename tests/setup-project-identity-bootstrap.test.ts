@@ -582,7 +582,7 @@ describe("project identity bootstrap", () => {
     expect(() => runner.deps.repositoryIdentity()).toThrow("identity_repository_unbound");
   });
 
-  it("CANDIDATE-U-PROJID-037: legacy inventory direct caller denies stale identity", () => {
+  it("legacy inventory direct caller denies stale identity", () => {
     const root = trackedFixture("other/repo", "git@github.com:acme/widget.git");
     expect(buildLegacyPlanInventory(root)).toMatchObject({
       ok: false,

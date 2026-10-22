@@ -13,7 +13,7 @@ import {
 import { headPlanDocCount } from "./head-plan-doc-count.ts";
 
 describe("legacy migration dry-run", () => {
-  it("U-PA-038: proves exact files and directory families against non-empty HEAD blobs", () => {
+  it("proves exact files and directory families against non-empty HEAD blobs", () => {
     const registry = HeadTargetRegistry.from([
       ["docs/process/forward/README.md", 10],
       ["docs/empty.md", 0],
@@ -24,7 +24,7 @@ describe("legacy migration dry-run", () => {
     expect(registry.hasNonEmpty("docs/missing/")).toBe(false);
   });
 
-  it("U-PA-039: re-verifies snapshot OID and content digest from the bound HEAD object", () => {
+  it("re-verifies snapshot OID and content digest from the bound HEAD object", () => {
     const result = new LegacyMigrationDryRun().run(process.cwd());
     if (!("records" in result)) throw new Error(result.ruleId);
     const sample = result.records[0];
@@ -34,7 +34,7 @@ describe("legacy migration dry-run", () => {
     expect(createHash("sha256").update(bytes).digest("hex")).toBe(sample.sourceContentDigest);
   });
 
-  it("U-PA-040: resolves every delegation slot to a non-empty role contract at HEAD", () => {
+  it("resolves every delegation slot to a non-empty role contract at HEAD", () => {
     const result = new LegacyMigrationDryRun().run(process.cwd());
     if (!("records" in result)) throw new Error(result.ruleId);
     const targets = result.records.flatMap((record) => record.delegationTargets);
@@ -51,11 +51,11 @@ describe("legacy migration dry-run", () => {
     }
   });
 
-  it("U-PA-041: resolves every authored target_slot against the HEAD document catalog", () => {
+  it("resolves every authored target_slot against the HEAD document catalog", () => {
     expect(targetSlotFindings(process.cwd())).toEqual([]);
   });
 
-  it("U-PA-034: emits an exactly-once HEAD-bound record for every inventory item", () => {
+  it("emits an exactly-once HEAD-bound record for every inventory item", () => {
     const result = new LegacyMigrationDryRun().run(process.cwd());
     if (!("records" in result)) throw new Error(result.ruleId);
     expect(result.total).toBe(headPlanDocCount(process.cwd()));
@@ -67,7 +67,7 @@ describe("legacy migration dry-run", () => {
     expect(result.reportDigest).toMatch(/^[a-f0-9]{64}$/);
   });
 
-  it("U-PA-035: applies every explicit reviewed rekey decision", () => {
+  it("applies every explicit reviewed rekey decision", () => {
     const result = new LegacyMigrationDryRun().run(process.cwd());
     if (!("records" in result)) throw new Error(result.ruleId);
     const reviewedItems = REVIEWED_REKEY_DECISIONS.length;
@@ -84,7 +84,7 @@ describe("legacy migration dry-run", () => {
     expect(result.findings).toEqual([]);
   });
 
-  it("U-PA-036: detects a decision manifest that targets another inventory identity", () => {
+  it("detects a decision manifest that targets another inventory identity", () => {
     const wrong: MigrationDecisionPort = {
       decide(item) {
         return {
@@ -106,7 +106,7 @@ describe("legacy migration dry-run", () => {
     ).toBe(true);
   });
 
-  it("U-PA-037: is deterministic for the same HEAD and decision port", () => {
+  it("is deterministic for the same HEAD and decision port", () => {
     const first = new LegacyMigrationDryRun().run(process.cwd());
     const second = new LegacyMigrationDryRun().run(process.cwd());
     expect(second).toEqual(first);
@@ -116,7 +116,7 @@ describe("legacy migration dry-run", () => {
     "confirmed",
     "completed",
     "accepted",
-  ])("U-PAEXRET-003: ($0) PLAN の absent / hollow generates target は missing finding にしない", (status) => {
+  ])("($0) PLAN の absent / hollow generates target は missing finding にしない", (status) => {
     const roots: string[] = [];
     try {
       const invalidPathRoot = createMigrationFixture(
