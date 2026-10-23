@@ -10,7 +10,7 @@ next_pair_freeze: L7
 issue: 1261
 ---
 
-# L6 機能設計: provider invocation input validation (Issue #1261 M1)
+# L6 機能設計: provider invocation input validation (Issue #1261 M1 / L1)
 
 > **契約状態**: 本文はM1の目標契約である。Issue #1284で対になるL7の11件を正式oracleへ昇格した。このID昇格はsource実装、Green結果、closing review PASSを示すものではない。frontmatterのconfirmedは文書revisionの固定を示し、実装完了を表さない。
 
@@ -18,7 +18,7 @@ issue: 1261
 
 CLIからprovider invocationを組み立てる前にmodel / reasoning effortを既存schemaで一貫して検証し、Windowsの`cmd.exe`経由で`.cmd` / `.bat`を起動するときは、command文字列へ展開する全tokenを最終境界で検査する。入口検証と最終token検査を独立した2層として維持する。
 
-対象はIssue #1261 M1に限定する。L1/L2、agent-guard、floor、共有function-specおよび共有L7 unit designの改訂は対象外。本書の対象はschemaの複製や新moduleではなく、既存schemaとprovider invocation choke pointの契約である。
+対象はIssue #1261 M1と、§7のL1 (`git ls-remote`へ渡すremote引数のoption注入拒否) に限定する。L2、agent-guard、floor、共有function-specおよび共有L7 unit designの改訂は対象外。本書の対象はschemaの複製や新moduleではなく、既存schemaとprovider invocation choke pointの契約である。
 
 ## 2. 既存schemaを使うmodel / effort検証
 
@@ -86,3 +86,43 @@ CLIからprovider invocationを組み立てる前にmodel / reasoning effortを�
 ## 6. 対になるテスト設計
 
 正式oracleと反証条件はpair artifact `docs/test-design/harness/L7-provider-invocation-input-validation-test-design.md` に記す。`U-CMDINPUT-001`〜`U-CMDINPUT-011` は正式IDであり、実装完了やGreen結果を表さない。
+
+## 7. git ls-remote の remote 引数 (Issue #1261 L1)
+
+> **契約状態**: 本節はL1のpair-freezeのための契約案であり、非著者のclosing review前である。未実装の目標契約であり、source実装・L7候補の正式昇格・実行証跡を示さない。§1〜§6のM1契約は本節で変えない。
+
+### 7.1 入力境界
+
+`src/setup/update-check.ts` の `checkForUpdate` が `configuredRemote` で解決したremote文字列を入力境界とする。解決順 (`UT_TDD_UPDATE_CHECK_REMOTE` override → harness root package.jsonの`repository.url` (`normalizeRepositoryUrl`で`git+`除去・trim済み) → harness root自身が`.git`を持つときだけ`origin`) は `docs/design/harness/L6-function-design/setup-solo-team.md` §8 のまま変えない。検査はどの出所から来た値にも同じ1か所で適用し、出所ごとに別の規則を持たない。
+
+### 7.2 拒否規則
+
+- 解決済みremoteが `-` で始まる (`remote.startsWith("-")`) とき拒否する。`--upload-pack=<cmd>` 等がgitのoptionとして解釈されるのを防ぐ。
+- 判定は解決済みの値そのものに対して行う。値をtrim・正規化し直して判定を変えない (前後空白の除去は既存の解決処理の責務のまま)。
+- `-` を先頭以外に含むURL (`https://example/a-b.git` 等) や `origin` は従来どおり受理する。
+- 検査は `configuredRemote` の直後、cache参照 (`readCache`) と `listRemoteTags` 呼出しより前に置く。cacheに同じremote keyが残っていても拒否が優先する。
+- `git ls-remote --tags -- <remote>` のような `--` end-of-optionsは**使わない**。拒否だけで注入経路は閉じ、`gitLsRemoteInvocation` のargv形 (`["ls-remote", "--tags", remote]`) と`.cmd` shim経路の既存挙動を変えないためである。`gitLsRemoteInvocation` / `listRemoteTags` 側に第2の検査層は設けない (呼出し元は`checkForUpdate`だけであり、最小実装とする)。
+
+### 7.3 診断と失敗時の挙動
+
+update checkはadvisoryであり、既存の `failOpen` と同じ形で返す。
+
+| 項目 | 契約 |
+|---|---|
+| 戻り値 | `checked: false`、`latestVersion: null`、`updateAvailable: false`、`source: "none"`、`localVersion` は解決済みのlocal version |
+| `detail` | 厳密に `remote rejected: starts with "-"` (既存の `remote tags unreachable` 等と同じ`detail`の平文literal) |
+| 表示 | `renderUpdateLine` の既存分岐により `update: check skipped (remote rejected: starts with "-")` |
+| 秘匿 | `detail` にremoteの生値を含めない |
+
+gitの起動に対してはfail-closeとする: 拒否時は `listRemoteTags` を呼ばず (git spawn 0回)、cacheの読み書きもしない。status / doctorに対してはfail-openとする: throwせず、exit codeに影響しない (setup-solo-team.md §8の「advisoryであってgateではない」を維持)。
+
+### 7.4 不変条件
+
+関数署名 `checkForUpdate(deps: UpdateCheckDeps) => UpdateCheckResult` と `gitLsRemoteInvocation` の署名・argvは変えない。
+
+| DbC | 契約 |
+| --- | --- |
+| pre | 無し (never throws)。remoteの出所は§7.1の3種で、どれも外部入力として扱う。 |
+| post | `-`始まりのremoteは§7.3の結果となり、`listRemoteTags`呼出し0回・cache書込み0回。それ以外のremoteは既存挙動のまま。 |
+| invariant | remote解決順、cache TTL、`gitLsRemoteInvocation`のargvと`%`回避、advisoryの非gate性を維持する。 |
+| oracle | 専用L7の `CANDIDATE-U-CMDINPUT-012`〜`015`。まだ正式oracleではない。 |
