@@ -114,7 +114,8 @@ function oracleStrengthMessages(text: string): string[] {
 }
 
 const NO_ORACLE_MESSAGE = "Test cases must contain an explicit expect/assert oracle.";
-const WEAK_ORACLE_MESSAGE = "Test cases must not rely only on toBeTruthy/toBeFalsy weak assertions.";
+const WEAK_ORACLE_MESSAGE =
+  "Test cases must not rely only on toBeTruthy/toBeFalsy weak assertions.";
 
 describe("U-DDDTDD DDD/TDD strictness lint", () => {
   it("detects SSoT policy drift", () => {
