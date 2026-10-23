@@ -933,6 +933,10 @@ describe("Issue #1261 M1 provider invocation input validation candidates", () =>
         { provider: "codex", role: "qa", task, model: "gpt-5.4", effort: "medium" },
         "hybrid",
       );
+      expect(plan.available).toBe(true);
+      expect(plan.messages).not.toContain("provider_model_invalid");
+      expect(plan.messages).not.toContain("provider_effort_invalid");
+      expect(plan.messages).not.toContain("provider_cmd_token_percent_forbidden");
       expect(plan.stdin).toBe(task);
       expect(plan.args).not.toContain(task);
       const invocation = buildProviderInvocation({
