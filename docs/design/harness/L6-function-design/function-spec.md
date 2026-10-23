@@ -293,7 +293,7 @@ type QualitySignal = { signal_type: string; subject_id: string; score?: number; 
 
 本節は VMS-007 (`typed-spec-phase-layer-alignment`、`traces_from: VMS-004`、検証 `TVMS-007`) の契約を所有する移設先である。VMS-007 は typed spec 台帳の `v_phase` と、宣言元 artifact から解決した owner phase を一致させる設計であり、検出系が owner phase を推測で作らないことを保証する。これにより VMS-004 の `traces_to` は VMS-007 に解決する。契約の実体は上の `analyzeTypedSpecPhaseLayerAlignment` / `checkTypedSpecPhaseLayerAlignment` の行と、L5 `physical-data.md` の `typed-spec-owner-phase-missing` 診断が持つ。
 
-`spec.defines` の宣言 block は、移行の途中では PLAN-L6-46 に残っている (唯一の宣言元)。block を本節へ複製すると同一 ID の二重宣言になるため、宣言の移設は ② の freeze で PLAN を一括で退役させる手順の中で、PLAN 側の削除と同時に行う。その際 `docs/governance/vmodel-typed-spec-definitions.md` の VMS-007 の `ledger_sources` を、PLAN から本文書 (`function-spec.md`) へ付け替える。
+`spec.defines` の VMS-007 宣言 block は、PLAN 退役作業 #1295 で本文書へ移設した。PLAN-L6-46 側の同一 block を除き、`docs/governance/vmodel-typed-spec-definitions.md` の VMS-007 の `ledger_sources` も本文書 (`function-spec.md`) へ付け替える。同一 ID の二重宣言は作らない。
 
 ## 2026-06-09 L6 completion readiness 追補
 
@@ -2832,3 +2832,65 @@ test-design に触れない。
    (`src/lint/github-ci-policy.ts` を変更する) が main に入った後に出す。
 
 Issue #1063 項目 1 (`memory-legacy-archive` の git 呼び出しバッチ化) は独立で、shard の偏りを減らすため先が望ましい。
+
+## PLAN 退役に伴う typed spec 宣言の移設 (#1295)
+
+```yaml
+spec:
+  defines:
+    - id: VMS-007
+      kind: typed-spec-phase-layer-alignment
+      traces_from: [VMS-004]
+      tests: [TVMS-007]
+```
+
+VMS-007 は typed spec 台帳の `v_phase` と宣言元 artifact の owner phase を一致させる設計である。
+修正版 ZIP 107 の V-model level 定義と各 doc の agent 契約を HARNESS の L0-L14 / frontmatter 正本へ翻訳する前段として、
+検出系が層を推測で作らないことを保証する。
+
+```yaml
+spec:
+  defines:
+    - id: VMS-008
+      kind: agent-contract-authoring-source
+      traces_from: [VMS-004]
+      traces_to: [VMS-009, VMS-010]
+      tests: [TVMS-008]
+```
+
+VMS-008 は ZIP の doc-local agent 契約を HARNESS の authoring source として保持する設計である。
+
+```yaml
+spec:
+  defines:
+    - id: VMS-010
+      kind: forward-freeze-contract-design
+      traces_from: [VMS-008]
+      traces_to: [VMS-011, VMS-012]
+      tests: [TVMS-010]
+```
+
+VMS-010 は ZIP 107 の L2 prototype agreement と L5 verification design を HARNESS の Forward freeze contract として定義する設計である。
+
+```yaml
+spec:
+  defines:
+    - id: VMS-014
+      kind: execution-assignment-ledger
+      traces_from: [VMS-004]
+      tests: [TVMS-014]
+```
+
+VMS-014 は ID 単位実行割当台帳の L6 設計契約である。typed spec authoring source を上流に持ち、
+対応 oracle は TVMS-014 である。
+
+```yaml
+spec:
+  defines:
+    - id: VMS-015
+      kind: schedule-live-session-digest
+      traces_from: [VMS-004]
+      tests: [TVMS-015]
+```
+
+VMS-015 は工程 live state と固定4段 SessionStart digest の L6 設計契約である。

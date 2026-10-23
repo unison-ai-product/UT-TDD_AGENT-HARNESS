@@ -107,13 +107,4 @@ dependencies:
 
 ## U11 型付きスペック所有 artifact
 
-```yaml
-spec:
-  defines:
-    - id: VMS-005
-      kind: activation-schedule-review
-      traces_from: [VMS-002, VMS-003]
-      tests: [TVMS-005]
-```
-
 VMS-005 は activation schedule review 実装 PLAN の所有 artifact で宣言される typed spec である。

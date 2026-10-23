@@ -174,13 +174,4 @@ Forward FSM移行までは工程表RAG、移行後はtransition ledgerで管理�
 
 ## U11 型付きスペック所有 artifact
 
-```yaml
-spec:
-  defines:
-    - id: VMS-001
-      kind: upgrade-charter
-      traces_to: [VMS-002, VMS-003, VMS-004]
-      tests: [TVMS-001]
-```
-
 VMS-001 は version-up charter の所有 artifact で宣言される typed spec である。

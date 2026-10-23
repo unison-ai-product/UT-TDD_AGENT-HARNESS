@@ -74,12 +74,3 @@ ZIP 108 / 109 の必須 marker が欠ける場合に fail-close する。
 - `VMS-013` と `TVMS-013` が typed spec ledger / body / L7 test design に登録される。
 
 ## U13b typed spec owned artifact
-
-```yaml
-spec:
-  defines:
-    - id: VMS-013
-      kind: refactor-qa-release-contract-gate
-      traces_from: [VMS-012]
-      tests: [TVMS-013]
-```
