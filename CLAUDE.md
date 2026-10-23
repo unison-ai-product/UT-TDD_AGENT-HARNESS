@@ -356,7 +356,7 @@ close された)。新規機構は作らず、既存工程の遵守を規律と�
    `function-spec.md`、`tests/gate-static.test.ts` のような共有の文書・テストを変える作業は直列にし、
    同じファイルを並行する複数の PR に分けない (1 本 merge するたびに残りが衝突して再検になる)。この直列化は
    直列ボックスで実現する。並列にしてよいのは、変更するファイルが重ならない範囲だけである。ボックスと slot の
-   運用は `docs/governance/github-issue-hierarchy.md` §6.1。初回の FLAG 率が高い作業は、worker を
+   運用 (実装・control・検収の全 lane に同じ型を当てる) は `docs/governance/github-issue-hierarchy.md` §6.1。初回の FLAG 率が高い作業は、worker を
    増やす前に手順書を直す。
 
 この規律から外れた PR は内容の当否に関わらず FLAG (process violation) とする

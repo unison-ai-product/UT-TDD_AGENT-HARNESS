@@ -67,41 +67,54 @@ PO 判断 (2026-10-22)。通常の Forward 作業は、使い捨ての作業チ�
 
 ### 6.1 並列ボックスと直列ボックス (PO 判断 2026-10-23)
 
-実装 lane (Codex) へ渡す作業は 2 つのボックスに溜め、lane が遊ばず、1 件ずつの受け渡しも要らない
-状態にする。これは特定の backlog の話ではなく、一般の運用形である。
+作業は 2 つのボックスに溜め、lane が遊ばず、1 件ずつの受け渡しも要らない状態にする。この型は
+実装 lane (Codex) だけでなく、control lane (Claude) と検収 lane (closing review。Codex 著は Claude Opus、
+Claude 著は Codex Sol) にも同じに当てる。特定の backlog の話ではなく、一般の運用形である。
 
-- **並列ボックス**: 順序を問わないチケットの集まり。空いた slot は、どれでも 1 件拾う (A でも B でも C でもよい)。
+- **並列ボックス**: 順序を問わないチケットの集まり。空いた slot は、どれでも 1 件拾う。
 - **直列ボックス**: A→B→C と鎖でつないだチケット。前のチケットが close して初めて、次が拾える。
-- **slot**: lane は最大 N slot を同時に動かす。Codex の N は 3 (subagent の上限)。各 slot は自分の worktree で作業する。
+- **slot**: どの lane も最大 N slot を同時に動かす。各 slot は自分の worktree (または作業枠) を持つ。
+  例として Codex の N は 3 (subagent の上限)。control と検収の N は運用値として記録し、ここでは固定しない。
 
 v4 候補 (`docs/governance/candidates/ut-tdd-concept-v4.0.md`) のチケット発行 (原子チケットが lease を持ち、
-依存が順序を決め、WIP 上限が量を縛る) を、手運用で先に試すものである。ここで集める計測 (lane の遊び時間、
-review の待ち時間。Issue コメントの時刻から取る) は、その後の機構化の入力にする。
+依存が順序を決め、WIP 上限が量を縛る) を、手運用で先に試すものである。
 
 **GitHub 上の表現** (既存機能だけを使う):
 
-- チケットは `Work` Issue。受け手 lane はラベル `lane:codex` (または `lane:claude`) で示す。
-- 直列は GitHub の issue dependency「blocked by」で表す (後のチケットに、前のチケットへの blocked by を張る)。
-  並列は、open な blocker が無いものである。
-- チケットが**拾える**条件は、open、lane ラベルあり、assignee なし、open な blocker なし、の全てである。
+- チケットは `Work` Issue。受け手 lane はラベル `lane:codex` / `lane:claude` で示す。検収のチケットには
+  `ticket:review` を付ける。
+- 直列は GitHub の issue dependency「blocked by」で表す。並列は、open な blocker が無いものである。
+- **拾える**条件は、open、lane ラベルあり、assignee なし、open な blocker なし、の全てである。
 
-**lease**:
+**lease**: 取得は assignee の設定と、slot 番号と開始時の base commit を書いたコメント 1 件。
+解放は assignee を外すことと、コメント 1 件。1 チケット = 1 slot = 1 worktree。
 
-- 取得は assignee の設定と、slot 番号と開始時の base commit を書いたコメント 1 件。
-- 解放は assignee を外すことと、コメント 1 件。
-- 1 チケット = 1 slot = 1 worktree。
-
-**空いた slot が拾う順**:
-
-1. その lane 自身の open PR にある FLAG・CI 赤・衝突の是正
-2. 直列の鎖の先頭
-3. 並列のチケット
+**空いた slot が拾う順**: (1) その lane 自身の open PR にある FLAG・CI 赤・衝突の是正、
+(2) 直列の鎖の先頭、(3) 並列のチケット。
 
 **並列ボックスへの入れ方**: 変更する path が、他の open な並列チケットと重ならないこと。かつ共有の面に
 触れないこと (例: `package.json` / lock、`.github/workflows/`、`docs/test-design/harness/L7-unit-test-design.md` や
 `function-spec.md`、`tests/gate-static.test.ts` のような共有 test-design)。当てはまらないものは直列の鎖に入れる。
 
-**control lane の務め**: 拾えるチケットの数が lane の slot 数以上になるよう、チケットを起票して溜める。
-下回ったら補充する。review request は従来どおり control lane だけが、exact head ごとに 1 本出す。
+**空きは問題である**: slot の空きを、普通の待ちとして扱わない。どちらも問題として Issue コメントに記録する。
+
+- 拾えるチケットがあるのに slot が空いている = **拾い漏れ**。その lane の問題である。
+- 拾えるチケットが無くて slot が空いている = **供給不足**。チケットを出す側の問題である。実装 lane と検収
+  lane に出すのは control lane、control lane 自身のチケットを出すのも control lane である。
+
+**検収もチケットにする**: closing review の依頼 1 本 (exact head ごとに 1 本) が、検収 lane の
+チケット 1 件である。FLAG の是正後の再検は、是正に blocked by される直列にする。独立した PR の review は並列にする。
+review request を出すのは従来どおり control lane だけで、チケットを起票することが、その依頼の見える記録になる。
+review の custody (request → verdict → receipt) は既存の経路のままで、チケットは custody の代わりにならない。
+
+**CI の順序と流れ**: CI は共有の限られた資源である。直列ボックスは CI の順序も決める。共有の面に触れる
+チケットは鎖でつなぎ、1 本の merge が他の CI と review を無効にしない (rebase して再実行にならない) ようにする。
+同時に動かす並列チケットの数は、slot 数に加えて CI の余力でも上限を持つ。
+
+**control lane の務め**: lane ごとに、拾えるチケットの数が slot 数以上になるよう起票して溜め、下回ったら補充する。
+
+**将来の管理知能**: v4 の管理知能 (ADR-001 決定 4 により proposal-only の別 process) は、lane ごとに
+拾える直列・並列チケットの数と空き slot の数を算出し、それに応じてチケットを発行する (実装・control・検収とも)。
+それまでは control lane が手でこの数を数え、Issue コメントの時刻から取った記録を、機構化の計測入力にする。
 
 **暫定である**: 運用して計測し、この節の改訂で改善する。
