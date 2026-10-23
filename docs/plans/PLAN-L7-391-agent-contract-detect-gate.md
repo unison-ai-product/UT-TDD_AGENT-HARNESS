@@ -95,13 +95,4 @@ dependencies:
 
 ## U12 typed spec owned artifact
 
-```yaml
-spec:
-  defines:
-    - id: VMS-009
-      kind: agent-contract-detect-gate
-      traces_from: [VMS-008]
-      tests: [TVMS-009]
-```
-
 VMS-009 は agent contract を DB projection と doctor hard gate に接続する実装境界である。

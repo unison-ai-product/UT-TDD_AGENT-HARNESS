@@ -30,6 +30,7 @@ vmodel-contract-compiler:1 vmodel-source-assets:1 work-guard:1 workspace-roots:3
 vmodel-consumer-lint:1
 release-consumer-gates:15
 consumer-g14-static:3
+consumer-g1-screen-namespace:1
 doctor-test-repository-isolation:1 persistent-db-cleanup-contract:1 memory-clean-cut-removal:1 memory-legacy-archive:1 memory-clean-cut-non-read:1 memory-curation-ledger:1
 secret-scan-diff:1
 feedback-log:2

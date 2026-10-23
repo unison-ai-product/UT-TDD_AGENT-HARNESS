@@ -89,14 +89,4 @@ L2 は画面プロトタイプ合意の証跡なしに L3 凍結へ進めない�
 
 ## U13 typed spec owned artifact
 
-```yaml
-spec:
-  defines:
-    - id: VMS-010
-      kind: forward-freeze-contract-design
-      traces_from: [VMS-008]
-      traces_to: [VMS-011, VMS-012]
-      tests: [TVMS-010]
-```
-
 VMS-010 は ZIP 107 の L2 prototype agreement と L5 verification design を HARNESS の Forward freeze contract として定義する設計である。

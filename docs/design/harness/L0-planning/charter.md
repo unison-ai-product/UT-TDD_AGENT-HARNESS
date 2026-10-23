@@ -143,3 +143,16 @@ PLAN-L0-01 のうち、この文書の時点で未達または carry のもの�
   109 source docs の target slot への統合。
 - 後続 PLAN 化するテーマ (§4) は 8 件ある: `requirements`、`roadmap-drive-selection`、`declarative-spec-ir`、`spec-trace-closure`、`activation-profile-scope`、`ddd-oop-design`、`plan-asset-format`、`right-lung-quality-loop-db`。
 - frontmatter `status=confirmed` は方針承認であり、program 完遂ではない (§5 冒頭)。
+
+## 上流憲章の typed spec 宣言 (#1295)
+
+```yaml
+spec:
+  defines:
+    - id: VMS-001
+      kind: upgrade-charter
+      traces_to: [VMS-002, VMS-003, VMS-004]
+      tests: [TVMS-001]
+```
+
+VMS-001 は version-up charter の所有 artifact で宣言される typed spec である。

@@ -1,6 +1,6 @@
 # UT-TDD コーディング規約
 
-本書は TypeScript/Node core の coding-rule SSoT である。
+本書は TypeScript/Node core の coding-rule SSoT であり、コード・テスト・設計文書の量と分割の目安も持つ。
 Requirements reference: `docs/governance/ut-tdd-agent-harness-requirements_v1.2.md` §7.6.1.
 実行ゲート: `src/lint/coding-rules.ts` を `ut-tdd doctor` から実行する。
 
@@ -94,6 +94,53 @@ hard gate 化の順序:
 2. false-positive が出やすい CQS / guard clause は限定 pattern から始める。
 3. 既存超過は silent grandfather にせず、refactor candidate または期限付き例外として記録する。
 4. analyzer 実装と L7 oracle が揃った rule だけ `coding_rules` YAML の hard gate へ昇格する。
+
+## 量・分割・Refactor の目安
+
+本節は、コード・テスト・設計文書の量と分割、重複の統合、「Refactor なし」の判定について、どこを見ればよいかを 1 か所にまとめる。値の持ち主が別にあるものは写さず、path と節で指す。上の `coding_rules` YAML が hard gate の正本であり、本節の目安は、ここに明記したものを除いて gate ではない。
+
+### 量の上限
+
+| 対象 | 上限 | 値の持ち主 | 状態 |
+|---|---|---|---|
+| 設計文書 (L6 topic・L7 topic・layer 文書) の行数と責務の数 | 値は写さない | `docs/design/harness/L6-function-design/doc-split-gate.md` §4.2 | 未実装 (#1307〜#1309) |
+| src・tests のファイルの行数 | 未定 | #1310 で決める | 未定 |
+| 関数の行数 | 80 nonblank 行 | 本書「クラス・メソッド構造」の `max-function-lines` | gate ではない (gate 化は #1310) |
+| 循環的複雑度 | 12 | 本書「クラス・メソッド構造」の `max-cyclomatic-complexity` | gate ではない (gate 化は #1310) |
+| 制御のネスト | 3 | 本書「クラス・メソッド構造」の `max-nesting-depth` | gate ではない (gate 化は #1310) |
+| 関数の引数 | 3 | 本書「機械判定ポリシー」の `max-source-params` | hard (`src/lint/coding-rules.ts`) |
+| PR の量 | 1 論点 | `CLAUDE.md` §PR スコープ規律 3 (新規 source_module 1 個 + 対になるテスト + 最小配線) | 規律 |
+
+次の値は、設計上の上限ではなく、Refactor の候補を出す値である。超えたものは負債候補として登録され、Refactor の入力になる。超えたこと自体は違反ではなく、上の上限とは意味が違う。
+
+| 指標 | 現行値 | 持ち主 |
+|---|---|---|
+| 循環的複雑度 | 関数あたり 15 超 | `docs/governance/vmodel-refactor-qa-release-gates.md` §2.1 |
+| 重複コード率 | 5% 超 | 同上 |
+| 関数の行数 (helper 抽出の候補) | 120 行 | `src/state-db/refactor-candidate-policy.ts` の `extractHelperLines` |
+| module の行数 (分割の候補) | 700 行 | 同 `splitModuleLines` |
+| module の export 数 (分割の候補) | 24 | 同 `splitModuleExports` |
+| 重複した関数 (統合の候補) | 10 行以上 | 同 `dedupeFunctionMinLines` |
+
+### 責務の数え方と分割の判断
+
+- 設計文書: 責務の数え方は `docs/design/harness/L6-function-design/doc-split-gate.md` §3 に従う。
+- 関数: 1 関数 1 責務とする。
+- module: 1 module の責務の数え方とファイル単位の上限は #1310 で決める。
+- PR: 新規 source_module 1 個を 1 つの論点とする (`CLAUDE.md` §PR スコープ規律 3)。
+
+判断は次のとおりとする。上限を超えたら分割する。上限の内側でも、変更理由が 2 つ以上あるなら分割を検討する。
+
+### 重複を統合する条件
+
+重複を作らず 1 か所に置く規則文は、`CLAUDE.md` §Rule Placement Convention が持つ。設計文書・コード・tests の重複について、統合を義務にする閾値は #1304 で確定する。確定するまで、本節は閾値を持たない。
+
+### 「Refactor なし」でよい条件と判定者
+
+- 条件: 実装 PR で「Refactor なし (理由)」と書いてよい条件は、#1300 で確定する。確定するまで、本節は条件を持たない。
+- 判定者: 条件を満たすかは、成果物を書いていない非著者 family の reviewer が判定する。著者の自己申告は根拠にしない。
+- 区別: 実装 PR の中の Refactor commit (Green の後の `refactor:`。`CLAUDE.md` §PR スコープ規律 5 と `skills/test-driven-development.md`) と、Refactor mode (独立した作業。`docs/process/modes/refactor.md`) は別のものとして扱う。
+- 大きな構造変更の行き先: PLAN ではなく、Refactor Issue と設計文書とする (PLAN 凍結、#1166)。
 
 ## 機械 surface の言語
 

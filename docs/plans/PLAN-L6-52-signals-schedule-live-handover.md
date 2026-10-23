@@ -141,15 +141,6 @@ human plane の正本であり、これを digest に使えば「どこまで進
 
 ## U17 型付きスペック所有 artifact
 
-```yaml
-spec:
-  defines:
-    - id: VMS-015
-      kind: schedule-live-session-digest
-      traces_from: [VMS-004]
-      tests: [TVMS-015]
-```
-
 VMS-015 は工程 live state と固定4段 SessionStart digest の L6 設計契約である。
 
 ## 4. Design Freeze Result (2026-07-10)

@@ -1,11 +1,13 @@
 # UT-TDD Agent Harness v2 アップデート戦略 (後続オーケストレータへの引き継ぎ正本)
 
+> **archive 済み (2026-10-23)**: #1312 により docs/governance から移動。単発の監査・戦略記録で、現行の読み手が無いため。
+
 - **date**: 2026-07-03
 - **author**: Claude Fable 5 (在任 1 週間の最終成果物)。監査正本 = `.ut-tdd/audit/A-181-performance-sustainability-audit-2026-07-03.md`
 - **読者**: 本リポジトリを今後運用する AI オーケストレータ (Claude Opus/Sonnet/Haiku、GPT/Codex 系) と PO。
 - **読むタイミング**: 常時読みではない。①マイルストーン/着手順を計画するとき ②version-up parked PLAN の活性化を判断するとき ③新しいオーケストレータが最初に運用方針を掴むとき、の 3 場面で読む。
 - **正本性**: v2 の wave 構成と着手順推奨の正本。個々の実装内容の正本は各 PLAN (`docs/plans/PLAN-L7-300` 〜 `309` ほか)。着手順の最終決定は常に PO。
-- **姉妹編**: 実装・設計の実質品質 (構造衛生/契約明確性/検証実質/設計現役性) の底上げは `harness-v2-quality-uplift-strategy.md` (A-182、2026-07-03) が正本。本 doc = 運用・持続性、姉妹編 = 成果物品質 — 重複しない。
+- **姉妹編**: 実装・設計の実質品質 (構造衛生/契約明確性/検証実質/設計現役性) の底上げは `docs/governance/harness-v2-quality-uplift-strategy.md` (A-182、2026-07-03) が正本。本 doc = 運用・持続性、姉妹編 = 成果物品質 — 重複しない。
 
 ## §1 「最高パフォーマンスを発揮し続ける」の定義 (判定 4 軸)
 
