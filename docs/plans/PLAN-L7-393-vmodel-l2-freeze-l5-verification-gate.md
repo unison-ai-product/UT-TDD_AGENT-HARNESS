@@ -88,13 +88,4 @@ dependencies:
 
 ## U13 typed spec owned artifact
 
-```yaml
-spec:
-  defines:
-    - id: VMS-011
-      kind: forward-freeze-contract-gate
-      traces_from: [VMS-010]
-      tests: [TVMS-011]
-```
-
 VMS-011 は U13a の L2/L5 forward freeze contract を doctor hard gate として実装する境界である。

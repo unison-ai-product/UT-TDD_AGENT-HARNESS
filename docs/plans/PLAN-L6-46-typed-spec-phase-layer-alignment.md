@@ -92,15 +92,6 @@ frontmatter で明示し、検出系が設計層を推測で補完しない状�
 
 ## U12 型付きスペック所有 artifact
 
-```yaml
-spec:
-  defines:
-    - id: VMS-007
-      kind: typed-spec-phase-layer-alignment
-      traces_from: [VMS-004]
-      tests: [TVMS-007]
-```
-
 VMS-007 は typed spec 台帳の `v_phase` と宣言元 artifact の owner phase を一致させる設計である。
 修正版 ZIP 107 の V-model level 定義と各 doc の agent 契約を HARNESS の L0-L14 / frontmatter 正本へ翻訳する前段として、
 検出系が層を推測で作らないことを保証する。

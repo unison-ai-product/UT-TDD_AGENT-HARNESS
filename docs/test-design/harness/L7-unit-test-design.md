@@ -1327,6 +1327,61 @@ TVMS-008 は agent contract authoring source、TVMS-009 は agent contract docto
 TVMS-014 は VMS-014 の ID 単位実行割当台帳 contract が L7 unit oracle として定義されることを保証する。
 TVMS-015 は VMS-015 の工程 live state / 固定4段 SessionStart digest contract が L7 unit oracle として定義されることを保証する。
 
+```yaml
+spec:
+  defines:
+    - id: VMS-005
+      kind: activation-schedule-review
+      traces_from: [VMS-002, VMS-003]
+      tests: [TVMS-005]
+```
+
+VMS-005 は activation schedule review の L7 実装境界を表す typed spec である。
+
+```yaml
+spec:
+  defines:
+    - id: VMS-006
+      kind: typed-spec-projection
+      traces_from: [VMS-004]
+      tests: [TVMS-006]
+```
+
+VMS-006 は typed spec projection の L7 実装境界を表す typed spec である。
+
+```yaml
+spec:
+  defines:
+    - id: VMS-009
+      kind: agent-contract-detect-gate
+      traces_from: [VMS-008]
+      tests: [TVMS-009]
+```
+
+VMS-009 は agent contract を DB projection と doctor hard gate に接続する実装境界である。
+
+```yaml
+spec:
+  defines:
+    - id: VMS-011
+      kind: forward-freeze-contract-gate
+      traces_from: [VMS-010]
+      tests: [TVMS-011]
+```
+
+VMS-011 は U13a の L2/L5 forward freeze contract を doctor hard gate として実装する境界である。
+
+- `VMS-013` と `TVMS-013` が typed spec ledger / body / L7 test design に登録される。
+
+```yaml
+spec:
+  defines:
+    - id: VMS-013
+      kind: refactor-qa-release-contract-gate
+      traces_from: [VMS-012]
+      tests: [TVMS-013]
+```
+
 ## PLAN-L6-60 ID 起点 trace impact traversal oracle (2026-07-08)
 
 | U-ID | Target | Oracle |
