@@ -307,7 +307,7 @@ describe("U-DDDTDD DDD/TDD strictness lint", () => {
   });
 
   describe("U-ORACLEHELPER same-file helper resolution oracles", () => {
-    it.fails("U-ORACLEHELPER-001 resolves a strong function helper", () => {
+    it("U-ORACLEHELPER-001 resolves a strong function helper", () => {
       expect(
         oracleStrengthMessages(`function h(x: number) { expect(x).toBe(1); }
 it("uses helper", () => { h(1); });`),
@@ -321,14 +321,14 @@ it("uses empty helper", () => { h(1); });`),
       ).toEqual([NO_ORACLE_MESSAGE]);
     });
 
-    it.fails("U-ORACLEHELPER-003 propagates a weak-only helper result", () => {
+    it("U-ORACLEHELPER-003 propagates a weak-only helper result", () => {
       expect(
         oracleStrengthMessages(`function h(x: number) { expect(x).toBeTruthy(); }
 it("uses weak helper", () => { h(1); });`),
       ).toEqual([WEAK_ORACLE_MESSAGE]);
     });
 
-    it.fails("U-ORACLEHELPER-004 lets a strong helper clear callback weak-only status", () => {
+    it("U-ORACLEHELPER-004 lets a strong helper clear callback weak-only status", () => {
       expect(
         oracleStrengthMessages(`function h(x: number) { expect(x).toBe(1); }
 it("combines callback and helper", () => { expect(1).toBeTruthy(); h(1); });`),
@@ -395,7 +395,7 @@ it("calls cycle", () => { a(); });`),
       ).toEqual([NO_ORACLE_MESSAGE]);
     });
 
-    it.fails("U-ORACLEHELPER-009b resolves a strong helper through a cycle", () => {
+    it("U-ORACLEHELPER-009b resolves a strong helper through a cycle", () => {
       expect(
         oracleStrengthMessages(`function a() { expect(1).toBe(1); b(); }
 function b() { a(); }
@@ -403,7 +403,7 @@ it("calls cycle", () => { b(); });`),
       ).toEqual([]);
     });
 
-    it.fails("U-ORACLEHELPER-010a resolves through the maximum helper depth", () => {
+    it("U-ORACLEHELPER-010a resolves through the maximum helper depth", () => {
       expect(
         oracleStrengthMessages(`function h1() { h2(); }
 function h2() { h3(); }
@@ -422,7 +422,7 @@ it("calls depth four", () => { h1(); });`),
       ).toEqual([NO_ORACLE_MESSAGE]);
     });
 
-    it.fails("U-ORACLEHELPER-011a requires the expectStatus helper body to be strong", () => {
+    it("U-ORACLEHELPER-011a requires the expectStatus helper body to be strong", () => {
       expect(
         oracleStrengthMessages(`function expectStatus(x: number) { expect(x).toBe(200); }
 it("checks status", () => { expectStatus(200); });`),
@@ -436,7 +436,7 @@ it("checks status", () => { expectStatus(200); });`),
       ).toEqual([NO_ORACLE_MESSAGE]);
     });
 
-    it.fails("U-ORACLEHELPER-011c reports a weak expectStatus helper as weak", () => {
+    it("U-ORACLEHELPER-011c reports a weak expectStatus helper as weak", () => {
       expect(
         oracleStrengthMessages(`function expectStatus(x: number) { expect(x).toBeTruthy(); }
 it("checks status", () => { expectStatus(200); });`),
@@ -471,7 +471,7 @@ it("checks status", () => { expectStatus(200); });`),
       ).toEqual([]);
     });
 
-    it.fails("U-ORACLEHELPER-013 resolves nested-scope helpers called in try", () => {
+    it("U-ORACLEHELPER-013 resolves nested-scope helpers called in try", () => {
       expect(
         oracleStrengthMessages(`describe("percent tokens", () => {
   function captureError(run: () => unknown, root: object) {
@@ -497,7 +497,7 @@ it("checks status", () => { expectStatus(200); });`),
       ).toEqual([]);
     });
 
-    it.fails("U-ORACLEHELPER-014a resolves a const arrow expression helper", () => {
+    it("U-ORACLEHELPER-014a resolves a const arrow expression helper", () => {
       expect(
         oracleStrengthMessages(`const h = (x: number) => expect(x).toBe(1);
 it("calls arrow helper", () => { h(1); });`),
@@ -520,7 +520,7 @@ it("calls out-of-scope arrow", () => { h(1); });`),
       ).toEqual([NO_ORACLE_MESSAGE]);
     });
 
-    it.fails("U-ORACLEHELPER-015a counts assert calls in helpers", () => {
+    it("U-ORACLEHELPER-015a counts assert calls in helpers", () => {
       expect(
         oracleStrengthMessages(`function h(x: number) { assert.equal(x, 1); }
 it("calls assert helper", () => { h(1); });`),
@@ -548,7 +548,7 @@ it("keeps callback counts", () => {
       ).toEqual([]);
     });
 
-    it.fails("U-ORACLEHELPER-016b takes the strongest helper result without summing", () => {
+    it("U-ORACLEHELPER-016b takes the strongest helper result without summing", () => {
       expect(
         oracleStrengthMessages(`function h1() {
   const e = expect(1);
