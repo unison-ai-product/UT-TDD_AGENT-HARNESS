@@ -79,10 +79,20 @@ advisor の付けた条件は次のとおり契約に入れる。
   "schema": "ut-tdd.sample-product-fixture/v1",
   "id_namespace": { "requirement": "RQ-", "screen": "SC-", "function": "FN-" },
   "gates": {
-    "G1": { "inputs": ["docs/design/L1-requirements/functional-requirements.md", "..."] },
-    "G2": { "inputs": ["..."] },
+    "G1": {
+      "inputs": {
+        "layer-pair": ["docs/design/L1-requirements/functional-requirements.md", "..."],
+        "core-trace": ["docs/design/L1-requirements/functional-requirements.md", "..."]
+      }
+    },
+    "G2": { "inputs": { "layer-pair": ["..."] } },
     "...": {},
-    "G14": { "inputs": ["..."] }
+    "G14": {
+      "inputs": {
+        "case-table": ["..."],
+        "evidence": [".ut-tdd/evidence/g14-operational/sample-product.json"]
+      }
+    }
   },
   "expected_totals": {
     "G1": { "requirements": 3, "screens": 3, "functions": 3 },
@@ -92,17 +102,31 @@ advisor の付けた条件は次のとおり契約に入れる。
 ```
 
 - `gates` のキーは `G1`〜`G14` のちょうど 14 個とする (`G0.5` / `R4` は review だけの gate で、静的検査が無いので
-  入れない)。`inputs` は gate ごとに 1 件以上で、fixture に実在する consumer 相対 path に限る。
+  入れない)。`inputs` は入力クラスの id から path 一覧への写像で、キーの集合は下の表のその gate の入力クラスと
+  ちょうど一致させる。各クラスの path 一覧は 1 件以上で、fixture に実在する consumer 相対 path に限る。
+- 同じ path を複数のクラスに入れてよい (例: L1 の機能要求は G1 の `layer-pair` と `core-trace` の両方の入力)。
+  テスト設計の入力感度の検査 (CANDIDATE-U-PACKSAMPLE-005) は、クラスごとに「そのクラスだけが欠けた」変異を
+  作るため、共有 path は file を消さず、そのクラスが読む部分 (表の行など) だけを消して作る。
 - `expected_totals` の件数は fixture の表の行数と一致させる。数値は例であり、fixture を作る実装 PR で確定する。
 
-gate ごとの入力クラス (各 1 つ以上を必須とする):
+gate ごとの入力クラス (gate の合否はクラスごとの検査の AND である。各クラス 1 つ以上を必須とする):
 
-| gate | 入力クラス | 正本 |
-| --- | --- | --- |
-| G1 / G3 | core 4 文書 (`DOC-L1-REQUIREMENTS` / `DOC-L2-SCREEN` / `DOC-L3-FUNCTIONAL` / `DOC-L12-ACCEPTANCE`) の表 | `consumer-trace-gates.md` §5 / §6 |
-| G1〜G6 | 各層の layer pair (設計文書と対になるテスト設計) | `src/gate/static.ts` の `evaluateLayerPairGate` |
-| G7 | 上記の L0〜L7 の対、`coverage/coverage-summary.json` (`readCoverageSummary` の閾値 80% を満たす値) | `evaluateG7` (既定の `coverage/coverage-summary.json` を consumer root で読む) |
-| G8〜G14 | 各 gate の slot 文書 (`DOC-L8-INTEGRATION-TEST-DESIGN` 〜 `DOC-L14-*`) の検証ケース表と、`docs/process/vmodel-contract.yaml` の `evidence_manifest` が指す証跡一式 | `src/gate/right-arm-static.ts` の `evaluateRightArmStaticGate` |
+| gate | 入力クラス id | 内容 | 検査 (正本) |
+| --- | --- | --- | --- |
+| G1 / G3 | `core-trace` | core 4 文書 (`DOC-L1-REQUIREMENTS` / `DOC-L2-SCREEN` / `DOC-L3-FUNCTIONAL` / `DOC-L12-ACCEPTANCE`) の表 | G1-trace / G3-trace lint (`consumer-trace-gates.md` §5 / §6) |
+| G1〜G6 | `layer-pair` | 各層の layer pair (設計文書と対になるテスト設計) | `src/gate/static.ts` の `evaluateLayerPairGate` |
+| G7 | `layer-pairs` | L0〜L7 の対 | `evaluateG7` の pair-freeze と L0-L7 verification group |
+| G7 | `impl-trace` | `src/` 配下の実装 file と、その trace 元 (設計文書) | `evaluateG7` の `analyzeImplPlanTrace` |
+| G7 | `oracle-trace` | テスト設計が宣言する oracle と、それを引用する `tests/` の file | `evaluateG7` の `analyzeOracleTestTrace` |
+| G7 | `coverage` | `coverage/coverage-summary.json` (`readCoverageSummary` の閾値 80% を満たす値) | `evaluateG7` (既定の path を consumer root で読む) |
+| G8〜G14 | `case-table` | 各 gate の slot 文書 (`DOC-L8-INTEGRATION-TEST-DESIGN` 〜 `DOC-L14-*`) の検証ケース表 | `src/gate/right-arm-static.ts` の `evaluateRightArmStaticGate` |
+| G8〜G14 | `evidence` | `docs/process/vmodel-contract.yaml` の `evidence_manifest` のディレクトリに置く証跡 JSON | 同上 (`manifestFiles` が consumer root からの相対ディレクトリを読む) |
+
+- 右腕 gate の証跡は、契約どおり consumer の `.ut-tdd/evidence/<dir>/` に置く必要がある。fixture では
+  `tests/fixtures/sample-product/.ut-tdd/evidence/<dir>/<name>.json` に置き、§4 の証跡 allowlist に従って複写する。
+  `<dir>` は出荷する `docs/process/vmodel-contract.yaml` の G8〜G14 の `evidence_manifest` の親ディレクトリ名
+  (`g8-integration` / `g9-system` / `g10-ux` / `g11-uat` / `g12-acceptance` / `g13-post-deploy` /
+  `g14-operational`) の 7 個に限る。
 
 - G8〜G14 の検証ケース ID は、契約の `case_id_prefix` (`IT-` / `ST-` / `UXV-` / `UAT-` / `AT-` / `SMOKE-` / `OT-`)
   を使う。これは consumer にも課される契約の値であり、ハーネス固有の値ではない。
@@ -126,7 +150,9 @@ gate ごとの入力クラス (各 1 つ以上を必須とする):
 | `harness-heading` | `harness 追補` | ハーネスだけの見出し |
 
 - 表は runner の mjs と source 側のテストの 2 箇所に同じ値で置く (runner は source を import できない。
-  U-ST-PACKCANARY-009)。2 箇所が一致することを source 側のテストで強制する (§3.3)。
+  U-ST-PACKCANARY-009)。2 箇所が一致することを source 側のテストで強制する (§3.3)。§4 の証跡 allowlist の
+  ディレクトリ 7 個も同じ扱いとし、runner の定数が出荷する契約の `evidence_manifest` から導いた値と一致することを
+  source 側のテストで強制する。
 
 ### 3.3 source 側の検査
 
@@ -135,13 +161,15 @@ gate ごとの入力クラス (各 1 つ以上を必須とする):
 
 | code | 条件 |
 | --- | --- |
-| `fixture-manifest-invalid` | schema 不一致、`gates` のキーが `G1`〜`G14` と一致しない、`expected_totals` の形が違う |
-| `fixture-gate-input-missing` | gate の `inputs` が空、または列挙した path が fixture に無い |
+| `fixture-manifest-invalid` | schema 不一致、`gates` のキーが `G1`〜`G14` と一致しない、gate の `inputs` のキー集合が §3.1 の入力クラスと一致しない、`expected_totals` の形が違う |
+| `fixture-gate-input-missing` | 入力クラスの path 一覧が空、または列挙した path が fixture に無い |
+| `fixture-path-invalid` | fixture 配下の `.ut-tdd/` 始まりの file が §4 の証跡 allowlist に合わない、または `.git/` 始まりの file がある |
 | `fixture-contaminated` | fixture の file が §3.2 の検出表に一致する、または絶対 path (`\b[A-Za-z]:[\\/]` か `/(?:home\|Users\|tmp)/`) を含む |
 | `fixture-namespace-violation` | core 3 文書 (L1 / L2 / L3) の ID 列の値が `id_namespace` の prefix で始まらない |
 | `fixture-template-drift` | vmodel template のある文書で、見出し行 (`#` で始まる行) の列か frontmatter のキー集合が出荷する template と違う |
 | `fixture-total-mismatch` | `expected_totals` が fixture の表の行数と違う |
 | `detector-table-drift` | runner の検出表と source 側の検出表が違う |
+| `evidence-dir-drift` | runner の証跡 allowlist のディレクトリ集合が、出荷する契約の G8〜G14 の `evidence_manifest` の親ディレクトリ集合と違う |
 
 `templates` は `embeddedVModelTemplateAssets()` (出荷する template の bytes) を渡す。build 出力と比べるのは、
 consumer が受け取る template の形を試すためである。
@@ -154,12 +182,22 @@ consumer が受け取る template の形を試すためである。
 1. `verifyReleaseDirectory` で検証済みの `<tag>.tar.gz` について、`tar -tzf` の path 一覧から
    `tests/fixtures/sample-product/` で始まる通常 file を集める。0 件、または `sample-product.json` が無ければ
    `sample-product-unavailable` で失敗する。
-2. 各 file を `tar -xOf` で取り出す。prefix を除いた相対 path に `..`、絶対 path、`.ut-tdd/` / `.git/` 始まりが
-   あれば `sample-product-path-invalid:<path>` で失敗する。
-3. manifest 以外の file を consumer root の同じ相対 path へ書く (setup が置いた template は上書きする)。
-4. 書いた path だけを明示して `git add -- <paths>` し、`canary sample product fixture` で commit する。この commit
+2. 各 file を `tar -xOf` で取り出す。prefix を除いた相対 path に `..` や絶対 path があるか、`.git/` で始まるか、
+   `.ut-tdd/` で始まって下の証跡 allowlist に合わなければ、`sample-product-path-invalid:<path>` で失敗する。
+3. manifest 以外の file を consumer root の同じ相対 path へ書く。文書は setup が置いた template を上書きする。
+   証跡 allowlist に合う file は上書きしない: 書く前に consumer に同じ path の file があれば
+   `sample-product-path-conflict:<path>` で失敗する (consumer の runtime 状態を fixture で書き換えない)。
+4. 書いた path だけを明示して `git add -- <paths>` し (`-f` は付けない。consumer の `.gitignore` が証跡を無視する
+   なら git の失敗をそのまま install の失敗にする)、`canary sample product fixture` で commit する。この commit
    は `consumer_head` に含まれる。
 5. evidence に `sample_product: { manifest, files: [{ path, sha256 }] }` を書く (`files` は path の昇順)。
+
+証跡 allowlist: `.ut-tdd/` 始まりで複写してよいのは、正規表現
+`^\.ut-tdd/evidence/(g8-integration|g9-system|g10-ux|g11-uat|g12-acceptance|g13-post-deploy|g14-operational)/[A-Za-z0-9._-]+\.json$`
+に一致する path だけである (ディレクトリの直下の `.json` に限り、深い階層は許さない。`manifestFiles` が直下だけを
+読むのに合わせる)。`.ut-tdd/` のそれ以外 (`state/`、`gate_runs/`、`harness.db` など) は従来どおり拒否する。
+`.ut-tdd/` を拒否する理由 (consumer の runtime 状態を fixture で汚さない) はそのまま保ち、契約が consumer に
+置かせる証跡の場所だけを、上書き禁止の条件付きで開ける。
 
 ## 5. verify phase: 全 gate と lint の実行
 
@@ -214,7 +252,7 @@ verify phase の step は次の順にする。
 | --- | --- |
 | Pack#10 / #971 (G1 の画面 ID 接頭辞の固定) | `gate-failed:G1`、`trace-total-mismatch:G1` (screens が 0) |
 | Pack#11 / #972 (G3 が `business-detail.md` を必須で読む) | `gate-failed:G3`、`throw-class:G3`、`harness-value:G3` (`harness-design-root`) |
-| 入力クラスの無い gate が黙って通る | source 側の入力感度の検査 (テスト設計の CANDIDATE-U-PACKSAMPLE-005) と、`gate-not-applicable` |
+| 入力クラスの無い gate が黙って通る | source 側の入力感度の検査 (テスト設計の CANDIDATE-U-PACKSAMPLE-005。入力クラスを 1 つだけ欠落・空集合にし、そのクラスの検査自身の失敗理由を確かめる) と、`gate-not-applicable` |
 
 ## 8. 既存機構への影響
 
@@ -231,5 +269,5 @@ verify phase の step は次の順にする。
 | 関数 | pre | post | invariant |
 | --- | --- | --- | --- |
 | `validateSampleProductFixture` | `fixtureRoot` は tracked fixture の root | `ok` ⇔ finding 0 件 | 例外で落ちず、不正な入力も finding で返す |
-| `installSampleProduct` | tar は `verifyReleaseDirectory` で検証済み | consumer に fixture が commit され、evidence に path と sha256 が載る | source checkout を読まない。書く path は fixture の path だけ |
+| `installSampleProduct` | tar は `verifyReleaseDirectory` で検証済み | consumer に fixture が commit され、evidence に path と sha256 が載る | source checkout を読まない。書く path は fixture の path だけ。`.ut-tdd/` に書くのは証跡 allowlist の path だけで、既存 file を上書きしない |
 | `classifySampleProductRun` | `outputs` は §5 の 17 件 (gate 14 件、lint 3 件) | `ok` ⇔ finding 0 件 | gate を除外する経路を持たない。`outputs` の件数が 17 でなければ `output-invalid` |
