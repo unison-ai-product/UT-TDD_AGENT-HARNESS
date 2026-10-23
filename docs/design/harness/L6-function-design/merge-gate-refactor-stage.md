@@ -1,7 +1,7 @@
 ---
 layer: L6
 artifact_type: design_doc
-status: draft
+status: confirmed
 sub_doc: function-spec
 artifact_role: topic_merge_gate_refactor_stage
 pair_artifact: docs/test-design/harness/L7-merge-gate-refactor-stage-test-design.md
@@ -11,224 +11,197 @@ created: 2026-10-23
 issue: 1300
 ---
 
-> **L6 contract marker**: `evaluateRefactorStage(facts: RefactorStageFacts) => RefactorStageDecision` と `parseRefactorNoneDeclaration(body: string) => RefactorNoneDeclaration` は unit-test 粒度の contract である。DbC は §10 にまとめる。oracle の詳細 (CANDIDATE-U-REFACTORGATE-001〜) は `docs/test-design/harness/L7-merge-gate-refactor-stage-test-design.md` が固定する。本書は契約だけであり、実装は Codex lane の実装チケット (Red → 昇格 → Green → Refactor) で別に入れる。
+> **L6 contract marker**: `extractVerdict(logText: string) => Outcome<VerdictExtraction>` (`refactorJudgement` を足す)、`evaluateRefactorJudgementGate(changes: PlanChange[], entries: ReviewDispatchEntry[]) => RefactorJudgementGateDecision`、`readPullRequestChanges(pr: number, runGh: ExecFileSync) => PlanChange[]` は unit-test 粒度の contract である。DbC は §10 にまとめる。oracle は `docs/test-design/harness/L7-merge-gate-refactor-stage-test-design.md` の `CANDIDATE-U-REFACTORGATE-048`〜`077` が固定する (正式 ID `U-REFACTORGATE-*` への昇格は設計書保護 gate の順序で入れる)。本書は契約だけであり、実装は Codex lane の実装チケット (Red → 昇格 → Green → Refactor) で別に入れる。
 
-# merge gate の Refactor 工程確認 - 機能設計 (Issue #1300)
+# merge gate の Refactor 判定欄 - 機能設計 (Issue #1300)
 
 ## 1. 目的と範囲
 
-root `CLAUDE.md` §PR スコープ規律 5 は、実装 PR の commit を Green (`feat:` / `fix:`) → Refactor (`refactor:`) の順にし、直す余地が無ければ PR 本文に「Refactor なし (理由)」を書くことを求めている。規則だけでは守られないため (#968、#1300)、`ut-tdd pr merge` が merge の前にこれを確かめる。
+root `CLAUDE.md` §PR スコープ規律 5 は、実装 PR の commit を Green (`feat:` / `fix:`) → Refactor (`refactor:`) の順にし、直す余地が無ければ PR 本文に「Refactor なし (理由)」を書くことを求めている。規則だけでは守られないため (#968、#1300)、`ut-tdd pr merge` が merge の前に確かめる。
 
-対象は `src/cli/pr-merge.ts` → `runPrMerge` (`src/feedback/review-merge-gate.ts`) の経路である。既存の review gate (`evaluateMergeGate`、exact HEAD 束縛、第二観測、check run 選択 `merge-gate-check-run-selection.md`) の規則は変えない。本書の gate は、それと並ぶ 2 つ目の判定として足す。
+**gate が見るのは作者の宣言ではなく、非著者 reviewer の verdict に Refactor 判定の欄があるかである。** Refactor が要るか、「なし」の理由が成り立つかは判断であって機械では決められない。そこで判断は非著者 reviewer に置き、gate は「判断した記録が exact HEAD の verdict にあり、その値が合格の値か」だけを見る。
+
+対象の経路は `src/cli/pr-merge.ts` → `runPrMerge` (`src/feedback/review-merge-gate.ts`) と、verdict を receipt にする `projectReviewVerdict` (`src/feedback/review-attestation.ts`) → `extractVerdict` (`src/feedback/review-verdict-contract.ts`) である。既存の review gate (`evaluateMergeGate`、exact HEAD 束縛、第二観測、check run 選択 `merge-gate-check-run-selection.md`) の判定と reason (`U-RVMG-*`) は変えない。
 
 範囲外:
 
-- 遡及はしない。gate は `ut-tdd pr merge` を通る PR だけを判定し、merge 済みの PR の履歴は走査しない。merge 済みの PR は Refactor チケット (#1296 / #1297 / #1298) で個別に扱う。
-- commit の順序 (Refactor が最後の Green より後にあるか) は機械で見ない (§11 の案 R3)。非著者 reviewer が見る。
-- commit type の付け間違い (Green の commit を `chore:` で出すなど) は gate の外であり、review の FINDING として扱う (§11 の案 R1 と §4 の理由)。
+- **PR をまたぐ重複**: この gate は 1 PR の中の Refactor 工程だけを扱う。複数の PR に分かれて積もった重複や、既存コードとの重複は、計測で発火する Refactor チケット (ラベル `refactor`、#1304 / #1310 の計測) に回す。
+- **遡及**: gate は `ut-tdd pr merge` を通る PR だけを判定する。merge 済みの PR は Refactor チケット (#1296 / #1297 / #1298) で個別に扱う。
+- **PR 本文と commit の機械読取**: gate は PR 本文の「Refactor なし」宣言も、commit の type も、Refactor commit の `tests/` 差分も読まない。これらは reviewer が見て、結果を判定欄に書く (§3)。
+- **commit の順序**: Refactor が最後の Green より後にあるかは reviewer が見る。FLAG 後の是正 commit (`fix:`) は Refactor の後に積まれるのが正規の手順である (§FLAG 後の限定是正と merge) ため、機械では見ない。
 
-## 2. 実測 (2026-10-23、GitHub REST の pulls / commits / files)
+## 2. 実測 (2026-10-23)
 
-| PR | 変更 path に `src/` / `scripts/` | merge でない commit の type | `refactor:` | PR 本文の記載 (行頭) |
-|---|---|---|---|---|
-| #1250 | なし (`tests/` 1 件だけ) | fix ×3 | 0 | `Refactorなし（既存helperの契約適合だけ）。…` |
-| #1245 | あり | test, fix, style | 0 | 行頭には無い (`- worker_model=… Refactorなし（…）` の行の途中) |
-| #1241 | あり | fix ×2 | 0 | `Refactorなし。契約で指定された3つの判定面と…` |
-| #1229 | あり | test ×2, fix | 0 | `Refactorなし。初回migrationの境界と…` |
-| #1106 | あり | feat, fix ×6, style, test | 0 | `独立 Refactor はありません。…` (形が違う) |
-| #1270 | あり | refactor ×2 | 2 | なし |
-| #1236 | なし (docs だけ) | docs | 0 | なし |
+直近の実装 PR 7 本 (#1250 / #1245 / #1241 / #1229 / #1106 / #1173 / #1102) は、どれも PR 本文に「Refactor なし」に当たる記載を持っていたが、`refactor:` の commit を持つものは 0 本だった。「なし」は作者の自己申告だけであり、非著者がそれを確かめた記録は 0 件だった。#1301 / #1302 では control (非著者) が事後に点検し、理由は成り立っていた。
 
-Issue #1300 の背景は #1241 / #1229 / #1250 を「記載なし」としていたが、実際には空白なしの `Refactorなし` で書かれていた。§5 の受理形はこの実態に合わせる。merge commit (親 2 つ) は #1241 / #1229 / #1106 / #1250 / #1270 に含まれ、その subject はすべて `chore:` である。
+記載の形もそろっていなかった。#1245 は行の途中 (`- worker_model=… Refactorなし（…）`)、#1106 は `独立 Refactor はありません。`、#1241 / #1229 は空白なしの `Refactorなし。…` だった。本文の書式を gate が parse する案 (§11 の案 A) は、この揺れに合わせて受理形を広げ続けることになり、しかも宣言の真偽は誰も見ないままになる。
 
-## 3. 判定の入力 (facts) と取得
+足りないのは書式の検査ではなく、非著者が判断した記録である。
 
-```ts
-interface RefactorStageFacts {
-  pr: number;
-  headSha: string;                 // review gate が評価した evaluatedHeadSha
-  body: string;                    // PR 本文。null は "" とする
-  changedPaths: string[];          // PR の変更ファイルの filename と previous_filename (rename 元) の和
-  commits: Array<{
-    sha: string;
-    parents: string[];
-    subject: string;               // commit message の 1 行目
-    files?: Array<{ filename: string; previousFilename?: string; status: string; changes: number }>;
-  }>;
-}
-```
+## 3. Refactor 判定欄の形 (verdict file)
 
-adapter (`GhPrMergePorts.getRefactorStageFacts(pr, headSha)`) は `gh api` で次を読む。
+reviewer は verdict file の `VERDICT:` 行より後に、行頭の `REFACTOR:` 行を 1 件書く。値は次の 5 種の ASCII token のどれか 1 つである (`docs/governance/coding-rules.md` §機械 surface の言語)。
 
-| 項目 | 取得元 | 上限と扱い |
+| 値 | 意味 | merge gate |
 |---|---|---|
-| `body` | `GET /repos/{owner}/{repo}/pulls/{pr}` の `body` | — |
-| `commits` | `GET /repos/{owner}/{repo}/pulls/{pr}/commits` (`--paginate`) | GitHub は 250 件で打ち切る。250 件以上なら `commit_list_truncated` |
-| `changedPaths` | `GET /repos/{owner}/{repo}/pulls/{pr}/files` (`--paginate`) | GitHub は 3000 件で打ち切る。3000 件以上なら `file_list_truncated` |
-| `commits[].files` | `GET /repos/{owner}/{repo}/commits/{sha}` (`--paginate`)。**対象 PR (§4) の、merge でない `refactor` commit についてだけ**読む | 3000 件以上なら `commit_files_truncated:<sha>` |
+| `commit-ok` | Refactor commit (`refactor:`) があり、各 Refactor commit が `tests/` と `docs/test-design/` の内容を変えていない (内容を変えない rename だけ) ことを確かめた | 合格 |
+| `none-ok` | Refactor commit は無く、PR 本文の「Refactor なし (理由)」が `coding-rules.md` §量・分割・Refactor の目安 の「Refactor なし」でよい条件を満たすと認めた | 合格 |
+| `not-applicable` | Refactor の段が適用されない。実装 PR では Green の commit (`feat:` / `fix:`) を持たない PR (登録 + Red、退役や構造変更が主の PR) に限る。実装 PR でない PR では常にこの値を書く | 合格 |
+| `commit-tests-changed` | Refactor commit があるが、`tests/` か `docs/test-design/` の内容を変えている | 不合格 |
+| `none-rejected` | Refactor commit が無く、「Refactor なし」の宣言が無いか、条件を満たさない | 不合格 |
 
-`files` を読む commit を refactor に限るのは、API の呼び出しを Refactor commit の数に抑えるためである。adapter は、対象かどうかの判定 (§4) を pure 関数と同じ規則で先に行い、対象でなければ `files` を読まない。
-
-## 4. 対象 (実装 PR) の判定
-
-次の 2 つを**両方**満たす PR を対象とする。対象でない PR は、この gate では何も言わない (reason を足さない)。
-
-- (P) 変更 path: `changedPaths` のどれかが `src/` か `scripts/` で始まる。rename 元 (`previous_filename`) も数える。
-- (G) Green の commit: merge でない commit (親が 1 つ以下) のうち 1 つ以上の type が `feat` か `fix` である。
-
-commit type は subject の 1 行目に `^([a-z]+)(\([^()\r\n]*\))?!?: \S` を当てた 1 番目のグループとする (大文字・小文字を区別する。`Refactor:` や `refactoring:` は refactor ではない)。当たらない subject は type なしとする。merge commit (親 2 つ以上) は、subject が何であっても type を数えない。
-
-(P) と (G) の両方を要る理由:
-
-- (P) は #968 の実測と設計書保護 gate §10.2 の「実装 PR = src/ か scripts/ を含む PR」と同じ線引きである。docs だけの PR (#1236) と、`tests/` だけの `fix:` (#1250) を外す。`tests/` だけの修理では、Refactor commit が `tests/` を変えられない (§6) ので、Refactor の段がそもそも無い。
-- (G) は、Green を持たない PR を外す。Red の PR (`test:`。§10.3 の「登録 + Red」は src/ に登録行を含む) と、退役・構造変更の PR (#1270 のように `refactor:` が主) は、それ自体が Green の段ではないので、Refactor の段を求めない。退役の PR は Refactor commit で `tests/` を消すのが正当であり (#1270 の `58dbdbab1` は `tests/` を 2 件削除・1 件変更)、§6 を当てると誤って止まる。
-
-## 5. 合格の条件と「Refactor なし」の形
-
-対象の PR は、次のどちらかを満たせば合格とする。
-
-- (R) merge でない commit のうち 1 つ以上の type が `refactor` である。
-- (N) PR 本文に有効な「Refactor なし」宣言が 1 行以上ある。
-
-(R) と (N) の両方があっても合格とする (矛盾として扱わない)。どちらを満たしても、§6 の違反があれば不合格である (宣言で Refactor commit の違反は消えない)。
-
-### 5.1 宣言の形
-
-書く形の正本は次の 1 行である。
+例 (PASS):
 
 ```text
-Refactor なし (理由)
+VERDICT: PASS
+REFACTOR: none-ok
 ```
 
-`parseRefactorNoneDeclaration(body)` は、本文を行に分け、次の規則で各行を読む。
+例 (FLAG。不合格の値を書いたときは、理由を `FINDING:` に書く):
 
-1. ` ``` ` か `~~~` で始まる行で囲まれた範囲 (fenced code block) の行は読まない。規則の引用で通らないようにするためである。
-2. 行頭の空白と、任意の箇条書き記号 1 つ (`- ` か `* `) を除いたあと、`Refactor` + 空白 0〜1 個 (半角か全角) + `なし` で始まる行を宣言行とする。行の途中の `Refactor なし` は宣言ではない (#1245 の形)。引用 (`> `) や HTML コメント (`<!-- `) で始まる行も宣言ではない。
-3. 宣言行の `なし` の後ろ (空白を除く) から理由を取る。
-   - `(` か `（` で始まるとき: 最初の `)` か `）` までの中身。閉じ括弧が無ければ理由は空。閉じ括弧の後ろに文が続いてもよい (#1250 の形)。
-   - `。` / `:` / `：` で始まるとき: その後ろの行末まで (#1241 / #1229 の形)。
-   - それ以外 (行末を含む): 理由は空。
-4. 理由の前後の空白 (半角・全角・タブ) を除き、空、または文字列 `理由` (規則文の写しの残り) なら空とする。
-5. 理由が空でない宣言行が 1 行でもあれば `valid`。宣言行はあるが全部空なら `empty`。宣言行が無ければ `absent`。
+```text
+VERDICT: FLAG
+FINDING: Green で足した parseX が 96 行あり coding-rules の関数行数の上限 80 を超えるのに Refactor commit が無い
+REFACTOR: none-rejected
+```
 
-### 5.2 受理例と拒否例
+### 3.1 抽出の規則 (`extractVerdict`)
 
-| 本文の行 | 結果 |
+1. 候補は、最後の `VERDICT:` 行より後の行で、行頭が `REFACTOR:` の行だけとする (`FINDING:` と同じ扱い)。`VERDICT:` 行より前の行と、字下げされた行は候補にしない。委譲した task text が log に行頭のまま echo される問題 (`EXAMPLE_INDENT` の注記) を同じ方法で避けるためである。
+2. 値は `REFACTOR:` の後ろを trim したものとする。大文字・小文字を区別する。
+3. 候補が 0 件なら `refactorJudgement` を持たない (verdict は従来どおり受理する。対象でない PR に欄を強制しないため)。
+4. 候補の値が §3 の 5 種のどれでもなければ `refactor_judgement_unknown` で失敗する。
+5. 候補の値が 2 種以上なら `refactor_judgement_ambiguous` で失敗する。同じ値の再掲は 1 件として扱う。
+6. 4 と 5 の失敗は、既存の `extractVerdict` の失敗と同じ経路 (`projectReviewVerdict` の `rejectedVerdict`) で verdict を拒否する。receipt は書かれない。
+
+`VERDICT` と `REFACTOR` の組み合わせ (PASS に `none-rejected` など) は抽出では拒否しない。gate が不合格の値を拒否するので、PASS に不合格の値を付けても merge されない (§6)。
+
+### 3.2 reviewer への指示 (`reviewOutputContract`)
+
+`reviewOutputContract` が返す出力契約に、次の指示を足す。模範出力ブロック (`EXAMPLE_START`〜`EXAMPLE_END`) は変えない (U-RVCON-017 / 019 の round-trip を保つ)。
+
+- `VERDICT:` 行の後に、行頭の `REFACTOR:` 行を 1 件出力する。値は §3 の 5 種だけ。
+- `src/` か `scripts/` を変える PR では、Refactor commit の有無、「なし」の理由を認めるか、Refactor commit の `tests/` と `docs/test-design/` の内容差分が 0 か、を確かめてから値を選ぶ。それ以外の PR では `not-applicable` を書く。
+- 「なし」を認める条件は `docs/governance/coding-rules.md` §量・分割・Refactor の目安 の「Refactor なし」でよい条件と判定者 に従う。
+
+## 4. receipt と dispatch entry への写し
+
+- `VerdictExtraction` に `refactorJudgement?: RefactorJudgement` を足す (`RefactorJudgement` は §3 の 5 種の union)。
+- `projectReviewVerdict` は、抽出結果が `refactorJudgement` を持つときだけ、verdict receipt (`ReviewReceipt`) に同名の key を書く。持たないときは key を書かない。
+- `validateReceipt` (`src/feedback/review-dispatch.ts`): `refactorJudgement` は `kind === "verdict"` の receipt にだけ許す (それ以外は既存の `unexpected_verdict_fields`)。値が 5 種のどれでもなければ `invalid_refactor_judgement` を reason に足す (entry は `merge_ready` にならない)。
+- `receiptContentKey` と receipt の並べ替えの比較に `refactorJudgement` を含める。同じ identity で判定欄だけが違う receipt を同じ内容として潰さないためである。
+- `ReviewDispatchEntry` に `refactorJudgement?: RefactorJudgement` を足し、`verdictReceipt` の値を写す。
+- `MergeGateDecision` に `entriesForHead: ReviewDispatchEntry[]` を足す (exact HEAD の entry の一覧。`pr_mismatch` / `head_mismatch` で早く返すときは空)。既存の `ok` / `reasons` / `verdict` / `authorizedEntry` の決め方は変えない。
+
+## 5. 対象 (実装 PR) の判定
+
+`classifyPullRequestChanges(changes)` (`src/github/design-protection.ts`) が `"implementation"` を返す PR を対象とする。すなわち、変更 path (rename 元を含む) のどれかが `src/` か `scripts/` で始まる PR である (設計書保護 gate `design-protection-diff-gate.md` §10.2 と同じ線引き。定義を 2 か所に持たない)。
+
+`changes` は adapter `readPullRequestChanges(pr, runGh)` が次で読む。
+
+- `gh api repos/{owner}/{repo}/pulls/<pr>/files --paginate` の各要素の `filename` / `previous_filename` / `status` を `PlanChange` に写す。`status === "renamed"` で `previous_filename` が文字列なら `{ kind: "renamed", from, path }`、`removed` は `deleted`、`added` は `added`、それ以外は `modified` とする。
+- 要素数が 3000 以上なら `file_list_truncated` で throw する (GitHub はこの件数で打ち切る。打ち切られた一覧で「対象でない」とは言えない)。
+- 応答が配列でない、要素の `filename` が文字列でない、`status` が文字列でない: `invalid_response` で throw する。
+
+`changes` は exact HEAD に束縛されない (API は呼んだ時点の PR を返す)。観測の後に push されたときは、既存どおり `gh pr merge --match-head-commit <evaluatedHeadSha>` が merge を失敗させる。
+
+## 6. gate の判定と DENY の reason
+
+`evaluateRefactorJudgementGate(changes, entries)`:
+
+1. 対象でなければ `{ target: false, ok: true, reasons: [] }`。判定欄の値は見ない。
+2. 対象なら、`entries` のうち `verdict` を持つ entry のそれぞれについて (verdict の無い entry は review gate の `verdict_missing` が扱う):
+   - `refactorJudgement` が無い: `refactor_judgement_missing`
+   - `commit-tests-changed` か `none-rejected`: `refactor_judgement_rejected:<値>`
+   - `commit-ok` / `none-ok` / `not-applicable`: reason なし
+3. reasons は重複を除いて昇順に並べる。`ok` は reasons が空のときだけ true。
+
+既存の出力 `pr merge — DENY pr=#<n> head=<sha> reason=<reasons>` に合わせ、reason は snake_case の token を `,` で繋ぐ。本 gate が足す token は次の 3 種である。
+
+| token | 出す条件 |
 |---|---|
-| `Refactor なし (既存関数の 7 行の分岐だけで構造追加なし)` | valid |
-| `Refactorなし（既存helperの契約適合だけ）。…` | valid |
-| `- Refactor なし: 退役で消すだけ` | valid |
-| `Refactorなし。初回migrationの境界と…` | valid |
-| `Refactor なし ()` / `Refactor なし（　）` / `Refactorなし。` / `Refactor なし` / `Refactor なし (理由)` | empty |
-| `- worker_model=… Refactorなし（…）` (行の途中) | absent |
-| `独立 Refactor はありません。` | absent |
-| fenced code block の中の `Refactor なし (x)` | absent |
-
-## 6. Refactor commit のテスト資産差分 (同じ gate で見る)
-
-対象の PR では、merge でない `refactor` commit のそれぞれについて、`files` のうち `filename` か `previousFilename` が `tests/` か `docs/test-design/` で始まるものを調べる。次のときだけ許し、それ以外は違反とする。
-
-- `status === "renamed"` かつ `changes === 0` かつ `filename` と `previousFilename` の両方が同じ保護先頭 (`tests/` 同士か `docs/test-design/` 同士) で始まる (内容を変えない rename / move だけ)。
-
-`docs/test-design/` を含めるのは、§PR スコープ規律 5 が「テスト設計にも触れない」と書いているためである。同じ gate で見る理由: これを見ないと、Green の commit の type を `refactor:` に書き換えるだけで (R) を満たせてしまう。対象を §4 の (G) を満たす PR に限っているので、退役の PR は止めない。
-
-違反 1 件ごとに `refactor_commit_changes_test_asset:<sha>:<path>` を出す (`<sha>` は 40 桁、`<path>` は `filename`。rename で保護先頭から出たときは `previousFilename`)。
-
-## 7. DENY の reason
-
-既存の出力 `pr merge — DENY pr=#<n> head=<sha> reason=<reasons>` に合わせ、reason は snake_case のトークンを `,` で繋ぐ。本 gate が足すトークンは次の 4 種である。
-
-| トークン | 出す条件 |
-|---|---|
-| `refactor_stage_missing` | 対象の PR で、(R) が無く、宣言が `absent` |
-| `refactor_none_reason_empty` | 対象の PR で、(R) が無く、宣言が `empty` |
-| `refactor_commit_changes_test_asset:<sha>:<path>` | §6 の違反 (違反ごとに 1 個) |
-| `refactor_facts_unavailable:<detail>` | §8 で facts が確かめられない |
-
-`<detail>` は `gh_failed:<message>` / `invalid_response` / `commit_list_truncated` / `file_list_truncated` / `commit_files_truncated:<sha>` / `head_not_tip` のどれかとする。
+| `refactor_judgement_missing` | 対象の PR で、exact HEAD の verdict に判定欄が無い (判定欄の導入より前に作られた receipt を含む) |
+| `refactor_judgement_rejected:<値>` | 対象の PR で、判定欄の値が不合格 (`commit-tests-changed` / `none-rejected`) |
+| `refactor_target_unavailable:<detail>` | `readPullRequestChanges` が throw した。`<detail>` は `gh_failed:<message>` / `invalid_response` / `file_list_truncated` |
 
 例:
 
 ```text
-pr merge — DENY pr=#1245 head=a0251b246b8275469dd0e8b4c79a82f4a94b5ac0 reason=refactor_stage_missing
-pr merge — DENY pr=#2001 head=… reason=refactor_commit_changes_test_asset:<sha>:tests/foo.test.ts
-pr merge — DENY pr=#2002 head=… reason=refactor_facts_unavailable:gh_failed:HTTP 502
+pr merge — DENY pr=#2001 head=… reason=refactor_judgement_missing
+pr merge — DENY pr=#2002 head=… reason=refactor_judgement_rejected:none-rejected
+pr merge — DENY pr=#2003 head=… reason=refactor_target_unavailable:gh_failed:HTTP 502
 ```
 
-## 8. fail-close
+判定欄の導入より前に verdict を受けた open な実装 PR は `refactor_judgement_missing` で止まる。猶予は設けない。同じ exact HEAD の review をやり直し、判定欄を持つ verdict を受ける (例外を作ると、記録の無い merge が残る)。
 
-確かめられないときは merge しない (deny)。
+## 7. fail-close
 
-- adapter が例外を投げた (gh の失敗、JSON の parse 失敗): `refactor_facts_unavailable:gh_failed:<message>`。
-- 応答の型が §3 と合わない (配列でない、`sha` / `parents` / `subject` が文字列でない など): `invalid_response`。
-- §3 の件数上限に当たった: `commit_list_truncated` / `file_list_truncated` / `commit_files_truncated:<sha>`。打ち切られた一覧で「Refactor が無い」「tests を変えていない」を言えないためである。
-- HEAD 束縛: commit 一覧の中で、一覧の他のどの commit の親でもない commit (tip) がちょうど 1 つで、それが `headSha` (review gate の `evaluatedHeadSha`) と一致しなければ `head_not_tip`。観測の間に push された場合に、古い一覧で判定しないためである。最終的な merge は既存どおり `--match-head-commit` で HEAD に束縛する。
-- 対象の判定 (§4) より前に facts が欠けたときも deny とする。「対象かどうか分からない」は対象でない扱いにしない。
+- `readPullRequestChanges` が throw したら deny (`refactor_target_unavailable:*`)。「対象かどうか分からない」を対象でない扱いにしない。
+- 判定欄の値が 5 種以外の receipt は、`validateReceipt` が `invalid_refactor_judgement` にして entry を `merge_ready` にしない (§4)。review gate の既存経路で deny になる。
+- 判定欄の抽出の失敗 (§3.1 の 4・5) は receipt を書かない。exact HEAD に verdict が無いので review gate が deny する。
 
-PR 本文は HEAD に束縛されない (本文の編集で HEAD は変わらない)。宣言は merge 時点の本文で判定する。本文を直しても再 review は要らない。exact-head review の束縛は commit の内容に対するものだからである。
+## 8. `runPrMerge` への組み込み
 
-## 9. `runPrMerge` への組み込み
+1. 既存どおり `getPullRequest` で facts を取る。失敗したら既存の `gh_fetch_failed:<message>` で終わる (本 gate は動かさず、`getPullRequestChanges` も呼ばない)。
+2. `GhPrMergePorts` に足す `getPullRequestChanges(pr)` (`createGhPrMergePorts` では `readPullRequestChanges`) を呼ぶ。throw したら `refactor_target_unavailable:<detail>` を本 gate の reason とする。
+3. 既存どおり `evaluateMergeGate` で review を判定する。
+4. 2 が成功していれば、`evaluateRefactorJudgementGate(changes, decision.entriesForHead)` を呼ぶ。review の結果に関わらず呼ぶ (1 回の `pr merge` で直すべきことを全部見せるため)。
+5. どちらかが deny なら、reason = 両方の token の和集合を重複除去・昇順に並べて `,` で繋いだもの。merge port は呼ばず、`merge_intent` receipt は書かない。`merge_result` receipt (`decision: "deny"`) に reason を記録する (既存の記録経路のまま)。
+6. 両方が ok のときだけ、既存どおり `merge_intent` receipt → merge → `merge_result` receipt に進む。
 
-1. 既存どおり `getPullRequest` で facts を取る。失敗したら既存の `gh_fetch_failed:<message>` で終わる (本 gate は動かさない)。
-2. 既存どおり `evaluateMergeGate` で review を判定する。
-3. review の結果に関わらず、`getRefactorStageFacts(pr, facts.evaluatedHeadSha)` を呼び、`evaluateRefactorStage` で判定する。adapter の例外は §8 のトークンに変える。両方を流すのは、1 回の `pr merge` で直すべきことを全部見せるためである。
-4. どちらかが deny なら、reason = 両方のトークンの和集合を重複除去・昇順に並べて `,` で繋いだもの。merge port は呼ばず、`merge_intent` receipt は書かない。`merge_result` receipt (`decision: "deny"`) に reason を記録する (既存の記録経路のまま)。
-5. 両方が ok のときだけ、既存どおり `merge_intent` receipt → merge → `merge_result` receipt に進む。
+## 9. 関数 signature (実装が置く場所)
+
+```ts
+// src/feedback/review-verdict-contract.ts (既存に足す)
+export type RefactorJudgement =
+  | "commit-ok" | "none-ok" | "not-applicable" | "commit-tests-changed" | "none-rejected";
+export interface VerdictExtraction {
+  verdict: ReviewVerdictName;
+  blockingFindings: string[];
+  refactorJudgement?: RefactorJudgement;
+}
+
+// src/feedback/refactor-judgement-gate.ts (新しい source module)
+export interface RefactorJudgementGateDecision { target: boolean; ok: boolean; reasons: string[] }
+export function evaluateRefactorJudgementGate(
+  changes: readonly PlanChange[],
+  entries: readonly ReviewDispatchEntry[],
+): RefactorJudgementGateDecision;
+export function readPullRequestChanges(pr: number, runGh: ExecFileSync): PlanChange[];
+```
+
+実装の分け方 (§PR スコープ規律 3。1 PR = 1 論点):
+
+1. 判定欄の抽出と写し: `extractVerdict`、`reviewOutputContract`、`projectReviewVerdict`、`validateReceipt` / `receiptContentKey` / `ReviewDispatchEntry` (§3・§4)。merge gate はまだ見ないので、既存の merge の挙動は変わらない。
+2. gate: `refactor-judgement-gate.ts`、`GhPrMergePorts.getPullRequestChanges`、`MergeGateDecision.entriesForHead`、`runPrMerge` の組み込み (§5〜§8)。1 が merge されてから入れる (1 より先に入れると、すべての実装 PR が `refactor_judgement_missing` で止まる)。
 
 ## 10. DbC
 
 | 関数 | 区分 | 内容 |
 |---|---|---|
-| `parseRefactorNoneDeclaration(body)` | pre | `body` は文字列 (adapter が null を `""` にする)。 |
-| | post | §5.1 の規則で `"valid" \| "empty" \| "absent"` を返す。行の途中・fenced code block の中・引用の宣言は数えない。理由は trim 後に空でなく `理由` でもないときだけ有効。 |
-| | invariant | 純粋関数 (I/O なし)。行の順序で結果が変わらない (有効な行が 1 つでもあれば valid)。 |
-| `evaluateRefactorStage(facts)` | pre | facts は §3 の型を満たし、§8 の HEAD 束縛と件数上限の検査を通っている (adapter が保証。通らなければ adapter が throw し、`runPrMerge` が `refactor_facts_unavailable:*` にする)。対象の PR の merge でない `refactor` commit には `files` がある。 |
-| | post-1 | §4 の (P) と (G) を両方満たさなければ `{ target: false, ok: true, reasons: [] }`。 |
-| | post-2 | 対象で、(R) も (N=valid) も無ければ `ok: false`、reasons に `refactor_stage_missing` (宣言が absent) か `refactor_none_reason_empty` (宣言が empty) のどちらか 1 つ。 |
-| | post-3 | 対象で、§6 の違反があれば `ok: false`、違反ごとに `refactor_commit_changes_test_asset:<sha>:<path>`。(N) があっても消えない。 |
-| | post-4 | 対象で post-2 と post-3 のどちらにも当たらなければ `{ target: true, ok: true, reasons: [] }`。 |
-| | invariant | merge commit は type も `files` も数えない。reasons は重複なしの昇順。純粋関数。review gate の入力 (requests / receipts) を読まない。 |
-| `runPrMerge` (変更分) | post | review gate と本 gate の両方が ok のときだけ merge port を呼ぶ。どちらかが deny なら reason は両方のトークンの和集合 (昇順)。`getRefactorStageFacts` の例外・型不一致・上限・HEAD 不一致はすべて deny。 |
-| | invariant | 既存の review gate の判定と reason (U-RVMG-*) は変えない。`getPullRequest` 失敗時の挙動 (`gh_fetch_failed:*`) も変えない。 |
+| `extractVerdict(logText)` | pre | `logText` は文字列。 |
+| | post | 既存の verdict / findings の規則は変えない。§3.1 の規則で `refactorJudgement` を足す。候補 0 件なら key を持たない。5 種以外は `refactor_judgement_unknown`、2 種以上は `refactor_judgement_ambiguous` で失敗する。 |
+| | invariant | 最後の `VERDICT:` 行より前の行と字下げされた行は判定欄の候補にしない。純粋関数。 |
+| `evaluateRefactorJudgementGate(changes, entries)` | pre | `changes` は §5 の adapter が返した一覧 (打ち切りなし)。`entries` は exact HEAD の entry (`MergeGateDecision.entriesForHead`)。 |
+| | post-1 | `classifyPullRequestChanges(changes) !== "implementation"` なら `{ target: false, ok: true, reasons: [] }`。 |
+| | post-2 | 対象で、verdict を持つ entry に判定欄が無いものがあれば `refactor_judgement_missing`。 |
+| | post-3 | 対象で、判定欄が `commit-tests-changed` か `none-rejected` の entry があれば `refactor_judgement_rejected:<値>`。 |
+| | post-4 | 対象で post-2・post-3 のどちらにも当たらなければ `{ target: true, ok: true, reasons: [] }`。 |
+| | invariant | verdict を持たない entry は見ない。PR 本文・commit・review の requests / receipts を読まない。reasons は重複なしの昇順。純粋関数。 |
+| `readPullRequestChanges(pr, runGh)` | pre | `pr` は正の整数。 |
+| | post | `--paginate` 付きの `gh api .../pulls/<pr>/files` を 1 回呼び、§5 の写しで `PlanChange[]` を返す。3000 件以上・型不一致は throw する。 |
+| `runPrMerge` (変更分) | post | review gate と本 gate の両方が ok のときだけ merge port を呼ぶ。どちらかが deny なら reason は両方の token の和集合 (昇順)。`getPullRequestChanges` の throw は deny。 |
+| | invariant | 既存の review gate の判定と reason (`U-RVMG-*`) は変えない。`getPullRequest` 失敗時の挙動 (`gh_fetch_failed:*`) も変えない。 |
 
 ## 11. 採らなかった案
 
 | 案 | 内容 | 採らない理由 |
 |---|---|---|
-| R1 | 対象を commit type だけ (`feat:` / `fix:` があれば実装 PR) で決める | docs や `tests/` だけの `fix:` (#1250) を止める。`tests/` だけの修理には Refactor の段が無い |
-| R2 | 対象を path だけ (`src/` / `scripts/` を含めば実装 PR) で決める | §10.3 の「登録 + Red」(src/ に登録行) と退役の PR (#1270) を止めるか、§6 を退役の PR だけ外す特例が要る。commit type を付け間違えて (G) を外す抜け道は残るが、それは review が commit 順と一緒に見る |
-| R3 | Refactor commit が最後の Green commit より後にあることを見る | FLAG 後の是正 commit (`fix:`) は Refactor の後に積まれるのが正規の手順である (§FLAG 後の限定是正と merge)。見ると正当な PR を止める |
-| R4 | 宣言の形を `Refactor なし (理由)` の 1 形だけにする | 実在の記載 (#1241 / #1229 / #1250) が `Refactorなし。…` / `Refactorなし（…）` で、運用中の PR を止める。行頭に限ることで、規則の引用での通過は防げる |
-| R5 | `tests/` の差分を見ない | Green の commit の type を `refactor:` に書き換えるだけで (R) を満たせる |
+| A | gate が PR 本文の「Refactor なし」宣言を parse し、宣言か `refactor:` commit があれば通す (本書の旧版、`CANDIDATE-U-REFACTORGATE-001`〜`047`) | 見るのが作者の自己申告のままで、理由が成り立つかを誰も確かめない (§2 の実測)。書式の揺れに合わせて受理形を広げ続けることになる |
+| B | gate が Refactor commit の `tests/` 差分と commit の順序を機械で見る | Refactor が要るかは判断であり機械で決められない。commit の type を付け替えれば通る。順序は FLAG 後の是正で正当に崩れる。差分 0 の確認は reviewer が判定欄に書く |
+| C | PR をまたぐ重複も、この gate で見る | 1 PR の review で見える範囲を超える。計測で発火する Refactor チケット (#1304 / #1310) の守備範囲 |
+| D (採択) | 非著者 reviewer の verdict に判定欄を必須にし、gate は欄の有無と値だけを見る | 判断を非著者に置き (§FLAG 後の限定是正と merge の族分離をそのまま使う)、gate は記録の有無という機械で確かめられることだけを見る。Fable advisor の推奨 |
 
-## 12. 実在 PR に当てたときの期待判定 (本 gate だけ、2026-10-23 の facts)
+## 12. oracle 対応
 
-| PR | 対象 (P / G) | (R) | 宣言 | 本 gate の判定 |
-|---|---|---|---|---|
-| #1250 | 対象外 (P なし / G あり) | 0 | valid | 通す (reason なし) |
-| #1245 | 対象 | 0 | absent (行の途中) | DENY `refactor_stage_missing` |
-| #1241 | 対象 | 0 | valid (`Refactorなし。…`) | 通す |
-| #1229 | 対象 | 0 | valid (`Refactorなし。…`) | 通す |
-| #1106 | 対象 | 0 | absent (`独立 Refactor はありません。`) | DENY `refactor_stage_missing` |
-| #1270 | 対象外 (P あり / G なし) | 2 | absent | 通す (§6 も当てない) |
-| #1236 | 対象外 (P なし / G なし) | 0 | absent | 通す |
-
-いずれの PR も、commit 一覧の tip は 1 つで head と一致した (`head_not_tip` にならない)。#1245 と #1106 は、本文の宣言を行頭に書き直せば (または `Refactor なし (理由)` の形に直せば) 通る。
-
-## 13. 関数 signature (実装が置く場所)
-
-新しい source module `src/feedback/refactor-stage-gate.ts` に置く。
-
-```ts
-export type RefactorNoneDeclaration = "valid" | "empty" | "absent";
-export function parseRefactorNoneDeclaration(body: string): RefactorNoneDeclaration;
-
-export interface RefactorStageDecision { target: boolean; ok: boolean; reasons: string[] }
-export function evaluateRefactorStage(facts: RefactorStageFacts): RefactorStageDecision;
-```
-
-`GhPrMergePorts` (`src/feedback/review-merge-gate.ts`) に `getRefactorStageFacts: (pr: number, headSha: string) => RefactorStageFacts` を足し、`createGhPrMergePorts` が §3 の gh 呼び出しと §8 の検査を行う。`runPrMerge` は §9 の順に呼ぶ。
-
-## 14. oracle 対応
-
-`CANDIDATE-U-REFACTORGATE-001`〜 を `docs/test-design/harness/L7-merge-gate-refactor-stage-test-design.md` に置く。実テストは `tests/refactor-stage-gate.test.ts` (純粋関数と adapter) と `tests/review-merge-gate.test.ts` (`runPrMerge` への組み込み) に置く。
+`CANDIDATE-U-REFACTORGATE-048`〜`077` を `docs/test-design/harness/L7-merge-gate-refactor-stage-test-design.md` に置く (`001`〜`047` は案 A とともに撤回し、番号は再利用しない)。実テストは `tests/review-verdict-contract.test.ts` (抽出と出力契約)、`tests/review-attestation.test.ts` (receipt への写し)、`tests/review-dispatch.test.ts` (receipt の検証と entry への写し)、`tests/refactor-judgement-gate.test.ts` (gate と adapter)、`tests/review-merge-gate.test.ts` (`runPrMerge` への組み込み) に置く。
