@@ -10,7 +10,7 @@ next_pair_freeze: L7
 issue: 1032
 ---
 
-> **L6 contract marker**: `analyzeDocSplit(sources, baseline, previousBaseline, mergeBaseMeasures, renames) => DocSplitResult` は unit-test-granularity contract である (未実装の目標契約。実装は本書の凍結後)。DbC pre/post/invariant は §9 にまとめる。oracle の詳細 (CANDIDATE-U-DOCSPLIT-001〜) は専用の `docs/test-design/harness/L7-doc-split-gate-test-design.md` が固定する。共有の `L7-unit-test-design.md` は、肥大の当事者なので本契約では触らず、索引行も足さない (§8.3 に既存検査との衝突を記す)。
+> **L6 contract marker**: `analyzeDocSplit(input: DocSplitInput) => DocSplitResult` は unit-test-granularity contract である (未実装の目標契約。実装は本書の凍結後)。DbC pre/post/invariant は §9 にまとめる。oracle の詳細 (CANDIDATE-U-DOCSPLIT-001〜) は専用の `docs/test-design/harness/L7-doc-split-gate-test-design.md` が固定する。共有の `L7-unit-test-design.md` は、肥大の当事者なので本契約では触らず、索引行も足さない (§8.3 に既存検査との衝突を記す)。
 
 # 設計文書の肥大検査 (doc-split gate) — 関数設計 (issue #1032)
 
@@ -118,7 +118,7 @@ path は `/` 区切りに正規化する。内容は CRLF を LF に直してか
 |---|---|---|
 | `classifyDoc` | `(path: string) => DocClass \| null` | path から class を再帰的に決める (§2)。対象外は `null` |
 | `measureDoc` | `(source: DocSplitSource) => DocMeasure` | §3 の値を測る。`{ path, docClass, lines, responsibilities, names }` |
-| `analyzeDocSplit` | `(sources: readonly DocSplitSource[], baseline: DocSplitBaseline, previousBaseline: DocSplitBaseline \| null, mergeBaseMeasures: DocSplitBaseline \| null, renames: readonly DocRename[]) => DocSplitResult` | §6 の規則を適用する。`{ ok, findings, summary }` |
+| `analyzeDocSplit` | `(input: DocSplitInput) => DocSplitResult` | §6 の規則を適用する。`{ ok, findings, summary }` |
 | `parseDocSplitBaseline` | `(sourceText: string) => DocSplitBaseline \| null` | baseline の JSON を解釈する。解釈できなければ `null` |
 | `loadDocSplitSources` | `(repoRoot: string) => { sources: DocSplitSource[]; unreadable: string[] }` | adapter。走査対象の `.md` を読む。読めない path は `unreadable` に積む |
 | `loadPreviousDocSplitBaseline` | `(repoRoot: string) => { kind: "found"; baseline: DocSplitBaseline } \| { kind: "absent" } \| { kind: "unreadable" }` | adapter。§5 の merge-base 経路 |
@@ -126,7 +126,7 @@ path は `/` 区切りに正規化する。内容は CRLF を LF に直してか
 | `loadRenamedDocs` | `(repoRoot: string) => { kind: "found"; renames: DocRename[] } \| { kind: "unreadable" }` | adapter。merge-base と作業木の `git diff -M --name-status` の R 行から、走査対象に関係する (`from` か `to` が対象 path の) rename を集める |
 | `checkDocSplit` | `(repoRoot: string) => { messages: string[]; ok: boolean }` | adapter の合成。doctor と CLI が共有する |
 
-`DocSplitSource` は `{ path: string; text: string }`、`DocRename` は `{ from: string; to: string }`、`DocSplitBaseline` は `Readonly<Record<string, { lines: number; responsibilities: number | null }>>`。`checkDocSplit` は例外を握りつぶさず、読めない入力は `doc-split-input-unreadable` か `doc-split-baseline-base-unreadable` の finding にして `ok: false` を返す。
+`DocSplitInput` は `{ sources: readonly DocSplitSource[]; baseline: DocSplitBaseline; previousBaseline: DocSplitBaseline | null; mergeBaseMeasures: DocSplitBaseline | null; renames: readonly DocRename[] }` で、各 field の意味は §5・§6 のとおりとする (`docs/governance/coding-rules.md` の `max-source-params` = 引数 3 個の上限に合わせて 1 つの object にまとめる。#1307 で検出)。`DocSplitSource` は `{ path: string; text: string }`、`DocRename` は `{ from: string; to: string }`、`DocSplitBaseline` は `Readonly<Record<string, { lines: number; responsibilities: number | null }>>`。`checkDocSplit` は例外を握りつぶさず、読めない入力は `doc-split-input-unreadable` か `doc-split-baseline-base-unreadable` の finding にして `ok: false` を返す。
 
 ## 8. 配線と分割の手順
 
