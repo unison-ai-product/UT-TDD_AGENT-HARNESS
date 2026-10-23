@@ -113,7 +113,8 @@ v4 候補 (`docs/governance/candidates/ut-tdd-concept-v4.0.md`) のチケット�
   assignee を外す。競合が続くようなら、control lane が claim を直列に割り当ててよい。
 
 **空いた slot が拾う順**: (1) その lane 自身の open PR にある FLAG・CI 赤・衝突の是正 (別チケットにせず、その PR の作業チケットで行う)、
-(2) 直列の鎖の先頭、(3) 並列のチケット。
+(2) 直列の鎖の先頭、(3) 並列のチケット、(4) 本線で拾えるものが無いときだけ、バッファ作業のチケット
+(下の「control lane の務め」)。
 
 **並列ボックスへの入れ方**: 変更する path が、他の open な並列チケットと重ならないこと。かつ共有の面に
 触れないこと (例: `package.json` / lock、`.github/workflows/`、`docs/test-design/harness/L7-unit-test-design.md` や
@@ -143,7 +144,20 @@ review の custody (request → verdict → receipt) は既存の経路のまま
 チケットは鎖でつなぎ、1 本の merge が他の CI と review を無効にしない (rebase して再実行にならない) ようにする。
 同時に動かす並列チケットの数は、slot 数に加えて CI の余力でも上限を持つ。
 
-**control lane の務め**: lane ごとに、拾えるチケットの数が slot 数以上になるよう起票して溜め、下回ったら補充する。
+**control lane の務め** (PO 判断 2026-10-23: 「タスクは下限 5 で持たせて、なくなっても別の作業ができるようにバッファを持たせること」):
+lane ごとに、拾えるチケットを下限以上に保つ。下限を割ったら補充する。
+
+- **下限**: どの lane も、拾えるチケット (open blocker が 0 件で、claim されていないもの) を常に **5 件以上**
+  持つ。slot 数が 5 より多い lane は slot 数以上にする。つまり下限は max(5, slot 数) である。
+- **バッファ**: 本線のチケット (Forward など) が依存待ちで尽きても slot が止まらないように、依存を持たない
+  バッファ作業のチケットを溜めておく。例: merge 済みの実装 PR で抜けた Refactor 工程 (drive model の
+  refactor)、PLAN 撤去の小さな退役、docs の是正。
+- **バッファの使い方**: 本線のチケットが拾えるときは本線を優先し、拾えないときだけバッファを拾う
+  (上の拾う順の (4))。
+- **補充の契機**: 拾えるチケットが下限を割ったら、control は同じ作業の中で補充する。下限割れは
+  **供給不足** (上の「空きは問題である」の定義) として Issue コメントに記録する。slot が埋まっていても記録する。
+  (2026-10-23 の実測: Codex lane の拾えるチケットが 0 件になり、3 slot のうち 1 slot が空き、
+  1 slot が前のチケット待ちになった。#1170 comment 6357845273。)
 
 **worktree と rebase** (PO 判断 2026-10-23): チケットの lease と close が、worktree の切り出しと畳みも決める。
 
