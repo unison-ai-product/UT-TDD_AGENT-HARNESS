@@ -2,7 +2,7 @@
 layer: L7
 executed_at_layer: L7
 artifact_type: test_design
-status: draft
+status: confirmed
 pair_artifact: docs/design/harness/L6-function-design/test-oracle-strength-helper-resolution.md
 related_function: src/lint/ddd-tdd-rules.ts
 issue: 1290

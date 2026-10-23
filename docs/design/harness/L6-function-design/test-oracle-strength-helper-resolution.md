@@ -1,7 +1,7 @@
 ---
 layer: L6
 artifact_type: design_doc
-status: draft
+status: confirmed
 sub_doc: function-spec
 artifact_role: topic_test_oracle_strength_helper_resolution
 pair_artifact: docs/test-design/harness/L7-test-oracle-strength-helper-resolution-test-design.md
@@ -12,6 +12,8 @@ issue: 1290
 ---
 
 # L6 機能設計: test-oracle-strength の同一ファイル helper 解決 (Issue #1290)
+
+> **L6 contract marker**: `analyzeDddTddRules(inputs) => DddTddResult` の `test-oracle-strength` 判定 (module 内部の `assertionSummary` / `testOracleViolations`) を対象とする unit-test-granularity contract である。DbC は §4、oracle は専用 L7 の `CANDIDATE-U-ORACLEHELPER-001`〜`015` が固定する。
 
 > **契約状態**: 本文は未実装の目標契約である。非著者 family の closing review 前の draft であり、source 実装・Green 結果・review PASS を示さない。
 
