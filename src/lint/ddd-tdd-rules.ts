@@ -394,6 +394,15 @@ function isFunctionLikeNode(node: ts.Node): boolean {
   return ts.isFunctionLike(node) || ts.isClassDeclaration(node) || ts.isClassExpression(node);
 }
 
+function walkOracleBody(body: ts.Node, visitNode: (node: ts.Node) => void): void {
+  const visit = (node: ts.Node, root: boolean): void => {
+    if (!root && isFunctionLikeNode(node)) return;
+    visitNode(node);
+    ts.forEachChild(node, (child) => visit(child, false));
+  };
+  visit(body, true);
+}
+
 function boundIdentifiers(name: ts.BindingName): ts.Identifier[] {
   if (ts.isIdentifier(name)) return [name];
   const identifiers: ts.Identifier[] = [];
@@ -609,15 +618,12 @@ function oracleHelperIndex(sourceFile: ts.SourceFile): OracleHelperIndex {
 
 function shallowCalls(node: ts.Node, scopeAtNode: WeakMap<ts.Node, OracleScope>): OracleCallSite[] {
   const calls: OracleCallSite[] = [];
-  const visit = (current: ts.Node, root: boolean): void => {
-    if (!root && isFunctionLikeNode(current)) return;
+  walkOracleBody(node, (current) => {
     if (ts.isCallExpression(current) && ts.isIdentifier(current.expression)) {
       const scope = scopeAtNode.get(current);
       if (scope) calls.push({ node: current, scope });
     }
-    ts.forEachChild(current, (child) => visit(child, false));
-  };
-  visit(node, true);
+  });
   return calls;
 }
 
@@ -649,8 +655,7 @@ function helperAstStrength(body: ts.Node): OracleStrength {
   let expectCount = 0;
   let assertCount = 0;
   let weakMatcherCount = 0;
-  const visit = (node: ts.Node, root: boolean): void => {
-    if (!root && isFunctionLikeNode(node)) return;
+  walkOracleBody(body, (node) => {
     if (ts.isCallExpression(node)) {
       const callee = node.expression;
       if (ts.isIdentifier(callee) && callee.text === "expect") expectCount += 1;
@@ -670,9 +675,7 @@ function helperAstStrength(body: ts.Node): OracleStrength {
         weakMatcherCount += 1;
       }
     }
-    ts.forEachChild(node, (child) => visit(child, false));
-  };
-  visit(body, true);
+  });
   if (expectCount === 0 && assertCount === 0) return 0;
   if (assertCount === 0 && expectCount > 0 && expectCount === weakMatcherCount) return 1;
   return 2;
