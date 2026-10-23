@@ -10,7 +10,7 @@ next_pair_freeze: L7
 plan: docs/plans/PLAN-L6-971-consumer-trace-gates.md
 ---
 
-> **L6 contract marker**: G1-trace / G3-trace の consumer 分岐 (`analyzeConsumerG1Trace(reader) => ConsumerTraceResult` / `analyzeConsumerG3Trace(reader) => ConsumerTraceResult`、出力の形は §8) は unit-test-granularity contract である。DbC pre/post/invariant は §10 にまとめる。oracle の索引は共有の `docs/test-design/harness/L7-unit-test-design.md` (§consumer trace gate) に置き、詳細 (CANDIDATE-U-CTRACE-001〜026) は専用の `docs/test-design/harness/L7-consumer-trace-gates-test-design.md` が固定する。
+> **L6 contract marker**: G1-trace / G3-trace の consumer 分岐 (`analyzeConsumerG1Trace(reader) => ConsumerTraceResult` / `analyzeConsumerG3Trace(reader) => ConsumerTraceResult`、出力の形は §8) は unit-test-granularity contract である。DbC pre/post/invariant は §10 にまとめる。oracle の索引は共有の `docs/test-design/harness/L7-unit-test-design.md` (§consumer trace gate) に置き、詳細 (CANDIDATE-U-CTRACE-001〜045、§14 の画面 ID の名前空間は 042〜045) は専用の `docs/test-design/harness/L7-consumer-trace-gates-test-design.md` が固定する。
 
 # consumer trace gate (G1-trace / G3-trace の consumer 分岐) — 関数設計 (issue #971 / #972 / #880)
 
@@ -322,3 +322,52 @@ consumer 分岐は prefix を仮定せず、§5〜§6 の表の列から ID を�
 | DEC-3 | consumer の画面の降下は L2 の `関連機能` で見る | T3 の参照先を広げる契約改訂を避ける。降下規則 D2 は T2 の理由と重ならない |
 | DEC-4 | consumer に除外台帳を認めない | テンプレートに宣言の表が無い。必要になれば後続の Issue |
 | DEC-5 | 引用の場所は表のセルに限らない | 最小の実装。`status: placeholder` / `park` の文書を数えないことを最小の防御とする |
+
+## 14. 画面 ID の名前空間 (issue #1273)
+
+### 14.1 目的と前提
+
+consumer の画面 ID は `PM-` / `HM-` / `GD-` に限らない (例: `SC-01`、Pack issue unison-ai-product/UT-TDD_AGENT-HARNESS-Pack#10)。G1-trace が画面 ID の名前空間をどこから受け取るかを本節で固定する。方式は §6 (B2、control の決定、advisor `claude-fable-5-1`) から一意に決まるので、本節は新しい方式判断をしない。§6 の規則が画面 ID について何を意味するかを、harness 側の固定 prefix と fail-close の扱いを含めて明文化する。新しい gate・新しい理由文字列・新しい設定項目は足さない。
+
+### 14.2 名前空間の出どころ
+
+| 分岐 | 画面 ID の名前空間 | 出どころ |
+|---|---|---|
+| consumer | `DOC-L2-SCREEN` の `#### 第4章 画面一覧` の `画面ID` 列に書かれた値の集合 `S` (§6.1、§6.2) | consumer 自身の L2 文書。この列が consumer の「名前空間の宣言」である |
+| harness | `(?:PM\|HM\|GD)-\d{2}` | `src/lint/g1-trace.ts` の `screenIds` と §5.5 の行の照合。harness 自身の ID 体系であり、OT-45 R1〜R3 の件数条件 (15 画面) がこれを前提にする |
+
+- consumer 分岐の宣言は L2 文書の表だけである。prefix を設定 (`package.json`、`.ut-tdd/`、環境変数など) で渡す方式や、harness 形式の `screen-requirements.md` の §1 の表から拾う方式は採らない。§6 の決定どおり、ID の抽出は列で行い、正規表現の prefix に依存しない (§10 invariant「prefix 非依存」)。
+- 参照の照合は、§6.3 で分解と範囲展開をした token と `S` の要素との文字列の完全一致で行う。大文字小文字・0 埋めの桁数・全角半角を正規化しない (`SC-01` と `SC-001` と `sc-01` は別の ID)。範囲表記 `SC-01〜16` は §6.3 により `SC-01`〜`SC-16` (始点の桁数で 0 埋め) へ展開してから照合する。
+- 複数の prefix を同じ `画面ID` 列に混在させてよい (例: `SC-01` と `ADM-01`)。列に書かれた値がそのまま名前空間になる。
+
+### 14.3 宣言が無いときの fail-close
+
+consumer 分岐では、画面 ID の宣言が取れないときに別の出どころへ縮退しない。次のいずれも `ok=false` であり、理由は既存の §5〜§7 のものを使う。
+
+| 状態 | 理由 |
+|---|---|
+| L2 文書が無い | `missing_core_doc:DOC-L2-SCREEN` |
+| L2 文書の frontmatter `doc_type_id` が違う | `doc_type_mismatch:DOC-L2-SCREEN` |
+| `#### 第4章 画面一覧` か必須列の header が無い | `required_table_missing:DOC-L2-SCREEN:#### 第4章 画面一覧` |
+| `画面ID` 列が placeholder 行だけ | `empty_required_set:DOC-L2-SCREEN:画面ID` |
+
+- 宣言が取れないとき、汎用の正規表現 (例: `[A-Z]+-\d+`)、harness の `(?:PM|HM|GD)-\d{2}`、L2 文書の表の外 (`diagrams.yaml` 節のラベルなど、§6.2)、harness 形式の文書 (`screen-requirements.md`) のいずれからも `S` を補わない。汎用の正規表現は `REQ-01` や `F-01` まで画面として拾うので、T1 の `S ∪ F` の照合が意味を失うからである。
+- このとき、L1 の `展開先` や L12 の `トレース元` に書かれた画面 ID の token は `S` に無いので、§7.1 の `dangling_reference` がそのまま出る。宣言の欠落を隠すための理由の抑止はしない。
+
+### 14.4 harness 形式の文書を置いた consumer (Pack#10 の形)
+
+Pack#10 の consumer は、consumer layout (`docs/design/L1-requirements/`) に harness 形式の `business-requirements.md` と `screen-requirements.md` (§5.1 `BR/UX → 画面` に `SC-01〜16、SC-20`) を置いて `gate G1` を回し、harness の `analyzeG1Trace` から `orphanBusiness=...` / `orphanP0Fr=...` を受け取った。§3 の分岐の導入後は次のとおりである。
+
+- 分岐は `resolveDesignRoot` だけで決まり、`docs/design/harness/` が無いので consumer 分岐になる。consumer 分岐は `analyzeG1Trace` を呼ばず、harness 形式の文書を存在しても読まない (§3.2、§10 の「harness 専用の文書を要求しない」)。したがって `orphanBusiness` / `orphanScreen` / `orphanP0Fr` を含む message は consumer 分岐から出ない。
+- 結果は §5 の core 文書だけで決まる。core 文書が無ければ `missing_core_doc` で赤になる。harness 形式の文書の中身で青にも赤にもならない。
+- harness 形式の文書から consumer の画面 ID を移す作業 (L2 の `画面一覧` への記入) は consumer 側の作業であり、gate は移行を自動で行わない。
+
+### 14.5 harness 側の固定 prefix を変えない範囲
+
+- `src/lint/g1-trace.ts` の `screenIds` と §5.5 の行の照合の `(?:PM|HM|GD)-\d{2}` は harness 分岐の規則であり、本節で一般化しない。一般化すると harness の `screen-requirements.md` に書かれた別の ID (例: 退役した `SCR-NN`、§13.5) を画面に数え、OT-45 の 15 画面の条件と §13 の降下検査の対象が変わる。
+- `src/lint/doc-consistency.ts` の `SCREEN_ID_REGEX` は doctor の `doc-consistency` からだけ呼ばれ、この検査は `source-full` profile (`src/doctor/profiles.ts` の `sourceOnly: true`) にだけ載る。consumer の profile (`consumer-toolchain` / `consumer-setup-smoke`) では走らないので、consumer の名前空間の契約の対象にしない。harness の文書の整合検査として現行のまま残す。
+- `src/state-db/projection-writer.ts` の画面 projection は §11 のとおり範囲外である。
+
+### 14.6 検証
+
+テスト設計 `docs/test-design/harness/L7-consumer-trace-gates-test-design.md` の `CANDIDATE-U-CTRACE-042`〜`045` が本節を固定する。042 は Pack#10 の形の再現、043 は宣言が無いときの縮退の禁止、044 は完全一致の照合、045 は harness 分岐の prefix 固定の保持である。
