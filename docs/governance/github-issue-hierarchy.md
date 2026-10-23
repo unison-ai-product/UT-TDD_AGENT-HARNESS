@@ -84,12 +84,22 @@ v4 候補 (`docs/governance/candidates/ut-tdd-concept-v4.0.md`) のチケット�
 - チケットは `Work` Issue。受け手 lane はラベル `lane:codex` / `lane:claude` で示す。検収のチケットには
   `ticket:review` を付ける。
 - 直列は GitHub の issue dependency「blocked by」で表す。並列は、open な blocker が無いものである。
-- **拾える**条件は、open、lane ラベルあり、assignee なし、open な blocker なし、の全てである。
+- **拾える**条件は、open、lane ラベルあり、有効な lease なし (下記)、open な blocker なし、の全てである。
 
-**lease**: 取得は assignee の設定と、slot 番号と開始時の base commit を書いたコメント 1 件。
-解放は assignee を外すことと、コメント 1 件。1 チケット = 1 slot = 1 worktree。
+**lease**: 正本は claim コメントである。claim コメントは slot 番号と開始時の base commit を書いた 1 件で、
+これが lease そのものになる。assignee は表示用の印であり、排他の鍵ではない (同じ lane の slot は
+同じ GitHub アカウントを共有することが多く、assignee は複数置けるため、assignee では勝者が決まらない)。
+1 チケット = 1 slot = 1 worktree。
 
-**空いた slot が拾う順**: (1) その lane 自身の open PR にある FLAG・CI 赤・衝突の是正、
+- **勝者**: 直近の release コメントより後に付いた claim コメントのうち、GitHub のコメント順で最も早いものが勝つ。
+- **着手前確認**: slot は claim を投稿した後でコメントを読み直し、自分の claim が最も早い有効なものである
+  ときだけ着手する (worktree を切る)。そうでなければ着手しない。
+- **敗者の撤退**: 負けた slot は撤退コメントを 1 件投稿するだけにし、assignee には触れない
+  (敗者が外すと、勝者の表示を消してしまう)。
+- **解放は所有者だけ**: 勝った claim の slot だけが release コメントを投稿し、他に有効な lease が無ければ
+  assignee を外す。競合が続くようなら、control lane が claim を直列に割り当ててよい。
+
+**空いた slot が拾う順**: (1) その lane 自身の open PR にある FLAG・CI 赤・衝突の是正 (別チケットにせず、その PR の作業チケットで行う)、
 (2) 直列の鎖の先頭、(3) 並列のチケット。
 
 **並列ボックスへの入れ方**: 変更する path が、他の open な並列チケットと重ならないこと。かつ共有の面に
@@ -103,8 +113,17 @@ v4 候補 (`docs/governance/candidates/ut-tdd-concept-v4.0.md`) のチケット�
   lane に出すのは control lane、control lane 自身のチケットを出すのも control lane である。
 
 **検収もチケットにする**: closing review の依頼 1 本 (exact head ごとに 1 本) が、検収 lane の
-チケット 1 件である。FLAG の是正後の再検は、是正に blocked by される直列にする。独立した PR の review は並列にする。
+チケット 1 件である。独立した PR の review は並列にする。
 review request を出すのは従来どおり control lane だけで、チケットを起票することが、その依頼の見える記録になる。
+
+- **FLAG の是正は別チケットにしない**: 同じ PR 内の是正は、同じ作業チケットで author lane が行う (上の拾う順 (1))。
+- **検収チケットの close 条件 (第 2〜4 節の例外)**: 検収チケットは PR の merge ではなく、その exact head の
+  verdict が記録された (既存の review custody に verdict と receipt が残った) ときに close する。FLAG の
+  verdict でも close する。PR の merge を待つと、是正 PR の merge → 再検 → receipt → 同じ PR の merge で
+  循環するためである。作業チケットの close は従来どおり、PR の merge (または放棄) である。
+- **再検**: author が是正 head を push した後で、control lane が新しい exact head の検収チケットを新たに
+  起票する (1 head に 1 本)。再検が直列だというのは、是正 head ができてから発行するという意味であり、
+  是正チケットに blocked by されるという意味ではない。
 review の custody (request → verdict → receipt) は既存の経路のままで、チケットは custody の代わりにならない。
 
 **CI の順序と流れ**: CI は共有の限られた資源である。直列ボックスは CI の順序も決める。共有の面に触れる
@@ -115,8 +134,8 @@ review の custody (request → verdict → receipt) は既存の経路のまま
 
 **worktree と rebase** (PO 判断 2026-10-23): チケットの lease と close が、worktree の切り出しと畳みも決める。
 
-- **切る = lease の取得**: slot は lease を取るとき、現在の origin/main から自分の worktree を切り、base commit を
-  lease コメントに書く。1 チケット = 1 worktree で、他のチケットの worktree を使い回さない。
+- **切る = lease の取得**: slot は claim コメントに base commit を書き、着手前確認に勝った後で、現在の
+  origin/main から自分の worktree を切る。1 チケット = 1 worktree で、他のチケットの worktree を使い回さない。
 - **畳む = チケットの close**: PR が merge された (またはチケットが close した) ら、slot はすぐ worktree と
   branch を消す (`git worktree remove` と branch 削除。切った側が畳む)。close したのに worktree が残っていれば、
   片付け漏れである。放棄するチケットも、lease を解放して worktree を畳む (未 merge の commit があれば branch は残す)。
