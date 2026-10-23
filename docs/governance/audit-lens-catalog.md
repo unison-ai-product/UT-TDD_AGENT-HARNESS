@@ -256,7 +256,7 @@ grep -rn "ENFORCEMENT_DATE\|閾値\|baseline" src/ を列挙し、各値に「se
 
 ## §8d 品質 4 レンズ: LENS-AQ / LENS-TQ / LENS-DQ / LENS-CX (A-182 で新設)
 
-運用系レンズ (CE/DV/GR/DR/DE/GG) が「ハーネスの働き方」を監査するのに対し、この 4 本は**成果物そのものの実質品質**を監査する。判定 4 軸と是正 wave の正本 = `docs/archive/governance/harness-v2-quality-uplift-strategy.md` (archive 済み) §1。四半期または大規模リファクタ後に 4 レーン fan-out で回し、A-182 §1 の基線と比較する。
+運用系レンズ (CE/DV/GR/DR/DE/GG) が「ハーネスの働き方」を監査するのに対し、この 4 本は**成果物そのものの実質品質**を監査する。判定 4 軸と是正 wave の正本 = `docs/governance/harness-v2-quality-uplift-strategy.md` §1。四半期または大規模リファクタ後に 4 レーン fan-out で回し、A-182 §1 の基線と比較する。
 
 **LENS-AQ (実装アーキテクチャ) — 解釈観点**: 変更が 1 箇所に閉じるか。(1) megafile: >800 行の全数と成長 (2) util 複製: 同名/同機能関数の横断 grep (実例: frontmatter parser 15 実装、walkMarkdown 5 複製) (3) 依存方向: 逆流・cli→内層直 import (4) 様式世代: gate シグネチャの揃い (5) 暗黙 fail-open: `catch {` の意図宣言有無。
 
