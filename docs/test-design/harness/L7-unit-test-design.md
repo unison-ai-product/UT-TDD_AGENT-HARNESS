@@ -867,10 +867,10 @@ SMB/NFS/OneDrive をまたぐ strict lease、heartbeat、clock-skew 耐性は主
 - U-L14CLOSE-007: missing A-143 audit source is a hard violation message, not a silent skip.
 - U-L14CLOSE-008: non-closed external/human/release boundary rows must keep item-specific markers in gap and next-action cells. After Pack tag/release publication, the release boundary marker is signed tarball signature rather than stale tag-push absence; PO UAT/signoff, post-deploy, operations feedback, hosted/API Codex, and signature boundaries cannot be replaced by vague prose.
 
-| ID | Declaration |
-| --- | --- |
-| U-L14CLOSE-001 | `analyzeL14CloseAudit` accepts a complete A-143 matrix only when all expected close rows exist, including L10 UX, L11 UAT, L12 release acceptance, L13 post-deploy, and L14 operations feedback boundaries. 検証は隔離 fixture 上の matrix と path-existence 回帰として維持し、fixture の証跡 path は `docs/plans/` を指さない (PLAN 機構撤去 = #1168 A4 / #1078 により、実 PLAN を証跡 path に混ぜる入力は退役)。 |
-| U-L14CLOSE-005 | **live 部分を退役 (PLAN 機構撤去 = #1168 A4 / #1078)**: 実 repo の A-143 audit を `loadL14CloseAuditDocs` で読み、必須 row 順と照合する live-corpus 検査は要求から外す。過去監査 (A-143) の内容は書き換えない。ただし `loadL14CloseAuditDocs` → `analyzeL14CloseAudit` が返す `rows` の item 順が必須の close row 順 (workflow-definition から始まる 17 行) と一致することの検査は、PLAN 撤去と独立の保証なので維持する。U-L14CLOSE-005 はこの順序 assertion を、証跡 path が `docs/plans/` を指さない隔離 fixture の audit 文書に対して行う形へ改める (001..003 / 007 は順序を検査しないため、代替にしない)。 |
+| U-ID | 対象 | oracle (DbC) |
+| --- | --- | --- |
+| U-L14CLOSE-001 | `analyzeL14CloseAudit` | `analyzeL14CloseAudit` accepts a complete A-143 matrix only when all expected close rows exist, including L10 UX, L11 UAT, L12 release acceptance, L13 post-deploy, and L14 operations feedback boundaries. 検証は隔離 fixture 上の matrix と path-existence 回帰として維持し、fixture の証跡 path は `docs/plans/` を指さない (PLAN 機構撤去 = #1168 A4 / #1078 により、実 PLAN を証跡 path に混ぜる入力は退役)。 |
+| U-L14CLOSE-005 | `loadL14CloseAuditDocs` → `analyzeL14CloseAudit` | **live 部分を退役 (PLAN 機構撤去 = #1168 A4 / #1078)**: 実 repo の A-143 audit を `loadL14CloseAuditDocs` で読み、必須 row 順と照合する live-corpus 検査は要求から外す。過去監査 (A-143) の内容は書き換えない。ただし `loadL14CloseAuditDocs` → `analyzeL14CloseAudit` が返す `rows` の item 順が必須の close row 順 (workflow-definition から始まる 17 行) と一致することの検査は、PLAN 撤去と独立の保証なので維持する。U-L14CLOSE-005 はこの順序 assertion を、証跡 path が `docs/plans/` を指さない隔離 fixture の audit 文書に対して行う形へ改める (001..003 / 007 は順序を検査しないため、代替にしない)。 |
 
 ### 2026-06-09 Runtime Adapter Lifecycle Test Addendum
 
