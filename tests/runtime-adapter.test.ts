@@ -644,7 +644,7 @@ describe("Issue #1261 M1 provider invocation input validation candidates", () =>
     expect(error.message).not.toContain(token);
   }
 
-  it("CANDIDATE-U-CMDINPUT-003: keeps schema-approved models and aliases in adapter plans", () => {
+  it("U-CMDINPUT-003: keeps schema-approved models and aliases in adapter plans", () => {
     const task = "preserve the planned task";
     for (const model of ["gpt-5.4", "sonnet", "local"]) {
       expect(modelOverrideSchema.safeParse(model).success, model).toBe(true);
@@ -661,7 +661,7 @@ describe("Issue #1261 M1 provider invocation input validation candidates", () =>
 
   ["gpt-5%", 'gpt-5"', "gpt 5", "", "gpt-5.4[1m]"].forEach((model, index) => {
     describe(`M1 invalid model fixture ${index + 1}`, () => {
-      it.fails("CANDIDATE-U-CMDINPUT-003: static invalid-model label", () => {
+      it.fails("U-CMDINPUT-003: static invalid-model label", () => {
         expect(modelOverrideSchema.safeParse(model).success, model).toBe(false);
         const plan = buildAdapterPlan(
           { provider: "codex", role: "se", task: "keep task unchanged", model },
@@ -673,7 +673,7 @@ describe("Issue #1261 M1 provider invocation input validation candidates", () =>
     });
   });
 
-  it("CANDIDATE-U-CMDINPUT-004: preserves schema-approved effort values and provider normalization", () => {
+  it("U-CMDINPUT-004: preserves schema-approved effort values and provider normalization", () => {
     const cases = [
       { provider: "codex" as const, effort: "low", normalized: "low" },
       { provider: "codex" as const, effort: "medium", normalized: "medium" },
@@ -718,7 +718,7 @@ describe("Issue #1261 M1 provider invocation input validation candidates", () =>
 
   ["extreme", ""].forEach((effort, index) => {
     describe(`M1 invalid effort fixture ${index + 1}`, () => {
-      it.fails("CANDIDATE-U-CMDINPUT-004: static invalid-effort label", () => {
+      it.fails("U-CMDINPUT-004: static invalid-effort label", () => {
         expect(reasoningEffortSchema.safeParse(effort).success, effort).toBe(false);
         const plan = buildAdapterPlan(
           {
@@ -736,7 +736,7 @@ describe("Issue #1261 M1 provider invocation input validation candidates", () =>
     });
   });
 
-  it.fails("CANDIDATE-U-CMDINPUT-005: invalid model fails the plan closed without rewriting task or provider", () => {
+  it.fails("U-CMDINPUT-005: invalid model fails the plan closed without rewriting task or provider", () => {
     const invalidModel = "gpt-5%raw-model";
     const task = "unchanged user task";
     const plan = buildAdapterPlan(
@@ -753,7 +753,7 @@ describe("Issue #1261 M1 provider invocation input validation candidates", () =>
     expect(plan.stdin).toBe(task);
   });
 
-  it.fails("CANDIDATE-U-CMDINPUT-006: invalid effort fails the plan closed", () => {
+  it.fails("U-CMDINPUT-006: invalid effort fails the plan closed", () => {
     const task = "unchanged user task";
     const validModel = "claude-sonnet-5-5";
     const invalidEffort = "extreme";
@@ -772,7 +772,7 @@ describe("Issue #1261 M1 provider invocation input validation candidates", () =>
     expect(plan.stdin).toBe(task);
   });
 
-  it.fails("CANDIDATE-U-CMDINPUT-006: model diagnostic wins when both model and effort are invalid", () => {
+  it.fails("U-CMDINPUT-006: model diagnostic wins when both model and effort are invalid", () => {
     const task = "unchanged user task";
     const invalidEffort = "extreme";
     const bothInvalid = buildAdapterPlan(
@@ -785,7 +785,7 @@ describe("Issue #1261 M1 provider invocation input validation candidates", () =>
 
   ["cmd", "bat"].forEach((extension, index) => {
     describe(`M1 percent command extension fixture ${index + 1}`, () => {
-      it.fails("CANDIDATE-U-CMDINPUT-007: static command-path label", () => {
+      it.fails("U-CMDINPUT-007: static command-path label", () => {
         const root = mkdtempSync(join(tmpdir(), "ut-adapter-percent-command-"));
         try {
           const token = join(root, `percent%path-${extension}`, `codex.${extension}`);
@@ -816,7 +816,7 @@ describe("Issue #1261 M1 provider invocation input validation candidates", () =>
     ["first", "middle", "percent%last"],
   ].forEach((args, index) => {
     describe(`M1 percent argument fixture ${index + 1}`, () => {
-      it.fails("CANDIDATE-U-CMDINPUT-008: static percent-argument label", () => {
+      it.fails("U-CMDINPUT-008: static percent-argument label", () => {
         const root = mkdtempSync(join(tmpdir(), "ut-adapter-percent-args-"));
         try {
           const explicit = join(root, "codex.cmd");
@@ -842,7 +842,7 @@ describe("Issue #1261 M1 provider invocation input validation candidates", () =>
     });
   });
 
-  it("CANDIDATE-U-CMDINPUT-009: preserves normal cmd quoting and direct native/non-Windows percent arguments", () => {
+  it("U-CMDINPUT-009: preserves normal cmd quoting and direct native/non-Windows percent arguments", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-adapter-percent-preserve-"));
     try {
       const cmdPath = join(root, "codex.cmd");
@@ -895,7 +895,7 @@ describe("Issue #1261 M1 provider invocation input validation candidates", () =>
     }
   });
 
-  it.fails("CANDIDATE-U-CMDINPUT-010: builder rejection makes the version probe false without invoking runProbe", () => {
+  it.fails("U-CMDINPUT-010: builder rejection makes the version probe false without invoking runProbe", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-adapter-percent-probe-"));
     try {
       const explicit = join(root, "percent%codex.cmd");
@@ -923,7 +923,7 @@ describe("Issue #1261 M1 provider invocation input validation candidates", () =>
     }
   });
 
-  it("CANDIDATE-U-CMDINPUT-011: keeps percent-bearing task text on stdin outside cmd tokens", () => {
+  it("U-CMDINPUT-011: keeps percent-bearing task text on stdin outside cmd tokens", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-adapter-percent-stdin-"));
     try {
       const explicit = join(root, "codex.cmd");
