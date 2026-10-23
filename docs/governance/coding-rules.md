@@ -137,8 +137,13 @@ hard gate 化の順序:
 
 ### 「Refactor なし」でよい条件と判定者
 
-- 条件: 実装 PR で「Refactor なし (理由)」と書いてよい条件は、#1300 で確定する。確定するまで、本節は条件を持たない。
-- 判定者: 条件を満たすかは、成果物を書いていない非著者 family の reviewer が判定する。著者の自己申告は根拠にしない。
+- 条件 (#1300 で確定): 実装 PR (`src/` か `scripts/` を変える PR) で Refactor commit を置かず「Refactor なし (理由)」で済ませてよいのは、次の 2 つを両方満たすときだけとする。
+  1. PR 本文に、行頭の `Refactor なし (理由)` が 1 行ある。理由は空でなく、何を見て直す余地が無いとしたかを書く (例: 「1 関数内の 7 行の分岐の修正だけで、構造を足していない」)。
+  2. Green の差分が、本節「量の上限」の関数の行数・循環的複雑度・制御のネスト・関数の引数の上限と、「Refactor の候補を出す値」(helper 抽出の候補・module の行数・module の export 数・重複した関数) のどれにも、新しく触れていない。新しく触れるとは、変更前は内側だったものが変更後に超えること、または Green で足したコードが超えることをいう。重複は同じ PR の中で作ったものだけを数える。
+- 2 を満たしやすい典型は、1 関数内の局所修正と、`src/` 配下の docs・config・テストデータだけの変更である。典型に当たっても 2 の確認は省かない。
+- 2 に触れたときは、同じ PR に Refactor commit を積んで直す。大きな構造変更が要るときは Refactor Issue (ラベル `refactor`) を起票し、PR 本文から指す。
+- PR をまたぐ重複 (複数の PR に分かれて積もった重複や、既存コードとの重複) は、この条件では扱わない。計測で発火する Refactor チケット (#1304 / #1310) が扱う。
+- 判定者: 条件を満たすかは、成果物を書いていない非著者 family の reviewer が判定する。著者の自己申告は根拠にしない。判定は verdict の `REFACTOR:` 欄に書き、`ut-tdd pr merge` は実装 PR で欄が無いか不合格の値なら merge を拒否する (契約は確定済み、実装は #1300 の実装チケットで入れる)。欄の形と gate の規則は `docs/design/harness/L6-function-design/merge-gate-refactor-stage.md` が持つ (本節の条件は gate が機械で判定するものではなく、gate が見るのは判定の記録である)。
 - 区別: 実装 PR の中の Refactor commit (Green の後の `refactor:`。`CLAUDE.md` §PR スコープ規律 5 と `skills/test-driven-development.md`) と、Refactor mode (独立した作業。`docs/process/modes/refactor.md`) は別のものとして扱う。
 - 大きな構造変更の行き先: PLAN ではなく、Refactor Issue と設計文書とする (PLAN 凍結、#1166)。
 
