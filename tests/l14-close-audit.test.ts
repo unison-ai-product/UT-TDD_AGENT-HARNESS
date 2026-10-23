@@ -59,7 +59,7 @@ function createAuditFixture(content: string = compliant): string {
 }
 
 describe("l14-close-audit", () => {
-  it.fails("U-L14CLOSE-001: accepts the complete L14 close audit inventory", () => {
+  it("U-L14CLOSE-001: accepts the complete L14 close audit inventory", () => {
     const root = createAuditFixture();
     try {
       const result = analyzeL14CloseAudit([{ file: "A.md", content: compliant }], root);
@@ -129,7 +129,7 @@ describe("l14-close-audit", () => {
     }
   });
 
-  it.fails("U-L14CLOSE-005: loads and validates the isolated A-143 audit item order", () => {
+  it("U-L14CLOSE-005: loads and validates the isolated A-143 audit item order", () => {
     const root = createAuditFixture();
     try {
       const docs = loadL14CloseAuditDocs(root);
