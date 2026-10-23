@@ -14,7 +14,7 @@ issue: 1261
 
 > **契約状態**: 本文はM1の目標契約である。Issue #1284で対になるL7の11件を正式oracleへ昇格した。このID昇格はsource実装、Green結果、closing review PASSを示すものではない。frontmatterのconfirmedは文書revisionの固定を示し、実装完了を表さない。
 
-L6 contract marker: M1は既存の `buildProviderInvocation(input: ProviderInvocationInput) => ProviderInvocation` と `buildAdapterPlan(intent: AdapterIntent, mode: ExecutionMode) => AdapterPlan` (§5、正式oracle `U-CMDINPUT-001`〜`011`)、L1は `checkForUpdate(deps: UpdateCheckDeps) => UpdateCheckResult` (§7、候補 `CANDIDATE-U-CMDINPUT-012`〜`016`)、L2は `ghCommandEnv(env: NodeJS.ProcessEnv) => NodeJS.ProcessEnv` と定数 `GH_COMMAND_TIMEOUT_MS` (§8、候補 `CANDIDATE-U-CMDINPUT-017`〜`025`) を契約面とする。§7・§8の候補は正式oracleではない。
+L6 contract marker: M1は既存の `buildProviderInvocation(input: ProviderInvocationInput) => ProviderInvocation` と `buildAdapterPlan(intent: AdapterIntent, mode: ExecutionMode) => AdapterPlan` (§5、正式oracle `U-CMDINPUT-001`〜`011`)、L1は `checkForUpdate(deps: UpdateCheckDeps) => UpdateCheckResult` (§7、候補 `CANDIDATE-U-CMDINPUT-012`〜`016`)、L2は `ghCommandEnv(env: NodeJS.ProcessEnv) => NodeJS.ProcessEnv` と定数 `GH_COMMAND_TIMEOUT_MS` (§8、候補 `CANDIDATE-U-CMDINPUT-017`〜`026`) を契約面とする。§7・§8の候補は正式oracleではない。
 
 ## 1. 目的と範囲
 
@@ -127,7 +127,7 @@ gitの起動に対してはfail-closeとする: 拒否時は `listRemoteTags` �
 | pre | 無し (never throws)。remoteの出所は§7.1の3種で、どれも外部入力として扱う。 |
 | post | `-`始まりのremoteは§7.3の結果となり、`listRemoteTags`呼出し0回・cache書込み0回。それ以外のremoteは既存挙動のまま。 |
 | invariant | remote解決順、cache TTL、`gitLsRemoteInvocation`のargvと`%`回避、advisoryの非gate性を維持する。 |
-| oracle | 専用L7の `CANDIDATE-U-CMDINPUT-012`〜`015`。まだ正式oracleではない。 |
+| oracle | 専用L7の `CANDIDATE-U-CMDINPUT-012`〜`016` (016は§7.2の再正規化禁止を固定する)。まだ正式oracleではない。 |
 
 ## 8. 外部コマンドのtimeoutとgh promptの抑止 (Issue #1261 L2)
 
@@ -135,7 +135,7 @@ gitの起動に対してはfail-closeとする: 拒否時は `listRemoteTags` �
 
 ### 8.1 対象の範囲
 
-対象は、`src/`配下でGitHubへ接続する`gh`の起動だけとする。ネットワークの不調や認証プロンプトで止まりうるのはこれらであり、`review-attestation.yml` のjobには`timeout-minutes`が無いため、CIでの停止はrunnerの既定上限まで続く。
+対象は、`src/`配下でGitHubへ接続する`gh`の起動だけとする。起動点は下表の14箇所 (timeout未設定11、設定済み3: `project-v2.ts:60` / `:71`、`post-merge-backstop.ts:136`) であり、L2の受入の分母は14とする。ネットワークの不調や認証プロンプトで止まりうるのはこれらであり、`review-attestation.yml` のjobには`timeout-minutes`が無いため、CIでの停止はrunnerの既定上限まで続く。
 
 | 起動点 (path:line) | コマンド | 現在のtimeout | 既存の失敗の扱い |
 |---|---|---|---|
@@ -162,28 +162,31 @@ gitの起動に対してはfail-closeとする: 拒否時は `listRemoteTags` �
 | `git`の起動 (`src/`配下の`execFileSync("git", ...)` 等、直接の起動だけで60箇所超) | local repositoryの操作であり、network・認証プロンプトを伴わない。networkへ出る`git`は`update-check`の`ls-remote`だけで、既に`LS_REMOTE_TIMEOUT_MS` (5000) が付く (`setup-solo-team.md` §8「timeout 付き」)。`release-artifact-resolver.ts:97`はlocal操作で、既に`GIT_TERMINAL_PROMPT=0`を設定している。 |
 | `src/cli.ts:3563` (node scopeの観測) と `src/lint/verification-profile.ts:138` / `:142` | 既にtimeoutを持つ (30_000、`PROBE_TIMEOUT_MS`、`RUN_TIMEOUT_MS`)。 |
 | `scripts/` 配下 | OSの薄い入口であり、`pack-canary-acceptance.mjs`は自前のtimeoutを持つ。本節の対象を`src/`に限る。 |
+| `gh`の`.cmd` / `.bat` shim経由の起動 | 前提とする`gh`はnative executable (本環境の実測で `C:\Program Files\GitHub CLI\gh.exe`) である。shimを解決する処理は足さず、`shell: true`も足さない (shim経由ではtimeoutの終了要求が`cmd.exe`にしか届かない可能性があり、本節では扱わない)。 |
 
 ### 8.2 timeoutの値と置き場
 
 - 新しいsource module `src/github/gh-command.ts` に、定数 `GH_COMMAND_TIMEOUT_MS = 30_000` と純関数 `ghCommandEnv` (§8.3) の2つだけを置く。port・adapter・設定file・環境変数でのtimeout上書きは作らない。値を利用者が変える手段を足さない。
-- 値は30秒とする。repo内で`gh`に付いている既存の値 (`NodeGhCommandPort`の`30_000`) に揃える。読み取りと変更系で値を分けない (分ける根拠となる実測が無い)。
-- 既に別の値を持つ起動点は、その値を変えない: `post-merge-backstop`は`POST_MERGE_COMMAND_TIMEOUT_MS` (10_000) のまま、`update-check`は`LS_REMOTE_TIMEOUT_MS` (5000) のままとする。
+- 値は30秒とし、これを**暫定の運用上限**と位置づける。repo内で`gh`に付いている既存の値 (`NodeGhCommandPort`の`30_000`) に揃えたものであり、正常な検証や更新に十分な時間であるとは主張しない。読み取りと変更系で値を分けない (分ける根拠となる実測が無い)。`gh attestation verify`のcold (初回のtrust root取得あり) / warmの所要時間の実測は、Green側の確認事項として残す。
+- `timeout`の意味は「経過後に子プロセスへ終了要求 (signal) を送る」である。Nodeの同期API (`spawnSync` / `execFileSync`) は終了要求の後も子の終了を待って戻るため、「30秒以内に必ず戻る」という上限は保証しない。
+- 既に別の値を持つ起動点は、その値を変えない: `post-merge-backstop`は`POST_MERGE_COMMAND_TIMEOUT_MS` (10_000) のまま (30秒へ延ばす根拠が無い)、`update-check`は`LS_REMOTE_TIMEOUT_MS` (5000) のままとする。
 - `NodeGhCommandPort`の2つの`30_000` literalは、値を変えずに`GH_COMMAND_TIMEOUT_MS`へ置き換える (Refactor工程で行う)。
 - §8.1の対象表の各起動点は、production用の実行子のspawn optionsに`timeout`を渡す。injectionできる実行子 (`runCommand` / `runGh` / `exec` / `execFileSync`の注入) の型は変えない。`createGhPrMergePorts`と`post-merge-backstop`のようにoptionsを呼出し側で組み立てて注入実行子へ渡す起動点は、そのoptionsに`timeout`を含める。
 
 ### 8.3 `GH_PROMPT_DISABLED=1` の設定
 
-- `ghCommandEnv(env: NodeJS.ProcessEnv) => NodeJS.ProcessEnv` は `{ ...env, GH_PROMPT_DISABLED: "1" }` を新しいobjectとして返す。既存の`GH_PROMPT_DISABLED` (空文字や`"0"`を含む) は`"1"`で上書きする。他のkey (`PATH`、`GH_TOKEN`等) は保つ。引数のobjectは変更しない。
+- `ghCommandEnv(env: NodeJS.ProcessEnv) => NodeJS.ProcessEnv` の本体は `({ ...env, GH_PROMPT_DISABLED: "1" })` 相当とし、新しいobjectを返す。既存の`GH_PROMPT_DISABLED` (空文字や`"0"`を含む) は`"1"`で上書きする。他のkey (`PATH`、`GH_TOKEN`等) は保つ。引数のobjectは変更しない。
 - §8.1の対象表の各起動点は、spawn optionsに`env: ghCommandEnv(process.env)`を渡す。`timeout`と同じ位置 (production用の実行子、または呼出し側で組み立てるoptions) に置く。
 - `process.env`を全体で書き換えて設定しない。provider子プロセスや`git`等、対象外の起動へ`GH_PROMPT_DISABLED`を漏らさないためである。`adapterExecutionEnv`はL2で変えない。
-- `validateLiveReviewSubject`の既定`run`は`git`と`gh`に共用されている。両方に同じ`timeout`と`env`を渡してよい (`git`は`GH_PROMPT_DISABLED`を参照しない)。
+- `validateLiveReviewSubject`の既定`run`は`git`と`gh`に共用されている。`timeout`と`env: ghCommandEnv(process.env)`は `command === "gh"` のときだけoptionsへ足し、`git cat-file`のoptionsは現状のまま (timeoutもenvも足さない) とする。§8.1で`git`を対象外にした判断を、共用の実行子で崩さないためである。
 
 ### 8.4 timeoutになったときの挙動
 
 Nodeは、`spawnSync`では`error` (code `ETIMEDOUT`) と`status: null`を返し、`execFileSync`では例外を投げる。L2では新しい分岐や診断literalを足さず、timeoutを各起動点の既存の失敗経路 (§8.1の表の右列) にそのまま載せる。
 
 - **成功に丸めない**: timeout時の`stdout`に妥当に見える出力 (head SHAやJSON) が含まれても使わない。`status: null`を`0`扱いにしない。
-- **自動でretryしない**: 特に変更系 (`gh pr merge`、`gh pr comment`、`NodeGhCommandPort.run`) は、server側で既に反映されている可能性がある。結果は不明だが、既存の失敗 (`merge_failed`、exit 1、throw) として報告し、成功と報告しない。実行子の呼出しは1回だけとする。
+- **変更系のtimeoutは「結果不明」である**: `gh pr merge`、`gh pr comment`、`NodeGhCommandPort.run`は、終了要求の時点でserver側に反映済みの可能性がある。ここでのfail-closeは「成功を認定しない」の意味に限り、「更新されなかった」ことは保証しない。既存の失敗経路で報告する: `review-merge-gate.ts:437-446`は`mergePullRequest`の例外を`decision: "merge_failed"`・`reason: gh_merge_failed:<message>`にする (mergeが実際に済んでいても成功とは報告しない)。`review-live.ts:252-264`は`writeMemory`でreceipt memoryを書いた後に`gh pr comment`を呼ぶため、commentのtimeoutではmemoryは書かれたまま、commentの有無は不明のままexit 1になる。
+- **自動でretryしない**: 変更系を再実行すると、反映済みだった場合に二重のmergeの試行や重複commentを生む。重複更新を防ぐため、実行子の呼出しは1回だけとする。読み取り系もL2ではretryを足さない。
 - **advisoryはfail-open**: `observeClaudeInboxPullRequest`、`SystemSealedLineageIssueAuthorityPort.observe`、`nodeGh`は、既存どおり`undefined` / `{ ok: false }`を返してthrowしない。
 - **gate・custodyはfail-close**: review custody runner、attestation verify、merge gate、review subjectの検証、`github policy`は、既存どおり非0終了・`audit_unavailable`・`ok: false`になる。
 - 診断へtimeoutを示す新しい文言を足さない。既存のmessage (`gh_merge_failed:<message>`等) にNodeのerror messageが入ることは許す。
@@ -195,6 +198,6 @@ Nodeは、`spawnSync`では`error` (code `ETIMEDOUT`) と`status: null`を返し
 | DbC | 契約 |
 | --- | --- |
 | pre | `ghCommandEnv`の引数は任意のenv objectで、`GH_PROMPT_DISABLED`の有無を問わない。§8.1対象表の起動点は、ネットワーク不調・認証待ちで応答しない`gh`を外部入力として扱う。 |
-| post | 対象表の各起動点のspawn optionsは`timeout` (`GH_COMMAND_TIMEOUT_MS`、`post-merge-backstop`は`POST_MERGE_COMMAND_TIMEOUT_MS`) と`env.GH_PROMPT_DISABLED === "1"`を持つ。timeoutはその起動点の既存の失敗経路に載り、成功・retryにならない。`ghCommandEnv`は引数を変えず、他のkeyを保った新objectを返す。 |
-| invariant | provider実行・probe・`git`・`gh --version`のspawn optionsにtimeoutを足さず、`process.env`と`adapterExecutionEnv`を変えない。既存の別値 (10_000 / 5000) を変えない。注入できる実行子の型を変えない。 |
-| oracle | 専用L7の `CANDIDATE-U-CMDINPUT-017`〜`025`。まだ正式oracleではない。 |
+| post | 対象表の14起動点のspawn optionsは`timeout` (`GH_COMMAND_TIMEOUT_MS`、`post-merge-backstop`は`POST_MERGE_COMMAND_TIMEOUT_MS`) と`env.GH_PROMPT_DISABLED === "1"`を持つ。timeoutは子への終了要求であって戻りまでの上限ではない。timeoutはその起動点の既存の失敗経路に載り、成功の認定・retryにならない。変更系では更新の有無を保証しない。`ghCommandEnv`は引数を変えず、他のkeyを保ち、既存の`GH_PROMPT_DISABLED`を上書きした新objectを返す。 |
+| invariant | provider実行・probe・`git` (`validateLiveReviewSubject`の共用runnerの`git`呼出しを含む)・`gh --version`のspawn optionsにtimeoutを足さず、`shell: true`を足さず、`process.env`と`adapterExecutionEnv`を変えない。既存の別値 (10_000 / 5000) を変えない。注入できる実行子の型を変えない。 |
+| oracle | 専用L7の `CANDIDATE-U-CMDINPUT-017`〜`026`。まだ正式oracleではない。 |
