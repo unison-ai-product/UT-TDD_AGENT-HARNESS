@@ -15,7 +15,7 @@ issue: 1290
 
 > **L6 contract marker**: `analyzeDddTddRules(inputs) => DddTddResult` の `test-oracle-strength` 判定 (module 内部の `assertionSummary` / `testOracleViolations`) を対象とする unit-test-granularity contract である。DbC は §4、oracle は専用 L7 の `U-ORACLEHELPER-001`〜`017` が固定する。
 
-> **契約状態**: 本文は未実装の目標契約である。非著者 family の closing review 前の draft であり、source 実装・Green 結果・review PASS を示さない。
+> **契約状態**: #1290 で凍結済みの未実装目標契約である。今回の ID 昇格は source 実装・Green・本 PR の closing review PASS を示さない。
 
 ## 1. 目的と範囲
 

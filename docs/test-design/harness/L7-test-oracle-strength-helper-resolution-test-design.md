@@ -65,7 +65,7 @@ pair L6: `docs/design/harness/L6-function-design/test-oracle-strength-helper-res
 ## 5. Red → Green → Refactor の工程
 
 1. **契約確認**: L6 と本書の pair、`docs/governance/ddd-tdd-rules.md` の `test-oracle-strength` を照合する。
-2. **Red**: 契約の merge 後、source を変えずに、現行実装で期待値を満たさない正式 oracle (001・003・004・009 の (b)・010 の (a)・011 の (a) と (c)・013・014 の (a)・015 の (a)・016 の (b)) を `it.fails` で登録する。現行実装ですでに期待値どおりの正式 oracle (002・005〜008・014 の (c)・016 の (a)・017 など) は `it` で登録し、`it.fails` に偽装しない。
+2. **候補 Red (Issue #1291)**: 契約の merge 後、source を変えずに、現行実装で期待値を満たさないケースを候補 ID として `it.fails` で登録し、すでに期待値どおりのケースは `it` で登録した。Issue #1292 では対応する正式 ID へ引用だけを同期する。
 3. **正式 ID 昇格 (Issue #1292)**: 17件の oracle ID を正式化し、L6/L7 の記載と test label を同期する。source 実装や Green 結果を意味しない。
 4. **Green**: L6 の最小実装で、全正式 oracle と既存の `tests/ddd-tdd-rules.test.ts` を通す。
 5. **Refactor**: Green のあとに限る。`tests/` の差分 0 で、判定の境界を変えない。
