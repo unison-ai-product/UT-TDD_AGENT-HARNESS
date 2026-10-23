@@ -1,0 +1,66 @@
+# Forward チケット (PO 判断 2026-10-22。種類は駆動モデル名を継承、2026-10-23)。定義は docs/governance/github-issue-hierarchy.md §6。
+name: Forward
+description: 通常の作業 (Forward) を運ぶ使い捨てチケットを起票する
+title: "Forward: "
+labels: ["ut-tdd", "forward"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        このチケットは使い捨てです。作業と経過を見えるようにするためだけに使います。
+        契約 (方式判断・API / schema・受入条件の本文・不変条件) をここに書かないでください。
+        契約は `docs/design/` または `docs/test-design/` に置き、path と revision で指します。
+  - type: dropdown
+    id: hierarchy_role
+    attributes:
+      label: Hierarchy role
+      description: 既存の成果目標がある bounded slice は child を選び、起票後に正式な parent を設定する
+      options:
+        - child
+        - top-level outcome
+    validations:
+      required: true
+  - type: input
+    id: parent_issue
+    attributes:
+      label: Parent Issue
+      description: child の場合は #N。top-level の場合は N/A と理由を記載する
+    validations:
+      required: true
+  - type: textarea
+    id: closure_condition
+    attributes:
+      label: Closure condition
+      description: この Issue 固有の受入証跡と、親へ返す完了条件
+    validations:
+      required: true
+  - type: textarea
+    id: upstream_design
+    attributes:
+      label: 上流の設計 revision
+      description: 設計文書 1 本につき 1 行、`<path>@<commit>` で書く。リンクのみとし、契約本文を貼らない
+      placeholder: docs/design/harness/<layer-dir>/<topic>.md@<commit>
+    validations:
+      required: true
+  - type: textarea
+    id: deliverables
+    attributes:
+      label: 引き渡し物
+      description: この作業で出すファイル・変更の一覧 (path)
+    validations:
+      required: true
+  - type: textarea
+    id: verification_pair
+    attributes:
+      label: 検証の対
+      description: 設計と対になるテスト設計・テストの path
+    validations:
+      required: true
+  - type: textarea
+    id: done_criteria
+    attributes:
+      label: 完了条件
+      description: markdown のチェックリストで書く。条件の本文は設計文書側を指し、ここへ複製しない
+      placeholder: "- [ ] "
+    validations:
+      required: true

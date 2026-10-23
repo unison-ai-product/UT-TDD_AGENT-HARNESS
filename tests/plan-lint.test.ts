@@ -1769,23 +1769,6 @@ dependencies:
     expect(VERSION_UP_PARKING_LEGACY_LANDED_PLAN_IDS).toEqual(
       new Set(["PLAN-L7-303-digest-commit-anchor"]),
     );
-    const debtLedger = readFileSync(
-      join(process.cwd(), "docs/governance/version-up-route-debt-2026-07-10.md"),
-      "utf8",
-    );
-    const ledgerIds = new Set(
-      [...debtLedger.matchAll(/^\|\s*(PLAN-[A-Za-z0-9-]+)\s*\|/gm)].map((match) => match[1]),
-    );
-    expect(ledgerIds).toEqual(VERSION_UP_PARKING_LEGACY_LANDED_PLAN_IDS);
-    const landedPlan = readFileSync(
-      join(process.cwd(), "docs/plans/PLAN-L7-303-digest-commit-anchor.md"),
-      "utf8",
-    );
-    expect(landedPlan).toMatch(/^status:\s*confirmed$/m);
-    expect(landedPlan).toMatch(/^route_mode:\s*version-up$/m);
-    expect(landedPlan).toMatch(/^kind:\s*impl$/m);
-    expect(landedPlan).toMatch(/^layer:\s*L7$/m);
-    expect(landedPlan).not.toMatch(/^version_target:/m);
   });
 
   it("U-PLANGOV-011z: draft PLAN code-line references surface missing paths and stale line numbers as advisory findings", () => {

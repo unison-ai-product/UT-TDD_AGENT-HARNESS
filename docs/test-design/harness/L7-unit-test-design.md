@@ -113,7 +113,7 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 | U-FSF-003 | `classifyFeedback` | 非同期。mock classifier で `mistake`/`feedback` + `attention` 反映 / **classifier が reject/throw/不正出力なら `feedback`+`low`+`unclassified` に倒す** (取りこぼし回避、強制停止 default=やらかし側) |
 | U-FSF-004 | `recordFeedback` | `category="feedback"` のみ記載 (`recovery_proposed=attention==="high"`) / **`category="mistake"` は no-op** / **`plan_id=null` は書かない (skip)** / 同一 `ts` idempotent / `summary`/`reason` は `sanitize` 済 (生文・PII・credential なし) |
 | U-FSF-005 | `pendingRecoveryProposals` | `recovery_proposed===true && resolved_at===undefined` のみ返す / `resolved_at` 設定済は除外 / **不正 JSON 行はスキップし valid 行のみ返す** / 空時 `[]` |
-| U-FSF-006 | `emitClassifyRequest` | managed pmo-haiku 契約 (`role="pmo-haiku"` / `text` / `output_schema.category` / `output_schema.attention`) を含む |
+| U-FSF-006 | `emitClassifyRequest` | 残る worker role `docs` の分類リクエスト契約 (`role="docs"` / `text` / `output_schema.category` / `output_schema.attention`) を含む |
 | U-FSF-007 | `scanDanglingStops` | dangling session のみ `forced_stop` 記録 / 正常終了は対象外 / current session 除外 / `forced_stop` 既存は再記録しない (idempotent) / listDir 失敗でも throw せず (fail-open) |
 
 ### §1.7 U-SETUP (ut-tdd setup solo/team 由来、PLAN-L6-05 add-design / setup-solo-team.md §2-§3)
@@ -126,12 +126,12 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 | U-SETUP-005 | `recordSetupState` | setup.json に phase/decidedBy/signals を書く / **signals が 4 フィールド (ownerType/collaborators/hasCodeowners/hasBranchProtection) 以外を含まない (strip 検証)** / token 非含 / 再読込で同一 phase / **再実行 (phase 変更) → 上書きで最新 phase のみ読める (append しない)** |
 | U-SETUP-006 | `applyBranchProtection` | `apply≠true` → `{applied:false, reason:"emit-only"}` (gh 呼ばれない) / **`isInteractive≠true` かつ `apply=true` → `{applied:false, reason:"non-interactive"}` (gh 呼ばれない)** / 対話下でも admin/auth/confirm 欠落 → 実行しない |
 | U-SETUP-007 | `runSetup` (orchestration) | ①フラグあり→フラグ値採用 / ②フラグ無し+対話→confirm 結果 / ③フラグ無し+非対話→`0-A` (fallback) / ④`apply=true`+非対話→`applied:false` (I-2 配線ミス検出) |
-| U-SETUP-009 | `planSetup` / `emitSetup` | `0-A` の生成計画に clean adapter テンプレ (`AGENTS.md` / `CLAUDE.md` / `.claude/CLAUDE.md` / `.claude/settings.json` / `.codex/config.toml` / `.codex/hooks.json` / `.claude/agents/ut-tdd-tl.md` / `.claude/commands/ut-tdd-status.md` / `.claude/commands/ut-tdd-test.md`) が含まれる。dry-run preview は adapter path を返し、dogfood repo 名や machine-local absolute path を含まない。 |
-| U-SETUP-009a | `loadTemplates` / built-in adapter templates | `docs/design/harness/L6-function-design/skill-index.md` の runtime asset 配布境界に従い、配布 subagent template は `model:` frontmatter を持つ。代表 3 family として `pmo-sonnet`=sonnet、`pmo-haiku`=haiku、`pdm-tech-innovation`=opus を確認し、model ID は `MODEL_IDS.claude` catalog 外に出ないことを固定する。consumer-facing adapter docs/commands は `ut-tdd doctor --profile consumer-setup-smoke` を既定 health check とし、full `ut-tdd doctor` は source/governance repository 用として明示する。 |
+| U-SETUP-009 | `planSetup` / `emitSetup` | `0-A` の生成計画に clean adapter テンプレ (`AGENTS.md` / `CLAUDE.md` / `.claude/CLAUDE.md` / `.claude/settings.json` / `.codex/config.toml` / `.codex/hooks.json` / `.claude/commands/ut-tdd-status.md` / `.claude/commands/ut-tdd-test.md`) が含まれ、`.claude/agents/` 配下の path を含まない。dry-run preview は adapter path を返し、dogfood repo 名や machine-local absolute path を含まない。 |
+| U-SETUP-009a | `loadTemplates` / built-in adapter templates | consumer-facing adapter docs/commands は `ut-tdd doctor --profile consumer-setup-smoke` を既定 health check とし、full `ut-tdd doctor` は source/governance repository 用として明示する。配布 adapter に subagent template は含まない (U-AGBOUND-027 / 028)。 |
 | U-SETUP-009b/b2/b3 | `common/ut-tdd.mjs` wrapper (`emitSetup` output) | 生成 wrapper の resolution order (local `node_modules/ut-tdd` → 同梱 setup Pack CLI fallback) を固定する。**Issue #506 (2026-09-01) 記録**: U-SETUP-009b2 (`node_modules/ut-tdd/src/cli.ts` local-package 分岐) は Node が `node_modules` 配下の `.ts` 実行を拒否する (`ERR_UNSUPPORTED_NODE_MODULES_TYPE_STRIPPING`) ため `it.skip` — Bun 撤去の fixture 問題ではなく、wrapper の local-package 分岐が compiled/self-contained entry point を要求する実プロダクト課題であり、#420 / #463 (self-contained consumer Node runtime) に帰属する。U-SETUP-009b3 (setup Pack CLI fallback、node_modules 外の source path) は影響を受けず Green のまま。 |
-| U-MODELID-SSOT | `.claude/agents` / `docs/templates/adapter` / `BUILTIN_GITHUB_TEMPLATES` | active agent frontmatter model は `MODEL_IDS.claude` catalog 内だけを許可する。disk template mirror は built-in fallback と一致し、旧 suffix (`claude-opus-4-7` / `claude-sonnet-4-6` / `20251001`) が再混入しないことを real-repo regression として固定する。 |
+| U-MODELID-SSOT | `docs/templates/adapter` / `BUILTIN_GITHUB_TEMPLATES` | adapter と built-in template の model は `MODEL_IDS.claude` catalog 内だけを許可する。disk template mirror は built-in fallback と一致し、旧 suffix (`claude-opus-4-7` / `claude-sonnet-4-6` / `20251001`) が再混入しないことを real-repo regression として固定する。`.claude/agents` の不存在は U-AGBOUND-028 が持つ。 |
 | U-SETUP-010 | `emitSetup` | 既存 consumer `AGENTS.md` / `CLAUDE.md` / `.claude/CLAUDE.md` は既存行を verbatim 保全し、`<!-- UT-TDD:managed:start -->`〜`<!-- UT-TDD:managed:end -->` の managed block だけを追加/更新する。既存 `.claude/settings.json` は confirm なしに上書きしない。同じ setup を 2 回走らせても doc 内容は no-op。 |
-| U-SETUP-011 | `buildCleanDistributionPlan` | clean distribution channel は `clean-repo-plus-tarball`。artifact path は LICENSE / package / src / adapter templates を含み、adapter templates には Claude/Codex hook・subagent・command 設定を含む。dogfood (`docs/plans` / `docs/design/harness` / `docs/test-design` / `.ut-tdd`) と root の開発用 `.claude` / `.codex` 状態、UI (`src/web`) は含まない。release integrity artifact (`tar.gz` / `sha256`) を要求する (D-4c unsigned 契約、`sig` 撤去)。 |
+| U-SETUP-011 | `buildCleanDistributionPlan` | clean distribution channel は `clean-repo-plus-tarball`。artifact path は LICENSE / package / src / adapter templates を含み、adapter templates には Claude/Codex hook・command 設定を含む (subagent 設定は含まない、U-AGBOUND-027 / 028)。dogfood (`docs/plans` / `docs/design/harness` / `docs/test-design` / `.ut-tdd`) と root の開発用 `.claude` / `.codex` 状態、UI (`src/web`) は含まない。release integrity artifact (`tar.gz` / `sha256`) を要求する (D-4c unsigned 契約、`sig` 撤去)。 |
 | U-SETUP-012 | `buildConsumerReadinessPlan` | consumer `package.json` の `engines.node` (npm semver) と Git を正本に Node/npm + git/project-local `ut-tdd`/runtime CLI を preflight として診断する。Node missing、`engines.node` missing/invalid、または supported range 外 (below-range / above-range) は blocking。gh は GitHub setup 用 warning、runtime CLI 不在は `mode=standalone` の advisory とし、judgment gate は人間レビュー必須として表示する。生成 adapter hooks は `.ut-tdd/bin/ut-tdd.mjs ...` を呼ぶため、project-local CLI 未解決なら consumer hook 自走性を満たさず readiness を fail-close する。`checks`、`ci.requires`、`rollback.commands` は Node/npm 経路だけを提示し、Bun の check・導入案内・実行コマンドを含めない。rollback managed paths、tag-pin contract、CI self-sufficiency、monorepo package-root 判定、全 smoke scenario を返す。単軸 mutation として Bun check/導入案内/実行コマンドの再導入、range guard の削除、CI/rollback への Bun command 再導入を Red とする。 |
 | U-SETUP-013 / AT-DIST-001 | `tests/distribution-acceptance.test.ts` | Local clean distribution acceptance smoke は planned clean artifacts を temp repo に materialize する。fixture の install/status/setup/typecheck は Node/npm で実行する (install は `npm ci`、CLI 実行は `process.execPath` 直接起動、typecheck は `npm run typecheck`。Issue #506 で実 Bun spawn を退役済み、real Bun spawn 0 件の契約を維持する)。`bun.lock` は direct-graph parity の検査対象として残る (PLAN-L7-527 §2.5)。Pack `v0.1.0` tag / GitHub Release 後も、この local smoke は署名 tarball publish / UAT / post-release telemetry を実行しない。source repo 用 full `doctor` は dogfood PLAN/design/test-design/runtime artifact を除外する clean distribution の受け入れ条件には含めず、consumer doctor profile が必要なら別 PLAN とする。Issue #405 の再発条件は、clean Pack から `package-lock.json` を除去すると `bun run test:pack` が Vitest 開始前の `npm ci` で fail-close すること。 |
 
@@ -206,7 +206,7 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 | U-SCRUMREV-002 | `analyzeScrumReverse` (pocOrphans) | confirmed poc (reuse-with-hardening) を指す reverse 無 → `pocOrphans` 1件/`ok=false` / reverse 有 → 0件/`ok=true` / `promotion_strategy=redesign` → 孤児にしない / 非 confirmed (pivot) → 対象外 |
 | U-SCRUMREV-003 | `analyzeScrumReverse` (badReverseRefs) | reverse が confirmed でない poc (pivot) を参照 → `badReverseRefs` 1件/`ok=false` / `status=archived` → 対象外 |
 | U-SCRUMREV-004 | `scrumReverseMessages` | 孤児なし → `"OK"` / 孤児あり → `"Reverse 合流が無い"` 文言 |
-| U-SCRUMREV-005 | `loadSrPlans`+`analyzeScrumReverse` (実 repo 回帰ガード) | 実 `docs/plans/` で `pocOrphans=[]` / `badReverseRefs=[]` (confirmed poc は Reverse 合流済、redesign 除く) |
+| U-SCRUMREV-005 | `loadSrPlans`+`analyzeScrumReverse` (実 repo 回帰ガード) | **退役 (PLAN 機構撤去 = #1168 A4 / #1078)**: 実 `docs/plans/` を読んで `pocOrphans=[]` / `badReverseRefs=[]` を要求する live guard は要求から外す。維持するのは合成入力による U-SCRUMREV-001..004 (parse / pocOrphans / badReverseRefs / messages) の製品回帰のみで、実 PLAN コーパスには依存させない |
 | U-PROP-001 | `extractSignals` | `\| signal \| mode \|` ヘッダのテーブルのみから signal 列 token 抽出 / 別表 (reverse/fullstack) と interrupt subtype は除外 |
 | U-PROP-002 | `analyzePropagation` | 両 doc 一致 → `ok=true` / concept のみ → `conceptOnly`+`ok=false` / requirements のみ → `requirementsOnly`+`ok=false` |
 | U-PROP-003 | `propagationMessages` | 一致 → `"OK"` / 不一致 → `"未伝播"` 文言 |
@@ -286,12 +286,11 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 
 | U-ID | 対象関数 | DbC oracle |
 |---|---|---|
-| U-ASSETDRIFT-001 | `analyzeAssetDrift` (legacy source path residue) | enrolled `.claude/agents` / `docs/skills` asset に個人 legacy source workspace path があれば `legacy-source-path-residue` + `ok=false` |
+| U-ASSETDRIFT-001 | `analyzeAssetDrift` (legacy source path residue) | enrolled `docs/skills` / prompt template の asset に個人 legacy source workspace path があれば `legacy-source-path-residue` + `ok=false` |
 | U-ASSETDRIFT-002 | `analyzeAssetDrift` (legacy command residue) | enrolled asset に `legacy-source codex` / `legacy-source claude` / `legacy-source plan` / `legacy-source gate` / `legacy-source handover` があれば `legacy-command-residue` + `ok=false` |
 | U-ASSETDRIFT-003 | `analyzeAssetDrift` (docs-skills vacancy) | enrolled `docs/skills` root が `.gitkeep` 以外の asset を持たなければ `empty-docs-skills` + `ok=false` |
-| U-ASSETDRIFT-004 | `analyzeAssetDrift` (guard allowlist missing) | guard allowlist entry に対応する `.claude/agents/<id>.md` が無ければ `missing-allowlisted-agent` + `ok=false` |
 | U-ASSETDRIFT-005 | `analyzeAssetDrift` (isolated fixture) | enrolled roots が無い isolated test fixture は unrelated doctor tests を落とさず skip (`checkedAssets=0`, `ok=true`) |
-| U-ASSETDRIFT-006 | `loadAssetDriftInput` + `analyzeAssetDrift` (実 repo guard) | 実 repo の active internal assets と prompt templates は legacy source path residue 0 / legacy command residue 0 / docs-skills non-empty / missing allowlisted agent 0 |
+| U-ASSETDRIFT-006 | `loadAssetDriftInput` + `analyzeAssetDrift` (実 repo guard) | 実 repo の active internal assets と prompt templates は legacy source path residue 0 / legacy command residue 0 / docs-skills non-empty |
 | U-ASSETDRIFT-007 | `loadAssetDriftInput` nested `.claude/agent-memory` scan | nested agent memory markdown is enrolled recursively; legacy runtime name/env residue in stale local memory fails `asset-drift` instead of bypassing doctor |
 
 ### §1.16.0b U-IPT (implementation-to-design source trace / PLAN-REVERSE-40)
@@ -502,12 +501,12 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 | ID | 対象 | Oracle |
 |---|---|---|
 | U-DELEG-001 | `resolveDelegationRouting` | 未登録 role を allowlist 明示付きで fail-close する |
-| U-DELEG-002 | `resolveDelegationRouting` | 判断ゲート role (blind-reviewer/code-reviewer 等) を族内 frontier reviewer tier (sol/opus) + ladder base effort へ固定する |
+| U-DELEG-002 | `resolveDelegationRouting` | 判断ゲート role (blind-reviewer / reviewer / ut-tdd-tl / qa-test / security-audit 等) を族内 frontier reviewer tier (sol/opus) + ladder base effort へ固定する |
 | U-DELEG-003 | `resolveDelegationRouting` | worker role (se) は selectTeamModel policy 経由で model+effort を解決する |
 | U-DELEG-004 | `resolveDelegationRouting` | 明示 --model/--effort は routing より常に優先される |
 | U-DELEG-005 | `buildAdapterPlan` (codex) | effort が argv `-c model_reasoning_effort=<effort>` へ実注入され、middle は medium へ正規化される |
 | U-DELEG-006 | `buildAdapterPlan` (claude) | 既存の `--effort` flag + env 契約が routing 導入後も不変 |
-| U-DELEG-007 | `DELEGATION_ROLE_ALLOWLIST` | 実 repo の役割語彙 (qa/blind-reviewer/tl/tl-advisor/se/reviewer/code-reviewer/pmo-*) を全て許容する |
+| U-DELEG-007 | `DELEGATION_ROLE_ALLOWLIST` | 実 repo の役割語彙 (qa / blind-reviewer / tl / tl-advisor / se / reviewer / ut-tdd-tl / qa-test / security-audit / be-api 等) を許容し、撤廃した `pmo-*` / `pdm-*` / `refactor-scout` / `code-reviewer` は許容しない (U-AGBOUND-018 / 019) |
 | U-DELEG-008 | `resolveDelegationRouting` | subagent 名形 gate role (ut-tdd-tl/qa-test/security-audit) も worker tier へ落とさず族内 frontier reviewer tier へ固定する (2026-07-16 クロスレビュー指摘 1 regression) |
 | U-DELEG-009 | `buildAdapterPlan` (codex) | ladder base `xhigh` (mini lane) が `-c model_reasoning_effort=xhigh` として argv へ素通しされる (codex-cli 0.144.1 実機受理 2026-07-16) |
 
@@ -809,7 +808,7 @@ SMB/NFS/OneDrive をまたぐ strict lease、heartbeat、clock-skew 耐性は主
 - **handover PLAN-L7-83 drift 増分 (runHandover marker reconcile) → U-HOVER-015** (marker reconcile (complete→clear / --plan→sync / dryRun 非破壊)。PLAN-L7-83。孤児 0。A-138 ITEM-4 の slim stub と累積上限の oracle U-HOVER-013 / 014 は、scaffold の停止に伴い state-channel-consolidation §5.1 で撤去した)
 - **agent-slots.md §2.3 関数 (loadSlots/fireSlot/releaseSlot/releaseOldestGuardSlot/sweepStaleGuardSlots/listActiveSlots/listStaleSlots/peakParallel/exceedsParallelLimit/recordGuardFire) → U-SLOT-001〜008** (add-feature 差分、IMP-050 + IMP-106 SubagentStop release。nodeAgentSlotsDeps は実 I/O deps で unit では mock 代替。孤児 0)
 - **module-drift.md §2-§3 関数 (parseListedModules/scanActualModules/analyzeModuleDrift/loadModuleDocs/moduleDriftMessages) → U-MDRIFT-001〜005** (add-feature 差分、PLAN-L7-16/IMP-075。moduleDriftMessages は U-MDRIFT-003/004 経路 + 専用 assert で被覆、loadModuleDocs は U-MDRIFT-005 実 repo ガードに内包。孤児 0)
-- **module-drift.md asset-drift alias (loadAssetDriftInput/analyzeAssetDrift/assetDriftMessages/checkAssetDrift) → U-ASSETDRIFT-001〜006** (内部資産 + prompt template cutover 差分、FR-L1-49。legacy source path residue / legacy command residue / docs-skills vacancy / guard allowlist missing を doctor hard guard。孤児 0)
+- **module-drift.md asset-drift alias (loadAssetDriftInput/analyzeAssetDrift/assetDriftMessages/checkAssetDrift) → U-ASSETDRIFT-001〜003 / 005 / 006** (内部資産 + prompt template cutover 差分、FR-L1-49。legacy source path residue / legacy command residue / docs-skills vacancy を doctor hard guard。guard allowlist と定義ファイルの照合は U-AGBOUND-025 で撤廃)
 - **skill-index.md §1-§5 関数 (analyzeSkillAssignments 索引反転 / scoreSkill de-saturate / runtime-provenance learning / wildcard checklist scoring 除外 / scanSkillCatalog+catalogAutomationAssets の category 投影) → U-SKILL-IDX-001〜011** (add-design 差分、PLAN-L6-37 + PLAN-REVERSE-277。索引キー = L+駆動+メタデータ、category fallback、indexable-by-something fail-close、de-saturate、CLI↔DB scorer SSoT。孤児 0)
 - **skill new scaffolder (scaffoldSkill) → U-SKILL-NEW-001〜003** (PLAN-L6-37 同梱 add-feature。規約準拠雛形生成 + 生成後 lint ok + 配布境界。孤児 0)
 - **skill-admission.md §4-§8 関数 (analyzeSkillFit/computeSkillNovelty/analyzeDecisionPoints/repairSkillCandidate/resolveAdmission/analyzeSkillSupersession/renderSkillCatalogIndex/analyzeAdmissionCoverage) → U-SKILL-ADMIT-001〜009** (add-design 差分、PLAN-L6-67。品質 3 要件、4種判定、judge fail-open 封止、台帳/カタログ drift の決定論検査。孤児 0)
@@ -861,11 +860,11 @@ SMB/NFS/OneDrive をまたぐ strict lease、heartbeat、clock-skew 耐性は主
 
 ### 2026-06-29 L14 Close Audit Oracle Addendum
 
-- U-L14CLOSE-001: `analyzeL14CloseAudit` accepts a complete A-143 matrix only when all expected close rows exist, including L10 UX, L11 UAT, L12 release acceptance, L13 post-deploy, and L14 operations feedback boundaries.
+- U-L14CLOSE-001: `analyzeL14CloseAudit` accepts a complete A-143 matrix only when all expected close rows exist, including L10 UX, L11 UAT, L12 release acceptance, L13 post-deploy, and L14 operations feedback boundaries. 検証は隔離 fixture 上の matrix と path-existence 回帰として維持し、fixture の証跡 path は `docs/plans/` を指さない (PLAN 機構撤去 = #1168 A4 / #1078 により、実 PLAN を証跡 path に混ぜる入力は退役)。
 - U-L14CLOSE-002: missing expected rows produce `missing_expected_item` instead of allowing broad prose close claims.
 - U-L14CLOSE-003: open boundary rows (`partial`, `human_required`, `external_required`, `parked_future`) require a non-empty next action.
 - U-L14CLOSE-004: evidence cells must contain existing repo-relative paths under approved evidence roots.
-- U-L14CLOSE-005: the live repository A-143 audit loads through `loadL14CloseAuditDocs` and matches the required row order.
+- U-L14CLOSE-005: **live 部分を退役 (PLAN 機構撤去 = #1168 A4 / #1078)**: 実 repo の A-143 audit を `loadL14CloseAuditDocs` で読み、必須 row 順と照合する live-corpus 検査は要求から外す。過去監査 (A-143) の内容は書き換えない。ただし `loadL14CloseAuditDocs` → `analyzeL14CloseAudit` が返す `rows` の item 順が必須の close row 順 (workflow-definition から始まる 17 行) と一致することの検査は、PLAN 撤去と独立の保証なので維持する。U-L14CLOSE-005 はこの順序 assertion を、証跡 path が `docs/plans/` を指さない隔離 fixture の audit 文書に対して行う形へ改める (001..003 / 007 は順序を検査しないため、代替にしない)。
 - U-L14CLOSE-006: item-specific hardening evidence for workflow definition, system foundation, Claude/Codex parity, clean distribution, version-up, brownfield onboarding, cross-project workflow, L1/L2 mock roundtrip, L10 UX, drive-model bookbinding, and green evidence integrity must be present, not only generic existing paths.
 - U-L14CLOSE-007: missing A-143 audit source is a hard violation message, not a silent skip.
 - U-L14CLOSE-008: non-closed external/human/release boundary rows must keep item-specific markers in gap and next-action cells. After Pack tag/release publication, the release boundary marker is signed tarball signature rather than stale tag-push absence; PO UAT/signoff, post-deploy, operations feedback, hosted/API Codex, and signature boundaries cannot be replaced by vague prose.
@@ -1412,9 +1411,7 @@ TVMS-015 は VMS-015 の工程 live state / 固定4段 SessionStart digest contr
 | `U-PA-016` | active leaseへrelease/expireを競合実行 | `PlanLedger.release/expire` | token/expiry guardを通った一方だけterminal eventをappendし、敗者は`plan-id-reservation-not-active` |
 | `U-PA-017` | active ordinalへ別reservationをappend | `PlanLedger.reserve` | `plan-id-reservation-conflict`でevent/current/receiptを全rollbackし部分commit 0 |
 | `U-PA-018` | reservation receiptのsubject/result kind/command type/recorded timeを改竄 | `migratePlanLedger` receipt/event bijection verifier | event subject/payload/result/timeとの不一致を`plan-ledger-unavailable`でfail-close |
-| `U-PA-019` | HEAD `docs/plans/PLAN-*.md`全件 | `buildLegacyPlanInventory` | HEAD path全件をexactly onceで読み、full plan ID/asset IDが全件一意、frontmatter plan_id一致 |
-| `U-PA-020` | numeric coreでgroup化したHEAD PLAN | `buildLegacyPlanInventory` | reviewed rekey manifestのgroup/item集合とexact一致しstable順、自動winner選択0 |
-| `U-PA-021` | 同一HEADを反復inventory | `buildLegacyPlanInventory` | item/collision順とSHA-256 inventory digestが完全一致 |
+| `U-PA-021` | 固定入力の合成inventory projection fixture | `inventoryProjectionDigest` | 独立 oracle の canonical digest と一致し、source commit変更でdigestが変わる |
 | `U-PA-022` | anchor/alias/merge/custom tag/non-string key/unsafe integerを含むfrontmatter | `parseLegacyPlanSource` | lossless canonical化できないYAMLを全件fail-close |
 | `U-PA-023` | empty state + valid pending observe | `reduceLegacyMigration` / append port | observed event/current/receiptのみatomic append、PlanAsset/revision/alias行0 |
 | `U-PA-024` | state×observe/decide/revise全組合せ | migration transition table | 許可pairだけ次state、禁止pairは`plan-migration-transition-invalid`でdelta 0 |
@@ -1427,15 +1424,6 @@ TVMS-015 は VMS-015 の工程 live state / 固定4段 SessionStart digest contr
 | `U-PA-031` | sequence/kind/time/identity/source digest mutation | `reduceLegacyMigration` | first observed・連続列・非減少時刻・immutable provenance違反を全件拒否 |
 | `U-PA-032` | 各append境界fault injection | migration transaction port | event/current/asset/revision/alias/receiptの全table delta 0 |
 | `U-PA-033` | valid ledger close→file reopen/rebuild | migration reconstruct | state/event/payload/provenance digest集合が完全一致 |
-| `U-PA-034` | source commitのHEAD PLAN全件 | `LegacyMigrationDryRun` | inventoryとrecordがexactly-once bijection、total=emitted、legacy ID重複0。完了を主張する PLAN (`confirmed` / `completed` / `accepted`) の `generates` artifact_path がHEADに実在することはdry-run条件にしない |
-| `U-PA-035` | reviewed collision manifest | decision resolver | migrated=HEAD全件-rekeyed、pending=0。manifest欠落・余剰・group不一致はfail-close |
-| `U-PA-036` | 別legacy IDを返すdecision port | dry-run record join | `plan-migration-preview-id-mismatch`、finding 1件以上 |
-| `U-PA-037` | 同一HEAD・同一manifestを2回実行 | dry-run report | record順、finding順、inventory/report digest完全一致 |
-| `U-PA-038` | HEAD exact file / directory family / hollow / missing | `HeadTargetRegistry` | 一般のHEAD target (role/design target等) は非空fileと非空familyのみ存在判定し、hollow/missingを拒否する。完了を主張する PLAN (`confirmed` / `completed` / `accepted`) の `generates` artifact_path の実在判定には適用しない |
-| `U-PA-039` | record source commit/path/OID/content digest | 独立Git object oracle | `commit:path` OIDと実blob bytes SHA-256がrecordと一致 |
-| `U-PA-040` | 全agent slot + 7 role contract | role contract loader/projection | role全単射、全slot contractRef付与、HEAD contract blob非空。未知role/欠落は拒否 |
-| `U-PA-041` | item ledgerの全`target_slot` edge | HEAD document catalog resolver | 全slot ref解決、存在しないslotはglobal findingでfail-close |
-| `U-PA-042` | `plan migration-dry-run --json` | CLI public surface | exit 0、`total=emitted=HEAD PLAN件数`、`migrated=total-rekeyed`、pending/finding 0のJSON契約。完了を主張する PLAN (`confirmed` / `completed` / `accepted`) の `generates` artifact_path の実在は件数・成功判定に含めない |
 | `U-PA-043` | `leaseMs`付きreservation commandを初回/再送 | `ReservationService` + versioned key-ring/clock port | raw tokenを返しDB/event/current/receipt保存0、再送はclock進行後も同一token/expiry、異payloadはconflict |
 | `U-PA-044` | reservation event/current/receipt各append直後にfault注入 | `PlanLedger.reserve` transaction | 各例外後にevent/current/receiptのdelta 0、次の正常commandは成功 |
 | `U-PA-045` | 複数kind/producer/subject/revision/commit/expiry/exit/claims outcomeを組合せたevidence全履歴 | `EvidenceRecord` / `EvidencePolicy` | policy定義と評価contextを分離し、typed claimsRuleに適合するactive frontierだけをmin/max cardinalityへ数え、requirement別missing/rejected IDをstable順で返す |
@@ -2001,7 +1989,7 @@ content-addressed path を citation してから `U-*` へ昇格する。
 | --- | --- | --- | --- |
 | `CANDIDATE-U-CIPOL-028` | 正常系 | 実 repo workflow そのまま | `analyzeGithubCiPolicy().ok=true`。`jobs.preflight` が存在し、4 runtime 脚の `needs` が `preflight`、aggregate `needs` が `preflight` + 4 脚 |
 | `CANDIDATE-U-CIPOL-029` | preflight 欠落 / 形 | (a) `jobs.preflight` 削除 (b) `runs-on: windows-latest` (c) job-level `if: false` (d) `continue-on-error: true` (e) `timeout-minutes` 追加 | 全件 `invalid_preflight_gate`、`ok=false` |
-| `CANDIDATE-U-CIPOL-030` | preflight manifest 完全一致 | (a) typecheck step 削除 (b) lint step 削除 (c) guard step 削除 (d) admission step 削除 (e) typecheck を lint の後へ移動 (f) guard / admission / lint いずれかの `if: ${{ !cancelled() }}` 削除 (g) typecheck の `if` (lane=='full') を削除 = lane 無条件化 (h) typecheck の `if` を `${{ !cancelled() && steps.classify.outputs.lane == 'full' }}` へ変更 | 全件 `invalid_preflight_gate` (detail = manifest 不一致)。(g) は doc lane へ typecheck を足す振る舞い変更 (D3 案 C) の負例。(h) は加えて `forbidden_lane_skip_step` (non-canonical lane condition、`jobs.preflight`) |
+| `CANDIDATE-U-CIPOL-030` | preflight manifest 完全一致 | (a) typecheck step 削除 (b) lint step 削除 (c) guard step 削除 (d) 欠番 (旧 admission step の削除。`plan admission-check` step を契約から外したため、本案は対象 step なし。#1168) (e) typecheck を lint の後へ移動 (f) guard / lint いずれかの `if: ${{ !cancelled() }}` 削除 (g) typecheck の `if` (lane=='full') を削除 = lane 無条件化 (h) typecheck の `if` を `${{ !cancelled() && steps.classify.outputs.lane == 'full' }}` へ変更 | 全件 `invalid_preflight_gate` (detail = manifest 不一致)。(g) は doc lane へ typecheck を足す振る舞い変更 (D3 案 C) の負例。(h) は加えて `forbidden_lane_skip_step` (non-canonical lane condition、`jobs.preflight`) |
 | `CANDIDATE-U-CIPOL-031` | 脚の needs 束縛 | 4 脚それぞれについて (a) `needs` 削除 (b) `needs: [preflight, node-generation-linux]` (c) `needs: other` | (a)(b)(c) とも該当脚の `invalid_preflight_gate` (`jobs.<leg>.needs must equal preflight`)。(a) は加えて exact keys で `missing_runtime_leg` |
 | `CANDIDATE-U-CIPOL-032` | Linux 脚から軽量 step の再流入禁止 | Linux 脚へ `lint (biome)` / `typecheck (tsc --noEmit)` を再追加 | `missing_runtime_leg` (Linux manifest 不一致)。二重化を manifest で拒否 |
 | `CANDIDATE-U-CIPOL-033` | Windows typecheck 維持 | Windows 脚から `typecheck (tsc --noEmit)` step を削除 | `missing_runtime_leg` (Windows manifest 不一致)。D2 の mutation |
@@ -2011,7 +1999,19 @@ content-addressed path を citation してから `U-*` へ昇格する。
 | `U-CIPOL-018` (改訂) | 結果行列 | `aggregateHarnessResultsPass` に `preflight` ∈ {failure, cancelled, skipped} × 脚 success | preflight が success 以外なら false。全 success のみ true |
 | `CANDIDATE-U-CIPOL-037` | required step の評価対象 | preflight から `npm run lint` を消し Linux 脚にも無い状態 | `missing_step` (`lint`) が依然出る。評価対象が preflight + Linux の和であること (既存 `U-CIPOL-012` = runtime profile 独立性とは別 oracle) |
 | `CANDIDATE-U-CIPOL-038` | preflight の lane producer | (a) preflight の classify step 削除 (typecheck の lane 条件は残す) (b) classify に `shell: bash` 付与 (c) classify に `if: ${{ !cancelled() }}` 付与 (d) classify を 2 個に複製 (e) preflight に job-level `env.GITHUB_OUTPUT` 付与 (f) `node-generation-linux` の任意 step に `if: ${{ steps.classify.outputs.lane == 'full' }}` 付与 (g) aggregate の任意 step に同条件付与 | (a)〜(e) は `missing_lane_producer` (detail `jobs.preflight requires the canonical classify producer with no explicit shell` / GITHUB_OUTPUT 上書き)、(a)〜(d) は加えて `invalid_preflight_gate`。(f)(g) は `missing_lane_producer` (detail `jobs.<name> references steps.classify.outputs.lane without owning the canonical classify producer`)。classify を持たない job での lane skip を 1 経路も残さない |
-| `CANDIDATE-U-CIPOL-039` | lane 別実行集合の不変 (refactor の behavior invariant fence) | 実 repo workflow を解析し、各 step を `if` で分類 (`LANE_FULL_ONLY_IF` = full のみ、`LANE_DOC_ONLY_IF` = doc のみ、それ以外 = 両 lane)、setup 系 / classify / job summary を除いた check 名集合を Linux 面 (preflight ∪ `harness-check-linux`) と Windows 脚で lane 別に算出 | PLAN-L7-729 §不変条件 の表 (= 改訂前 `harness-check.yml` の lane 別集合) と完全一致。特に doc lane の Linux 面 = {guard, admission, doc lane checks, doc lane source doctor, lint} で typecheck を含まない。負例: preflight typecheck の lane 条件削除で doc 集合に typecheck が現れ不一致 |
+| `CANDIDATE-U-CIPOL-039` | lane 別実行集合の不変 (refactor の behavior invariant fence) | 実 repo workflow を解析し、各 step を `if` で分類 (`LANE_FULL_ONLY_IF` = full のみ、`LANE_DOC_ONLY_IF` = doc のみ、それ以外 = 両 lane)、setup 系 / classify / job summary を除いた check 名集合を Linux 面 (preflight ∪ `harness-check-linux`) と Windows 脚で lane 別に算出 | PLAN-L7-729 §不変条件 の表 (= 改訂前 `harness-check.yml` の lane 別集合) と完全一致。特に doc lane の Linux 面 = {guard, doc lane checks (readability / rule-drift), doc lane source doctor, lint} (旧 admission と doc lane の `plan lint` は #1168 で契約から外した) で typecheck を含まない。負例: preflight typecheck の lane 条件削除で doc 集合に typecheck が現れ不一致 |
+
+CI の実行集合の改訂 (#1168、方針は #1078 issuecomment-6265568869): 実 manifest の契約と各 oracle の契約は分けて扱う。
+本節の preflight 構成と現行の 3 job 基準構成 (`harness-check-linux` / `harness-check-windows` / `node-generation-*` と aggregate) は
+すでに異なる。次の 2 点は構成の違いによらず契約から外す。
+
+- `plan admission-check` step。`design-protection` step の位置は admission に依存させず、直前を `branch-type guard (commitlint / poc / hotfix)`、
+  直後を `typecheck (tsc --noEmit)` とする (`docs/design/harness/L6-function-design/design-protection-diff-gate.md` §7)。
+- doc lane の `plan lint` と、`test:doc-lane` の `tests/plan-lint.test.ts`。doc lane の検査は `readability` と `rule-drift` を残す。
+  step 名は `doc lane checks (readability / rule-drift)` とする。
+
+Green で直す oracle の期待: CANDIDATE-U-CIPOL-030 (d) 欠番化、CANDIDATE-U-CIPOL-039 と `E-729-doc` の doc lane 集合、
+`U-DPROT-024` / `U-DPROT-025` (c) / `U-DPROT-026` の step 位置。
 
 既存 fixture の付け替え (期待 reason の変更。新規 ID は振らない):
 
@@ -2034,7 +2034,7 @@ Actions 実 run の証跡 (unit oracle ではなく PLAN AC-4 / AC-5 の受入�
 | --- | --- | --- |
 | E-729-neg | 軽量 check (例: biome format 違反) を意図的に含む PR head | `preflight`=failure、4 脚=skipped、`harness-check`=failure、aggregate の失敗 step = result guard |
 | E-729-pos | 通常 PR head (full lane) | 全 job success、preflight 所要と run 壁時計を記録 |
-| E-729-doc | doc lane の PR head | preflight の classify = doc、typecheck は skipped、guard / admission / lint は実行され success。Linux/Windows 脚は doc lane step のみ (改訂前と同じ実行集合) |
+| E-729-doc | doc lane の PR head | preflight の classify = doc、typecheck は skipped、guard / lint は実行され success。Linux/Windows 脚は doc lane step のみ (改訂前と同じ実行集合) |
 
 `pull_request`を単に含む文字列検査だけではGreenにしない。YAML構造でbase filter不在を検査し、
 source workflow / source template / Pack template / setup builtinのどれか1 artifactだけの更新を完了扱いにしない。
@@ -2209,8 +2209,8 @@ cross-provider比較除去、E9/E11いずれかのgate除去を全てkillする�
 | `U-HOOKEXEC-006` | setup / Pack parity | source、built-in、docs template、fresh consumer materialization の executable+argv が一致する。 |
 | `U-HOOKEXEC-007` | doctor fail-close | shell-form command、argv 欠落/追加/並替え、command spoofing、argv の shell operator を個別に検出する。 |
 | `U-HOOKEXEC-008` | Windows native smoke | project-local Node wrapper (`.ut-tdd/bin/ut-tdd.mjs`) が `spawnSync(process.execPath, ...)` の直接 executable spawn と `windowsHide: true` を使い、shell host token (`sh.exe` / `bash.exe` / `cmd.exe` / `powershell.exe` / `pwsh.exe` / dispatch 用 `conhost.exe`) を含まない。process-tree ancestry の実測はこの oracle の主張に含めない。entrypoint 欠落時は exit 127 で fail-close し、hook outcome は既存契約どおりである。 |
-| `U-HOOKEXEC-009` | Node TypeScript launcher floor | `package.json#engines.node` は無フラグ TypeScript execution が有効な `>=22.18` を要求し、22.6〜22.17を対応済みと宣言しない。 |
-| `U-HOOKEXEC-010` | Windows custody debt boundary | hook PLAN は `windowsHide` / shell-free Greenをprocess-tree custody証拠へ流用せず、Issue #134 / Windows Job Object / 未解消境界を明記する。 |
+| `U-HOOKEXEC-009` | Node TypeScript launcher floor | 無フラグ TypeScript execution の下限は Node 22.18 であり、`package.json#engines.node` はこの下限を満たす範囲（下限が 22.18 以上）でなければならない。22.6〜22.17を対応済みと宣言しない。`engines.node` の実際の範囲は `>=24.22.1 <25` で、22 系を対応範囲に含めない（`internal-processing.md` §Node toolchain authority、Issue #1255）。 |
+| `U-HOOKEXEC-010` | Windows custody debt boundary | **退役 (PLAN 機構撤去 = #1168 A4 / #1078)**: hook PLAN の Windows debt 注記 (Issue #134 / Windows Job Object / 未解消境界) を読んで照合する検査は要求から外す。既存の非 PLAN 設計文書に同 debt 事実の記述は無いため、移管先は設けない。維持するのは U-HOOKEXEC-001..009 の launcher argv / Node floor / native spawn (`windowsHide: true`) の製品回帰。 |
 
 実行対応は `tests/hook-native-launcher.test.ts`、`tests/project-hook.test.ts`、
 `tests/codex-hook-adapter.test.ts`、`tests/setup.test.ts` である。主検証となる
@@ -3210,29 +3210,10 @@ oracle の詳細 (入力・期待・殺す mutation) と既存 oracle の改訂�
 
 | 範囲 | 検証面 | 詳細 |
 | --- | --- | --- |
-| CANDIDATE-U-AGBOUND-001〜036 | agent-guard の許可集合・model 必須・fable 禁止・bypass、委譲 role の許可集合と floor の正本、`CODEX_WORKSPACE_WRITE_ROLES` の据え置き、roster / asset-drift / setup template / Pack / skill-engine の撤去、規律の書き直しで marker 節を壊さないこと、判断ゲート role の明示 model の floor (fail-close) と review custody の入口の tier 検査 | 専用文書 §3 (既存 oracle の改訂表は §4) |
+| U-AGBOUND-001〜036 | agent-guard の許可集合・model 必須・fable 禁止・bypass、委譲 role の許可集合と floor の正本、`CODEX_WORKSPACE_WRITE_ROLES` の据え置き、roster / asset-drift / setup template / Pack / skill-engine の撤去、規律の書き直しで marker 節を壊さないこと、判断ゲート role の明示 model の floor (fail-close) と review custody の入口の tier 検査 | 専用文書 §3 (既存 oracle の改訂表は §4) |
 
 上表の ID は backtick 無し表記である。候補台帳への再掲ではなく専用文書への参照であり、U-VMSRC-009 の一意性検査の対象外とする。
-正規 `U-AGBOUND-*` への昇格は、`design-protection-diff-gate.md` §10.3 の三段階 (登録 + Red、src/ を含まない昇格、実装 PR) に従う。開発 repo を読む oracle があるので、Red を先に入れ、昇格はその後の別 PR にする。
-
-## PLAN 退役 gate (Issue #1078) — 索引
-
-L6 契約は `docs/design/harness/L6-function-design/plan-retirement-gate.md` (未実装の目標契約)。
-oracle の詳細 (入力・期待・殺す mutant) は専用の
-`docs/test-design/harness/L7-plan-retirement-gate-test-design.md` に置き、本節は索引だけを持つ。
-
-| 範囲 | 検証面 | 詳細 |
-| --- | --- | --- |
-| CANDIDATE-U-PLRET-001〜005 | 処分 JSON の読み取り・削除なし PR の素通り・削除対象だけの検査・重複・最終処分の列挙 | 専用文書 §3 |
-| CANDIDATE-U-PLRET-006〜011 | 行き先 (設計文書の path と節・issue 番号)・廃止理由の検査 | 専用文書 §3 |
-| CANDIDATE-U-PLRET-012〜014 | 照合証跡 (三者照合・supersedes 双方向) と完備 fixture・決定的な出力順 | 専用文書 §3 |
-| CANDIDATE-U-PLRET-015〜016、027 | 実 repo の処分 JSON との独立集計の一致、生成スクリプトの上書き拒否、実 JSON の link schema (開発 repo を読む検査) | 専用文書 §3 |
-| CANDIDATE-U-PLRET-017〜020 | 純粋性 (外部呼び出し 0)、loader の削除判定と非破壊読み取り、`path:reason` の出力形式 | 専用文書 §3 |
-| CANDIDATE-U-PLRET-032〜037 | supersede の coverage (full / partial の明示、disposition との整合、見出し集合の被覆、置換先の実在)、governance の行き先と終端 | 専用文書 §3 |
-| CANDIDATE-U-PLRET-021〜026、028〜031 | 参照の残存 (frontmatter の各欄・設計文書の owning-plan 欄・本文の言及は止めない)、supersedes の連鎖の終端、自己申告の偽造・同時編集の拒否、base blob からの実体検証 | 専用文書 §3 |
-
-上表の ID は backtick 無し表記である。候補台帳への再掲ではなく専用文書への参照であり、U-VMSRC-009 の一意性検査の対象外とする。
-正規 `U-PLRET-*` への昇格は、`design-protection-diff-gate.md` §10.3 の三段階 (登録 + Red、src/ を含まない昇格、実装 PR) に従う。開発 repo を読む oracle (015・016・027。実 JSON の読み取りは 015 と 027 で共有し、1 行で登録する) があるので、Red を先に入れ、昇格はその後の別 PR にする。
+正規 `U-AGBOUND-*` へ全36件を昇格した。`design-protection-diff-gate.md` §10.3 の三段階 (登録 + Red、src/ を含まない昇格、実装 PR) に従い、Red PR #1066 の後に正式宣言とテスト引用を同期した。実装と `it.fails` の解除は後続の別 PR で行う。
 
 ## snapshot runner の寿命 (Issue #1129) — 索引
 

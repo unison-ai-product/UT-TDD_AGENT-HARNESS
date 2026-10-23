@@ -48,7 +48,7 @@ canonical bytes比較 (§3.1.3)、`origin` remote由来のrepository binding (§
 | CANDIDATE-U-PROJID-014 | `origin` remoteが既知形式に一致しない文字列 | 作成せずdeny |
 | CANDIDATE-U-PROJID-015 | 同一originに対しcreateを2回連続実行 | byte-identical (field順・改行・BOM無し・末尾改行1個が同一) |
 | CANDIDATE-U-PROJID-016 | 既にHEADにidentityがあるrepoで再実行 | no-op read。ファイルを書き換えない |
-| CANDIDATE-U-PROJID-017 | `doctor`/`node-plan-revision-runner`/`legacy-plan-inventory` などread専用呼び出し元がidentity欠落時に呼ばれる | createを試みず既存のdenyをそのまま返す |
+| CANDIDATE-U-PROJID-017 | `doctor`/`node-plan-revision-runner` などread専用呼び出し元がidentity欠落時に呼ばれる | createを試みず既存のdenyをそのまま返す |
 | CANDIDATE-U-PROJID-018 | working-tree-onlyの未commit生成物がある状態で再実行 | 同じ入力から同じbytesを再生成するのみ。read側はHEAD未到達のためmissingのまま |
 
 Setup orchestration integration (not a project-identity candidate):
@@ -91,7 +91,6 @@ identity denial を setup 全体の fatal error として扱ったら Red。
 | Candidate | Stimulus | Oracle |
 |---|---|---|
 | CANDIDATE-U-PROJID-036 | `node-plan-revision-runner.ts` の `repositoryIdentity()` port経由で、別origin由来のgrammar-valid stale identityをHEADに持つrepoを読む | loader内部binding (§3.1.4) によりcallerがexpected値を渡さなくてもdenyされる (現状は未対策、027の呼び出し元別ケース) |
-| CANDIDATE-U-PROJID-037 | `legacy-plan-inventory.ts` の `buildLegacyPlanInventory` 経由で036と同じstale identityを読む | 036と同じくloader内部bindingでdenyされる |
 | CANDIDATE-U-PROJID-038 | `project-memory-root.ts` の `projectIdentityFromHead` (loader を経由しない独立 reader) 経由で036と同じstale identityを読む | `identity_repository_unbound` で deny される。独立 reader 自身が §3.1.4 の binding を行うか、共有 loader へ統合済みであること (loader 側だけの変更で Green にしない)。基準 ref 7b18ee4e では accept される (Red 起点) |
 | CANDIDATE-U-PROJID-039 | `origin` remoteが存在せず、呼び出し側も `expectedRepositoryIdentity` を渡さない状態でHEADにgrammar-valid identityがある | `identity_repository_unbound` でdeny。HEAD値をそのまま信頼しない |
 | CANDIDATE-U-PROJID-040 | detached snapshot cloneの`origin`をlocal Git pathへ設定し、そのsource repositoryだけがcanonical network originを持つ | exactly one Git custody hopで同じidentityへ解決する。local path文字列や二段local originをidentityとして受理しない |

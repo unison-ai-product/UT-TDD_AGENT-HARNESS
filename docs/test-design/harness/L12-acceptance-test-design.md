@@ -67,7 +67,7 @@ updated: 2026-07-09
 | **AT-FR-08-01** | AC-FR-08-01 (drift → Reverse 提案) | drift 検出 → mode-routing Reverse 提案 / next_action 出力 | vitest doctor + routing test |
 | **AT-FR-08-02** | AC-FR-08-02 (複数シグナル優先度) | drift + 劣化 + 暴走 → Recovery routing / 他 warn | vitest routing test |
 | **AT-FR-08-03** | AC-FR-08-03 (PO 手動 mode) | `ut-tdd route --mode reverse --force` → warn + audit / routing | vitest CLI + audit test |
-| **AT-FR-09-01** | AC-FR-09-01 (許可 subagent pass) | pmo-sonnet + model 明示 → agent-guard pass / audit | vitest agent-guard test (既存カバー) |
+| **AT-FR-09-01** | AC-FR-09-01 (許可された汎用の型 pass) | 許可された汎用の型 + model 明示 → agent-guard pass / audit (例: `Agent({subagent_type: "general-purpose", model: "sonnet"})`) | vitest agent-guard test (既存カバー) |
 | **AT-FR-09-02** | AC-FR-09-02 (model 指定なし block) | model を指定しない general-purpose 試行 → fail-close exit 2 (model を指定した汎用の型は pass、#1002) | vitest agent-guard test |
 | **AT-FR-09-03** | AC-FR-09-03 (PO bypass) | UT_TDD_ALLOW_RAW_AGENT=1 + 理由 → warn + audit / exit 0 | vitest agent-guard test |
 | **AT-FR-10-01** | AC-FR-10-01 (Recovery 再開ポイント) | 5 連続 gate fail + budget 超過 → Recovery / cutover コマンド生成 | vitest recovery test |
@@ -97,7 +97,7 @@ updated: 2026-07-09
 | **AT-FR-18-01** | AC-FR-18-01 (doctor clean) | 検出 0 件 → HM-07 All clean / exit 0 | vitest doctor test |
 | **AT-FR-18-02** | AC-FR-18-02 (doctor 検出 3 件) | error 1 + warn 2 → severity 別表示 / error で exit 1 | vitest doctor test |
 | **AT-FR-18-03** | AC-FR-18-03 (detector timeout) | 30s 超 → skip + warn / 他結果集約 | vitest doctor test |
-| **AT-FR-09-04** | AC-FR-09-04 (floor 未満への格下げ禁止、A-54 で functional に AC 追加、#1002 で floor 規則へ改訂) | `Agent({subagent_type: "pmo-sonnet", model: "haiku"})` → fail-close exit 2 / audit block 記録 (floor 以上の `opus` は許可) | vitest agent-guard test 拡張 |
+| **AT-FR-09-04** | AC-FR-09-04 (Agent tool で fable 禁止、A-54 で functional に AC 追加、#1002 で規則を改訂) | `Agent({subagent_type: "general-purpose", model: "fable"})` → fail-close exit 2 / audit block 記録 | vitest agent-guard test 拡張 |
 | **AT-FR-45-01** | AC-FR-45-01 (doc-reviewer 召喚正常系) | `ut-tdd review --uncommitted --reviewer doc-reviewer` → `.ut-tdd/audit/doc-reviews/<timestamp>.json` 記録 / pass → 次工程許可 / exit 0 | vitest review test |
 | **AT-FR-45-02** | AC-FR-45-02 (未召喚で G3 fail-close) | doc-reviewer 未召喚 + `ut-tdd gate G3` → fail-close error / next_action 提示 / exit 1 | vitest gate + review test |
 | **AT-FR-45-03** | AC-FR-45-03 (PO bypass) | `UT_TDD_DOC_REVIEWER_BYPASS=1` + 理由 → bypass + audit / D-08 集計 / exit 0 | vitest gate + audit test |

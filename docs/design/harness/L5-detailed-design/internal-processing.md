@@ -395,6 +395,57 @@ C.7 の設計 + lint 契約まで。
 C.7 相互参照を追加 (Important-3 対応)。結合テスト設計 = L8 (宣言×外部化なし→fail / opt-out→pass /
 config・registry 不在→既定 fail-close / 未知キー→fail-close)。
 
+## Node toolchain authority: engines は範囲、完全固定は pin 面に限る（Issue #1255）
+
+`package.json` の `engines` が Node/npm を完全一致で固定していたため、Node の新しい patch や別の対応版を使う consumer が弾かれていた
+（互換性の指摘）。「consumer が使ってよい範囲」と「審査済みバイナリの同一性」は別の契約であり、次のとおり分ける。
+この節は、下の「Node build generation内部処理」の項目 1・2 のうち `engines` の扱いを上書きする。
+
+1. **`engines.node` = 範囲**: consumer が使ってよい Node の版の範囲を表す。consumer 側の判定は `package.json` の `engines.node` を
+   npm semver として評価する既存の経路（`src/setup/distribution.ts` の `satisfiesRequiredNode`）が正本であり、ここで別の pin を持たない。
+2. **完全固定 = pin 面だけ**: 審査済みの 1 点（reviewed single binary）への完全固定は、`.node-version`、harness 自身の CI pin
+   （`.github/workflows/harness-check.yml` の `node-version`）、build（`scripts/build-node.mjs`）、`NODE_TOOLCHAIN_POLICY.nodeVersion`
+   にだけ掛ける。executable receipt と provenance registry の検証対象もこの審査済みの 1 点であり、範囲ではない。
+3. **`toolchain-pin` の変更**: `analyzeToolchainPin` の `node-version-mismatch` は、現在 `.node-version` / `engines.node` /
+   `NODE_TOOLCHAIN_POLICY.nodeVersion` の三者の完全一致を要求している。このうち `engines` の脚だけを外し、`.node-version` と
+   `NODE_TOOLCHAIN_POLICY.nodeVersion` の完全一致は残す。`engines.node` は「有効な semver 範囲であり、`.node-version` の版を
+   含むこと」だけを要求する（pin が範囲の外へ出る設定ミスを防ぐ最小の整合条件）。新しい rule・機構は足さない。
+   `utTdd.nodeToolchain`（`nodeAuthority=sealed` / `executableReceipt=required`）の検査は変えない。
+4. **範囲の値**: `engines.node` は `>=24.22.1 <25` とする。
+   - 下限 `24.22.1` は #1254 が決める固定先（security release）に合わせる。#1254 が固定先を別の版に決めた場合は、下限も同じ版にする
+     （下限 = 固定先、の関係を保つ）。下限未満には security 修正を取りこぼした版が含まれるため、範囲に入れない。
+   - 上限 `<25`: 25 系は最新 v25.9.0 が `lts: false` であり、奇数系は LTS にならないため含めない（nodejs.org/dist/index.json、2026-10-22 実測）。
+   - **22 系は含めない**。理由は 3 つ。(a) `src/cli.ts` を型ストリップで直接実行する経路（`bin` の `./src/cli.ts`、hook の
+     `node src/cli.ts`）は無フラグの型ストリップ（22.18 以降、U-HOOKEXEC-009）に依存する。(b) `node:sqlite` を state DB の主ドライバとして使う（`src/state-db/index.ts`）。22 系での動作は未実測で、22 を支える根拠がない。
+     (c) 22 は Maintenance である（#1255）。
+   - **26 系は、実測が済むまで含めない**。2026-10-21 時点で 26.12.1 が最新だが `lts: false` である（nodejs.org/dist/index.json、#1255）。
+     範囲を `<27` へ広げる条件は、26.x で `npm test` と hook 起動を 1 回実測して緑を確認し、その結果を Issue に残し、
+     かつ 26 系が LTS になることとする。条件を満たすまで `<25` を保つ。
+5. **`engines.npm`**: Node と同じ分離を適用する。`engines.npm` は範囲、`packageManager`（`npm@<版>+sha512-...`）は審査済みの
+   1 点の完全固定のまま残す（`npm-package-manager-*` の rule は変えない）。範囲の値は `>=11.19.1 <12` とする
+   （11.19.1 は Node v24.22.1 に同梱される npm である。nodejs.org/dist/index.json の `npm` 欄、2026-10-22 実測）。下限 = 固定先の Node に同梱される npm、上限 = 次 major 未満、という
+   Node と同じ関係で決める。#1254 が固定先を 24.22.1 以外にした場合は、その版の同梱 npm に下限を合わせる。
+   `toolchain-pin` の `npm-version-mismatch` は `engines.npm` との完全一致を要求しているので、`engines.npm` の脚を外し、
+   `packageManager` と `NODE_TOOLCHAIN_POLICY.npmVersion` の一致だけを残す。
+6. **provenance registry の扱い**: `node-toolchain-provenance-registry-v1.json` は、審査済みの 1 点（Node/npm の archive digest、
+   `.node-version`、lock、`packageManager`）の同一性を結ぶものとして位置づけ、`engines` の範囲は結ばない。
+   registry の `toolchain.engines`（完全一致の `24.13.0` / `11.6.2`）と `engine_authority` は、この契約と食い違うため Green の PR で
+   改訂が必要である（項目 7）。status は `pair_frozen_pending_review` のままであり、`package_json_identity.content_sha256` は
+   現 HEAD の `package.json` と一致しない。さらに `src/` に `package_json_identity` を読む箇所はない。このため registry の sealed は
+   文書の記述より実効範囲が狭い。この契約は、registry を実効的な authority へ引き上げることを要求しない（引き上げは別の判断）。
+7. **Green の PR が行う registry 改訂**（この設計文書の PR では JSON を編集しない）。
+   - 審査済みの 1 点が #1254 で 24.22.1 へ動くため、`toolchain.node_version` / `npm_version` / `package_manager` / archive・member の digest を
+     再取得して更新する。`source_authority` の URL と `observed_on` も更新する。
+   - `toolchain.engines` を範囲（項目 4・5）へ改め、`engine_authority` の説明を「`engines` は範囲であり、完全固定の authority ではない」へ
+     書き換える。
+   - `package_json_identity.content_sha256` は、Green の `package.json` の raw bytes から再計算した値に更新する。再計算の前提は、
+     `package.json` の変更が全て済んでいること（#1247 → #1254 → #1255 の順）である。
+   - `package_json_identity` の意味を「`engines` を含む `package.json` 全体」から変えるかは、registry を実効 authority にする判断
+     （項目 6）と同時に決める。この PR の範囲では、値の再計算だけを必須とする。
+   - registry の status を `pair_frozen_pending_review` から進めるのは、非著者 family の review 完了後に限る。この改訂では進めない。
+8. **範囲外**: `.github/workflows/harness-check.yml` / `scripts/build-node.mjs` / `NODE_TOOLCHAIN_POLICY` の固定先を 24.22.1 へ
+   上げる作業は #1254 であり、この契約は扱わない。Pack への反映は `ut-tdd distribution sync-pack` の正規の手順で別に行う。
+
 ## Node build generation内部処理（Issue #152 D0-N）
 
 1. Node build generation receiptの`subject_revision`は当該sliceのcandidate HEADへ固定する。pair-freezeした provenance は
@@ -405,7 +456,7 @@ config・registry 不在→既定 fail-close / 未知キー→fail-close)。
    status は `pair_frozen_pending_review` とし、`darwin-*` は typed `unsupported_os` とする。公式 archive が存在しても
    macOS を supported と推論しない。実Node/npm executableを絶対pathで解決し、version文字列だけでなく expected
    digest/provenanceへ照合する。
-2. `npm ci`のlock graph、external runtime dependency closure、builder/source graphをcanonical digest化する。同じversionを自己申告する別npm CLIへの差替えもdigest不一致として拒否する。`package.json` の engines authority は `node` と `npm` に限定し、`engines.bun` は PLAN-L7-488 §2.3 で削除済みであり、Node toolchain の support/activation authority でもない。
+2. `npm ci`のlock graph、external runtime dependency closure、builder/source graphをcanonical digest化する。同じversionを自己申告する別npm CLIへの差替えもdigest不一致として拒否する。`package.json` の engines authority は `node` と `npm` に限定し（`engines` は範囲であり、完全固定は `.node-version` / CI pin / `packageManager` に限る。§Node toolchain authority、Issue #1255）、`engines.bun` は PLAN-L7-488 §2.3 で削除済みであり、Node toolchain の support/activation authority でもない。
    registry digest は RFC 8785 JCS/UTF-8（`canonical_digest.registry_sha256` 自身を除外）で再計算し、宣言 source revision の各 tracked Git blob OID と
    raw-byte SHA-256 を照合する。不在・改竄・未追跡fixtureによる補完は `provenance_unavailable` で generation 前に
    fail-close する。registry 自身の Git blob は `source_revision` から解決せず、consumer receipt の

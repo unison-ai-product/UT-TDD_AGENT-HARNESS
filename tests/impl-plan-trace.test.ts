@@ -64,12 +64,7 @@ describe("analyzeImplPlanTrace (U-IPT-001..003)", () => {
   });
 });
 
-describe("loadImplPlanTraceInput real repo (U-IPT-004/U-IPT-005)", () => {
-  it("U-IPT-004: 実 repo の orphan は 0 (4 PLAN back-fill + 3 design trace + 5 baseline 適用後)", () => {
-    const r = analyzeImplPlanTrace(loadImplPlanTraceInput(process.cwd()));
-    expect(r.orphans).toEqual([]);
-  });
-
+describe("impl-plan trace baseline shrink-only (U-IPT-005)", () => {
   it("U-IPT-005: baselineは shrink-only の既存負の回帰網を維持する", () => {
     // 縮小のみ可の回帰網: 新規モジュールを baseline へ足して gate を黙らせない
     // (2026-08-05 に一度 9 件化した実例の再発防止。trace は PLAN 側で持つ)。

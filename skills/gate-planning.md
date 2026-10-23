@@ -42,9 +42,9 @@ decision_points:
     over: "silencing with `// biome-ignore`, `// @ts-ignore`, or `.skip`"
     because: "unrationalized silencing defeats the enforcement the gate exists to provide and hides the condition from future review"
   - when: "An implementation PR must confirm its PLAN before merge"
-    choose: "follow the confirm runbook (case A: empty commit + CI green; case B: logged local Node runs at the subject head), then a post-green evidence review, the confirm commit and a bookkeeping re-review"
+    choose: "follow the confirm runbook, then a post-green evidence review, the confirm commit and a bookkeeping re-review"
     over: "dropping confirm, citing a pre-green review, or citing evidence that is not in the packet"
-    because: "review-evidence requires tests_green_at <= reviewed_at and new deliverables stay orphan until the owning PLAN is confirmed (#856)"
+    because: "review-evidence requires tests_green_at <= reviewed_at and the packet must contain the cited evidence (#856)"
 ---
 
 # gate planning
@@ -116,11 +116,6 @@ Two hard gates form a cycle on any PR that confirms its PLAN:
   `updated >= 2026-06-23`, a complete `green_commands` list
   (`src/lint/review-evidence.ts:94`, `:224-262`). So confirm needs a review taken
   **after** green.
-- `orphan-deliverable` は、どの PLAN の `generates` にも無い `scripts/` 配下、
-  除外対象外の `.claude/` 配下、`tests/**/*.test.ts` だけを対象にする
-  (`src/lint/deliverable-plan-trace.ts:55-67`、収集 root は `:116`)。`src/` 配下の
-  新規ファイルはここでは orphan にならない。また `generates` は PLAN の status を
-  問わず読まれる (`:130-139`) ので、draft PLAN に載せても trace は通る。
 - 別軸で、draft など未 confirm の PLAN が `src/` `tests/` `scripts/` `.claude/`
   の既存ファイルを `generates` に載せると `merged-plan-status` violation になる
   (`src/lint/merged-plan-status.ts:62`、`:106-127`、`:145-147`)。これは「orphan」
@@ -141,35 +136,6 @@ green before confirm.
    `evidence_path` blob at the anchor (`src/lint/green-command-digest.ts:58-74`).
 5. Bookkeeping re-review of the confirm head (originals in the packet, below).
 6. Merge through `ut-tdd pr merge`.
-
-**Case B: the PR adds new `scripts/` / `.claude/` / `tests/**/*.test.ts` files
-that only the confirming PLAN would own** (precedent #839). 適用条件は
-`deliverable-plan-trace.ts:55-67` の対象パスに限る。confirm 前の head はこれらが
-`orphan-deliverable` で red になり、CI を green 証跡にできない。`src/` だけの追加は
-orphan にならないため Case A に従う (ただし draft PLAN の `generates` に既存
-`src/` ファイルを載せない: `merged-plan-status.ts:62`)。
-
-1. At the subject head, run locally under Node, logging each run with UTC start
-   / end timestamps and the sha256 of its log: `npx tsc --noEmit`, `npx biome
-   check <changed files>`, `node scripts/run-vitest-snapshot.ts <targeted tests>`.
-   Put the logs in the packet evidence directory.
-2. Request the evidence review of that head; the packet carries the logs.
-3. Confirm commit (`plan revise`): add the new files to `generates`;
-   `green_commands` with `runner: node` and `scope: targeted | full |
-   changed-files` matching what was actually run (allowed values:
-   `src/lint/review-evidence.ts:105-106`); `tests_green_at` = the last local
-   run end, `reviewed_at` after it; `anchor_commit` = the subject head.
-   `evidence_path` / `output_digest` は log ではなく、subject head に実在する
-   tracked の source / test ファイルを指し、`output_digest` はその anchor 時点の
-   blob の sha256 にする。`green-command-digest.ts:69-96` は
-   `readBlobAtCommit(anchor, evidence_path)` の blob を hash して比較し、blob 不在は
-   `anchor-path-missing`、不一致は `anchor-digest-mismatch` になる。log の hash は
-   使えない (log は packet evidence に置くだけで tracked blob ではない)。log の
-   sha256 は step 1 の記録として別に残す (#839 の confirm comment も blob hash と
-   log hash を別に記載)。
-4. Bookkeeping re-review of the confirm head.
-5. The merge-ref CI on the confirm head must be green, then merge through
-   `ut-tdd pr merge`.
 
 **Packet originals.** Every receipt, revise manifest, base projection and run
 JSON / log cited by the confirm goes into

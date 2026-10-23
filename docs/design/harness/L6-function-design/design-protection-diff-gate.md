@@ -143,7 +143,7 @@ format の一括修正や文字化け修正のように src と docs を同時�
 - base の解決失敗、diff の読み取り失敗、不明 status、不正 path はすべて `ok=false` にする (fail-close)。
   - ref の解決失敗は `resolveCommit` の既存の扱いどおり `git-ref-invalid` になる。
   - ref の解決後に `git diff` の実行自体が失敗した場合は `git-command-failed` になる。これを「変更 0 件」として扱ってはならない (空 diff の PASS と区別する)。
-- 終了 code は `ok=true` で 0、それ以外で 1 とする。`plan admission-check` (`src/cli/plan-admission.ts`) と同じ規約である。
+- 終了 code は `ok=true` で 0、それ以外で 1 とする。他の fail-close 系 CLI gate と同じ規約である。
 - 人が読む出力は `design-protection: PASS` / `design-protection: BLOCK` の 1 行と、違反 1 件につき 1 行である。
   BLOCK の行には「契約の変更は src/scripts を含まない別 PR に分ける」旨を 1 行添える。
 - `--json` で結果オブジェクトをそのまま出す。
@@ -179,7 +179,7 @@ v4 R05 で `src/plan-admission/` を削除するとき、本 gate が import し
 既存の `.github/workflows/harness-check.yml` の `jobs.harness-check-linux.steps` に step を 1 つ足す。新しい workflow は作らない。
 `harness-check-windows` と `node-generation-*` には足さない。
 
-- 位置: `plan admission-check (PLAN 編集の receipt 照合、fail-close)` step の直後、`typecheck (tsc --noEmit)` step の前。
+- 位置: `branch-type guard (commitlint / poc / hotfix)` step の直後、`typecheck (tsc --noEmit)` step の前。`plan admission-check` step は CI の契約から外した(#1168、方針は #1078 issuecomment-6265568869)ので、位置は admission に依存させない。以後も、直前は `branch-type guard`、直後は `typecheck` の順を固定する。
 - 実行条件: step の `if` を `${{ github.event_name == 'pull_request' }}` にする。main への push の diff は複数 PR にまたがり、契約 PR と実装 PR が 1 つの diff に混ざって誤って拒否されるからである。lane (`steps.classify.outputs.lane`) による skip は付けない。
 - 呼び出し: `env.BASE_SHA` に `${{ github.sha }}^1` を置き、`run` を `node src/cli.ts github design-protection --base "$BASE_SHA" --head "${{ github.sha }}"` にする。`shell`、`id`、`continue-on-error` は付けない。
 - `github.sha` は PR の検証用 merge commit である。その第 1 親を比較元にし、その merge commit との 2 点 diff を「この PR が main に入れる変更」とする。第 1 親を解決できなければ既存の ref 解決で fail-close にする。event の `pull_request.base.sha` は merge commit の第 1 親と一致するとは限らないため使わない。main が先行して設計文書を更新しても、その変更を本 PR の変更へ混ぜない。一方、本 PR 自身の保護対象変更は拒否する。
@@ -189,7 +189,7 @@ workflow だけを直しても CI policy は通らない。`src/lint/github-ci-p
 一致しなければ `missing_runtime_leg` (detail `jobs.<leg>.steps must exactly match the ordered canonical semantic manifest`) になる。
 そのため、同じ実装 PR で次の 2 つを workflow と同時に直す。
 
-1. `RUNTIME_STEP_MANIFESTS["harness-check-linux"]` の、`plan admission-check` の `step(...)` と `typecheck` の `run(...)` の間に、
+1. `RUNTIME_STEP_MANIFESTS["harness-check-linux"]` の、`branch-type guard` の `step(...)` と `typecheck` の `run(...)` の間に、
    上の step と同じ `name` / `if` / `env` / `run` を持つ `step(...)` を 1 つ足す。`if` と式は既存の `githubExpression(...)` で組む。
    `name` は workflow と manifest で同じ文字列にする (例: `design-protection (実装 PR の設計書書き換え拒否、fail-close)`)。
 2. `SOURCE_REQUIRED_STEPS` に `{ label: "design protection", any: ["github design-protection"] }` を足す。step が消えたときに、
@@ -217,8 +217,8 @@ workflow と manifest の片方だけを直す PR は、`missing_runtime_leg` �
 ## 9. 範囲外
 
 - `tests/` の oracle の保護。oracle ID の無い既存テスト (baseline 433 件) があるため初版では扱わない。oracle ID 付きテストに限る後続として扱う。
-- 「新規追加は可」を使った実質的な上書き (既存と矛盾する設計文書を新しく足すこと)。`duplicate-artifact-ownership` など他の検査の範囲である。
-- `docs/governance/` や `docs/plans/` の保護。PLAN の編集は PLAN admission (`plan admission-check`) が見る。
+- 「新規追加は可」を使った実質的な上書き (既存と矛盾する設計文書を新しく足すこと)。本 gate の範囲外である。
+- `docs/governance/` や `docs/plans/` の保護。PLAN の編集の検査は、PLAN 機構の撤去(#1168、方針は #1078 issuecomment-6265568869)に伴い CI の契約から外した。
 - clean Pack の consumer workflow (`docs/templates/github/common/pack-harness-check.yml`) への展開。
 - main への push event での検査。保護は PR の時点で効かせる (理由は §7)。
 - `.claude/hooks/` / `.github/workflows/` 単独変更を実装 PR として分類すること。初版は #898 の PO 決定どおり `src/` / `scripts/` に限る。これらの変更を含めた全実行系の保護は保証しない。広げるかどうかは issue #973 で決める。
@@ -257,7 +257,7 @@ test-design の書き換えの多くは、`CANDIDATE-*` を正式 ID へ昇格�
 3. **実装 PR**: テストファイルの `it.fails` を `it` に戻して Green にする。
 
 順序を 1 → 2 にする理由は、doctor の `oracle-test-trace` が正式 ID を宣言したら同じ変更でテストの引用を要求し (未引用の宣言は baseline 外の違反になる)、候補 ID には引用を要求しないためである (`src/lint/oracle-test-trace.ts` の `CANDIDATE-*` 除外)。昇格だけを先に入れると、引用するテストが無いので CI が赤になる (PR #985 の 3c30fced で実測)。
-どのテストファイルが開発 repo を読むかは、実装レーンが `test-repository-isolation` の判定 (登録が要るか) で確定する。テストの subject や CLI の解決に `process.cwd()` を使うファイルも、この判定では読取ありになる (PR #985 で実測)。1 の新しいテストファイルは、その PR で PLAN-L6-834 の `generates` に canonical `plan revise` で足す (`deliverable-plan-trace` の owner)。
+どのテストファイルが開発 repo を読むかは、実装レーンが `test-repository-isolation` の判定 (登録が要るか) で確定する。テストの subject や CLI の解決に `process.cwd()` を使うファイルも、この判定では読取ありになる (PR #985 で実測)。1 の新しいテストファイルの所有証拠は、test-design の宣言 (正式 ID または候補 ID) をテスト名で引用することで満たす。`deliverable-plan-trace` gate の `loadDeliverablePlanTraceInput` は、宣言と結合した引用を持つテストファイルを所有済みとして扱う。PLAN 凍結 (`CLAUDE.md` §PLAN Filing Rules) の間は、PLAN の `generates` へ `plan revise` で足す登録を所有証拠に使わない。同 gate は退役が確定しており (`oracle-test-citation-trace.md` §6)、退役の実装 PR の merge 後は所有証拠そのものが要らなくなる。
 実装 PR は src/ を含むので、昇格や登録のために test-design を書き換えると §4 で拒否される。
 
 ## 11. 根拠

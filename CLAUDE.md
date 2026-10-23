@@ -186,7 +186,8 @@ PLAN への依存をこれ以上増やさない**。この節の規則は、PLAN
 
 - **新規 PLAN の起票と `plan revise` を止める**。
 - **新しい作業の正本は設計文書 (`docs/design/` / `docs/test-design/`) と GitHub Issue** にする。方式判断・
-  契約・受け入れ条件は設計文書か Issue に書き、新しい PLAN を作って持たせない。
+  契約・受け入れ条件の本文は設計文書に書き、Issue (作業チケット、`docs/governance/github-issue-hierarchy.md` §6) は
+  その path と revision を指すだけにする。新しい PLAN を作って持たせない。
 - **PLAN への参照を新しく足さない**。新規の契約・gate・コード・文書は、PLAN ID や `docs/plans/` 内の
   実体を要件にせず、Issue または設計文書の節を参照する (例: #848 の `retirement_plan` は PLAN
   撤去後に成り立たない形のため、Issue / 設計文書参照へ改める — 別 PR で扱う)。
@@ -194,7 +195,7 @@ PLAN への依存をこれ以上増やさない**。この節の規則は、PLAN
   同じ例外を適用する。PR 本文に例外の根拠を書く。
 - **PLAN を宛先とする既存の指示の読み替え**: §運用規律の再締結 1 や §PR スコープ規律 2 などが
   「PLAN の設計判断節」へ方式を freeze すると書く箇所は、凍結中は宛先を設計文書 (`docs/design/` /
-  `docs/test-design/`) または Issue に読み替える。工程 (実装前の pair-freeze、改訂の cross-review) は
+  `docs/test-design/`) に読み替える (Issue は参照の置き場であり、契約本文を書かない)。工程 (実装前の pair-freeze、改訂の cross-review) は
   そのまま守る。
 - 既存 PLAN の削除・物理撤去は本節の範囲外 (#1078 の後続段で行う)。
 
@@ -205,8 +206,8 @@ Codex はこれらの規律を一度も受け取っていなかった)。`rule-d
 
 - 新規 PLAN は route certificate (`route_signal` + `route_mode`) を持ち、mode が `kind` を
   許すこと (SSoT: `src/schema/route-filing.ts`)。
-- **draft PLAN の `generates` に既存ファイルを書かない** (`merged-plan-status` /
-  `duplicate-artifact-ownership` が fail-close する)。宣言は実装 PR の confirm と同時。
+- **draft PLAN の `generates` に既存ファイルを書かない** (`merged-plan-status` が
+  fail-close する)。宣言は実装 PR の confirm と同時。
 - `requires` は confirmed / completed のみ。draft への依存は `references` へ。
 - `kind=add-impl` は Reverse 対必須。conditional kind は Reverse 対か
   `backprop_decision: not_required` + 理由 (純修理なら not_required、新契約なら Reverse 対)。
@@ -349,11 +350,13 @@ close された)。新規機構は作らず、既存工程の遵守を規律と�
    PLAN へ回す。非著者 reviewer は commit の順と Refactor commit の `tests/` 差分 0 を確かめる。
    手順の正本は `skills/test-driven-development.md`。
 
-6. **WIP 上限と共有文書の直列化** (PO 指摘 2026-10-14): 自 lane の open PR に FLAG・CI 赤・衝突が
-   残っている間は、新しい PR を出さない。`docs/test-design/harness/L7-unit-test-design.md`、
+6. **WIP 上限 (slot 単位) と共有文書の直列化** (PO 指摘 2026-10-14、2026-10-23 に slot 単位へ改訂): WIP は
+   lane 全体ではなく slot ごとに数える。自分の open PR に FLAG・CI 赤・衝突が残っている slot は、是正が済むまで
+   新しい作業を拾わない (他の slot は動き続けてよい)。`docs/test-design/harness/L7-unit-test-design.md`、
    `function-spec.md`、`tests/gate-static.test.ts` のような共有の文書・テストを変える作業は直列にし、
-   同じファイルを並行する複数の PR に分けない (1 本 merge するたびに残りが衝突して再検になる)。
-   並列にしてよいのは、変更するファイルが重ならない範囲だけである。初回の FLAG 率が高い作業は、worker を
+   同じファイルを並行する複数の PR に分けない (1 本 merge するたびに残りが衝突して再検になる)。この直列化は
+   直列ボックスで実現する。並列にしてよいのは、変更するファイルが重ならない範囲だけである。ボックスと slot の
+   運用 (実装・control・検収の全 lane に同じ型を当てる) は `docs/governance/github-issue-hierarchy.md` §6.1。初回の FLAG 率が高い作業は、worker を
    増やす前に手順書を直す。
 
 この規律から外れた PR は内容の当否に関わらず FLAG (process violation) とする

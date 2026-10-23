@@ -47,3 +47,120 @@ GitHub の正式な親子関係で追跡する。`Related #N` や本文中の `P
 
 監査は新規 Issue を自動生成しない。既存 Issue の親子設定、canonical successor、close 理由を
 先に整理する。
+
+## 6. 作業チケット (暫定定義)
+
+PO 判断 (2026-10-22、2026-10-23 改訂)。チケットの種類は、駆動モデル (route mode、
+`src/schema/route-filing.ts`) の名前を継承する。汎用の `Work` チケットは置かず、Issue Form は mode ごとに
+1 つとする。通常の Forward 作業は、使い捨ての `Forward` チケット (`.github/ISSUE_TEMPLATE/forward.yml`)
+で運ぶ。チケットの役目は、作業 (task) と経過 (episode) を見える状態にすることだけである。
+
+| 駆動モデル (mode) | Issue Form |
+|---|---|
+| forward | `forward.yml` |
+| reverse | `reverse.yml` |
+| redesign | `redesign.yml` |
+| recovery | `recovery.yml` |
+| incident | `incident.yml` |
+| (対応 mode 不明。route-filing に `nfr` の mode は無い) | `nfr-failure.yml` |
+| discovery / scrum / refactor / retrofit / add-feature / research / design-bottomup / version-up / verify | 未作成 (使う時点で足す) |
+
+次の「本文は 4 項目」は Forward に適用する。他の種類は、それぞれのフォームの項目を使う。
+
+- **本文は 4 項目**: 上流の設計 revision / 引き渡し物 / 検証の対 / 完了条件。
+  上流の設計 revision は設計文書 1 本につき 1 行、`<path>@<commit>` で書く。
+  sha256 は暫定の間は任意とする。
+- **契約を書かない**: 方式判断・API / schema・受入条件の本文・不変条件はチケットに書かず、
+  `docs/design/` または `docs/test-design/` に置いて path と revision で指す。
+  使い捨ての記録へ契約文を写すと、正本とずれた複製が残るためである。
+- **経過の記録**: 何をしたか、何が起きたかは、Issue コメントと紐づく PR で残す。
+- **親子関係と close**: 第 2〜4 節の規則 (親子・close 条件) をそのまま使う。
+- **暫定である**: 機械検査 (lint や harness.db への Issue projection) は今は足さない。
+  運用して不足を計測してから追加する。改善はこの節の改訂で行う。
+
+### 6.1 並列ボックスと直列ボックス (PO 判断 2026-10-23)
+
+作業は 2 つのボックスに溜め、lane が遊ばず、1 件ずつの受け渡しも要らない状態にする。この型は
+実装 lane (Codex) だけでなく、control lane (Claude) と検収 lane (closing review。Codex 著は Claude Opus、
+Claude 著は Codex Sol) にも同じに当てる。特定の backlog の話ではなく、一般の運用形である。
+
+- **並列ボックス**: 順序を問わないチケットの集まり。空いた slot は、どれでも 1 件拾う。
+- **直列ボックス**: A→B→C と鎖でつないだチケット。前のチケットが close して初めて、次が拾える。
+- **slot**: どの lane も最大 N slot を同時に動かす。各 slot は自分の worktree (または作業枠) を持つ。
+  例として Codex の N は 3 (subagent の上限)。control と検収の N は運用値として記録し、ここでは固定しない。
+
+v4 候補 (`docs/governance/candidates/ut-tdd-concept-v4.0.md`) のチケット発行 (原子チケットが lease を持ち、
+依存が順序を決め、WIP 上限が量を縛る) を、手運用で先に試すものである。
+
+**GitHub 上の表現** (既存機能だけを使う):
+
+- チケットは駆動モデルのチケット (例: `Forward`)。ボックス・lane・lease は全ての種類に当てる。受け手 lane はラベル `lane:codex` / `lane:claude` で示す。検収のチケットには
+  `ticket:review` を付ける。
+- 直列は GitHub の issue dependency「blocked by」で表す。並列は、open な blocker が無いものである。
+- **拾える**条件は、open、lane ラベルあり、有効な lease なし (下記)、open な blocker なし、の全てである。
+
+**lease**: 正本は claim コメントである。claim コメントは slot 番号と開始時の base commit を書いた 1 件で、
+これが lease そのものになる。assignee は表示用の印であり、排他の鍵ではない (同じ lane の slot は
+同じ GitHub アカウントを共有することが多く、assignee は複数置けるため、assignee では勝者が決まらない)。
+1 チケット = 1 slot = 1 worktree。
+
+- **勝者**: 直近の release コメントより後に付いた claim コメントのうち、GitHub のコメント順で最も早いものが勝つ。
+- **着手前確認**: slot は claim を投稿した後でコメントを読み直し、自分の claim が最も早い有効なものである
+  ときだけ着手する (worktree を切る)。そうでなければ着手しない。
+- **敗者の撤退**: 負けた slot は撤退コメントを 1 件投稿するだけにし、assignee には触れない
+  (敗者が外すと、勝者の表示を消してしまう)。
+- **解放は所有者だけ**: 勝った claim の slot だけが release コメントを投稿し、他に有効な lease が無ければ
+  assignee を外す。競合が続くようなら、control lane が claim を直列に割り当ててよい。
+
+**空いた slot が拾う順**: (1) その lane 自身の open PR にある FLAG・CI 赤・衝突の是正 (別チケットにせず、その PR の作業チケットで行う)、
+(2) 直列の鎖の先頭、(3) 並列のチケット。
+
+**並列ボックスへの入れ方**: 変更する path が、他の open な並列チケットと重ならないこと。かつ共有の面に
+触れないこと (例: `package.json` / lock、`.github/workflows/`、`docs/test-design/harness/L7-unit-test-design.md` や
+`function-spec.md`、`tests/gate-static.test.ts` のような共有 test-design)。当てはまらないものは直列の鎖に入れる。
+
+**空きは問題である**: slot の空きを、普通の待ちとして扱わない。どちらも問題として Issue コメントに記録する。
+
+- 拾えるチケットがあるのに slot が空いている = **拾い漏れ**。その lane の問題である。
+- 拾えるチケットが無くて slot が空いている = **供給不足**。チケットを出す側の問題である。実装 lane と検収
+  lane に出すのは control lane、control lane 自身のチケットを出すのも control lane である。
+
+**検収もチケットにする**: closing review の依頼 1 本 (exact head ごとに 1 本) が、検収 lane の
+チケット 1 件である。独立した PR の review は並列にする。
+review request を出すのは従来どおり control lane だけで、チケットを起票することが、その依頼の見える記録になる。
+
+- **FLAG の是正は別チケットにしない**: 同じ PR 内の是正は、同じ作業チケットで author lane が行う (上の拾う順 (1))。
+- **検収チケットの close 条件 (第 2〜4 節の例外)**: 検収チケットは PR の merge ではなく、その exact head の
+  verdict が記録された (既存の review custody に verdict と receipt が残った) ときに close する。FLAG の
+  verdict でも close する。PR の merge を待つと、是正 PR の merge → 再検 → receipt → 同じ PR の merge で
+  循環するためである。作業チケットの close は従来どおり、PR の merge (または放棄) である。
+- **再検**: author が是正 head を push した後で、control lane が新しい exact head の検収チケットを新たに
+  起票する (1 head に 1 本)。再検が直列だというのは、是正 head ができてから発行するという意味であり、
+  是正チケットに blocked by されるという意味ではない。
+review の custody (request → verdict → receipt) は既存の経路のままで、チケットは custody の代わりにならない。
+
+**CI の順序と流れ**: CI は共有の限られた資源である。直列ボックスは CI の順序も決める。共有の面に触れる
+チケットは鎖でつなぎ、1 本の merge が他の CI と review を無効にしない (rebase して再実行にならない) ようにする。
+同時に動かす並列チケットの数は、slot 数に加えて CI の余力でも上限を持つ。
+
+**control lane の務め**: lane ごとに、拾えるチケットの数が slot 数以上になるよう起票して溜め、下回ったら補充する。
+
+**worktree と rebase** (PO 判断 2026-10-23): チケットの lease と close が、worktree の切り出しと畳みも決める。
+
+- **切る = lease の取得**: slot は claim コメントに base commit を書き、着手前確認に勝った後で、現在の
+  origin/main から自分の worktree を切る。1 チケット = 1 worktree で、他のチケットの worktree を使い回さない。
+- **畳む = チケットの close**: PR が merge された (またはチケットが close した) ら、slot はすぐ worktree と
+  branch を消す (`git worktree remove` と branch 削除。切った側が畳む)。close したのに worktree が残っていれば、
+  片付け漏れである。放棄するチケットも、lease を解放して worktree を畳む (未 merge の commit があれば branch は残す)。
+- **rebase は直列の鎖が減らす**: 共有の面に触れるチケットは鎖でつなぐので、後続は前のチケットが merge した後の
+  main から切る。そのため rebase が要らない。並列のチケットは path が重ならないので、通常は同じく要らない。
+  rebase するのは GitHub が CONFLICTING を返したときだけである (CLAUDE.md §FLAG 後の限定是正と merge 8)。
+  並列のチケットで起きたら、並列ボックスへの入れ方が誤っていた印なので、問題として記録し、以後は鎖でつなぐ。
+  rebase した後は、新しい head に review request を 1 本だけ出す。
+
+**将来の管理知能**: v4 の管理知能 (ADR-001 決定 4 により proposal-only の別 process) は、lane ごとに
+拾える直列・並列チケットの数と空き slot の数を算出し、それに応じてチケットを発行する (実装・control・検収とも。チケットは駆動モデルの種類ごとに発行する)。同じチケットの状態から、worktree の切り出しと畳み、
+rebase が要る合図も出す。
+それまでは control lane が手でこの数を数え、Issue コメントの時刻から取った記録を、機構化の計測入力にする。
+
+**暫定である**: 運用して計測し、この節の改訂で改善する。
