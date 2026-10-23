@@ -10,14 +10,15 @@ next_pair_freeze: L7
 issue: 1275
 ---
 
-> **L6 contract marker**: `collectDeliveryRegistry(input) => DeliveryRegistry`、`validateDeliveryInventoryManifest(manifest, registry) => DeliveryInventoryValidation`、`observeConsumerInventory(consumerRoot, runCli) => ObservedInventory`、`diffDeliveryInventory(manifest, observed) => DeliveryInventoryDiff` は unit-test-granularity contract である。DbC (pre / post / invariant) は §8 にまとめる。oracle は `docs/test-design/harness/L7-pack-delivery-inventory-diff-test-design.md` の `CANDIDATE-U-PACKINV-001〜016` が固定する。
+> **L6 contract marker**: `collectDeliveryRegistry(input) => DeliveryRegistry`、`validateDeliveryInventoryManifest(manifest, registry) => DeliveryInventoryValidation`、`observeConsumerInventory(consumerRoot, runCli) => ObservedInventory`、`diffDeliveryInventory(manifest, observed) => DeliveryInventoryDiff` は unit-test-granularity contract である。DbC (pre / post / invariant) は §8 にまとめる。oracle は `docs/test-design/harness/L7-pack-delivery-inventory-diff-test-design.md` の `CANDIDATE-U-PACKINV-001〜018` が固定する。
 
 # Pack の在庫差分 — source と導入後 consumer の比較 (issue #1275)
 
 ## 1. 目的と範囲
 
 Pack#13 / #1072 / #676 では、source にある配送物 (skill・テンプレートなど) が導入後の consumer に届かず、
-それを検出する検査が無かった。本書は、source 側の在庫 (command / hook / skill / template) と導入後の consumer が
+それを検出する検査が無かった。本書は、source 側の在庫 (command / hook / skill / template。template には setup が
+consumer へ書く adapter / GitHub 雛形の配送先を含む) と導入後の consumer が
 実際に持つものを比べ、**除外理由のある差だけを許し、それ以外の差を fail-close にする**契約を固める
 (決定の出所: #961 comment 6356415105、親 #676)。
 
@@ -80,17 +81,24 @@ source 側検査が Red にする。
       { "id": "codex:agent-guard", "command": "<codexCommandString(wrapperHookArgs(\"agent-guard\")) の値>" }
     ],
     "excluded": [
-      { "id": "codex:subagent-stop", "reason": "Codex に SubagentStop surface が無い" },
-      { "id": "codex:claude-memory-wake", "reason": "Claude Stop hook の asyncRewake 専用" }
+      { "id": "codex:claude-memory-wake", "command": "<codexCommandString(wrapperHookArgs(\"claude-memory-wake\")) の値>", "reason": "Claude Stop hook の asyncRewake 専用" },
+      { "id": "codex:subagent-stop", "command": "<codexCommandString(wrapperHookArgs(\"subagent-stop\")) の値>", "reason": "Codex に SubagentStop surface が無い" }
     ]
   },
   "template": {
-    "expected": ["authoring:docs/templates/plan/design/template.md", "vmodel-slot:<doc_type_id>", "vmodel-optional:ZIP-DOC-NNN"],
-    "excluded": [{ "id": "vmodel-file:docs/templates/vmodel/<path>", "reason": "<理由>" }]
+    "expected": ["authoring:docs/templates/plan/design/template.md", "setup:.claude/agents/qa-test.md", "setup:.github/PULL_REQUEST_TEMPLATE.md", "vmodel-optional:ZIP-DOC-NNN", "vmodel-slot:<doc_type_id>"],
+    "excluded": [
+      { "id": "setup-template:docs/templates/github/common/pack-harness-check.yml", "reason": "Pack repo 自身の CI。setup は consumer へ書かない" },
+      { "id": "setup-template:docs/templates/github/team/CODEOWNERS", "reason": "team (0-B) 専用。canary の setup は --solo (0-A)" },
+      { "id": "vmodel-file:docs/templates/vmodel/<path>", "reason": "<理由>" }
+    ]
   }
 }
 ```
 
+- hook の `excluded` は `expected` と同じ invocation (`claude` は `command` + `args`、`codex` は `command` 文字列) を
+  持つ。runner は source を import できないので、除外した hook が consumer に現れたときに同じ id へ復元するには
+  invocation が manifest に要る (§5 の hook 観測、§6 の `inventory-excluded-present`)。
 - `excluded[].reason` は前後の空白を除いて 1 文字以上の文字列とする。除外表はこの manifest の中だけに置き、
   別ファイルや TS 定数に二重に持たない。
 - `expected` / `excluded` は各 kind の中で id の昇順に並べる (差分を読みやすくするため。順序違いは
@@ -105,15 +113,26 @@ source 側検査が Red にする。
 | skill | `git ls-files skills` のうち `.md` / `.yaml` (`.gitkeep` を除く) | `skills/` からの相対 path |
 | command | `git ls-files .claude/commands` のうち `*.md` | 拡張子を除いた file 名 |
 | hook | `src/lint/project-hook.ts` の `REQUIRED` × provider `claude` / `codex` | `<provider>:<REQUIRED id>` |
-| template | (a) `AUTHORING_TEMPLATE_ARTIFACT_PATHS` から manifest 自身を除いたもの、(b) port index `docs/templates/vmodel/README.md` の slot source 行と optional 行、(c) `git ls-files docs/templates/vmodel` のうち (b) のどの行からも参照されない file | (a) `authoring:<path>`、(b) `vmodel-slot:<doc_type_id>` / `vmodel-optional:<ZIP-DOC-NNN>`、(c) `vmodel-file:<path>` |
+| template | (a) `AUTHORING_TEMPLATE_ARTIFACT_PATHS` から manifest 自身を除いたもの、(b) port index `docs/templates/vmodel/README.md` の slot source 行と optional 行、(c) `git ls-files docs/templates/vmodel` のうち (b) のどの行からも参照されない file、(d) `src/setup/templates.ts` の `COMMON_FILES` のうち、雛形が tracked file で裏付けられる entry (雛形名 `adapter/<rest>` は `docs/templates/adapter/<rest>`、それ以外は `docs/templates/github/<雛形名>` が `trackedPaths` にあるもの)、(e) `git ls-files docs/templates/adapter docs/templates/github` のうち (d) のどの entry からも参照されない file | (a) `authoring:<path>`、(b) `vmodel-slot:<doc_type_id>` / `vmodel-optional:<ZIP-DOC-NNN>`、(c) `vmodel-file:<path>`、(d) `setup:<consumer 側の path>` (`/` 区切りに正規化)、(e) `setup-template:<path>` |
 
 (c) は登録簿には入るが、consumer への配送単位ではないので `excluded` に理由付きで置くか、port index に行を
-足すかのどちらかを求める。`docs/templates/adapter/**` と `docs/templates/github/**` は setup が書く adapter /
-GitHub 雛形の原本であり、consumer での実在は command / hook の kind と `consumer-setup-smoke` の必須 file で
-観測するので、template の登録簿には入れない。
+足すかのどちらかを求める。
+
+`docs/templates/adapter/**` と `docs/templates/github/**` は setup が consumer へ書く adapter / GitHub 雛形の
+原本であり、(d) / (e) として**配送先との対応を登録して観測する**。範囲外として一括で除外する案は採らない。
+既存の観測はこれらを網羅しないためである: `consumer-setup-smoke` の必須 file (`SETUP_SMOKE_REQUIRED_FILES`) は
+wrapper と設定 / ルールの 7 file だけで、`.claude/agents/*.md`、`.github/workflows/*.yml`、
+`.github/ISSUE_TEMPLATE/*.md`、`.github/PULL_REQUEST_TEMPLATE.md` などは command / hook の観測にも入らない。
+また `buildCleanDistributionPlan` の必須 path は `adapter/` の雛形だけで `github/` を含まず、setup は雛形が
+無ければ `BUILTIN_GITHUB_TEMPLATES` の内蔵版で書くので、tar 側の検査だけでは consumer に届いたかが分からない。
+配送先の対応は setup 自身の正本 `COMMON_FILES` から作り、別の表を持たない。(e) は雛形が tracked なのに setup が
+consumer へ書かない file (例: Pack repo 自身の CI `pack-harness-check.yml`、team (0-B) 専用の `team/*`) であり、
+`excluded` に理由付きで置くことを求める。雛形を足して `COMMON_FILES` に載せ忘れると、(e) が
+`registry-unclassified` で Red になる。
 
 `collectDeliveryRegistry(input) => DeliveryRegistry` は `trackedPaths` (git の tracked path 一覧)、
-`portIndex` (README.md の本文) を受け取り、上表の id 集合と、hook ごとの期待 invocation
+`portIndex` (README.md の本文) を受け取り、source の定数 `REQUIRED` / `COMMON_FILES` /
+`AUTHORING_TEMPLATE_ARTIFACT_PATHS` と合わせて、上表の id 集合と、hook ごとの期待 invocation
 (`claude`: `{ command: "node", args: wrapperHookArgs(id) }`、`codex`: `codexCommandString(wrapperHookArgs(id))`)
 を返す。file system・環境変数・build 出力を読まない。
 
@@ -128,7 +147,7 @@ GitHub 雛形の原本であり、consumer での実在は command / hook の ki
 | `exclusion-stale` | `excluded` にあるが登録簿に無い |
 | `exclusion-reason-missing` | `reason` が無い、文字列でない、または空白だけ |
 | `classified-twice` | 同じ id が `expected` と `excluded` の両方にある、またはどちらかに 2 回以上ある |
-| `hook-command-drift` | hook の `expected` の `command` / `args` が登録簿の期待 invocation と一致しない |
+| `hook-command-drift` | hook の `expected` / `excluded` の `command` / `args` が登録簿の期待 invocation と一致しない (invocation の欠落も含む) |
 
 この検査は、実 repo の tracked path と実際の manifest を入力にする owner test で CI に載る
 (`coding ≠ substance`。新しい doctor check にはしない)。
@@ -150,9 +169,19 @@ GitHub 雛形の原本であり、consumer での実在は command / hook の ki
 | skill | `.ut-tdd/assets/skills/` 配下の通常 file の相対 path (symlink は観測値に入れず `inventory-unexpected` にする) |
 | command | `.claude/commands/*.md` の file 名 (拡張子を除く) |
 | hook | `.claude/settings.json` の各 hook の `{ command, args }` と、`.codex/hooks.json` の各 hook の `command` 文字列。manifest の `expected` / `excluded` の invocation と完全一致したものを、その id として観測する。どれにも一致しない hook は id `unknown:<provider>:<表示文字列>` で観測する |
-| template | `authoring:<path>` は install phase の `tar_paths` に含まれるか。`vmodel-slot:<id>` / `vmodel-optional:<id>` は id ごとに `vmodel template --slot <id>` / `--optional <id>` に `--dry-run --json` を付けて wrapper で起動し、exit 0 で `written` と `skipped` の合計がちょうど 1 件なら観測する。`vmodel-file:` は consumer への配送単位ではないので観測しない |
+| template | `authoring:<path>` は install phase の `tar_paths` に含まれるか。`setup:<path>` は consumer root のその path が通常 file (symlink でない) か。`setup-template:` は配送単位ではないので観測しない。`vmodel-slot:<id>` / `vmodel-optional:<id>` は id ごとに `vmodel template --slot <id>` / `--optional <id>` に `--dry-run --json` を付けて wrapper で起動し、exit 0 で `written` と `skipped` の合計がちょうど 1 件なら観測する。`vmodel-file:` は consumer への配送単位ではないので観測しない |
 
-`--dry-run` は書き込みをしないので、`consumer_head` の drift 検査には影響しない。
+観測は consumer へ書き込まない。`vmodel template` は必ず `--dry-run` を付けて起動する。既存の
+`consumer-head-drift-since-install` は verify の開始時にしか検査せず、file を新しく書いても HEAD は変わらないので、
+この不変条件の検出には使えない。無書き込みはテスト設計の oracle (argv の `--dry-run` と、観測の前後の
+consumer file 状態の比較) で固定する。
+
+実行順の帰結: 観測は `doctor-setup-smoke` と `doctor-consumer-profile` の後に走る。runner の `runCli` は非 0 終了で
+即 throw するので、`consumer-setup-smoke` の固定一覧 (`SETUP_SMOKE_REQUIRED_FILES`、`SETUP_SMOKE_SHARED_INVOCATIONS`、
+claude の `subagent-stop`) に入る欠落は、在庫比較に届く前に doctor の step で verify を失敗させる。在庫比較が
+verify の失敗理由になるのは、doctor の固定一覧に入らない欠落 (例: claude の `claude-memory-wake` の hook、skill、
+`setup:.claude/agents/*.md`) である。関数単体の `observeConsumerInventory` / `diffDeliveryInventory` は、
+doctor の固定一覧に入る欠落も同じく finding にする (doctor の先行は二重の網であり、比較の契約を狭めない)。
 
 ## 6. 比較と失敗の出力
 
@@ -187,7 +216,7 @@ GitHub 雛形の原本であり、consumer での実在は command / hook の ki
 
 | 関数 | pre | post | invariant |
 | --- | --- | --- | --- |
-| `collectDeliveryRegistry` | `trackedPaths` は repo 相対で `/` 区切り | 4 kind の id 集合を返す。同じ入力なら同じ出力 | build 出力・作業ツリー・環境変数を読まない |
+| `collectDeliveryRegistry` | `trackedPaths` は repo 相対で `/` 区切り | 4 kind の id 集合と、hook ごとの期待 invocation を返す。同じ入力なら同じ出力 | build 出力・作業ツリー・環境変数を読まない |
 | `validateDeliveryInventoryManifest` | registry は `collectDeliveryRegistry` の出力 | `ok` ⇔ finding 0 件。`ok` なら kind ごとに `expected ∪ excluded = 登録簿`、`expected ∩ excluded = ∅`、全 `reason` が非空 | 例外で落ちず、不正な入力も finding で返す |
-| `observeConsumerInventory` | install evidence が検証済みで、source path は forbidden | 4 kind の観測集合を返す | consumer へ書き込まない (`vmodel template` は `--dry-run` だけ) |
+| `observeConsumerInventory` | install evidence が検証済みで、source path は forbidden | 4 kind の観測集合を返す。hook は manifest の `expected` / `excluded` の invocation と完全一致すれば、その id で返す | consumer へ書き込まない (`vmodel template` は `--dry-run` だけ。観測の前後で consumer の file 状態が同じ) |
 | `diffDeliveryInventory` | manifest は tar から取り出した値 | `ok` ⇔ finding 0 件 | 差を許す経路は `excluded` だけで、理由の無い除外は許さない |
