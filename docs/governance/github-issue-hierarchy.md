@@ -50,9 +50,22 @@ GitHub の正式な親子関係で追跡する。`Related #N` や本文中の `P
 
 ## 6. 作業チケット (暫定定義)
 
-PO 判断 (2026-10-22)。通常の Forward 作業は、使い捨ての作業チケット (Issue Form `Work`、
-`.github/ISSUE_TEMPLATE/work.yml`) で運ぶ。チケットの役目は、作業 (task) と経過 (episode) を
-見える状態にすることだけである。
+PO 判断 (2026-10-22、2026-10-23 改訂)。チケットの種類は、駆動モデル (route mode、
+`src/schema/route-filing.ts`) の名前を継承する。汎用の `Work` チケットは置かず、Issue Form は mode ごとに
+1 つとする。通常の Forward 作業は、使い捨ての `Forward` チケット (`.github/ISSUE_TEMPLATE/forward.yml`)
+で運ぶ。チケットの役目は、作業 (task) と経過 (episode) を見える状態にすることだけである。
+
+| 駆動モデル (mode) | Issue Form |
+|---|---|
+| forward | `forward.yml` |
+| reverse | `reverse.yml` |
+| redesign | `redesign.yml` |
+| recovery | `recovery.yml` |
+| incident | `incident.yml` |
+| (対応 mode 不明。route-filing に `nfr` の mode は無い) | `nfr-failure.yml` |
+| discovery / scrum / refactor / retrofit / add-feature / research / design-bottomup / version-up / verify | 未作成 (使う時点で足す) |
+
+次の「本文は 4 項目」は Forward に適用する。他の種類は、それぞれのフォームの項目を使う。
 
 - **本文は 4 項目**: 上流の設計 revision / 引き渡し物 / 検証の対 / 完了条件。
   上流の設計 revision は設計文書 1 本につき 1 行、`<path>@<commit>` で書く。
@@ -81,7 +94,7 @@ v4 候補 (`docs/governance/candidates/ut-tdd-concept-v4.0.md`) のチケット�
 
 **GitHub 上の表現** (既存機能だけを使う):
 
-- チケットは `Work` Issue。受け手 lane はラベル `lane:codex` / `lane:claude` で示す。検収のチケットには
+- チケットは駆動モデルのチケット (例: `Forward`)。ボックス・lane・lease は全ての種類に当てる。受け手 lane はラベル `lane:codex` / `lane:claude` で示す。検収のチケットには
   `ticket:review` を付ける。
 - 直列は GitHub の issue dependency「blocked by」で表す。並列は、open な blocker が無いものである。
 - **拾える**条件は、open、lane ラベルあり、有効な lease なし (下記)、open な blocker なし、の全てである。
@@ -146,7 +159,7 @@ review の custody (request → verdict → receipt) は既存の経路のまま
   rebase した後は、新しい head に review request を 1 本だけ出す。
 
 **将来の管理知能**: v4 の管理知能 (ADR-001 決定 4 により proposal-only の別 process) は、lane ごとに
-拾える直列・並列チケットの数と空き slot の数を算出し、それに応じてチケットを発行する (実装・control・検収とも)。同じチケットの状態から、worktree の切り出しと畳み、
+拾える直列・並列チケットの数と空き slot の数を算出し、それに応じてチケットを発行する (実装・control・検収とも。チケットは駆動モデルの種類ごとに発行する)。同じチケットの状態から、worktree の切り出しと畳み、
 rebase が要る合図も出す。
 それまでは control lane が手でこの数を数え、Issue コメントの時刻から取った記録を、機構化の計測入力にする。
 

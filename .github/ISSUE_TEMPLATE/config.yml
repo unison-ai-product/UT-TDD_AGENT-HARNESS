@@ -1,3 +1,3 @@
-# 通常の Forward 作業は Work フォーム (docs/governance/github-issue-hierarchy.md §6) で起票する。
+# 通常の Forward 作業は Forward フォーム (docs/governance/github-issue-hierarchy.md §6) で起票する。
 # それ以外のフォームは Forward 外 episode 用に限定するため blank issue を禁止する。
 blank_issues_enabled: false
