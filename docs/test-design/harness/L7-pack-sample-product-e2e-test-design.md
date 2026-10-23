@@ -3,6 +3,7 @@ title: "L7 pack sample product e2e test design"
 layer: L7
 executed_at_layer: L7
 artifact_type: test_design
+pair_artifact: docs/design/harness/L6-function-design/pack-sample-product-e2e.md
 status: confirmed
 issue: 1276
 updated: 2026-10-23
