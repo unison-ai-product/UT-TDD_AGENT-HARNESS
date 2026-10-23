@@ -11,7 +11,7 @@ created: 2026-10-23
 issue: 1300
 ---
 
-> **L6 contract marker**: `extractVerdict(logText: string) => Outcome<VerdictExtraction>` (`refactorJudgement` を足す)、`evaluateRefactorJudgementGate(changes: PlanChange[], entries: ReviewDispatchEntry[]) => RefactorJudgementGateDecision`、`readPullRequestChanges(pr: number, runGh: ExecFileSync) => PlanChange[]` は unit-test 粒度の contract である。DbC は §10 にまとめる。oracle は `docs/test-design/harness/L7-merge-gate-refactor-stage-test-design.md` の `CANDIDATE-U-REFACTORGATE-048`〜`077` が固定する (正式 ID `U-REFACTORGATE-*` への昇格は設計書保護 gate の順序で入れる)。本書は契約だけであり、実装は Codex lane の実装チケット (Red → 昇格 → Green → Refactor) で別に入れる。
+> **L6 contract marker**: `extractVerdict(logText: string) => Outcome<VerdictExtraction>` (`refactorJudgement` を足す)、`evaluateRefactorJudgementGate(changes: PlanChange[], entries: ReviewDispatchEntry[]) => RefactorJudgementGateDecision`、`readPullRequestChanges(pr: number, runGh: ExecFileSync) => PlanChange[]` は unit-test 粒度の contract である。DbC は §10 にまとめる。oracle は `docs/test-design/harness/L7-merge-gate-refactor-stage-test-design.md` の `CANDIDATE-U-REFACTORGATE-048`〜`078` が固定する (正式 ID `U-REFACTORGATE-*` への昇格は設計書保護 gate の順序で入れる)。本書は契約だけであり、実装は Codex lane の実装チケット (Red → 昇格 → Green → Refactor) で別に入れる。
 
 # merge gate の Refactor 判定欄 - 機能設計 (Issue #1300)
 
@@ -99,7 +99,7 @@ REFACTOR: none-rejected
 
 `changes` は adapter `readPullRequestChanges(pr, runGh)` が次で読む。
 
-- `gh api repos/{owner}/{repo}/pulls/<pr>/files --paginate` の各要素の `filename` / `previous_filename` / `status` を `PlanChange` に写す。`status === "renamed"` で `previous_filename` が文字列なら `{ kind: "renamed", from, path }`、`removed` は `deleted`、`added` は `added`、それ以外は `modified` とする。
+- `gh api repos/{owner}/{repo}/pulls/<pr>/files --paginate` の各要素の `filename` / `previous_filename` / `status` を `PlanChange` に写す。`status === "renamed"` なら `{ kind: "renamed", from: previous_filename, path }`、`removed` は `deleted`、`added` は `added`、それ以外は `modified` とする。`renamed` の `previous_filename` が無い・文字列でない・空文字のときは `invalid_response` で throw する (rename 元を確かめられないまま `modified` に落とすと、`src/` からの移動が対象から漏れる)。
 - 要素数が 3000 以上なら `file_list_truncated` で throw する (GitHub はこの件数で打ち切る。打ち切られた一覧で「対象でない」とは言えない)。
 - 応答が配列でない、要素の `filename` が文字列でない、`status` が文字列でない: `invalid_response` で throw する。
 
@@ -132,7 +132,13 @@ pr merge — DENY pr=#2002 head=… reason=refactor_judgement_rejected:none-reje
 pr merge — DENY pr=#2003 head=… reason=refactor_target_unavailable:gh_failed:HTTP 502
 ```
 
-判定欄の導入より前に verdict を受けた open な実装 PR は `refactor_judgement_missing` で止まる。猶予は設けない。同じ exact HEAD の review をやり直し、判定欄を持つ verdict を受ける (例外を作ると、記録の無い merge が残る)。
+判定欄の導入より前に verdict を受けた open な実装 PR は `refactor_judgement_missing` で止まる。猶予は設けない (例外を作ると、記録の無い merge が残る)。
+
+回復は **HEAD を進めて再レビューする** 経路だけとする。同じ exact HEAD での再レビューは取らない: 同じ identity の terminal receipt がある間は `issueReviewRequest` / `beginReviewAttempt` が `review_receipt_already_exists` で拒否し、別 identity で足しても本 gate は exact HEAD の verdict entry を全部見るので、旧 entry の `refactor_judgement_missing` が残るためである。手順は次のとおり。
+
+1. author family が PR に新しい commit を積む (変更が無ければ `git commit --allow-empty` で、理由を commit message に書く。amend / force push はしない)。
+2. control lane が新 HEAD に review request を 1 本出し、判定欄を持つ verdict を受ける。
+3. `entriesForHead` は新 HEAD の entry だけなので、旧 HEAD の判定欄の無い receipt は判定に入らない。旧 receipt は custody にそのまま残る (書き換え・削除をしない)。
 
 ## 7. 失敗時の拒否 (fail-close)
 
@@ -204,4 +210,4 @@ export function readPullRequestChanges(pr: number, runGh: ExecFileSync): PlanCha
 
 ## 12. oracle 対応
 
-`CANDIDATE-U-REFACTORGATE-048`〜`077` を `docs/test-design/harness/L7-merge-gate-refactor-stage-test-design.md` に置く (`001`〜`047` は案 A とともに撤回し、番号は再利用しない)。実テストは `tests/review-verdict-contract.test.ts` (抽出と出力契約)、`tests/review-attestation.test.ts` (receipt への写し)、`tests/review-dispatch.test.ts` (receipt の検証と entry への写し)、`tests/refactor-judgement-gate.test.ts` (gate と adapter)、`tests/review-merge-gate.test.ts` (`runPrMerge` への組み込み) に置く。
+`CANDIDATE-U-REFACTORGATE-048`〜`078` を `docs/test-design/harness/L7-merge-gate-refactor-stage-test-design.md` に置く (`001`〜`047` は案 A とともに撤回し、番号は再利用しない)。実テストは `tests/review-verdict-contract.test.ts` (抽出と出力契約)、`tests/review-attestation.test.ts` (receipt への写し)、`tests/review-dispatch.test.ts` (receipt の検証と entry への写し)、`tests/refactor-judgement-gate.test.ts` (gate と adapter)、`tests/review-merge-gate.test.ts` (`runPrMerge` への組み込み) に置く。

@@ -76,7 +76,7 @@ issue: 1300
 | `CANDIDATE-U-REFACTORGATE-063` | `changes` が `scripts/b.mjs` の `modified` / `src/old.ts` → `lib/new.ts` の `renamed` (別ケース)、entry は判定欄なし | 各ケース `target: true`、`refactor_judgement_missing` | `scripts/` を外す / rename 元を数えない (`classifyPullRequestChanges` を使わず独自に判定する) |
 | `CANDIDATE-U-REFACTORGATE-064` | fake `gh api` が `filename` / `previous_filename` / `status` の 4 要素 (`added` / `removed` / `renamed` / `modified`) を返す | 呼び出し引数に `pulls/<pr>/files` と `--paginate`。戻り値は `added` / `deleted` / `renamed` (`from` 付き) / `modified` | `--paginate` を付けない / `previous_filename` を捨てる |
 | `CANDIDATE-U-REFACTORGATE-065` | 応答の要素数が 3000 / 2999 (別ケース) | 3000 は `file_list_truncated` で throw、2999 は成功 | 上限の検査を削除する / 境界を `>` にする |
-| `CANDIDATE-U-REFACTORGATE-066` | 応答が配列でない / 要素の `filename` が数値 / `status` が無い (別ケース) | 各ケース `invalid_response` で throw | 型検査を削除する |
+| `CANDIDATE-U-REFACTORGATE-066` | 応答が配列でない / 要素の `filename` が数値 / `status` が無い / `status: "renamed"` で `previous_filename` が無い / 数値 / 空文字 (別ケース) | 各ケース `invalid_response` で throw | 型検査を削除する / rename 元の欠落を `modified` に落とす |
 
 ### 3.4 gate の判定 (L6 §6)
 
@@ -98,6 +98,7 @@ issue: 1300
 | `CANDIDATE-U-REFACTORGATE-075` | review は `merge_ready`、対象でない PR (docs だけ) で判定欄なし / 対象の PR で `commit-ok` (別ケース) | 各ケース MERGED (既存 `U-RVMG-001` と同じ receipt) | 対象外や合格を deny にする |
 | `CANDIDATE-U-REFACTORGATE-076` | `getPullRequestChanges` が `HTTP 502` で throw / `getPullRequest` が throw (別ケース) | 前者は DENY `refactor_target_unavailable:gh_failed:HTTP 502` で merge port 0 回。後者は既存どおり `gh_fetch_failed:*` で、`getPullRequestChanges` 0 回 | 例外を握りつぶして対象外にする / `getPullRequest` 失敗の後に本 gate を呼ぶ |
 | `CANDIDATE-U-REFACTORGATE-077` | CLI (`registerPrMergeCommands`) を fake port で実行、判定欄なし | 標準出力が `pr merge — DENY pr=#<n> head=<sha> reason=refactor_judgement_missing`、exit code 1 | 出力形式を変える |
+| `CANDIDATE-U-REFACTORGATE-078` | 対象の PR。旧 HEAD A に判定欄なしの `merge_ready` receipt、新 HEAD B に `commit-ok` の `merge_ready` receipt があり、facts の HEAD は B (L6 §6 の回復手順) | MERGED。`entriesForHead` は B の entry だけで、A の receipt は custody に残り内容も変わらない | `entriesForHead` に他 HEAD の entry を混ぜる / 回復で旧 receipt を書き換える |
 
 ## 4. 既存 oracle との関係
 
