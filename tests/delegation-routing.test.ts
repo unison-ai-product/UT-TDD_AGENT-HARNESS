@@ -167,7 +167,7 @@ describe("delegation routing (PLAN-L7-255)", () => {
     }
   });
 
-  it.fails("CANDIDATE-U-CMDINPUT-001: reviewer routing rejects an invalid model override", () => {
+  it.fails("U-CMDINPUT-001: reviewer routing rejects an invalid model override", () => {
     const result = resolveDelegationRouting({
       provider: "codex",
       role: "blind-reviewer",
@@ -177,7 +177,7 @@ describe("delegation routing (PLAN-L7-255)", () => {
     expect(result).toEqual({ ok: false, message: "provider_model_invalid" });
   });
 
-  it.fails("CANDIDATE-U-CMDINPUT-001: worker routing rejects an invalid model override", () => {
+  it.fails("U-CMDINPUT-001: worker routing rejects an invalid model override", () => {
     const result = resolveDelegationRouting({
       provider: "codex",
       role: "se",
@@ -187,7 +187,7 @@ describe("delegation routing (PLAN-L7-255)", () => {
     expect(result).toEqual({ ok: false, message: "provider_model_invalid" });
   });
 
-  it.fails("CANDIDATE-U-CMDINPUT-001: reviewer routing reports invalid model before invalid effort", () => {
+  it.fails("U-CMDINPUT-001: reviewer routing reports invalid model before invalid effort", () => {
     const result = resolveDelegationRouting({
       provider: "codex",
       role: "blind-reviewer",
@@ -198,7 +198,7 @@ describe("delegation routing (PLAN-L7-255)", () => {
     expect(result).toEqual({ ok: false, message: "provider_model_invalid" });
   });
 
-  it.fails("CANDIDATE-U-CMDINPUT-001: worker routing reports invalid model before invalid effort", () => {
+  it.fails("U-CMDINPUT-001: worker routing reports invalid model before invalid effort", () => {
     const result = resolveDelegationRouting({
       provider: "codex",
       role: "se",
@@ -211,7 +211,7 @@ describe("delegation routing (PLAN-L7-255)", () => {
 
   for (const [index, effort] of ["ultra", ""].entries()) {
     describe(`M1 reviewer effort fixture ${index}`, () => {
-      it.fails("CANDIDATE-U-CMDINPUT-002: reviewer invalid effort", () => {
+      it.fails("U-CMDINPUT-002: reviewer invalid effort", () => {
         const result = resolveDelegationRouting({
           provider: "claude",
           role: "code-reviewer",
@@ -225,7 +225,7 @@ describe("delegation routing (PLAN-L7-255)", () => {
 
   for (const [index, effort] of ["ultra", ""].entries()) {
     describe(`M1 worker effort fixture ${index}`, () => {
-      it.fails("CANDIDATE-U-CMDINPUT-002: worker invalid effort", () => {
+      it.fails("U-CMDINPUT-002: worker invalid effort", () => {
         const result = resolveDelegationRouting({
           provider: "codex",
           role: "se",
@@ -237,7 +237,7 @@ describe("delegation routing (PLAN-L7-255)", () => {
     });
   }
 
-  it("CANDIDATE-U-CMDINPUT-003: valid model IDs, aliases, and omitted overrides route normally", () => {
+  it("U-CMDINPUT-003: valid model IDs, aliases, and omitted overrides route normally", () => {
     const reviewerDefault = resolveDelegationRouting({
       provider: "codex",
       role: "blind-reviewer",
@@ -297,7 +297,7 @@ describe("delegation routing (PLAN-L7-255)", () => {
     "claude-opus-5-5[1m]",
   ].entries()) {
     describe(`M1 reviewer model fixture ${index}`, () => {
-      it.fails("CANDIDATE-U-CMDINPUT-003: reviewer invalid model syntax", () => {
+      it.fails("U-CMDINPUT-003: reviewer invalid model syntax", () => {
         const result = resolveDelegationRouting({
           provider: "claude",
           role: "code-reviewer",
@@ -317,7 +317,7 @@ describe("delegation routing (PLAN-L7-255)", () => {
     "claude-opus-5-5[1m]",
   ].entries()) {
     describe(`M1 worker model fixture ${index}`, () => {
-      it.fails("CANDIDATE-U-CMDINPUT-003: worker invalid model syntax", () => {
+      it.fails("U-CMDINPUT-003: worker invalid model syntax", () => {
         const result = resolveDelegationRouting({
           provider: "codex",
           role: "se",
@@ -329,7 +329,7 @@ describe("delegation routing (PLAN-L7-255)", () => {
     });
   }
 
-  it("CANDIDATE-U-CMDINPUT-004: reviewer and worker routing accept each declared effort enum", () => {
+  it("U-CMDINPUT-004: reviewer and worker routing accept each declared effort enum", () => {
     const efforts = ["low", "medium", "middle", "high", "xhigh"];
     for (const effort of efforts) {
       const reviewer = resolveDelegationRouting({
@@ -350,7 +350,7 @@ describe("delegation routing (PLAN-L7-255)", () => {
     }
   });
 
-  it("CANDIDATE-U-CMDINPUT-004: omitted effort keeps reviewer and worker defaults", () => {
+  it("U-CMDINPUT-004: omitted effort keeps reviewer and worker defaults", () => {
     const reviewer = resolveDelegationRouting({
       provider: "codex",
       role: "blind-reviewer",
