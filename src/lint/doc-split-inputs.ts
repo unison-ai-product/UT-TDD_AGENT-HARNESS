@@ -3,7 +3,7 @@
  * Filesystem/git loading and check composition belong to #1309 Green.
  */
 
-import type { DocRename, DocSplitBaseline, DocSplitSource } from "./doc-split.js";
+import type { DocRename, DocSplitBaseline, DocSplitSource } from "./doc-split.ts";
 
 export function loadDocSplitSources(_repoRoot: string): {
   sources: DocSplitSource[];
