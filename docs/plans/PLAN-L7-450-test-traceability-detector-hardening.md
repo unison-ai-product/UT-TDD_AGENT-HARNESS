@@ -49,12 +49,6 @@ review_evidence:
 generates:
   - artifact_path: docs/plans/PLAN-L7-450-test-traceability-detector-hardening.md
     artifact_type: markdown_doc
-  - artifact_path: src/lint/artifact-ownership.ts
-    artifact_type: source_module
-  - artifact_path: src/lint/deliverable-plan-trace.ts
-    artifact_type: source_module
-  - artifact_path: src/trace/generate-deliverable-trace-debt-audit.ts
-    artifact_type: source_module
   - artifact_path: src/state-db/projection-writer.ts
     artifact_type: source_module
   - artifact_path: src/doctor/source-trace.ts
@@ -63,14 +57,8 @@ generates:
     artifact_type: source_module
   - artifact_path: src/doctor/index.ts
     artifact_type: source_module
-  - artifact_path: tests/artifact-ownership.test.ts
-    artifact_type: test_code
-  - artifact_path: tests/deliverable-plan-trace.test.ts
-    artifact_type: test_code
   - artifact_path: tests/projection-writer.test.ts
     artifact_type: test_code
-  - artifact_path: docs/governance/deliverable-trace-debt-audit.md
-    artifact_type: markdown_doc
 dependencies:
   parent: docs/plans/PLAN-L7-44-harness-db-master.md
   requires: []

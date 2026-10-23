@@ -317,7 +317,7 @@ and prefer extending an existing PLAN over creating an overlapping one.
   contract (constraint, fail-close condition, physical parameter) → Reverse pair.
 - **Draft PLANs must not list already-existing files in `generates`.** A draft
   PLAN whose declared deliverable already exists in the tree trips
-  `merged-plan-status` and `duplicate-artifact-ownership`. Declare only the PLAN
+  `merged-plan-status`. Declare only the PLAN
   doc itself at filing time; the implementing PR updates `generates` together
   with the confirm (2026-07-28 lesson: PR #167 went red on exactly this).
 - `requires` may only point at confirmed / completed PLANs. A dependency on a
@@ -335,12 +335,11 @@ and prefer extending an existing PLAN over creating an overlapping one.
   `docs/design/` (or `docs/test-design/`) and carry only the 4-item body. The
   rule, per-document digest format, and example live in `CLAUDE.md`
   §PLAN Filing Rules (設計系 PLAN の本文 4 項目, issue #648); do not restate them here.
-- PLAN files are LF-only. Rewriting one with a tool that emits CRLF breaks
-  `deliverable-plan-trace` with an opaque YAML error (observed 2026-07-28).
+- PLAN files are LF-only.
 
 Verify with `ut-tdd plan lint` plus the targeted doctor checks
-(`plan-governance`, `merged-plan-status`, `deliverable-plan-trace`,
-`plan-artifact-existence`, `backfill`) before pushing.
+(`plan-governance`, `merged-plan-status`, `plan-artifact-existence`, `backfill`)
+before pushing.
 
 ## Editing Rules
 

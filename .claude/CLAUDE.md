@@ -75,7 +75,7 @@ PLAN requirements:
   troubleshoot also requires an `aim` agent slot.
 - **Draft PLANs must not list already-existing files in `generates`.** A draft
   PLAN whose declared deliverable already exists in the tree trips
-  `merged-plan-status` and `duplicate-artifact-ownership`. Declare only the
+  `merged-plan-status`. Declare only the
   PLAN doc itself at filing time; the implementing PR updates `generates`
   together with the confirm (2026-07-28 lesson: PR #167 went red on this).
 
