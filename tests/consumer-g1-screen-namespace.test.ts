@@ -34,7 +34,12 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { evaluateStaticGate } from "../src/gate/static.ts";
 import { analyzeConsumerG1Trace } from "../src/lint/consumer-trace.ts";
-import { analyzeG1Trace, extractG1ScreenTrace, loadG1TraceDocs } from "../src/lint/g1-trace.ts";
+import {
+  analyzeG1Trace,
+  extractG1ScreenTrace,
+  g1TraceOk,
+  loadG1TraceDocs,
+} from "../src/lint/g1-trace.ts";
 import { lintPlanWithGate } from "../src/plan/lint.ts";
 
 const TEMPLATE_SLOTS = [
@@ -551,12 +556,15 @@ describe("consumer G1 screen namespace (issue #1273)", () => {
       screen: screenBusinessTraceOnlyCustomId,
     });
 
+    expect(g1TraceOk(baseResult)).toBe(true);
     expect(baseResult.totals.screen).toBe(1);
     expect(baseResult.orphanBusiness).toEqual([]);
     expect(baseResult.orphanScreen).toEqual([]);
     expect(baseResult.orphanP0Fr).toEqual([]);
+    expect(g1TraceOk(result)).toBe(true);
     expect(result.totals.screen).toBe(baseResult.totals.screen);
     expect(result.orphanScreen).toEqual([]);
+    expect(g1TraceOk(brokenBusinessTrace)).toBe(false);
     expect(brokenBusinessTrace.orphanBusiness).toContain("BR-01");
     expect(trace.has("SC-99")).toBe(false);
     expect([...trace.keys()]).toEqual(["PM-01"]);
