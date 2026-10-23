@@ -14,7 +14,7 @@ issue: 1261
 
 > **契約状態**: 本文はM1の目標契約である。Issue #1284で対になるL7の11件を正式oracleへ昇格した。このID昇格はsource実装、Green結果、closing review PASSを示すものではない。frontmatterのconfirmedは文書revisionの固定を示し、実装完了を表さない。
 
-L6 contract marker: M1は既存の `buildProviderInvocation(input: ProviderInvocationInput) => ProviderInvocation` と `buildAdapterPlan(intent: AdapterIntent, mode: ExecutionMode) => AdapterPlan` (§5、正式oracle `U-CMDINPUT-001`〜`011`)、L1は `checkForUpdate(deps: UpdateCheckDeps) => UpdateCheckResult` (§7、候補 `CANDIDATE-U-CMDINPUT-012`〜`016`)、L2は `ghCommandEnv(env: NodeJS.ProcessEnv) => NodeJS.ProcessEnv` と定数 `GH_COMMAND_TIMEOUT_MS` (§8、候補 `CANDIDATE-U-CMDINPUT-017`〜`026`) を契約面とする。§7・§8の候補は正式oracleではない。
+L6 contract marker: M1は既存の `buildProviderInvocation(input: ProviderInvocationInput) => ProviderInvocation` と `buildAdapterPlan(intent: AdapterIntent, mode: ExecutionMode) => AdapterPlan` (§5、正式oracle `U-CMDINPUT-001`〜`011`)、L1は `checkForUpdate(deps: UpdateCheckDeps) => UpdateCheckResult` (§7、候補 `CANDIDATE-U-CMDINPUT-012`〜`016`)、L2は `ghCommandEnv(env: NodeJS.ProcessEnv) => NodeJS.ProcessEnv` と定数 `GH_COMMAND_TIMEOUT_MS` (§8、候補 `CANDIDATE-U-CMDINPUT-017`〜`028`) を契約面とする。§7・§8の候補は正式oracleではない。
 
 ## 1. 目的と範囲
 
@@ -146,7 +146,7 @@ gitの起動に対してはfail-closeとする: 拒否時は `listRemoteTags` �
 | `src/feedback/adapters/gh-attestation-verifier.ts:35` `defaultRunner` | `gh attestation verify` (CI) | 無し | `error`を`status: null`へ写し、`audit_unavailable` |
 | `src/github/project-v2.ts:60` / `:71` `NodeGhCommandPort` | `gh api` / `gh project` | `30_000` | throwし、呼出し元の既存処理 |
 | `src/cli/review-live.ts:120` `validateLiveReviewSubject`の既定`run` | `git cat-file` と `gh pr view` | 無し | `status`が0以外 (timeout時は`null`) で`exact_head_not_found` / `pull_request_head_unavailable` |
-| `src/cli/review-live.ts:261` `publishLiveReviewReceipt` | `gh pr comment` (変更系) | 無し | throwし、`review live-consume`のcatchでexit 1 |
+| `src/cli/review-live.ts:261` `publishLiveReviewReceipt` | `gh pr comment` (変更系) | 無し | throwし、`consumeLiveReview`のcatch (`live-review-projection.ts:226-230`) で`derived_verdict_publish_failed`、exit 1 |
 | `src/feedback/post-merge-backstop.ts:136` `defaultFetchMergedPrPage` | `gh api .../pulls` | `POST_MERGE_COMMAND_TIMEOUT_MS` (10_000) | throwし、呼出し元の既存処理 |
 | `src/feedback/review-merge-gate.ts:567` `readGhView` | `gh pr view` | 無し | throwし、`getPullRequest`のcatchで`ok: false` |
 | `src/feedback/review-merge-gate.ts:604` `createGhPrMergePorts().mergePullRequest` | `gh pr merge` (変更系、`stdio: "inherit"`) | 無し | throwし、`merge_failed` / `gh_merge_failed:<message>` |
@@ -185,7 +185,7 @@ gitの起動に対してはfail-closeとする: 拒否時は `listRemoteTags` �
 Nodeは、`spawnSync`では`error` (code `ETIMEDOUT`) と`status: null`を返し、`execFileSync`では例外を投げる。L2では新しい分岐や診断literalを足さず、timeoutを各起動点の既存の失敗経路 (§8.1の表の右列) にそのまま載せる。
 
 - **成功に丸めない**: timeout時の`stdout`に妥当に見える出力 (head SHAやJSON) が含まれても使わない。`status: null`を`0`扱いにしない。
-- **変更系のtimeoutは「結果不明」である**: `gh pr merge`、`gh pr comment`、`NodeGhCommandPort.run`は、終了要求の時点でserver側に反映済みの可能性がある。ここでのfail-closeは「成功を認定しない」の意味に限り、「更新されなかった」ことは保証しない。既存の失敗経路で報告する: `review-merge-gate.ts:437-446`は`mergePullRequest`の例外を`decision: "merge_failed"`・`reason: gh_merge_failed:<message>`にする (mergeが実際に済んでいても成功とは報告しない)。`review-live.ts:252-264`は`writeMemory`でreceipt memoryを書いた後に`gh pr comment`を呼ぶため、commentのtimeoutではmemoryは書かれたまま、commentの有無は不明のままexit 1になる。
+- **変更系のtimeoutは「結果不明」である**: `gh pr merge`、`gh pr comment`、`NodeGhCommandPort.run`は、終了要求の時点でserver側に反映済みの可能性がある。ここでのfail-closeは「成功を認定しない」の意味に限り、「更新されなかった」ことは保証しない。既存の失敗経路で報告する: `review-merge-gate.ts:437-446`は`mergePullRequest`の例外を`decision: "merge_failed"`・`reason: gh_merge_failed:<message>`にする (mergeが実際に済んでいても成功とは報告しない)。`review-live.ts:252-264`は`writeMemory`でreceipt memoryを書いた後に`gh pr comment`を呼ぶため、commentのtimeoutではmemoryは書かれたまま、commentの有無は不明のまま`derived_verdict_publish_failed` (exit 1) になる。
 - **自動でretryしない**: 変更系を再実行すると、反映済みだった場合に二重のmergeの試行や重複commentを生む。重複更新を防ぐため、実行子の呼出しは1回だけとする。読み取り系もL2ではretryを足さない。
 - **advisoryはfail-open**: `observeClaudeInboxPullRequest`、`SystemSealedLineageIssueAuthorityPort.observe`、`nodeGh`は、既存どおり`undefined` / `{ ok: false }`を返してthrowしない。
 - **gate・custodyはfail-close**: review custody runner、attestation verify、merge gate、review subjectの検証、`github policy`は、既存どおり非0終了・`audit_unavailable`・`ok: false`になる。
@@ -200,4 +200,4 @@ Nodeは、`spawnSync`では`error` (code `ETIMEDOUT`) と`status: null`を返し
 | pre | `ghCommandEnv`の引数は任意のenv objectで、`GH_PROMPT_DISABLED`の有無を問わない。§8.1対象表の起動点は、ネットワーク不調・認証待ちで応答しない`gh`を外部入力として扱う。 |
 | post | 対象表の14起動点のspawn optionsは`timeout` (`GH_COMMAND_TIMEOUT_MS`、`post-merge-backstop`は`POST_MERGE_COMMAND_TIMEOUT_MS`) と`env.GH_PROMPT_DISABLED === "1"`を持つ。timeoutは子への終了要求であって戻りまでの上限ではない。timeoutはその起動点の既存の失敗経路に載り、成功の認定・retryにならない。変更系では更新の有無を保証しない。`ghCommandEnv`は引数を変えず、他のkeyを保ち、既存の`GH_PROMPT_DISABLED`を上書きした新objectを返す。 |
 | invariant | provider実行・probe・`git` (`validateLiveReviewSubject`の共用runnerの`git`呼出しを含む)・`gh --version`のspawn optionsにtimeoutを足さず、`shell: true`を足さず、`process.env`と`adapterExecutionEnv`を変えない。既存の別値 (10_000 / 5000) を変えない。注入できる実行子の型を変えない。 |
-| oracle | 専用L7の `CANDIDATE-U-CMDINPUT-017`〜`026`。まだ正式oracleではない。 |
+| oracle | 専用L7の `CANDIDATE-U-CMDINPUT-017`〜`028`。まだ正式oracleではない。 |

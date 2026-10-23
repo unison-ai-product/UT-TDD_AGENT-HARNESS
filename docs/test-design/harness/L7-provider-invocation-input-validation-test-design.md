@@ -111,6 +111,26 @@ pair L6: `docs/design/harness/L6-function-design/provider-invocation-input-valid
 | CANDIDATE-U-CMDINPUT-023 | 変更系のtimeout (`gh pr merge` / `NodeGhCommandPort.run`) | merge gateの既存fixtureで、`gh pr view`は正常 (OPEN、head一致、checks green)、`gh pr merge`だけが`ETIMEDOUT`のErrorを投げる。結果は`ok: false`、`decision: "merge_failed"`、`reason`が`gh_merge_failed:`で始まり、`gh pr merge`の呼出しは厳密に1回である (成功を認定しないことだけを検査し、server側が更新されなかったことは主張しない)。`NodeGhCommandPort.run`は`ETIMEDOUT`をthrowのまま伝える。落とすmutation: merge timeoutを成功 (merged) と報告する、retryして2回以上呼ぶ、`run`の例外を握りつぶす。 |
 | CANDIDATE-U-CMDINPUT-024 | providerの起動は対象外 | `executeAdapterPlanForCli`へspyの`spawnSync`を注入し、渡されたoptionsが`timeout` keyを持たず、`env`が`adapterExecutionEnv`の結果と一致する (`GH_PROMPT_DISABLED`を足していない)。`isProviderCommandSpawnable`の`runProbe`が受けるoptionsも`timeout` keyを持たない。team run (`cli.ts`の`spawn(invocation.command, ...)`) は020と同じ静的走査で、そのoptions objectに`timeout`が無いことを確かめる。落とすmutation: provider実行やprobeにも一律にtimeoutやprompt抑止を付ける。正常系の固定なので`it`で登録する。 |
 | CANDIDATE-U-CMDINPUT-025 | 既存の別値の維持 (`post-merge-backstop`) | `scanPostMergeBackstop`へspyの`execFileSync`を注入し、`gh api`の呼出しのoptionsで`timeout`が`10000`、`env.GH_PROMPT_DISABLED`が`"1"`である。落とすmutation: timeoutを`GH_COMMAND_TIMEOUT_MS`へ揃えて既存値を変える、この起動点だけprompt抑止を付け忘れる。 |
-| CANDIDATE-U-CMDINPUT-026 | `validateLiveReviewSubject`の共用runnerの`git` | mockの`spawnSync`で、`git cat-file`の呼出しが受けたoptionsに`timeout` keyが無く、`env`も足されていない (`GH_PROMPT_DISABLED`を含まない) ことを確かめる。同じ検証の中の`gh pr view`の呼出しは、018 / 019の条件を満たしたままにする。落とすmutation: commandを見ずにtimeoutとenvを無条件で足し、`git`にも掛ける。現状でも成り立つ固定なので`it`で登録する。 |
+| CANDIDATE-U-CMDINPUT-026 | `validateLiveReviewSubject`の共用runnerの`git` | mockの`spawnSync`で、`git cat-file`の呼出しが受けたoptionsに`timeout` keyが無く、`env`も足されていない (`GH_PROMPT_DISABLED`を含まない) ことだけを確かめる。同じ検証の中の`gh pr view`側のoptionsは本候補では検査しない (018 / 019の範囲)。落とすmutation: commandを見ずにtimeoutとenvを無条件で足し、`git`にも掛ける。 |
+| CANDIDATE-U-CMDINPUT-027 | 変更系のretry禁止 (`NodeGhCommandPort.run`) | mockの`execFileSync`が`ETIMEDOUT`のErrorを投げるとき、`NodeGhCommandPort.run`はそのErrorをthrowし、`execFileSync`の呼出しは厳密に1回である。落とすmutation: catchして同じ`execFileSync`を再実行してから再throwする (throwの検査だけでは通ってしまう2回目の更新試行)。 |
+| CANDIDATE-U-CMDINPUT-028 | 変更系のretry禁止 (`publishLiveReviewReceipt`の`gh pr comment`) | `registerLiveReviewCommands`の`live-consume`を、`publishReceipt`だけoverrideせずに既存のconsume fixture (`tests/review-live-cli.test.ts`のpublishReceipt検査と同じ前提) で動かす。mockの`execFileSync`が`gh pr comment`で`ETIMEDOUT`のErrorを投げるとき、`gh pr comment`の呼出しは厳密に1回で、結果は`derived_verdict_publish_failed`、`process.exitCode`は1である。落とすmutation: commentをcatchして再実行する、timeoutを成功として扱う。 |
 
-017〜023と025は未実装の付与・負系を含むため`it.fails`で登録する。017は新設moduleが対象であり、Red時点ではmoduleが存在しない。test fileの読込み全体を落とさないよう、017は`it`の本体で`await import("../src/github/gh-command.ts")`する。017のRed証拠はこの読込み失敗であり、§4 step 2の「対象assertionで落ちる」の例外として扱う (018〜023・025は既存moduleを対象にし、対象assertionで落ちること)。024と026は現状でも成り立つ固定なので`it`で登録する。`update-check`の`LS_REMOTE_TIMEOUT_MS` (5000) は本節で検査しない (既存の`U-UPDCHK-*`の範囲)。
+登録区分は、origin/main `5630f0f7d` の現行sourceで各assertionが通るか落ちるかで決める。
+
+| 候補 | 区分 | 根拠 (現行source) |
+|---|---|---|
+| 017 | `it.fails` | `src/github/gh-command.ts`が存在しない。test fileの読込み全体を落とさないよう、`it`の本体で`await import("../src/github/gh-command.ts")`する。Red証拠はこの読込み失敗であり、§4 step 2の「対象assertionで落ちる」の例外として扱う。 |
+| 018 (`NodeGhCommandPort.json` / `.run`の2件) | `it` | `project-v2.ts:62` / `:73`で既に`timeout: 30_000`を渡している。 |
+| 018 (他の6件) | `it.fails` | `setup/index.ts:1176-1179`、`gh-attestation-verifier.ts:35`、`sealed-lineage-local-migration.ts:199-203`、`review-live.ts:120-124`、`review-merge-gate.ts:567-571` / `:604-606`のoptionsに`timeout`が無い。 |
+| 019 (8件) | `it.fails` | 8起動点のどのoptionsにも`env`が無い (`project-v2.ts:60-66` / `:71-77`を含む)。 |
+| 020 | `it.fails` | `cli.ts:625-629`、`:4138`、`:4144`、`review-custody-runner.ts:289`、`review-live.ts:261-264`に`timeout: GH_COMMAND_TIMEOUT_MS`と`env: ghCommandEnv(`の記述が無い。 |
+| 021 | `it` | `gh-attestation-verifier.ts:36-38`が`error`を`status: null`へ写し、`:141-142`で`audit_unavailable`を返す。`review-live.ts:125`は`status`をそのまま返し、`:136`の`status !== 0`で`pull_request_head_unavailable`になる。 |
+| 022 | `it` | `setup/index.ts:1182-1184`のcatchが`ok: false`、`sealed-lineage-local-migration.ts:228-230`のcatchが`undefined`を返す。`project-v2.ts:60`はcatchせずthrowする。`review-merge-gate.ts:342-353`は`getPullRequest`の例外で`ok: false`を返し、mergeへ進まない。 |
+| 023 | `it` | `review-merge-gate.ts:436-446`が`merge_failed` / `gh_merge_failed:`を返し、`:604`の呼出しは1回だけである。`project-v2.ts:71`はcatchせずthrowする。 |
+| 024 | `it` | `delegation.ts:212-221`、`adapter.ts:341-347`、`cli.ts:3439-3448`のoptionsに`timeout`が無い。 |
+| 025 | `it.fails` | `post-merge-backstop.ts:138`の`timeout: POST_MERGE_COMMAND_TIMEOUT_MS`は既に成り立つが、`:136-141`に`env`が無いため、`env`のassertionで落ちる。 |
+| 026 | `it` | `review-live.ts:120-124`の`git`呼出しのoptionsに`timeout`も`env`も無い。 |
+| 027 | `it` | `project-v2.ts:70-77`は`execFileSync`を1回だけ呼び、catchしない。 |
+| 028 | `it` | `review-live.ts:261`は`gh pr comment`を1回だけ呼び、`live-review-projection.ts:226-230`のcatchが`derived_verdict_publish_failed`を返し、`review-live.ts:412`でexit 1になる。 |
+
+`it`で登録する候補は、既存の正常な拒否境界・対象外の境界を固定する回帰fenceであり、Green前後で通り続けなければならない。`it.fails`の候補は未実装の付与だけを検査し、対象assertionで落ちること (017を除く)。`update-check`の`LS_REMOTE_TIMEOUT_MS` (5000) は本節で検査しない (既存の`U-UPDCHK-*`の範囲)。
