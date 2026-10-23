@@ -134,7 +134,7 @@ pr merge — DENY pr=#2003 head=… reason=refactor_target_unavailable:gh_failed
 
 判定欄の導入より前に verdict を受けた open な実装 PR は `refactor_judgement_missing` で止まる。猶予は設けない。同じ exact HEAD の review をやり直し、判定欄を持つ verdict を受ける (例外を作ると、記録の無い merge が残る)。
 
-## 7. fail-close
+## 7. 失敗時の拒否 (fail-close)
 
 - `readPullRequestChanges` が throw したら deny (`refactor_target_unavailable:*`)。「対象かどうか分からない」を対象でない扱いにしない。
 - 判定欄の値が 5 種以外の receipt は、`validateReceipt` が `invalid_refactor_judgement` にして entry を `merge_ready` にしない (§4)。review gate の既存経路で deny になる。
