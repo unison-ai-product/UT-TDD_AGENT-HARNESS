@@ -47,6 +47,8 @@ Refactor は機能追加でも不具合修正でもない。観測可能な振�
 | テスト実行時間 | 単体10分超 | test_runs / review_evidence.green_commands | fixture 分割またはテスト構成改善を起票する |
 | 変更失敗率 | 同一モジュールで直近3回中2回リグレッション | feedback_events / quality_signals | High 優先で Refactor または Troubleshoot へ route する |
 
+上表の「関数あたり15超」「重複コード率5%超」などの閾値は、設計上の上限ではなく Refactor 候補の発火点である。超えたこと自体は違反ではない。設計上の上限と目安は `docs/governance/coding-rules.md` の「量・分割・Refactor の目安」節を正本とする。
+
 ### 2.2 禁止事項
 
 - 仕様変更を refactor と称して混入しない。
