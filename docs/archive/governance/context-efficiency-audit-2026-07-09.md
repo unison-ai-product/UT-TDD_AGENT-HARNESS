@@ -1,5 +1,7 @@
 # HARNESS コンテキスト効率監査 (2026-07-09)
 
+> **archive 済み (2026-10-23)**: #1312 により docs/governance から移動。単発の監査・戦略記録で、現行の読み手が無いため。
+
 > **依頼**: PO `/goal` 指示 (2026-07-09)「HARNESSコンテキスト効率監査をしてレポートにまとめて改善点を挙げてくれ」。
 > **監査主体**: Claude (Sonnet 5)、read-only 監査 (コード変更なし)。
 > **対象**: UT-TDD Agent Harness が AI エージェント (Claude Code / Codex) のコンテキストへ情報を運ぶ全経路 —
