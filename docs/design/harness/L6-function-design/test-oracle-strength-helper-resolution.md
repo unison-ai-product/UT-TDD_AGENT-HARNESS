@@ -13,9 +13,9 @@ issue: 1290
 
 # L6 機能設計: test-oracle-strength の同一ファイル helper 解決 (Issue #1290)
 
-> **L6 contract marker**: `analyzeDddTddRules(inputs) => DddTddResult` の `test-oracle-strength` 判定 (module 内部の `assertionSummary` / `testOracleViolations`) を対象とする unit-test-granularity contract である。DbC は §4、oracle は専用 L7 の `CANDIDATE-U-ORACLEHELPER-001`〜`017` が固定する。
+> **L6 contract marker**: `analyzeDddTddRules(inputs) => DddTddResult` の `test-oracle-strength` 判定 (module 内部の `assertionSummary` / `testOracleViolations`) を対象とする unit-test-granularity contract である。DbC は §4、oracle は専用 L7 の `U-ORACLEHELPER-001`〜`017` が固定する。
 
-> **契約状態**: 本文は未実装の目標契約である。非著者 family の closing review 前の draft であり、source 実装・Green 結果・review PASS を示さない。
+> **契約状態**: #1290 で凍結済みの未実装目標契約である。今回の ID 昇格は source 実装・Green・本 PR の closing review PASS を示さない。
 
 ## 1. 目的と範囲
 
@@ -108,7 +108,7 @@ callback 本文 (§3.1 の 1) とは数え方が違う。callback 本文は現�
 | pre | 入力は `scope: "test"` の文書の text だけである。型情報・他ファイル・実行結果を使わない。text が構文として不完全でも、TypeScript parser が返す木の上で判定し、例外で doctor を止めない。 |
 | post | callback ごとの判定は §3.1 の 3 通り (oracle なし違反 / truthiness だけ違反 / 違反なし) のどれか 1 つで、callback 本文の判定と helper ごとの判定の最大値である。helper ごとの判定に使うのは §3.2 で解決できた、深さ 3 以内の helper 宣言だけである。解決できない呼び出しは判定に加えない。 |
 | invariant | (1) callback 本文の regex 計数と、`it` / `test` の判定対象の選び方は変えない。(2) 判定は helper について単調である。結果は callback 本文の判定より弱くならず、helper を足す・強めても違反は増えない (§3.1 の単調性)。逆に、helper の assertion を除くとその helper の判定は oracle なしになり、結果は残りの判定の最大値へ戻る (helper が 1 つなら callback 本文の判定。違反が復活する)。truthiness に弱めると、その helper の判定は truthiness だけになる。(3) 解析は必ず停止し、callback ごとに訪れる helper 宣言はファイル内の helper 宣言数以下である。(4) violation の message・行番号・rule・baseline debt key の形式は変えない。 |
-| oracle | pair の L7 テスト設計の `CANDIDATE-U-ORACLEHELPER-001`〜`017` が、解決・計数・合成・停止・現行挙動の維持を、それぞれ独立に反証する。候補 ID は正式 oracle ではない。 |
+| oracle | pair の L7 テスト設計の `U-ORACLEHELPER-001`〜`017` が、解決・計数・合成・停止・現行挙動の維持を、それぞれ独立に反証する。正式 oracle ID は同じ L7 pair で定義する。 |
 
 ## 5. 失敗の方向
 
@@ -131,4 +131,4 @@ callback 本文 (§3.1 の 1) とは数え方が違う。callback 本文は現�
 
 ## 8. 対になるテスト設計
 
-候補 oracle と、それぞれが落とす mutation は pair artifact `docs/test-design/harness/L7-test-oracle-strength-helper-resolution-test-design.md` に記す。
+正式 oracle と、それぞれが落とす mutation は pair artifact `docs/test-design/harness/L7-test-oracle-strength-helper-resolution-test-design.md` に記す。
