@@ -206,8 +206,8 @@ Codex はこれらの規律を一度も受け取っていなかった)。`rule-d
 
 - 新規 PLAN は route certificate (`route_signal` + `route_mode`) を持ち、mode が `kind` を
   許すこと (SSoT: `src/schema/route-filing.ts`)。
-- **draft PLAN の `generates` に既存ファイルを書かない** (`merged-plan-status` /
-  `duplicate-artifact-ownership` が fail-close する)。宣言は実装 PR の confirm と同時。
+- **draft PLAN の `generates` に既存ファイルを書かない** (`merged-plan-status` が
+  fail-close する)。宣言は実装 PR の confirm と同時。
 - `requires` は confirmed / completed のみ。draft への依存は `references` へ。
 - `kind=add-impl` は Reverse 対必須。conditional kind は Reverse 対か
   `backprop_decision: not_required` + 理由 (純修理なら not_required、新契約なら Reverse 対)。
