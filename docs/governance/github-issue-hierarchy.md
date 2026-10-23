@@ -64,3 +64,44 @@ PO 判断 (2026-10-22)。通常の Forward 作業は、使い捨ての作業チ�
 - **親子関係と close**: 第 2〜4 節の規則 (親子・close 条件) をそのまま使う。
 - **暫定である**: 機械検査 (lint や harness.db への Issue projection) は今は足さない。
   運用して不足を計測してから追加する。改善はこの節の改訂で行う。
+
+### 6.1 並列ボックスと直列ボックス (PO 判断 2026-10-23)
+
+実装 lane (Codex) へ渡す作業は 2 つのボックスに溜め、lane が遊ばず、1 件ずつの受け渡しも要らない
+状態にする。これは特定の backlog の話ではなく、一般の運用形である。
+
+- **並列ボックス**: 順序を問わないチケットの集まり。空いた slot は、どれでも 1 件拾う (A でも B でも C でもよい)。
+- **直列ボックス**: A→B→C と鎖でつないだチケット。前のチケットが close して初めて、次が拾える。
+- **slot**: lane は最大 N slot を同時に動かす。Codex の N は 3 (subagent の上限)。各 slot は自分の worktree で作業する。
+
+v4 候補 (`docs/governance/candidates/ut-tdd-concept-v4.0.md`) のチケット発行 (原子チケットが lease を持ち、
+依存が順序を決め、WIP 上限が量を縛る) を、手運用で先に試すものである。ここで集める計測 (lane の遊び時間、
+review の待ち時間。Issue コメントの時刻から取る) は、その後の機構化の入力にする。
+
+**GitHub 上の表現** (既存機能だけを使う):
+
+- チケットは `Work` Issue。受け手 lane はラベル `lane:codex` (または `lane:claude`) で示す。
+- 直列は GitHub の issue dependency「blocked by」で表す (後のチケットに、前のチケットへの blocked by を張る)。
+  並列は、open な blocker が無いものである。
+- チケットが**拾える**条件は、open、lane ラベルあり、assignee なし、open な blocker なし、の全てである。
+
+**lease**:
+
+- 取得は assignee の設定と、slot 番号と開始時の base commit を書いたコメント 1 件。
+- 解放は assignee を外すことと、コメント 1 件。
+- 1 チケット = 1 slot = 1 worktree。
+
+**空いた slot が拾う順**:
+
+1. その lane 自身の open PR にある FLAG・CI 赤・衝突の是正
+2. 直列の鎖の先頭
+3. 並列のチケット
+
+**並列ボックスへの入れ方**: 変更する path が、他の open な並列チケットと重ならないこと。かつ共有の面に
+触れないこと (例: `package.json` / lock、`.github/workflows/`、`docs/test-design/harness/L7-unit-test-design.md` や
+`function-spec.md`、`tests/gate-static.test.ts` のような共有 test-design)。当てはまらないものは直列の鎖に入れる。
+
+**control lane の務め**: 拾えるチケットの数が lane の slot 数以上になるよう、チケットを起票して溜める。
+下回ったら補充する。review request は従来どおり control lane だけが、exact head ごとに 1 本出す。
+
+**暫定である**: 運用して計測し、この節の改訂で改善する。

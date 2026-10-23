@@ -350,11 +350,13 @@ close された)。新規機構は作らず、既存工程の遵守を規律と�
    PLAN へ回す。非著者 reviewer は commit の順と Refactor commit の `tests/` 差分 0 を確かめる。
    手順の正本は `skills/test-driven-development.md`。
 
-6. **WIP 上限と共有文書の直列化** (PO 指摘 2026-10-14): 自 lane の open PR に FLAG・CI 赤・衝突が
-   残っている間は、新しい PR を出さない。`docs/test-design/harness/L7-unit-test-design.md`、
+6. **WIP 上限 (slot 単位) と共有文書の直列化** (PO 指摘 2026-10-14、2026-10-23 に slot 単位へ改訂): WIP は
+   lane 全体ではなく slot ごとに数える。自分の open PR に FLAG・CI 赤・衝突が残っている slot は、是正が済むまで
+   新しい作業を拾わない (他の slot は動き続けてよい)。`docs/test-design/harness/L7-unit-test-design.md`、
    `function-spec.md`、`tests/gate-static.test.ts` のような共有の文書・テストを変える作業は直列にし、
-   同じファイルを並行する複数の PR に分けない (1 本 merge するたびに残りが衝突して再検になる)。
-   並列にしてよいのは、変更するファイルが重ならない範囲だけである。初回の FLAG 率が高い作業は、worker を
+   同じファイルを並行する複数の PR に分けない (1 本 merge するたびに残りが衝突して再検になる)。この直列化は
+   直列ボックスで実現する。並列にしてよいのは、変更するファイルが重ならない範囲だけである。ボックスと slot の
+   運用は `docs/governance/github-issue-hierarchy.md` §6.1。初回の FLAG 率が高い作業は、worker を
    増やす前に手順書を直す。
 
 この規律から外れた PR は内容の当否に関わらず FLAG (process violation) とする
