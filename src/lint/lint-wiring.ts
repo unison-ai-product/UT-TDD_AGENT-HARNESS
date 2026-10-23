@@ -33,6 +33,8 @@ export const RUNTIME_ENTRYPOINTS = ["src/cli.ts"] as const;
  */
 export const DEFERRED_LINTS: Record<string, string> = {
   "consumer-trace": "#1282 Red の stub。runtime 配線とこの保留登録の撤去は #1314 Green で行う。",
+  "doc-split": "#1307 Red の stub。runtime 配線とこの保留登録の撤去は #1309 Green で行う。",
+  "doc-split-inputs": "#1307 Red の stub。runtime 配線とこの保留登録の撤去は #1309 Green で行う。",
   "tool-adapter":
     "adapter-probe 純関数ライブラリ (catalog/probe/normalize/planDiagramRefresh)。`ut-tdd adapter` 統合は IMP-033 rule-engine / PLAN-L7-50 R8 で deferred (closed-as-library)。",
 };
