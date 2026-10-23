@@ -113,8 +113,22 @@ review の custody (request → verdict → receipt) は既存の経路のまま
 
 **control lane の務め**: lane ごとに、拾えるチケットの数が slot 数以上になるよう起票して溜め、下回ったら補充する。
 
+**worktree と rebase** (PO 判断 2026-10-23): チケットの lease と close が、worktree の切り出しと畳みも決める。
+
+- **切る = lease の取得**: slot は lease を取るとき、現在の origin/main から自分の worktree を切り、base commit を
+  lease コメントに書く。1 チケット = 1 worktree で、他のチケットの worktree を使い回さない。
+- **畳む = チケットの close**: PR が merge された (またはチケットが close した) ら、slot はすぐ worktree と
+  branch を消す (`git worktree remove` と branch 削除。切った側が畳む)。close したのに worktree が残っていれば、
+  片付け漏れである。放棄するチケットも、lease を解放して worktree を畳む (未 merge の commit があれば branch は残す)。
+- **rebase は直列の鎖が減らす**: 共有の面に触れるチケットは鎖でつなぐので、後続は前のチケットが merge した後の
+  main から切る。そのため rebase が要らない。並列のチケットは path が重ならないので、通常は同じく要らない。
+  rebase するのは GitHub が CONFLICTING を返したときだけである (CLAUDE.md §FLAG 後の限定是正と merge 8)。
+  並列のチケットで起きたら、並列ボックスへの入れ方が誤っていた印なので、問題として記録し、以後は鎖でつなぐ。
+  rebase した後は、新しい head に review request を 1 本だけ出す。
+
 **将来の管理知能**: v4 の管理知能 (ADR-001 決定 4 により proposal-only の別 process) は、lane ごとに
-拾える直列・並列チケットの数と空き slot の数を算出し、それに応じてチケットを発行する (実装・control・検収とも)。
+拾える直列・並列チケットの数と空き slot の数を算出し、それに応じてチケットを発行する (実装・control・検収とも)。同じチケットの状態から、worktree の切り出しと畳み、
+rebase が要る合図も出す。
 それまでは control lane が手でこの数を数え、Issue コメントの時刻から取った記録を、機構化の計測入力にする。
 
 **暫定である**: 運用して計測し、この節の改訂で改善する。
