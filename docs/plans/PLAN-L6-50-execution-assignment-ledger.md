@@ -127,14 +127,5 @@ DB は projection であり正本ではない。row は最低限、以下の論�
 
 ## U15 型付きスペック所有 artifact
 
-```yaml
-spec:
-  defines:
-    - id: VMS-014
-      kind: execution-assignment-ledger
-      traces_from: [VMS-004]
-      tests: [TVMS-014]
-```
-
 VMS-014 は ID 単位実行割当台帳の L6 設計契約である。typed spec authoring source を上流に持ち、
 対応 oracle は TVMS-014 である。

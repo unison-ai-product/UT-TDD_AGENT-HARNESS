@@ -94,14 +94,4 @@ HARNESS の `doctor:<gate-id>` 完了条件として表す。
 
 ## U12 typed spec owned artifact
 
-```yaml
-spec:
-  defines:
-    - id: VMS-008
-      kind: agent-contract-authoring-source
-      traces_from: [VMS-004]
-      traces_to: [VMS-009, VMS-010]
-      tests: [TVMS-008]
-```
-
 VMS-008 は ZIP の doc-local agent 契約を HARNESS の authoring source として保持する設計である。

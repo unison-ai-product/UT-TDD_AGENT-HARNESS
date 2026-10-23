@@ -51,7 +51,7 @@ HARNESS 向けに落とした bootstrap 台帳である。
 ```yaml
 typed_spec_ledger:
   - spec_id: VMS-001
-    ledger_sources: [docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md]
+    ledger_sources: [docs/design/harness/L0-planning/charter.md]
     v_phase: L0
   - spec_id: VMS-002
     ledger_sources:
@@ -69,37 +69,37 @@ typed_spec_ledger:
       - docs/plans/PLAN-L6-42-typed-spec-declaration-source.md
     v_phase: L6
   - spec_id: VMS-005
-    ledger_sources: [docs/plans/PLAN-L7-385-vmodel-activation-profile-join.md]
+    ledger_sources: [docs/test-design/harness/L7-unit-test-design.md]
     v_phase: L7
   - spec_id: VMS-006
-    ledger_sources: [docs/plans/PLAN-L7-386-typed-spec-declaration-projection.md]
+    ledger_sources: [docs/test-design/harness/L7-unit-test-design.md]
     v_phase: L7
   - spec_id: VMS-007
-    ledger_sources: [docs/plans/PLAN-L6-46-typed-spec-phase-layer-alignment.md]
+    ledger_sources: [docs/design/harness/L6-function-design/function-spec.md]
     v_phase: L6
   - spec_id: VMS-008
-    ledger_sources: [docs/plans/PLAN-L6-47-agent-contract-authoring-source.md]
+    ledger_sources: [docs/design/harness/L6-function-design/function-spec.md]
     v_phase: L6
   - spec_id: VMS-009
-    ledger_sources: [docs/plans/PLAN-L7-391-agent-contract-detect-gate.md]
+    ledger_sources: [docs/test-design/harness/L7-unit-test-design.md]
     v_phase: L7
   - spec_id: VMS-010
-    ledger_sources: [docs/plans/PLAN-L6-48-vmodel-l2-freeze-l5-verification-design.md]
+    ledger_sources: [docs/design/harness/L6-function-design/function-spec.md]
     v_phase: L6
   - spec_id: VMS-011
-    ledger_sources: [docs/plans/PLAN-L7-393-vmodel-l2-freeze-l5-verification-gate.md]
+    ledger_sources: [docs/test-design/harness/L7-unit-test-design.md]
     v_phase: L7
   - spec_id: VMS-012
     ledger_sources: [docs/governance/vmodel-refactor-qa-release-gates.md]
     v_phase: L6
   - spec_id: VMS-013
-    ledger_sources: [docs/plans/PLAN-L7-394-refactor-qa-release-contract-gate.md]
+    ledger_sources: [docs/test-design/harness/L7-unit-test-design.md]
     v_phase: L7
   - spec_id: VMS-014
-    ledger_sources: [docs/plans/PLAN-L6-50-execution-assignment-ledger.md]
+    ledger_sources: [docs/design/harness/L6-function-design/function-spec.md]
     v_phase: L6
   - spec_id: VMS-015
-    ledger_sources: [docs/plans/PLAN-L6-52-signals-schedule-live-handover.md]
+    ledger_sources: [docs/design/harness/L6-function-design/function-spec.md]
     v_phase: L6
   - spec_id: TVMS-001
     ledger_sources: [docs/test-design/harness/L7-unit-test-design.md]
