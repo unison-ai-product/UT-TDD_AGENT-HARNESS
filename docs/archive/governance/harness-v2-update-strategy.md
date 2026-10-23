@@ -1,5 +1,7 @@
 # UT-TDD Agent Harness v2 アップデート戦略 (後続オーケストレータへの引き継ぎ正本)
 
+> **archive 済み (2026-10-23)**: #1312 により docs/governance から移動。単発の監査・戦略記録で、現行の読み手が無いため。
+
 - **date**: 2026-07-03
 - **author**: Claude Fable 5 (在任 1 週間の最終成果物)。監査正本 = `.ut-tdd/audit/A-181-performance-sustainability-audit-2026-07-03.md`
 - **読者**: 本リポジトリを今後運用する AI オーケストレータ (Claude Opus/Sonnet/Haiku、GPT/Codex 系) と PO。

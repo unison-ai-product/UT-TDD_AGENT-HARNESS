@@ -1,5 +1,7 @@
 # UT-TDD Agent Harness v2 品質底上げ戦略 (実装・設計の実質品質)
 
+> **archive 済み (2026-10-23)**: #1312 により docs/governance から移動。単発の監査・戦略記録で、現行の読み手が無いため。
+
 - **date**: 2026-07-03
 - **author**: Claude Fable 5。監査正本 = `.ut-tdd/audit/A-182-implementation-design-quality-audit-2026-07-03.md`
 - **位置づけ**: `harness-v2-update-strategy.md` (アップデート戦略 = 運用・持続性) の**姉妹編**。あちらは「性能を発揮し続ける」ための 4 軸 (正確性の持続/経済性/適応性/後続実装効率)、本 doc は「成果物そのものの実質品質」を底上げする 4 軸を扱う。両者は重複しない (A-182 冒頭の境界宣言)。
