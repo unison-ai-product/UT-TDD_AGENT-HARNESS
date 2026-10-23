@@ -8,7 +8,7 @@ related_function: src/runtime/adapter.ts
 related_cli: src/cli.ts
 ---
 
-# L7 test design: provider invocation input validation (Issue #1261 M1)
+# L7 test design: provider invocation input validation (Issue #1261 M1 / L1)
 
 > **状態**: 本PRの非著者closing review前の契約案。本文は未実装の目標契約に対する候補test designであり、候補IDは正式oracle宣言ではない。frontmatterのconfirmedは提案revisionの固定であり、review PASSを意味しない。テスト起動・実装・実証済み結果を記録していない。
 
@@ -64,6 +64,22 @@ pair L6: `docs/design/harness/L6-function-design/provider-invocation-input-valid
 - model / effort schemaの受理集合やaliasをこのtest designが定義・拡張すること。
 - 実provider、実`cmd.exe`、資格情報、networkを使った起動test。
 - session / audit writeが拒否時に必ず0であるという保証。
-- provider選択、taskの意味、role別policy、L1/L2、agent-guard、floorの変更。
+- provider選択、taskの意味、role別policy、L2、agent-guard、floorの変更。
 - prompt本文をargv/tokenへ移すこと、またはprompt中の`%`を拒否すること。
 - 新しいPLAN、共有function-spec / L7 unit designへのoracle索引追加。
+- L1について: 実git・networkを使う起動test、`--` end-of-optionsの付与、`gitLsRemoteInvocation`側の検査 (L6 §7.2で採らない)。
+
+## 6. L1: git ls-remote の remote 引数 (Issue #1261 L1)
+
+> **状態**: L6 §7のpair-freezeのための候補test design。非著者closing review前であり、候補IDは正式oracleではない。工程は§4と同じ (Red → 昇格 → Green → Refactor)。
+
+対象: `src/setup/update-check.ts` の `checkForUpdate`。既存test配置の候補は `tests/update-check.test.ts` の `describe("checkForUpdate")` である。`UpdateCheckDeps` を注入し、`listRemoteTags` / `readText` / `writeText` をspyする純unitとし、実gitやnetworkを使わない。期待する`detail`はL6 §7.3のliteralを明示して書き、production定数から生成しない。
+
+| Candidate ID | 関数 / surface | 反証可能な主張 |
+|---|---|---|
+| CANDIDATE-U-CMDINPUT-012 | `checkForUpdate` (override) | `remoteOverride`が`--upload-pack=touch pwned`のとき、`checked: false`、`source: "none"`、`detail`が厳密に`remote rejected: starts with "-"`、`listRemoteTags` 0回、`writeText` 0回。`detail`に`upload-pack`を含まない。検査を削除するmutationを殺す。 |
+| CANDIDATE-U-CMDINPUT-013 | `checkForUpdate` (package.json) | override無しでpackage.jsonの`repository.url`が`git+-oProxyCommand=x`のとき (`git+`除去後に`-`始まり)、012と同じshape・`listRemoteTags` 0回。検査をoverride経路だけに置くmutationを殺す。 |
+| CANDIDATE-U-CMDINPUT-014 | `checkForUpdate` (cache順序) | `remoteOverride`が`-x`で、remote keyが`-x`かつTTL内のcacheを`readText`が返しても、`source: "cache"`にならず012と同じ拒否結果。検査をcache参照の後へ置くmutationを殺す。 |
+| CANDIDATE-U-CMDINPUT-015 | `checkForUpdate` (正常系) | `https://example.invalid/a-b.git`と、`.git`を持つharness rootでの`origin`は従来どおり`listRemoteTags`を各1回、そのremote値で呼ぶ。`includes("-")`等の過剰拒否mutationを殺す。正常系なので`it`で登録する。 |
+
+012〜014は未実装の負系として`it.fails`で登録し、015は`it`で登録する。`gitLsRemoteInvocation`のargv不変は既存の`U-UPDCHK-021`〜`024`が回帰fenceであり、本節で置き換えない。
