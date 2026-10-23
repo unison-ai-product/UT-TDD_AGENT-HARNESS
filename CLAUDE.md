@@ -346,8 +346,9 @@ close された)。新規機構は作らず、既存工程の遵守を規律と�
    (`it.fails`、設計書保護 gate §10.2) で先に入れる。実装 PR の commit は Green (`feat:` / `fix:`、
    `it.fails` を `it` に戻す最小実装) → Refactor (`refactor:`) の順にする。Refactor の commit は
    `tests/` の内容差分 0 (rename だけ可) でテスト設計にも触れず、commit ごとに full suite を流す。
-   直す余地が無いときは PR 本文に「Refactor なし (理由)」と書く。大きな構造変更は `kind: refactor` の
-   PLAN へ回す。非著者 reviewer は commit の順と Refactor commit の `tests/` 差分 0 を確かめる。
+   直す余地が無いときは PR 本文に「Refactor なし (理由)」と書く。その理由を認める条件と判定者は
+   `docs/governance/coding-rules.md` §量・分割・Refactor の目安 を正本とする。大きな構造変更は
+   Refactor Issue (ラベル `refactor`) と設計文書へ回す (PLAN 凍結、#1166)。非著者 reviewer は commit の順と Refactor commit の `tests/` 差分 0 を確かめる。
    手順の正本は `skills/test-driven-development.md`。
 
 6. **WIP 上限 (slot 単位) と共有文書の直列化** (PO 指摘 2026-10-14、2026-10-23 に slot 単位へ改訂): WIP は

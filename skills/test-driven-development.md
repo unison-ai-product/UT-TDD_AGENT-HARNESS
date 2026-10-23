@@ -49,7 +49,7 @@ implementation it exercises provides zero design signal and weaker oracle value
 ## When to load this skill
 
 - Crossing pair-freeze into L7 implementation for any Forward or Add-feature PLAN.
-- A Refactor PLAN must re-confirm regression coverage before touching source.
+- A Refactor Issue (with its design document) must re-confirm regression coverage before touching source.
 - A Reverse back-fill requires test-first evidence for an existing code path.
 - `ut-tdd doctor` or `ut-tdd review --uncommitted` flags a missing test or a
   test that post-dates its implementation commit.
@@ -67,7 +67,10 @@ the base and head path sets and does not see commits, so the order is a review r
 | Refactor | implementation PR, after Green | `refactor:` | source structure only; `tests/` content diff 0 (renames only); no test design |
 
 If there is nothing to refactor, say "Refactor なし" with the reason in the PR body; do not skip
-silently. Large structural changes go to a `kind: refactor` PLAN and the code-simplify skill.
+silently. The conditions that justify "Refactor なし" and who judges them are defined in
+`docs/governance/coding-rules.md` §量・分割・Refactor の目安 (the canonical source). Large structural
+changes go to a Refactor Issue (label `refactor`) and a design document, and the code-simplify skill
+(PLAN is frozen, #1166).
 The non-author reviewer checks the commit order and that the Refactor commits leave `tests/`
 content unchanged.
 
