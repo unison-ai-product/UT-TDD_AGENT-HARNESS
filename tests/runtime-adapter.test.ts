@@ -783,7 +783,7 @@ describe("Issue #1261 M1 provider invocation input validation candidates", () =>
     expect(bothInvalid.messages).not.toContain(INVALID_EFFORT_MESSAGE);
   });
 
-  ["cmd", "bat"].forEach((extension) => {
+  ["cmd", "bat"].forEach((extension, index) => {
     describe(`M1 percent command extension fixture ${index + 1}`, () => {
       it.fails("CANDIDATE-U-CMDINPUT-007: static command-path label", () => {
         const root = mkdtempSync(join(tmpdir(), "ut-adapter-percent-command-"));
