@@ -3,6 +3,7 @@ title: "L7 pack delivery inventory diff test design"
 layer: L7
 executed_at_layer: L7
 artifact_type: test_design
+pair_artifact: docs/design/harness/L6-function-design/pack-delivery-inventory-diff.md
 status: confirmed
 issue: 1275
 updated: 2026-10-23
