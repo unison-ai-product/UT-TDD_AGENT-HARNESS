@@ -10,7 +10,7 @@ next_pair_freeze: L7
 plan: docs/plans/PLAN-L6-971-consumer-trace-gates.md
 ---
 
-> **L6 contract marker**: G1-trace / G3-trace の consumer 分岐 (`analyzeConsumerG1Trace(reader) => ConsumerTraceResult` / `analyzeConsumerG3Trace(reader) => ConsumerTraceResult`、出力の形は §8) は unit-test-granularity contract である。DbC pre/post/invariant は §10 にまとめる。oracle の索引は共有の `docs/test-design/harness/L7-unit-test-design.md` (§consumer trace gate) に置き、詳細 (CANDIDATE-U-CTRACE-001〜045、§14 の画面 ID の名前空間は 042〜045) は専用の `docs/test-design/harness/L7-consumer-trace-gates-test-design.md` が固定する。
+> **L6 contract marker**: G1-trace / G3-trace の consumer 分岐 (`analyzeConsumerG1Trace(reader) => ConsumerTraceResult` / `analyzeConsumerG3Trace(reader) => ConsumerTraceResult`、出力の形は §8) は unit-test-granularity contract である。DbC pre/post/invariant は §10 にまとめる。oracle の索引は共有の `docs/test-design/harness/L7-unit-test-design.md` (§consumer trace gate) に置き、詳細 (CANDIDATE-U-CTRACE-001〜050、§14 の画面 ID の名前空間は 042〜045、§15 の G3-trace の文書不在時の縮退は 046〜050) は専用の `docs/test-design/harness/L7-consumer-trace-gates-test-design.md` が固定する。
 
 # consumer trace gate (G1-trace / G3-trace の consumer 分岐) — 関数設計 (issue #971 / #972 / #880)
 
@@ -371,3 +371,95 @@ Pack#10 の consumer は、consumer layout (`docs/design/L1-requirements/`) に 
 ### 14.6 検証
 
 テスト設計 `docs/test-design/harness/L7-consumer-trace-gates-test-design.md` の `CANDIDATE-U-CTRACE-042`〜`045` が本節を固定する。042 は Pack#10 の形の再現、043 は宣言が無いときの縮退の禁止、044 は完全一致の照合、045 は harness 分岐の prefix 固定の保持である。
+
+## 15. G3-trace の文書不在時の縮退 (issue #1274)
+
+### 15.1 目的と前提
+
+consumer で `ut-tdd gate G3` を回すと、`g3-trace - violation: required docs could not be read (Error: required doc not created: docs/design/harness/L3-functional/business-detail.md)` で毎回赤になる (Pack unison-ai-product/UT-TDD_AGENT-HARNESS-Pack#11、#972)。`src/lint/g3-trace.ts` の `loadDocs` は、5 文書を `resolveAuthoringSourceAbsolutePath` で consumer layout へ写したうえで、1 本でも無ければ `throw new Error("required doc not created: <path>")` する。`src/plan/lint.ts` の G3-trace handler はこの例外を `required docs could not be read (...)` に丸める。`src/lint/g1-trace.ts` の `loadG1TraceDocs` も同じ形である。
+
+真因は、文書の配布漏れではなく、文書が無いときの縮退の分岐が無いことである。path の写像は効いているが、写した先に harness 専用の文書が無いときに、何を検査し何を報告するかが決まっていない。本節はこの縮退を G3-trace について固定する。方式は §3 (A1) と §5 から一意に決まるので、本節は新しい gate・新しい理由の種類・新しい設定項目を足さない。
+
+### 15.2 G3-trace が読む文書の 2 つの種類
+
+harness の `loadDocs` が読む 5 文書と consumer 分岐が読む L2 を、consumer での位置付けで 2 つに分ける。
+
+| 文書 (`loadDocs` の field) | 写像後の consumer path | 種類 | consumer 分岐での扱い |
+|---|---|---|---|
+| `l1Functional` | `docs/design/L1-requirements/functional-requirements.md` | core (`DOC-L1-REQUIREMENTS`) | §5 の reader で読む。無ければ `missing_core_doc:DOC-L1-REQUIREMENTS` |
+| (`loadDocs` は読まない) | `docs/design/L2-screen/screen-list.md` | core (`DOC-L2-SCREEN`) | 同上 (T4 の参照先 `S`、§7.1)。無ければ `missing_core_doc:DOC-L2-SCREEN` |
+| `l3Functional` | `docs/design/L3-functional/functional-requirements.md` | core (`DOC-L3-FUNCTIONAL`) | 同上。無ければ `missing_core_doc:DOC-L3-FUNCTIONAL` |
+| `l12AcceptanceTest` | `docs/test-design/L12-acceptance-test-design.md` | core (`DOC-L12-ACCEPTANCE`) | 同上。無ければ `missing_core_doc:DOC-L12-ACCEPTANCE` |
+| `l3BusinessDetail` | `docs/design/L3-functional/business-detail.md` | harness 専用 | 入力にしない。要求も報告もしない |
+| `l3NfrGrade` | `docs/design/L3-functional/nfr-grade.md` | harness 専用 | 入力にしない。要求も報告もしない |
+
+- 縮退は、文書が無いときに「その文書を飛ばす」ことではなく、consumer 分岐の入力を core 4 文書へ切り替えることである。切り替えは §3 の分岐 (`resolveDesignRoot(repoRoot)`) だけで決まり、個々の文書の有無では決めない。
+- core 4 文書の不在は finding (`missing_core_doc`) であり、`ok=false` にする (§5、§10 post (fail-close))。黙って通さない。
+- harness 専用の 2 文書は consumer 分岐の入力ではない。consumer に置かれていても読まず (§3.2)、無くても finding にしない。
+
+### 15.3 判断と理由
+
+harness 専用の文書が無いときの扱いには、次の 3 案があった。
+
+| 案 | 内容 | 採否 |
+|---|---|---|
+| (a) consumer が書くべき文書として要求する | 雛形とセットアップガイドに business-detail / nfr-grade を足し、無ければ `missing_core_doc` 相当で赤にする | 採らない |
+| (b) 不在を finding として出す | 文書が無いことを違反または警告の理由として毎回返す | 採らない |
+| (c) consumer 分岐の入力から外し、同じ段の保証を core 文書の列 trace (T3 / T4) で持つ | 本節の決定 | 採る |
+
+- (a) を採らない理由: 2 文書の中身は harness 自身の ID 体系そのものである。business-detail は `AC-FR-BR21-*` (BR-21 由来の AC)、nfr-grade は L1 NFR 15 件 (`extractL1NfrIds` の `NFR-01`〜`NFR-17`、欠番 09 / 10) の被覆を持つ。consumer に要求すると、consumer は harness の prefix と件数を写した文書を書かされ、§6 (B2) の「prefix を仮定しない」と §10 invariant (prefix 非依存) に反する。catalog (`docs/governance/vmodel-document-catalog.md` §1) の core 行にもテンプレート (`docs/templates/vmodel/`) にも無い文書を、gate の都合で必須にすることになる。
+- (b) を採らない理由: consumer 分岐では、2 文書が無いのが正常な状態である。不在を違反にすると、consumer の G3 は (a) と同じく恒常的に赤になる。警告にすると、全 consumer の全実行に同じ行が出続け、本当に見るべき `missing_core_doc` を埋もれさせる。どちらも状態を区別しない。
+- (c) を採る理由: §3.2 と §5 が既に「consumer 分岐は core 4 文書だけを読む」と決めており、本節はその帰結を文書不在の場面に書き下すだけである。黙って通さないことは、次の 2 つで担保する。
+  1. core 文書が無ければ fail-close する (§15.4)。consumer の G3 が保証する範囲 (T3 / T4) の入力は全て必須である。
+  2. 保証の範囲が harness と違うことを出力に書く。message は常に `consumer column trace` を含む (§4、§8)。consumer の G3 が持たない保証 (L3 FR → AC の段、AC → AT の段、L1 NFR → L3 nfr-grade の被覆) は §15.6 に列挙し、consumer の PASS をこれらの PASS と読ませない。
+
+### 15.4 縮退したときの診断
+
+consumer 分岐の G3-trace の診断は、§8 の形をそのまま使う。
+
+| 状態 | `violations` に入る理由 | message |
+|---|---|---|
+| core 4 文書が全てあり、規則の違反が無い | (なし) | `g3-trace - OK (consumer column trace: requirements=<n>, functions=<n>, tests=<n>)` |
+| core 文書の 1 本以上が無い | 無い文書ごとに `missing_core_doc:<doc_type_id>` を 1 件。辞書順で全件 | `g3-trace - violation (consumer column trace): <理由>; <理由>...` |
+| harness 専用の文書が無い | (理由を足さない) | 他の状態の message のまま |
+
+- 無い文書が 2 本以上でも、全てを返す。最初の 1 本で打ち切らない (§8 の「辞書順で全件」)。`loadDocs` のように最初の欠落で例外を投げる形を consumer 分岐に残さない。
+- 無い core 文書について、`missing_core_doc` 以外の理由 (`doc_type_mismatch`、`required_table_missing`、`empty_required_set`) を重ねない。1 つの原因に 1 つの理由とする (§14.3 の表と同じ扱い)。無い文書の ID 集合は空として扱い、`totals` の該当の件数は 0 にする。
+- 無い文書の ID 集合を参照先とする token は、§7.1 の `dangling_reference` をそのまま返す。宣言の欠落を隠すための理由の抑止はしない (§14.3 と同じ)。たとえば L3 が無いとき、L12 の `トレース元` に書かれた `F-01` は `dangling_reference:DOC-L12-ACCEPTANCE:<テストID>:トレース元:F-01` になる。
+- 診断に `required doc not created` と `required docs could not be read` の文字列を使わない (§8 の「読み取り例外を丸めない」)。consumer の利用者は、無い文書を §5 の `doc_type_id` で同定する。
+- harness 専用の文書の path (`business-detail.md` / `nfr-grade.md`) は、consumer 分岐の message に現れない。
+
+### 15.5 harness 分岐 (repo root) の不変条件
+
+- harness 分岐は `analyzeG3Trace(loadDocs(repoRoot))` を現行のまま呼ぶ (§9)。5 文書のどれかが無ければ、現行と同じく `loadDocs` が最初に見つけた欠落で例外を投げ、handler が `g3-trace - violation: required docs could not be read (Error: required doc not created: <path>)` の 1 行に丸める。`<path>` は `loadDocs` に渡す harness の path (`docs/design/harness/...` / `docs/test-design/harness/...`) である。
+- harness 分岐では、business-detail と nfr-grade を任意にしない。無いときに空として扱う、飛ばす、`missing_core_doc` に置き換える、のいずれも行わない。harness の G3 の保証 (§4 の表の harness 行) はこの 2 文書に依存するからである。
+- 本節の縮退は consumer 分岐にだけ適用する。`docs/design/harness/` を持つ repo は、consumer 4 文書を持っていても harness 分岐であり、harness 専用の文書が無ければ上の 1 行で赤になる (`CANDIDATE-U-CTRACE-002`)。
+- G1-trace の `loadG1TraceDocs` (`src/lint/g1-trace.ts`) の同じ例外は、consumer 分岐では §3.2 と §14.4 により呼ばれない。harness 分岐の G1 の例外の扱いは本節で変えない。
+
+### 15.6 consumer の G3 が保証しないもの
+
+consumer の G3-trace の PASS は、次を保証しない。これは縮退の結果であり、§4 の「同じ gate 名の 2 つの意味」の G3 の行を、文書の側から言い直したものである。
+
+| harness の G3 の検査 (`src/lint/g3-trace.ts`) | 依存する harness 専用文書 | consumer での扱い |
+|---|---|---|
+| R2 (L3 FR → AC) と R3 / R3-rev (AC ↔ AT) の、`AC-FR-BR21-*` を含む AC の段 | business-detail | consumer のテンプレートに AC の段が無い。L3 機能 → L12 テストの直接の列 trace (T4 の参照先 `F`) だけを持つ。逆方向 (全機能のテスト被覆) は §11 の範囲外 |
+| R4 (L1 NFR 15 件 → L3 nfr-grade) | nfr-grade | consumer の L1 第5章 非機能要求の trace は §11 の範囲外 |
+
+- 後続で consumer にこれらの保証を足すときは、consumer のテンプレートの列で表せる規則として本設計文書を改訂する。harness 専用の文書を consumer に要求する形では足さない (§15.3 の (a) を採らない理由)。
+
+### 15.7 DbC
+
+| contract point | 条件 |
+|---|---|
+| pre | `repoRoot` は directory である。consumer 分岐の reader は §5 の 4 文書の path に対して、文書が無ければ `undefined` を返し、例外を投げない |
+| post (縮退の入力) | consumer 分岐の G3-trace は、§5 の 4 文書だけを reader に要求する。`business-detail.md` と `nfr-grade.md` は、consumer layout と harness layout のどちらの path でも要求しない。文書が置かれていても結果を変えない |
+| post (fail-close) | core 文書が 1 本でも無ければ `ok=false`。無い文書ごとに `missing_core_doc:<doc_type_id>` を 1 件返し、辞書順で全件返す |
+| post (理由の重ね) | 無い core 文書について `doc_type_mismatch` / `required_table_missing` / `empty_required_set` を返さない。その文書の集合を参照先とする token の `dangling_reference` は返す |
+| post (診断の形) | consumer 分岐の message は `consumer column trace` を含み、`required doc not created` / `required docs could not be read` を含まない。harness 専用の文書が無いことは、理由も message も増やさない |
+| post (入口の一致) | `ut-tdd gate G3` の trace 部分と `ut-tdd plan lint --gate G3-trace` は、文書が無い状態でも同じ `ok` と messages を返す (§10 invariant (入口の一致)) |
+| invariant (harness 不変) | harness 分岐の G3-trace は、5 文書が揃った状態でも、1 本が無い状態でも、現行と同じ `ok` と messages を返す。無い状態の message は `g3-trace - violation: required docs could not be read (Error: required doc not created: <harness の path>)` の 1 行である |
+| invariant (分岐の決め方) | 縮退の有無は §3 の分岐だけで決まる。個々の文書の有無で、harness 分岐の中に consumer の縮退を持ち込まない |
+
+### 15.8 検証
+
+テスト設計 `docs/test-design/harness/L7-consumer-trace-gates-test-design.md` の `CANDIDATE-U-CTRACE-046`〜`050` が本節を固定する。046 は Pack#11 の形の再現と 2 つの入口、047 は harness 専用文書が置かれた consumer、048 は core 文書の入力クラスごとの欠落と理由の重ね、049 は複数欠落の全件報告、050 は harness 分岐の不変である。既存の `CANDIDATE-U-CTRACE-019` (harness 専用文書を要求しない) と `021` (core 文書の欠落の fail-close) は、本節の前提として引き続き有効である。
