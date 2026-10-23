@@ -860,14 +860,17 @@ SMB/NFS/OneDrive をまたぐ strict lease、heartbeat、clock-skew 耐性は主
 
 ### 2026-06-29 L14 Close Audit Oracle Addendum
 
-- U-L14CLOSE-001: `analyzeL14CloseAudit` accepts a complete A-143 matrix only when all expected close rows exist, including L10 UX, L11 UAT, L12 release acceptance, L13 post-deploy, and L14 operations feedback boundaries. 検証は隔離 fixture 上の matrix と path-existence 回帰として維持し、fixture の証跡 path は `docs/plans/` を指さない (PLAN 機構撤去 = #1168 A4 / #1078 により、実 PLAN を証跡 path に混ぜる入力は退役)。
 - U-L14CLOSE-002: missing expected rows produce `missing_expected_item` instead of allowing broad prose close claims.
 - U-L14CLOSE-003: open boundary rows (`partial`, `human_required`, `external_required`, `parked_future`) require a non-empty next action.
 - U-L14CLOSE-004: evidence cells must contain existing repo-relative paths under approved evidence roots.
-- U-L14CLOSE-005: **live 部分を退役 (PLAN 機構撤去 = #1168 A4 / #1078)**: 実 repo の A-143 audit を `loadL14CloseAuditDocs` で読み、必須 row 順と照合する live-corpus 検査は要求から外す。過去監査 (A-143) の内容は書き換えない。ただし `loadL14CloseAuditDocs` → `analyzeL14CloseAudit` が返す `rows` の item 順が必須の close row 順 (workflow-definition から始まる 17 行) と一致することの検査は、PLAN 撤去と独立の保証なので維持する。U-L14CLOSE-005 はこの順序 assertion を、証跡 path が `docs/plans/` を指さない隔離 fixture の audit 文書に対して行う形へ改める (001..003 / 007 は順序を検査しないため、代替にしない)。
 - U-L14CLOSE-006: item-specific hardening evidence for workflow definition, system foundation, Claude/Codex parity, clean distribution, version-up, brownfield onboarding, cross-project workflow, L1/L2 mock roundtrip, L10 UX, drive-model bookbinding, and green evidence integrity must be present, not only generic existing paths.
 - U-L14CLOSE-007: missing A-143 audit source is a hard violation message, not a silent skip.
 - U-L14CLOSE-008: non-closed external/human/release boundary rows must keep item-specific markers in gap and next-action cells. After Pack tag/release publication, the release boundary marker is signed tarball signature rather than stale tag-push absence; PO UAT/signoff, post-deploy, operations feedback, hosted/API Codex, and signature boundaries cannot be replaced by vague prose.
+
+| U-ID | 対象 | oracle (DbC) |
+| --- | --- | --- |
+| U-L14CLOSE-001 | `analyzeL14CloseAudit` | `analyzeL14CloseAudit` accepts a complete A-143 matrix only when all expected close rows exist, including L10 UX, L11 UAT, L12 release acceptance, L13 post-deploy, and L14 operations feedback boundaries. 検証は隔離 fixture 上の matrix と path-existence 回帰として維持し、fixture の証跡 path は `docs/plans/` を指さない (PLAN 機構撤去 = #1168 A4 / #1078 により、実 PLAN を証跡 path に混ぜる入力は退役)。 |
+| U-L14CLOSE-005 | `loadL14CloseAuditDocs` → `analyzeL14CloseAudit` | **live 部分を退役 (PLAN 機構撤去 = #1168 A4 / #1078)**: 実 repo の A-143 audit を `loadL14CloseAuditDocs` で読み、必須 row 順と照合する live-corpus 検査は要求から外す。過去監査 (A-143) の内容は書き換えない。ただし `loadL14CloseAuditDocs` → `analyzeL14CloseAudit` が返す `rows` の item 順が必須の close row 順 (workflow-definition から始まる 17 行) と一致することの検査は、PLAN 撤去と独立の保証なので維持する。U-L14CLOSE-005 はこの順序 assertion を、証跡 path が `docs/plans/` を指さない隔離 fixture の audit 文書に対して行う形へ改める (001..003 / 007 は順序を検査しないため、代替にしない)。 |
 
 ### 2026-06-09 Runtime Adapter Lifecycle Test Addendum
 
@@ -2210,7 +2213,6 @@ cross-provider比較除去、E9/E11いずれかのgate除去を全てkillする�
 | `U-HOOKEXEC-007` | doctor fail-close | shell-form command、argv 欠落/追加/並替え、command spoofing、argv の shell operator を個別に検出する。 |
 | `U-HOOKEXEC-008` | Windows native smoke | project-local Node wrapper (`.ut-tdd/bin/ut-tdd.mjs`) が `spawnSync(process.execPath, ...)` の直接 executable spawn と `windowsHide: true` を使い、shell host token (`sh.exe` / `bash.exe` / `cmd.exe` / `powershell.exe` / `pwsh.exe` / dispatch 用 `conhost.exe`) を含まない。process-tree ancestry の実測はこの oracle の主張に含めない。entrypoint 欠落時は exit 127 で fail-close し、hook outcome は既存契約どおりである。 |
 | `U-HOOKEXEC-009` | Node TypeScript launcher floor | 無フラグ TypeScript execution の下限は Node 22.18 であり、`package.json#engines.node` はこの下限を満たす範囲（下限が 22.18 以上）でなければならない。22.6〜22.17を対応済みと宣言しない。`engines.node` の実際の範囲は `>=24.22.1 <25` で、22 系を対応範囲に含めない（`internal-processing.md` §Node toolchain authority、Issue #1255）。 |
-| `U-HOOKEXEC-010` | Windows custody debt boundary | **退役 (PLAN 機構撤去 = #1168 A4 / #1078)**: hook PLAN の Windows debt 注記 (Issue #134 / Windows Job Object / 未解消境界) を読んで照合する検査は要求から外す。既存の非 PLAN 設計文書に同 debt 事実の記述は無いため、移管先は設けない。維持するのは U-HOOKEXEC-001..009 の launcher argv / Node floor / native spawn (`windowsHide: true`) の製品回帰。 |
 
 実行対応は `tests/hook-native-launcher.test.ts`、`tests/project-hook.test.ts`、
 `tests/codex-hook-adapter.test.ts`、`tests/setup.test.ts` である。主検証となる
@@ -2218,6 +2220,8 @@ cross-provider比較除去、E9/E11いずれかのgate除去を全てkillする�
 準備した writable execution snapshot で source / Pack template の parity を検証する
 `isolated_fixture` 分類とする。live checkout の検証に切り替えたり、root 参照を
 追加した場合は `test-repository-isolation` の `callsite-drift` で fail-close する。
+
+- U-HOOKEXEC-010 / Windows custody debt boundary: **退役 (PLAN 機構撤去 = #1168 A4 / #1078)**: hook PLAN の Windows debt 注記 (Issue #134 / Windows Job Object / 未解消境界) を読んで照合する検査は要求から外す。既存の非 PLAN 設計文書に同 debt 事実の記述は無いため、移管先は設けない。維持するのは U-HOOKEXEC-001..009 の launcher argv / Node floor / native spawn (`windowsHide: true`) の製品回帰。
 
 Windows smoke は単なる exit code green では代替できない。本 slice の実測対象は
 `tests/hook-native-launcher.test.ts` が検査する project-local Node wrapper の直接 executable spawn、

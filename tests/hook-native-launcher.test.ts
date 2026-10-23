@@ -100,16 +100,6 @@ describe("Claude hook wrapper execution contract (issue #123 / PLAN-L7-522 S1-b)
     expect(major > 22 || (major === 22 && minor >= 18)).toBe(true);
   });
 
-  it("U-HOOKEXEC-010: keeps Windows process-tree custody open until the Rust kernel owns it", () => {
-    const plan = readFileSync(
-      join(repoRoot, "docs", "plans", "PLAN-L7-139-codex-hook-adapter.md"),
-      "utf8",
-    );
-    expect(plan).toContain("Issue #134");
-    expect(plan).toContain("Windows Job Object");
-    expect(plan).toContain("未解消");
-  });
-
   it("U-HOOKEXEC-002/U-HOOKEXEC-003/U-HOOKEXEC-004/U-HOOKEXEC-007: routes all Claude hooks as exact argv and preserves policy", () => {
     const settings = JSON.parse(
       readFileSync(join(repoRoot, ".claude", "settings.json"), "utf8"),
