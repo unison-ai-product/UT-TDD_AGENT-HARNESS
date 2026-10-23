@@ -28,7 +28,7 @@ pair L6: `docs/design/harness/L6-function-design/test-oracle-strength-helper-res
 
 ## 3. 候補 oracle
 
-各行の「落とす mutation」は、正しい実装と比べて、その fixture の期待値が変わることを確かめた mutation である (§4)。
+各行の「落とす mutation」は、正しい実装と比べて、その fixture の期待値が変わるはずの mutation である。そのうち、初版の試作で期待値が変わることを実測したのは 001〜013・015 と 014 の let mutation だけである。003・004・012 の改訂分、014 (c)、016、017 は規則から導いたもので、まだ実測していない。実装 PR の Red で確かめる (§4)。
 
 | 候補 ID | 境界 | 入力 (fixture の要点) | 期待値 | 落とす mutation |
 |---|---|---|---|---|
