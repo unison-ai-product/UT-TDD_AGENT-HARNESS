@@ -115,7 +115,13 @@ forward 側の `referenced` 集合は既存契約を維持する。reverse 側�
 - 残存参照の検査は、退役した識別子 (`deliverable-plan-trace`、`duplicate-artifact-ownership`、`artifact-ownership`、
   `deliverable-trace-debt-audit`) が `docs/governance/candidates/**`、`docs/archive/**`、`.ut-tdd/**`、`docs/plans/**`
   以外に残らないことを確かめる。除外する 4 つは履歴・候補・実行時状態・退役対象の PLAN であり、退役の対象外である。
-  退役の記録として、本節自身と `design-protection-diff-gate.md` の退役注記が識別子を名指しする分は残存に数えない。
+  退役の記録として、次は残存に数えない。
+  - 本節自身と `design-protection-diff-gate.md` の退役注記が識別子を名指しする分。
+  - PR-1 が退役記録として残した `docs/test-design/harness/L7-deliverable-plan-trace-test-design.md`
+    (PR-2 は `src/` を含むため、design-protection gate によりこの文書を変更できない)。
+  - `docs/archive/**` 配下のファイルを指す path 文字列の一部として現れる識別子
+    (例: `docs/governance/memory-curation-ledger-2026-09.md` の `archive_path`)。除外済みの領域への参照は数えない、
+    という規則であり、個別ファイルの免除ではない。
 
 ### 6.5 工程 (2 PR)
 
@@ -133,16 +139,23 @@ legacy migration の退役 (#1256 / #1257) と同じ 2 PR で進める。design-
    - テストを削除する: `tests/deliverable-plan-trace.test.ts`、`tests/artifact-ownership.test.ts`、
      `tests/doctor.test.ts` の roster / fail-closed 表の該当エントリ (`checkDeliverablePlanTrace` の import、
      fail-closed 表の行、output ID 一覧の `"deliverable-plan-trace"`)。
-   - §6.1 と §6.2 の src、doctor 配線、台帳、生成スクリプトを削除する。
+   - §6.1 と §6.2 の src、doctor 配線、台帳、生成スクリプトを削除する。doctor 配線には、
+     `deliverable-plan-trace.ts` を import している `src/doctor/source-trace.ts` の `checkDeliverablePlanTrace` を含む。
    - `docs/governance/oracle-test-trace-baseline.json` の **`citations`** 一覧から、最後の引用テストが消える
-     `U-L7-450-W2-003` / `U-L7-450-W2-004` / `U-L7-450-W3-001` / `U-L7-450-W3-002` / `U-L7-450-W4-001` を外す。
-     5 件は test-design に宣言が無く、`tests/deliverable-plan-trace.test.ts` だけが引用している
-     (`git grep -n "<ID>" -- src tests docs/test-design` で各 1 件を実測)。5 件は baseline の `legacy` / `widened` には無く
+     `U-L7-450-W2-001` / `U-L7-450-W2-002` / `U-L7-450-W2-003` / `U-L7-450-W2-004` /
+     `U-L7-450-W3-001` / `U-L7-450-W3-002` / `U-L7-450-W4-001` の 7 件を外す。
+     7 件は test-design に宣言が無く、W2-003 / W2-004 / W3-001 / W3-002 / W4-001 の 5 件は
+     `tests/deliverable-plan-trace.test.ts`、W2-001 / W2-002 の 2 件は `tests/artifact-ownership.test.ts`
+     (PR-2 が §6.2 / §6.5 で削除する) が唯一の引用元である
+     (`git grep -n "<ID>" -- src tests docs/test-design` で各 1 件を実測)。7 件は baseline の `legacy` / `widened` には無く
      `citations` にだけある (baseline JSON を解析して各 ID で確認)。`citations` に残したままテストを消すと、
      `src/lint/oracle-test-trace.ts` の `analyzeCitationTrace` が stale citation baseline として違反にする。
      他の ID は、まだ別のテストが引用している場合があるため触れない。
-   - prose を掃除する: `AGENTS.md`、`.claude/CLAUDE.md`、`skills/gate-planning.md` の `deliverable-plan-trace` /
-     `duplicate-artifact-ownership` / `orphan-deliverable` への言及。
+   - prose を掃除する: root `CLAUDE.md`、`AGENTS.md`、`.claude/CLAUDE.md`、`skills/gate-planning.md` の
+     `deliverable-plan-trace` / `duplicate-artifact-ownership` / `orphan-deliverable` への言及。
+     「draft PLAN の `generates` に既存ファイルを書かない」規則は、`duplicate-artifact-ownership` への言及が
+     root `CLAUDE.md`・`AGENTS.md`・`.claude/CLAUDE.md` の 3 ファイルで等価に書かれているため、3 ファイルを同時に直す
+     (rule-drift の対象であり、片側欠落を作らない)。
    - PLAN-L7-450 の `generates` から退役した成果物の行を外す。これは PLAN 凍結 (`CLAUDE.md` §PLAN Filing Rules)
      の例外 (撤去作業そのものに必要な場合) に当たるので、PR 本文に根拠を書く。
    - `tests/doctor.test.ts` の `test-repository-isolation` の mode_calls が変わらないかを、削除後に確認する。
