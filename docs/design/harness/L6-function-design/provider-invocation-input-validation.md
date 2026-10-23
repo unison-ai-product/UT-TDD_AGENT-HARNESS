@@ -10,15 +10,17 @@ next_pair_freeze: L7
 issue: 1261
 ---
 
-# L6 機能設計: provider invocation input validation (Issue #1261 M1 / L1)
+# L6 機能設計: provider invocation input validation (Issue #1261 M1 / L1 / L2)
 
 > **契約状態**: 本文はM1の目標契約である。Issue #1284で対になるL7の11件を正式oracleへ昇格した。このID昇格はsource実装、Green結果、closing review PASSを示すものではない。frontmatterのconfirmedは文書revisionの固定を示し、実装完了を表さない。
+
+L6 contract marker: M1は既存の `buildProviderInvocation(input: ProviderInvocationInput) => ProviderInvocation` と `buildAdapterPlan(intent: AdapterIntent, mode: ExecutionMode) => AdapterPlan` (§5、正式oracle `U-CMDINPUT-001`〜`011`)、L1は `checkForUpdate(deps: UpdateCheckDeps) => UpdateCheckResult` (§7、候補 `CANDIDATE-U-CMDINPUT-012`〜`016`)、L2は `ghCommandEnv(env: NodeJS.ProcessEnv) => NodeJS.ProcessEnv` と定数 `GH_COMMAND_TIMEOUT_MS` (§8、候補 `CANDIDATE-U-CMDINPUT-017`〜`025`) を契約面とする。§7・§8の候補は正式oracleではない。
 
 ## 1. 目的と範囲
 
 CLIからprovider invocationを組み立てる前にmodel / reasoning effortを既存schemaで一貫して検証し、Windowsの`cmd.exe`経由で`.cmd` / `.bat`を起動するときは、command文字列へ展開する全tokenを最終境界で検査する。入口検証と最終token検査を独立した2層として維持する。
 
-対象はIssue #1261 M1と、§7のL1 (`git ls-remote`へ渡すremote引数のoption注入拒否) に限定する。L2、agent-guard、floor、共有function-specおよび共有L7 unit designの改訂は対象外。本書の対象はschemaの複製や新moduleではなく、既存schemaとprovider invocation choke pointの契約である。
+対象はIssue #1261 M1と、§7のL1 (`git ls-remote`へ渡すremote引数のoption注入拒否) と、§8のL2 (`gh`起動のtimeoutとprompt抑止) に限定する。agent-guard、floor、共有function-specおよび共有L7 unit designの改訂は対象外。M1の対象はschemaの複製や新moduleではなく、既存schemaとprovider invocation choke pointの契約である (L2の置き場は§8.2で別に定める)。
 
 ## 2. 既存schemaを使うmodel / effort検証
 
@@ -126,3 +128,73 @@ gitの起動に対してはfail-closeとする: 拒否時は `listRemoteTags` �
 | post | `-`始まりのremoteは§7.3の結果となり、`listRemoteTags`呼出し0回・cache書込み0回。それ以外のremoteは既存挙動のまま。 |
 | invariant | remote解決順、cache TTL、`gitLsRemoteInvocation`のargvと`%`回避、advisoryの非gate性を維持する。 |
 | oracle | 専用L7の `CANDIDATE-U-CMDINPUT-012`〜`015`。まだ正式oracleではない。 |
+
+## 8. 外部コマンドのtimeoutとgh promptの抑止 (Issue #1261 L2)
+
+> **契約状態**: 本節はL2のpair-freezeのための契約案であり、非著者のclosing review前である。未実装の目標契約であり、source実装・L7候補の正式昇格・実行証跡を示さない。§1〜§7の契約は本節で変えない。行番号はorigin/main `5630f0f7d` 時点の実測である。
+
+### 8.1 対象の範囲
+
+対象は、`src/`配下でGitHubへ接続する`gh`の起動だけとする。ネットワークの不調や認証プロンプトで止まりうるのはこれらであり、`review-attestation.yml` のjobには`timeout-minutes`が無いため、CIでの停止はrunnerの既定上限まで続く。
+
+| 起動点 (path:line) | コマンド | 現在のtimeout | 既存の失敗の扱い |
+|---|---|---|---|
+| `src/cli.ts:625` `observeClaudeInboxPullRequest` | `gh pr view` (SessionStart経路) | 無し | catchして`undefined` (entryは残す)。advisory |
+| `src/cli.ts:4138` / `:4144` `fetchRulesetsViaGh` | `gh api .../rulesets` | 無し | throwし、`policy inspect` 等の呼出し元catchでexit 3 |
+| `src/setup/index.ts:1176` `nodeGh` | `gh api` (setupの検出) | 無し | catchして`{ ok: false }` |
+| `src/feedback/review-custody-runner.ts:289` `processEnvironment().runGh` | `gh api .../pulls/<n>` (CI) | 無し | `error`を`status: null`へ写し、`status !== 0`でthrow → 非0終了 |
+| `src/feedback/adapters/gh-attestation-verifier.ts:35` `defaultRunner` | `gh attestation verify` (CI) | 無し | `error`を`status: null`へ写し、`audit_unavailable` |
+| `src/github/project-v2.ts:60` / `:71` `NodeGhCommandPort` | `gh api` / `gh project` | `30_000` | throwし、呼出し元の既存処理 |
+| `src/cli/review-live.ts:120` `validateLiveReviewSubject`の既定`run` | `git cat-file` と `gh pr view` | 無し | `status`が0以外 (timeout時は`null`) で`exact_head_not_found` / `pull_request_head_unavailable` |
+| `src/cli/review-live.ts:261` `publishLiveReviewReceipt` | `gh pr comment` (変更系) | 無し | throwし、`review live-consume`のcatchでexit 1 |
+| `src/feedback/post-merge-backstop.ts:136` `defaultFetchMergedPrPage` | `gh api .../pulls` | `POST_MERGE_COMMAND_TIMEOUT_MS` (10_000) | throwし、呼出し元の既存処理 |
+| `src/feedback/review-merge-gate.ts:567` `readGhView` | `gh pr view` | 無し | throwし、`getPullRequest`のcatchで`ok: false` |
+| `src/feedback/review-merge-gate.ts:604` `createGhPrMergePorts().mergePullRequest` | `gh pr merge` (変更系、`stdio: "inherit"`) | 無し | throwし、`merge_failed` / `gh_merge_failed:<message>` |
+| `src/plan-asset/ledger/sealed-lineage-local-migration.ts:199` `SystemSealedLineageIssueAuthorityPort`の既定`exec` | `gh api .../issues/<n>` | 無し | catchして`undefined` |
+
+対象外とする起動と、その理由:
+
+| 起動点 | 理由 |
+|---|---|
+| provider の実行: `src/cli/delegation.ts:212` (`ut-tdd codex` / `claude`)、`src/cli.ts:3439` (team run)、`src/cli/review-live.ts:156` (live reviewの入れ子CLI) | 正当な実行時間がtaskに依存して上限を持たない (review・実装sessionは数十分続く)。固定のtimeoutは正当な作業を途中で止め、verdict fileからreceiptへの封印を失わせる。delegationはstdioをinheritして対話を含み、停止は操作者に見えてCtrl-Cで止められる。provider CLIは自身でnetwork・認証を扱い、harness側のtimeoutでは原因を区別できない。CI (`harness-check.yml` / `review-attestation.yml`) はproviderを起動しない。 |
+| provider probe `src/runtime/adapter.ts:340` (`--version`) と PATH lookup `:200` (`where.exe` / `which`) | networkにも認証にも触れず、L2の停止原因に該当しない。M1 §4のprobe契約を変えない。 |
+| `src/cli/distribution.ts:857` `gh --version` | GitHubへ接続しない存在確認である。 |
+| `git`の起動 (`src/`配下の`execFileSync("git", ...)` 等、直接の起動だけで60箇所超) | local repositoryの操作であり、network・認証プロンプトを伴わない。networkへ出る`git`は`update-check`の`ls-remote`だけで、既に`LS_REMOTE_TIMEOUT_MS` (5000) が付く (`setup-solo-team.md` §8「timeout 付き」)。`release-artifact-resolver.ts:97`はlocal操作で、既に`GIT_TERMINAL_PROMPT=0`を設定している。 |
+| `src/cli.ts:3563` (node scopeの観測) と `src/lint/verification-profile.ts:138` / `:142` | 既にtimeoutを持つ (30_000、`PROBE_TIMEOUT_MS`、`RUN_TIMEOUT_MS`)。 |
+| `scripts/` 配下 | OSの薄い入口であり、`pack-canary-acceptance.mjs`は自前のtimeoutを持つ。本節の対象を`src/`に限る。 |
+
+### 8.2 timeoutの値と置き場
+
+- 新しいsource module `src/github/gh-command.ts` に、定数 `GH_COMMAND_TIMEOUT_MS = 30_000` と純関数 `ghCommandEnv` (§8.3) の2つだけを置く。port・adapter・設定file・環境変数でのtimeout上書きは作らない。値を利用者が変える手段を足さない。
+- 値は30秒とする。repo内で`gh`に付いている既存の値 (`NodeGhCommandPort`の`30_000`) に揃える。読み取りと変更系で値を分けない (分ける根拠となる実測が無い)。
+- 既に別の値を持つ起動点は、その値を変えない: `post-merge-backstop`は`POST_MERGE_COMMAND_TIMEOUT_MS` (10_000) のまま、`update-check`は`LS_REMOTE_TIMEOUT_MS` (5000) のままとする。
+- `NodeGhCommandPort`の2つの`30_000` literalは、値を変えずに`GH_COMMAND_TIMEOUT_MS`へ置き換える (Refactor工程で行う)。
+- §8.1の対象表の各起動点は、production用の実行子のspawn optionsに`timeout`を渡す。injectionできる実行子 (`runCommand` / `runGh` / `exec` / `execFileSync`の注入) の型は変えない。`createGhPrMergePorts`と`post-merge-backstop`のようにoptionsを呼出し側で組み立てて注入実行子へ渡す起動点は、そのoptionsに`timeout`を含める。
+
+### 8.3 `GH_PROMPT_DISABLED=1` の設定
+
+- `ghCommandEnv(env: NodeJS.ProcessEnv) => NodeJS.ProcessEnv` は `{ ...env, GH_PROMPT_DISABLED: "1" }` を新しいobjectとして返す。既存の`GH_PROMPT_DISABLED` (空文字や`"0"`を含む) は`"1"`で上書きする。他のkey (`PATH`、`GH_TOKEN`等) は保つ。引数のobjectは変更しない。
+- §8.1の対象表の各起動点は、spawn optionsに`env: ghCommandEnv(process.env)`を渡す。`timeout`と同じ位置 (production用の実行子、または呼出し側で組み立てるoptions) に置く。
+- `process.env`を全体で書き換えて設定しない。provider子プロセスや`git`等、対象外の起動へ`GH_PROMPT_DISABLED`を漏らさないためである。`adapterExecutionEnv`はL2で変えない。
+- `validateLiveReviewSubject`の既定`run`は`git`と`gh`に共用されている。両方に同じ`timeout`と`env`を渡してよい (`git`は`GH_PROMPT_DISABLED`を参照しない)。
+
+### 8.4 timeoutになったときの挙動
+
+Nodeは、`spawnSync`では`error` (code `ETIMEDOUT`) と`status: null`を返し、`execFileSync`では例外を投げる。L2では新しい分岐や診断literalを足さず、timeoutを各起動点の既存の失敗経路 (§8.1の表の右列) にそのまま載せる。
+
+- **成功に丸めない**: timeout時の`stdout`に妥当に見える出力 (head SHAやJSON) が含まれても使わない。`status: null`を`0`扱いにしない。
+- **自動でretryしない**: 特に変更系 (`gh pr merge`、`gh pr comment`、`NodeGhCommandPort.run`) は、server側で既に反映されている可能性がある。結果は不明だが、既存の失敗 (`merge_failed`、exit 1、throw) として報告し、成功と報告しない。実行子の呼出しは1回だけとする。
+- **advisoryはfail-open**: `observeClaudeInboxPullRequest`、`SystemSealedLineageIssueAuthorityPort.observe`、`nodeGh`は、既存どおり`undefined` / `{ ok: false }`を返してthrowしない。
+- **gate・custodyはfail-close**: review custody runner、attestation verify、merge gate、review subjectの検証、`github policy`は、既存どおり非0終了・`audit_unavailable`・`ok: false`になる。
+- 診断へtimeoutを示す新しい文言を足さない。既存のmessage (`gh_merge_failed:<message>`等) にNodeのerror messageが入ることは許す。
+
+### 8.5 不変条件
+
+関数署名: 新設は `ghCommandEnv(env: NodeJS.ProcessEnv) => NodeJS.ProcessEnv` だけである。既存の `nodeGh(args: string[]) => { ok: boolean; stdout: string }`、`createGhPrMergePorts(dependencies: { execFileSync?: ExecFileSync }) => GhPrMergePorts`、`createGhAttestationVerifier(options: GhAttestationVerifierOptions) => GitHubAttestationVerifierPort`、`validateLiveReviewSubject(input) => LiveReviewSubjectValidationResult` の署名は変えない。
+
+| DbC | 契約 |
+| --- | --- |
+| pre | `ghCommandEnv`の引数は任意のenv objectで、`GH_PROMPT_DISABLED`の有無を問わない。§8.1対象表の起動点は、ネットワーク不調・認証待ちで応答しない`gh`を外部入力として扱う。 |
+| post | 対象表の各起動点のspawn optionsは`timeout` (`GH_COMMAND_TIMEOUT_MS`、`post-merge-backstop`は`POST_MERGE_COMMAND_TIMEOUT_MS`) と`env.GH_PROMPT_DISABLED === "1"`を持つ。timeoutはその起動点の既存の失敗経路に載り、成功・retryにならない。`ghCommandEnv`は引数を変えず、他のkeyを保った新objectを返す。 |
+| invariant | provider実行・probe・`git`・`gh --version`のspawn optionsにtimeoutを足さず、`process.env`と`adapterExecutionEnv`を変えない。既存の別値 (10_000 / 5000) を変えない。注入できる実行子の型を変えない。 |
+| oracle | 専用L7の `CANDIDATE-U-CMDINPUT-017`〜`025`。まだ正式oracleではない。 |
