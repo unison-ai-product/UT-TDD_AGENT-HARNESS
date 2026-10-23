@@ -99,7 +99,6 @@ import {
   checkProjectHooks,
 } from "./runtime-surface.ts";
 import {
-  checkDeliverablePlanTrace,
   checkImplPlanTrace,
   checkMemorySync,
   checkMergedPlanStatus,
@@ -235,7 +234,6 @@ export function buildDoctorCheckDefinitionGroups(
     {
       id: "source-trace",
       definitions: [
-        full("deliverable-plan-trace", () => checkDeliverablePlanTrace(deps.repoRoot)),
         full("impl-plan-trace", () => checkImplPlanTrace(deps.repoRoot)),
         full("oracle-test-trace", () => checkOracleTestTrace(deps.repoRoot)),
         full("tracked-canonical", () => checkTrackedCanonical(deps.repoRoot)),

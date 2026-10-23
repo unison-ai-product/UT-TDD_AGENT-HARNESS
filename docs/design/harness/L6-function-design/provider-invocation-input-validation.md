@@ -12,7 +12,7 @@ issue: 1261
 
 # L6 機能設計: provider invocation input validation (Issue #1261 M1 / L1)
 
-> **契約状態**: 本PRはpair-freezeのための契約案であり、非著者のclosing review前である。本文は未実装の目標契約であり、source実装・L7候補の正式昇格・実行証跡を示すものではない。frontmatterのconfirmedは提案する文書revisionの固定を示し、review PASSや実装完了を表さない。
+> **契約状態**: 本文はM1の目標契約である。Issue #1284で対になるL7の11件を正式oracleへ昇格した。このID昇格はsource実装、Green結果、closing review PASSを示すものではない。frontmatterのconfirmedは文書revisionの固定を示し、実装完了を表さない。
 
 ## 1. 目的と範囲
 
@@ -74,7 +74,7 @@ CLIからprovider invocationを組み立てる前にmodel / reasoning effortを�
 | pre | model/effortは省略可能な外部入力であり、型宣言だけを検証とみなさない。Windowsのcommand解決は既存の規則に従う。 |
 | post | 不正model/effortは失敗plan/routing、cmd/batのpercent tokenは指定Errorとなり、該当providerをspawnしない。probeはfalse、runProbe呼出し0。 |
 | invariant | 正常値の既存正規化、直接実行、stdin prompt、role/floorの独立検証を維持し、schemaや実行経路を複製しない。 |
-| oracle | 専用L7の `CANDIDATE-U-CMDINPUT-001`〜`011` が、入口・最終境界・probe・stdinを独立して反証する。まだ正式oracleではない。 |
+| oracle | 専用L7の正式oracle `U-CMDINPUT-001`〜`U-CMDINPUT-011` が、入口・最終境界・probe・stdinを独立して反証する。正式IDへの昇格はsource実装やGreen結果を意味しない。 |
 
 1. model / effortの許容値は既存schemaが単一正本であり、team runとdelegationで一致する。
 2. CLI入口での検証はWindows最終token検査の代替ではない。直接builderを使うprobe等も最終検査を通る。
@@ -85,7 +85,7 @@ CLIからprovider invocationを組み立てる前にmodel / reasoning effortを�
 
 ## 6. 対になるテスト設計
 
-候補oracleと反証条件はpair artifact `docs/test-design/harness/L7-provider-invocation-input-validation-test-design.md` に記す。L7候補は通常testとしてRed工程で追加・確認されるまで正式oracleではない。
+正式oracleと反証条件はpair artifact `docs/test-design/harness/L7-provider-invocation-input-validation-test-design.md` に記す。`U-CMDINPUT-001`〜`U-CMDINPUT-011` は正式IDであり、実装完了やGreen結果を表さない。
 
 ## 7. git ls-remote の remote 引数 (Issue #1261 L1)
 

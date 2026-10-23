@@ -1,8 +1,8 @@
-# 作業チケット (PO 判断 2026-10-22)。定義は docs/governance/github-issue-hierarchy.md §6。
-name: Work
+# Forward チケット (PO 判断 2026-10-22。種類は駆動モデル名を継承、2026-10-23)。定義は docs/governance/github-issue-hierarchy.md §6。
+name: Forward
 description: 通常の作業 (Forward) を運ぶ使い捨てチケットを起票する
-title: "Work: "
-labels: ["ut-tdd", "work"]
+title: "Forward: "
+labels: ["ut-tdd", "forward"]
 body:
   - type: markdown
     attributes:
