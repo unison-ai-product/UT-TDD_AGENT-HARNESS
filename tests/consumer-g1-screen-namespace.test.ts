@@ -29,10 +29,11 @@ vi.mock("node:fs", async (importOriginal) => {
   };
 });
 
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { evaluateStaticGate } from "../src/gate/static.ts";
+import { analyzeConsumerG1Trace } from "../src/lint/consumer-trace.ts";
 import { analyzeG1Trace, extractG1ScreenTrace, loadG1TraceDocs } from "../src/lint/g1-trace.ts";
 import { lintPlanWithGate } from "../src/plan/lint.ts";
 
@@ -50,6 +51,12 @@ const TEMPLATE_SLOTS = [
     "docs/templates/vmodel/L12-acceptance-test-design.md",
     "docs/test-design/L12-acceptance-test-design.md",
   ],
+] as const;
+
+const CORE_G1_PATHS = [
+  "docs/design/L1-requirements/functional-requirements.md",
+  "docs/design/L2-screen/screen-list.md",
+  "docs/design/L3-functional/functional-requirements.md",
 ] as const;
 
 const temporaryRoots: string[] = [];
@@ -224,8 +231,30 @@ function observeFixture<T>(root: string, run: () => T): { result: T; paths: stri
 
 function screenTraceCalls(paths: readonly string[]): string[] {
   return paths.filter((path) =>
-    /\/docs\/design\/L1-requirements\/(business-requirements|screen-requirements)\.md$/i.test(path),
+    /(?:^|\/)docs\/design\/L1-requirements\/(business-requirements|screen-requirements)\.md$/i.test(
+      path,
+    ),
   );
+}
+
+function fixtureReader(root: string): {
+  reader: (relativePath: string) => string | undefined;
+  requestedPaths: string[];
+} {
+  const requestedPaths: string[] = [];
+  return {
+    reader: (relativePath) => {
+      requestedPaths.push(relativePath);
+      const path = join(root, relativePath);
+      return existsSync(path) ? readFileSync(path, "utf8") : undefined;
+    },
+    requestedPaths,
+  };
+}
+
+function pureAnalyze(root: string) {
+  const fake = fixtureReader(root);
+  return { result: analyzeConsumerG1Trace(fake.reader), requestedPaths: fake.requestedPaths };
 }
 
 function consumerTraceReasons(messages: readonly string[]): string[] {
@@ -296,6 +325,42 @@ describe("consumer G1 screen namespace (issue #1273)", () => {
     });
   });
 
+  it("CANDIDATE-U-CTRACE-042: pure analyzer import and result shape are valid", () => {
+    const { result } = pureAnalyze(fixtures.fixture042);
+
+    expect(result.branch).toBe("consumer");
+    expect(Array.isArray(result.violations)).toBe(true);
+    expect(typeof result.ok).toBe("boolean");
+    expect(Object.keys(result.totals).sort()).toEqual(["functions", "requirements", "screens"]);
+    expect(Object.values(result.totals).every((count) => typeof count === "number")).toBe(true);
+    expect(Array.isArray(result.messages)).toBe(true);
+    expect(result.messages.every((message) => message.includes("consumer column trace"))).toBe(
+      true,
+    );
+  });
+
+  it.fails("CANDIDATE-U-CTRACE-042: pure result reports the fixture's three-by-three totals", () => {
+    const { result } = pureAnalyze(fixtures.fixture042);
+    expect(result.totals).toEqual({ requirements: 3, screens: 3, functions: 3 });
+  });
+
+  it.fails("CANDIDATE-U-CTRACE-042: pure result has the fixture's contract OK message", () => {
+    const { result } = pureAnalyze(fixtures.fixture042);
+    expect(result.messages).toEqual([
+      "g1-trace - OK (consumer column trace: requirements=3, screens=3, functions=3)",
+    ]);
+  });
+
+  it.fails("CANDIDATE-U-CTRACE-042: pure reader requests the three consumer core documents", () => {
+    const { requestedPaths } = pureAnalyze(fixtures.fixture042);
+    expect([...new Set(requestedPaths)].sort()).toEqual([...CORE_G1_PATHS].sort());
+  });
+
+  it("CANDIDATE-U-CTRACE-042: pure reader does not request the legacy business/screen documents", () => {
+    const { requestedPaths } = pureAnalyze(fixtures.fixture042);
+    expect(screenTraceCalls(requestedPaths)).toEqual([]);
+  });
+
   it.fails("CANDIDATE-U-CTRACE-042: uses consumer columns and never reads harness business/screen docs", () => {
     const observed = observeFixture(fixtures.fixture042, () =>
       lintPlanWithGate(undefined, fixtures.fixture042, "G1-trace"),
@@ -328,6 +393,23 @@ describe("consumer G1 screen namespace (issue #1273)", () => {
     expect(result.messages.join("\n")).not.toContain("required docs could not be read");
   });
 
+  it.fails("CANDIDATE-U-CTRACE-043(a): pure result counts zero declared screens", () => {
+    const { result } = pureAnalyze(fixtures.fixture043a);
+    expect(result.totals.screens).toBe(0);
+  });
+
+  it.fails("CANDIDATE-U-CTRACE-043(a): pure result reports the empty screen declaration", () => {
+    const { result } = pureAnalyze(fixtures.fixture043a);
+    expect(result.violations).toContain("empty_required_set:DOC-L2-SCREEN:画面ID");
+  });
+
+  it.fails("CANDIDATE-U-CTRACE-043(a): pure result keeps the SC-01 dangling reference", () => {
+    const { result } = pureAnalyze(fixtures.fixture043a);
+    expect(result.violations).toContain(
+      "dangling_reference:DOC-L1-REQUIREMENTS:REQ-01:展開先:SC-01",
+    );
+  });
+
   it.fails("CANDIDATE-U-CTRACE-043(b): empty declaration ignores fixed-prefix labels outside the L2 table", () => {
     const result = lintPlanWithGate(undefined, fixtures.fixture043b, "G1-trace");
     const reasons = consumerTraceReasons(result.messages);
@@ -338,11 +420,35 @@ describe("consumer G1 screen namespace (issue #1273)", () => {
     expect(result.messages.join("\n")).not.toContain("required docs could not be read");
   });
 
+  it.fails("CANDIDATE-U-CTRACE-043(b): pure result counts zero declared screens", () => {
+    const { result } = pureAnalyze(fixtures.fixture043b);
+    expect(result.totals.screens).toBe(0);
+  });
+
+  it.fails("CANDIDATE-U-CTRACE-043(b): pure result reports the empty screen declaration", () => {
+    const { result } = pureAnalyze(fixtures.fixture043b);
+    expect(result.violations).toContain("empty_required_set:DOC-L2-SCREEN:画面ID");
+  });
+
+  it.fails("CANDIDATE-U-CTRACE-043(b): pure result keeps the PM-01 dangling reference", () => {
+    const { result } = pureAnalyze(fixtures.fixture043b);
+    expect(result.violations).toContain(
+      "dangling_reference:DOC-L1-REQUIREMENTS:REQ-01:展開先:PM-01",
+    );
+  });
+
   it.fails("CANDIDATE-U-CTRACE-044(a): SC-001 is not equal to declared SC-01", () => {
     const result = lintPlanWithGate(undefined, fixtures.fixture044["SC-001"], "G1-trace");
     const reasons = consumerTraceReasons(result.messages);
     expect(result.ok).toBe(false);
     expect(reasons).toContain("dangling_reference:DOC-L1-REQUIREMENTS:REQ-02:展開先:SC-001");
+  });
+
+  it.fails("CANDIDATE-U-CTRACE-044(a): pure result rejects SC-001 by exact equality", () => {
+    const { result } = pureAnalyze(fixtures.fixture044["SC-001"]);
+    expect(result.violations).toContain(
+      "dangling_reference:DOC-L1-REQUIREMENTS:REQ-02:展開先:SC-001",
+    );
   });
 
   it.fails("CANDIDATE-U-CTRACE-044(b): sc-01 is not equal to declared SC-01", () => {
@@ -352,11 +458,32 @@ describe("consumer G1 screen namespace (issue #1273)", () => {
     expect(reasons).toContain("dangling_reference:DOC-L1-REQUIREMENTS:REQ-02:展開先:sc-01");
   });
 
+  it.fails("CANDIDATE-U-CTRACE-044(b): pure result rejects sc-01 by exact equality", () => {
+    const { result } = pureAnalyze(fixtures.fixture044["sc-01"]);
+    expect(result.violations).toContain(
+      "dangling_reference:DOC-L1-REQUIREMENTS:REQ-02:展開先:sc-01",
+    );
+  });
+
   it.fails("CANDIDATE-U-CTRACE-044(c): fullwidth ＳＣ-01 is not equal to declared SC-01", () => {
     const result = lintPlanWithGate(undefined, fixtures.fixture044["ＳＣ-01"], "G1-trace");
     const reasons = consumerTraceReasons(result.messages);
     expect(result.ok).toBe(false);
     expect(reasons).toContain("dangling_reference:DOC-L1-REQUIREMENTS:REQ-02:展開先:ＳＣ-01");
+  });
+
+  it.fails("CANDIDATE-U-CTRACE-044(c): pure result rejects fullwidth ＳＣ-01 by exact equality", () => {
+    const { result } = pureAnalyze(fixtures.fixture044["ＳＣ-01"]);
+    expect(result.violations).toContain(
+      "dangling_reference:DOC-L1-REQUIREMENTS:REQ-02:展開先:ＳＣ-01",
+    );
+  });
+
+  it.fails("CANDIDATE-U-CTRACE-044(a-c): pure results retain the three declared screens", () => {
+    const screenCounts = mismatchTokens.map(
+      (token) => pureAnalyze(fixtures.fixture044[token]).result.totals.screens,
+    );
+    expect(screenCounts).toEqual([3, 3, 3]);
   });
 
   it.fails("CANDIDATE-U-CTRACE-044(d): permits a second declared screen prefix", () => {
@@ -368,6 +495,11 @@ describe("consumer G1 screen namespace (issue #1273)", () => {
         message.startsWith("g1-trace - OK (consumer column trace:"),
       ),
     ).toEqual(["g1-trace - OK (consumer column trace: requirements=3, screens=4, functions=3)"]);
+  });
+
+  it.fails("CANDIDATE-U-CTRACE-044(d): pure result includes the additional declared screen", () => {
+    const { result } = pureAnalyze(fixtures.fixture044d);
+    expect(result.totals.screens).toBe(4);
   });
 
   it("CANDIDATE-U-CTRACE-045: keeps the harness screen prefix fixed, including the direct trace map", () => {
