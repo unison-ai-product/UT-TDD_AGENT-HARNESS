@@ -173,13 +173,9 @@ function requiredMessage(measure: DocMeasure, reason: string, limit: Measured): 
   return `${head}\n  責務 ${names.join(", ")} を ${target}`;
 }
 
-export function docSplitFinding(
-  path: string,
-  kind: string,
-  reason: string,
-  message = `${path}:${kind}:${reason}`,
-): DocSplitFinding {
-  return { path, kind, reason, message };
+/** finding を作る。メッセージは `<path>:<kind>:<reason>` (doc-split-required だけは呼び出し側で分割指示に差し替える)。 */
+export function docSplitFinding(path: string, kind: string, reason: string): DocSplitFinding {
+  return { path, kind, reason, message: `${path}:${kind}:${reason}` };
 }
 
 /** finding を path、kind、reason の順で一意に並べる (§6)。 */
@@ -201,13 +197,10 @@ function documentFindings(
   for (const measure of measures) {
     const recorded = Object.hasOwn(baseline, measure.path) ? baseline[measure.path] : undefined;
     const limit = DOC_SPLIT_LIMITS[measure.docClass];
-    const required = (reason: string, bound: Measured) =>
-      docSplitFinding(
-        measure.path,
-        "doc-split-required",
-        reason,
-        requiredMessage(measure, reason, bound),
-      );
+    const required = (reason: string, bound: Measured): DocSplitFinding => ({
+      ...docSplitFinding(measure.path, "doc-split-required", reason),
+      message: requiredMessage(measure, reason, bound),
+    });
     if (recorded === undefined) {
       if (exceeds(measure, limit)) findings.push(required("new-doc-over-limit", limit));
     } else if (exceeds(measure, recorded)) {
