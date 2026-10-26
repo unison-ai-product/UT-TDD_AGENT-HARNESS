@@ -23,6 +23,7 @@ issue: 1364
 
 - 純粋関数の行 (001〜007、009〜013) は、入力を直接渡す。実 repo のファイルは読まない。`docs/plans` を持たない temp directory を repo root として使う。
 - DB の行 (008) は temp directory に harness.db を作り、registry に登録の無い表を手で作ってから `migrate` と rebuild の truncate を流す。実際の `.ut-tdd/harness.db` と台帳 DB には触れない。
+- 移行の行 (019、020) は、旧版の DDL を手で書き直さない。その段の base commit で `schemaDdl()` が出す文字列をそのまま fixture に保存し、temp の harness.db をそれで作る。実際の `.ut-tdd/harness.db` には触れない。
 - 静的な行 (014〜018) は実 repo の tracked file を読むので、`src/doctor/test-repository-isolation.ts` の登録が要る。
 - 1 つの行は規則を 1 本だけ殺すように、入力の書き方を 1 つだけ変える。
 
@@ -47,12 +48,15 @@ issue: 1364
 | `CANDIDATE-U-PLANRET-015` | S1 | doctor の check 定義と `.github/workflows/harness-check.yml` | `merged-plan-status`・`plan-body-substance`・`plan-completion-drift`・`green-command-digest` と PLAN の `review-evidence` の check ID が full doctor の出力 ID に無い。workflow と src に `--strict-green-command-digest` が無い | check や flag を残す / 一部だけ外す |
 | `CANDIDATE-U-PLANRET-016` | S4 | `.github/workflows/review-attestation.yml` | `workflow_dispatch.inputs` に `plan_id` と `plan_revision` が無く、`pr` は必須のまま。`UT_TDD_CUSTODY_PLAN_ID` / `UT_TDD_CUSTODY_PLAN_REVISION` の env が無い | 入力を残す / PR の束縛を外す |
 | `CANDIDATE-U-PLANRET-017` | S6 | `docs/templates/**/*.md` の frontmatter、`src/setup/authoring-template-inventory.ts`、`scripts/pack-canary-acceptance.mjs` | `plan:` を持つ雛形が 0 本で、§6 の 50 本は `issue:` を持つ。inventory に `docs/templates/plan/` が無い。canary に `plan draft` / `plan lint` の実行が無い | 一部の雛形に `plan:` を残す / canary が PLAN を起票し続ける |
+| `CANDIDATE-U-PLANRET-019` | S3 | 旧版 DB の fixture: S3 の base commit の `schemaDdl()` が出す実際の DDL で全表を作り、`user_version` を旧版 (29) にし、`plan_registry` に行 2 件、`vmodel_item_target_edges` に旧形の行 1 件を入れた temp の harness.db。これに (1) `migrate`、(2) defer で `issue` を持ち `plan_id` を持たない item target の行を含む catalog から vmodel の投影を流す rebuild、(3) もう一度 `migrate` を流す | (1) の後: `sqlite_master` の `vmodel_item_target_edges` の DDL に `plan_id` と `plan_registry` への外部キーが無く、`issue` 列と「defer なら `issue` が NULL でない」CHECK がある。`plan_registry` の表と行 2 件は (1) で変わらない。(2) は例外なく終わり、defer の行が `issue` を持って 1 件投影される。(3) は `applied=false` で、`sqlite_master` の全 DDL と全表の行数が (2) の後と同じ。`issue` が NULL の defer 行を (2) の後に挿入すると CHECK で拒否される | 再作成を省いて registry の定義だけ変える (旧い CHECK か未定義の列で (2) が落ちる) / 版を見ずに毎回作り直す ((3) で行が消える) / 新しい CHECK を付け忘れる / PLAN 用の表を巻き込んで DROP する |
+| `CANDIDATE-U-PLANRET-020` | S4 | 旧版 DB の fixture: S4 の base commit (S3 の後) の `schemaDdl()` が出す実際の DDL で作り、`user_version` をその版にし、`github_review_lane_receipts` に `plan_id` を持つ旧形の行 1 件、`plan_registry` に行 2 件を入れた temp の harness.db。これに (1) `migrate`、(2) custody v2 の receipt (`plan_id` 無し) を含む repo から rebuild、(3) もう一度 `migrate` を流す | (1) の後: `github_review_lane_receipts` の DDL に `plan_id`・`plan_revision` が無く、UNIQUE が `lane`・`subject_head` の組。`plan_registry` の表と行 2 件は (1) で変わらない。(2) は例外なく終わり、receipt の行が投影される。同じ `lane`・`subject_head` の行の 2 件目の挿入は UNIQUE で拒否される。(3) は `applied=false` で、DDL と行数が (2) の後と同じ | 再作成を省く (旧い NOT NULL で (2) が落ちる) / 版を見ずに毎回作り直す / UNIQUE を落とす / PLAN 用の表を巻き込んで DROP する |
 | `CANDIDATE-U-PLANRET-018` | S7 | src・scripts・`.github` の tracked file | (a) L6 §3 の PLAN 用の表の名前を含む SQL 文字列が無い、(b) `harness-ledger.db` の path が無い、(c) PLAN 用の表と台帳への `DROP`・`VACUUM`・`DELETE` が無い、(d) `docs/plans` の実在を確かめるコードが無い、(e) Project の item を消す GraphQL mutation (`deleteProjectV2Item` など) が無い | 読み手や書き手を残す / 退役の名目で破壊的な操作を足す |
 
 ## 4. 昇格と引用の方針
 
 - 各段の Red PR は、その段の行 (表の「段」の列) の候補 ID をテスト名に引用する。1 本の PR が別の段の行を引用しない。
 - S1・S5・S8 のように振る舞いを足さない段の行 (015、014 の S5 部分) は、退役の PR で `it` として入れてよい (退役前の main では成り立たないので `it.fails` の Red にしない)。
+- 019 は S3 の PR、020 は S4 の PR が、Red (`it.fails`) として先に入れる。どちらも S7 の前の中間段で rebuild が通ることを確かめる行である。
 - 008 と 018 は S7 の PR が入れる。S7 より前は、PLAN 用の表がまだ registry にあるので成り立たない。
 
 ## 5. 範囲外

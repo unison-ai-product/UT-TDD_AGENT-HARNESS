@@ -57,6 +57,15 @@ PLAN 機構は撤去の方針である (#1078、凍結は #1166)。`docs/plans` 
 
 **PLAN を参照する残りの表の定義**: `vmodel_item_target_edges` は `plan_registry` への外部キー (`src/schema/harness-db-tables-vmodel.ts:115`) と「defer なら `plan_id` 必須」の CHECK (`:129`) を持ち、`github_review_lane_receipts` は `plan_id` を必須にしている (`src/schema/harness-db-tables-github.ts:9`、`:22`)。どちらも PLAN 用の表ではなく、rebuild で作り直せる投影である。既存の DB では `CREATE TABLE IF NOT EXISTS` が古い定義を変えないので、registry 側の定義を変えるだけでは CHECK と NOT NULL が残る。そこで、この 2 表は `migration.ts:104-120` と同じ版つきの再作成 (`SCHEMA_VERSION` を上げ、旧版の DB でだけ作り直す) で、`plan_id` を持たない定義へ移す。行は同じ rebuild で投影し直す。この再作成は PLAN 用の表には使わない。
 
+再作成は、その表へ PLAN の無い行を書き始める段と**同じ PR** で行う。分けると、間の段の rebuild が旧い制約で落ちる。
+
+| 表 | 段 | 新しい定義 | 理由 |
+| --- | --- | --- | --- |
+| `vmodel_item_target_edges` | S3 | `plan_id` 列と `plan_registry` への外部キーを外し、`issue` 列 (Issue URL) を足す。CHECK は「defer なら `issue` が NULL でない」にする | S3 で catalog の defer を Issue 化すると、投影 (`src/state-db/vmodel-projections.ts:86-87` が catalog の行をそのまま upsert する) が旧い CHECK (`harness-db-tables-vmodel.ts:129`) に当たる。足した列も旧い表には無い |
+| `github_review_lane_receipts` | S4 | `plan_id`・`plan_revision` を外し、UNIQUE は `lane`・`subject_head` の組にする | S4 の custody v2 の receipt には `plan_id` が無く、旧い NOT NULL (`harness-db-tables-github.ts:9`) に当たる |
+
+2 回の再作成はそれぞれ `SCHEMA_VERSION` を 1 つ上げ、`src/schema/harness-db.ts` と `src/state-db/migration.ts` を変えるので、S3 → S4 の順に直列にする。現在の item target 台帳 (`docs/governance/vmodel-item-target-ledger.md`) に defer の行は無く、`plan_id` はすべて未設定 (`—`) なので、既存の catalog の書き換えは要らない。
+
 **既存の自動 VACUUM**: `src/state-db/db-maintenance.ts:83` は rebuild の後に空きページの割合で DB 全体へ `VACUUM` を掛ける既存の保守であり、PLAN 用の表を狙う操作ではない。本書はこれを足しも外しもしない。
 
 ## 4. fail-open で残る check の扱い (凍結点 2)
@@ -142,11 +151,11 @@ Pack の PLAN 運用は Issue 参照に置き換える (PO 判断)。**互換性
 | --- | --- | --- | --- |
 | S1 | PLAN 専用 lint の退役 3/3 (§4 の「退役」の行の doctor check、`--strict-green-command-digest`) | `src/lint/{merged-plan-status,plan-body-substance,plan-completion-drift,green-command-digest}.ts`、doctor の登録、`harness-check.yml`、`src/cli.ts` (doctor の option) | 直列 1 |
 | S2 | fail-open の check の PLAN 非依存化 (§4 の「PLAN 非依存化」と `red-first-evidence`) | `src/lint/{outstanding,sub-doc-section-structure,ddd-tdd-rules,descent-obligation,l6-completion,drive-db-registration,db-currency}.ts`、`src/state-db/drive-registration.ts` | 並列。`src/cli.ts` の変更が要るなら S1 の後に直列へ入れる |
-| S3 | manifest の参照の付け替え (§5.1、§5.2 の right-arm static・文書処分・V-model 契約) と `parseIssueUrl` | `src/shared/issue-ref.ts`、`src/gate/right-arm-static.ts`、`src/document-disposition/**`、`src/disposition/**`、`src/vmodel-contract/**`、`docs/process/vmodel-contract.yaml`、`PLAN-L0-*` を引用する test design | 並列 |
+| S3 | manifest の参照の付け替え (§5.1、§5.2 の right-arm static・文書処分・V-model 契約) と `parseIssueUrl` | `src/shared/issue-ref.ts`、`src/gate/right-arm-static.ts`、`src/document-disposition/**`、`src/disposition/**`、`src/vmodel-contract/**`、`docs/process/vmodel-contract.yaml`、`PLAN-L0-*` を引用する test design、`vmodel_item_target_edges` の再作成 (§3、`src/schema/harness-db*.ts`、`src/state-db/{migration,vmodel-projections}.ts`) | S4 より前 (schema の版を直列にする)。他の段とは並列 |
 | S4 | CLI の `--plan` の解除、PR の typed trace v2、review custody v2 と `review-attestation.yml`、`github_review_lane_receipts` の再作成 (§3) | `src/cli.ts`、`src/forward/adapters/cli-registrar.ts`、`src/cli/{delegation,feedback}.ts`、`src/github/pr-trace.ts`、`src/feedback/review-custody*.ts`、`.github/workflows/review-attestation.yml`、`.github/PULL_REQUEST_TEMPLATE.md` | 直列 3 |
 | S5 | Project V2 同期と binding の退役 (§7) | `src/github/{project-v2,repository-bindings}.ts`、`src/cli.ts` | 直列 2 |
 | S6 | Pack の雛形と canary (§6) | `docs/templates/**`、`src/setup/authoring-template-inventory.ts`、`scripts/pack-canary-acceptance.mjs` | S3 と S2 の `l6-completion` の後。#961 の前 |
-| S7 | PLAN の CLI・台帳・投影コードの退役と registry からの除外 (§3)。`src/plan/`、`src/plan-admission/`、`src/plan-asset/` を消す。PLAN 以外が使う部分 (§2 の 8 行目) は消さずに `src/forward/` と `src/setup/` の側へ移す。`vmodel_item_target_edges` の再作成、`model_evaluations` の成功判定 (`plan_registry.status` との結合、`src/schema/harness-db-tables-evaluation.ts:31`) の退役 (列は残して NULL)、`src/doctor/test-repository-isolation.ts:45` の登録行の削除 | 上記 3 dir、`src/state-db/**`、`src/schema/harness-db*.ts`、`src/cli.ts` | 直列 4 (S1〜S5 の後) |
+| S7 | PLAN の CLI・台帳・投影コードの退役と registry からの除外 (§3)。`src/plan/`、`src/plan-admission/`、`src/plan-asset/` を消す。PLAN 以外が使う部分 (§2 の 8 行目) は消さずに `src/forward/` と `src/setup/` の側へ移す。`model_evaluations` の成功判定 (`plan_registry.status` との結合、`src/schema/harness-db-tables-evaluation.ts:31`) の退役 (列は残して NULL)、`src/doctor/test-repository-isolation.ts:45` の登録行の削除 | 上記 3 dir、`src/state-db/**`、`src/schema/harness-db*.ts`、`src/cli.ts` | 直列 4 (S1〜S5 の後) |
 | S8 | 規範文書と rule-drift の marker の掃除 (`CLAUDE.md`、`AGENTS.md`、`.claude/CLAUDE.md`、`skills/`、`docs/governance/`) | 規範文書 | S7 の後 |
 
 各段は設計書保護 gate の三段階 (契約 → 登録 + Red → src を含まない昇格 → 実装) に従う。本書が (0) の契約にあたる。退役だけで新しい振る舞いを持たない段 (S1、S5、S8) は Red を持たず、削除と、消えたことを確かめるテストの差分だけにする。
