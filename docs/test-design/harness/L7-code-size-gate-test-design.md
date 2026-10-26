@@ -18,7 +18,7 @@ issue: 1310
 共有の `docs/test-design/harness/L7-unit-test-design.md` には索引行を足さない。本書が詳細の正本である。
 
 この pair-freeze では候補 ID (`CANDIDATE-U-CODESIZE-*`) だけを宣言する。正式化は設計書保護 gate §10.3 の三段階 (L6 §9) で行う。
-閾値の値を書いた oracle (003 の `functionExcess`、004、005、012 の (d)、018) は L6 §4.2 の **PO 確定値 (2026-10-26。ファイル 500 / 500、関数 120、分割候補 400)** で書いてある。値を変えるときは、L6 §4.2 と同じ改訂でこれらの値を書き換える。他の oracle は、L6 §4.2 で比べたどの上限 (500〜1200 行) でも結果が変わらない値 (1300 行の baseline、300 行の上限の内側) か、`CODE_SIZE_LIMITS` からの相対値 (上限 + 1 など) で書く。
+閾値の値を書いた oracle (003 の `functionExcess`、004、005、012 の (d)、018、019) は L6 §4.2 の **PO 確定値 (2026-10-26。ファイル 500 / 500、関数 120、分割候補 400)** で書いてある。値を変えるときは、L6 §4.2 と同じ改訂でこれらの値を書き換える。他の oracle は、L6 §4.2 で比べたどの上限 (500〜1200 行) でも結果が変わらない値 (1300 行の baseline、300 行の上限の内側) か、`CODE_SIZE_LIMITS` からの相対値 (上限 + 1 など) で書く。
 
 ## 2. fixture
 
@@ -49,11 +49,12 @@ issue: 1310
 | `CANDIDATE-U-CODESIZE-015` | temp の git repository で、(a) merge-base の commit に `docs/governance/code-size-baseline.json` がある、(b) 無い、(c) `origin/main` が無く merge-base を解決できない、(d) JSON として解釈できない。続けて、(e) merge-base で 900 行の `src/big.ts` を作業木で 950 行に育てた状態の `loadCodeSizeMergeBaseMeasures`、(f) `src/big.ts` を `git mv` で `src/sub/big.ts` へ移した状態の `loadRenamedCodeFiles`、(g) git を起動できない状態の `loadRenamedCodeFiles` | `loadPreviousCodeSizeBaseline` は (a) `found`、(b) `absent`、(c)(d) `unreadable`。`checkCodeSize` は (b) で比較を省き、(c)(d) で `code-size-baseline-base-unreadable`。(e) は `found` で 900 (作業木の 950 ではない)。(f) は R 行を `found` で返す。(g) は `unreadable` | 読めない比較元を比較なしと取り違える / 初めて入れる PR を赤にする / merge-base ではなく作業木を測る / 読めない git を rename なしとみなす |
 | `CANDIDATE-U-CODESIZE-016` | 実 repo (`origin/main` の内容) に `checkCodeSize` をかける。temp にコピーした実 repo で、(a) baseline に行のある `src` ファイルのうち `lines` が最大の 1 本と、`tests` ファイルのうち最大の 1 本の末尾に、それぞれ 1 行を足す、(b) 新しい `src` ファイルに本体 121 行の関数を足す (具体的なファイル名は固定せず baseline の行から選ぶ) | 実 repo は `ok=true` で、`docs/governance/code-size-baseline.json` の各行は、その時点の実測から作った記録形 (L6 §5) と一致する (行数や値は本書に固定しない)。(a) の各 1 行は `exceeds-baseline` で止まりメッセージに分割先の指示を含む。(b) は `new-file-over-limit`。baseline は `docs/governance/` から読む (`src/` の定数ではない) | 実 repo に対して常に緑 (baseline が実測と無関係) / 実際の追記を止められない |
 | `CANDIDATE-U-CODESIZE-017` | (a) doctor に `code-size` の check が登録されている。(b) `ut-tdd code-size check` を、緑の worktree と違反を足した worktree で実行する。(c) 実行前後で `.ut-tdd/` と harness.db のファイルの更新時刻を比べる | (a) 登録されており、違反のとき doctor が fail する。(b) 緑は exit 0、違反は exit 1 でメッセージを標準出力に出す。(c) 書き込みなし | doctor に配線しない / CLI が常に exit 0 / CLI が state を書く |
-| `CANDIDATE-U-CODESIZE-018` | `CODE_SIZE_LIMITS` と `REFACTOR_CANDIDATE_THRESHOLDS` (`src/state-db/refactor-candidate-policy.ts`) を import して比べる | `CODE_SIZE_LIMITS` の `src` のファイルの行数 ≥ `splitModuleLines`、関数の行数 ≥ `extractHelperLines` (候補 ≤ 上限、L6 §10)。確定値では 500 ≥ 400 (`splitModuleLines` は L6 §10 で 700 から 400 に下げる)、120 ≥ 120。現行の 700 のままなら赤になる | 上限を候補より小さくして、候補が上限より遅く出る |
+| `CANDIDATE-U-CODESIZE-018` | `CODE_SIZE_LIMITS` と `REFACTOR_CANDIDATE_THRESHOLDS` (`src/state-db/refactor-candidate-policy.ts`) を import して比べる | (a) `CODE_SIZE_LIMITS` の `src` のファイルの行数 ≥ `splitModuleLines`、関数の行数 ≥ `extractHelperLines` (候補 ≤ 上限、L6 §10)。(b) 等値: `splitModuleLines` === 400、`extractHelperLines` === 120、`src` の上限 === 500。(c) 境界: 空白以外を含む行が 399 / 400 / 401 行の `src` ファイル (export は 1 個) を `analyzeRefactorCandidates` と `analyzeCodeSize` (baseline は空) の両方に渡す。399 行は `split-module` の候補なし、400 行と 401 行は候補あり (候補は値以上で出す)。3 つとも gate の finding は 0 件 (gate は 501 行から) | 上限を候補より小さくして、候補が上限より遅く出る / `splitModuleLines` を 500 など 400 以外にする (大小比較だけなら通る) / 候補を値を超えたときだけ出す (400 行で出ない) |
+| `CANDIDATE-U-CODESIZE-019` | 同じ `src` ファイルを `analyzeRefactorCandidates` (候補側) と `measureCodeFile` (gate) の両方に渡す。(a) 関数本体に `x++; /* c` と `*/ x++;` の 2 行の組を 60 組置く、(b) 61 組、(c) 本体 125 行の method、constructor、getter、(d) 本体が 125 行の式の arrow function、(e) 本体 100 行と本体 30 行の callback を持つ関数 (003 の (e) と同じ形) | 両側で関数の行数と拾った関数が一致する。(a) は両側 120 行で、`extract-helper` の候補が出て (候補は 120 以上)、gate の超過はない。(b) は両側 122 行で、`extract-helper` の候補が出て、gate の `functionExcess` は 2。(c)(d) は両側が同じ関数を拾い、候補が出て、gate の `overFunctions` に入る。(e) は外側 132 行で両側が一致する | 候補側がコメントを改行ごと除いて行数を少なく数える (b で候補側が 61 行になり、gate だけが止める) / 候補側が method・constructor・getter・式本体の arrow を拾わない / 入れ子の扱いが両側で違う |
 
 ## 4. 昇格と引用の方針
 
-- `CANDIDATE-U-CODESIZE-001`〜`018` は候補 ID のまま Red のテストが引用する。正式 ID `U-CODESIZE-*` への昇格は、src/ を含まない昇格 PR で、正式 ID を先頭セルに書き直す変更とテスト名の引用の書き換えを同時に入れる (L6 §9 の (2))。
+- `CANDIDATE-U-CODESIZE-001`〜`019` は候補 ID のまま Red のテストが引用する。正式 ID `U-CODESIZE-*` への昇格は、src/ を含まない昇格 PR で、正式 ID を先頭セルに書き直す変更とテスト名の引用の書き換えを同時に入れる (L6 §9 の (2))。
 - 015 の `found` / `absent` / `unreadable` は `loadPreviousCodeSizeBaseline` の戻り値の型 (L6 §8) と 1:1 に対応する。
 - 016 は baseline の行数や特定の値を期待値に持たない (L6 §5: 初期値は Green の base commit で実測して記録する)。分割 PR で baseline の行が減っても 016 は改訂不要である。
 
