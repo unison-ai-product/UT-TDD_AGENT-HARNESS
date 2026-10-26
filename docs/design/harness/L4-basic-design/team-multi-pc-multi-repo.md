@@ -130,8 +130,26 @@ L9 の受入 oracle (CANDIDATE-ST-TEAM-004) で確かめる。
 - review の receipt と verdict は、今は PC ローカルの custody にある (表 §2 #6)。receipt を git の中に置くか外に置くかは
   v4 要件の未確定事項 U-1 であり、本書では決めない。U-1 が決まるまでは、merge は request の `machine_id` の PC で行う。
   別の PC の `ut-tdd pr merge` は `review_custody_on_other_machine` で拒否し、custody のある PC の `label` を返す。
-- custody のある PC が失われた場合は、§4.1 の transfer と同じ形 (理由と HEAD を記録) で request を引き取り、新しい
-  request を出し直す。
+- custody のある PC が失われた場合の引き取り (transfer) は、次の契約に従う。前提として、現行の merge gate は同じ head の
+  request を全件判定し、verdict の無い request が 1 件でもあれば `pending_request_for_head` で拒否する
+  (`src/feedback/review-merge-gate.ts:230-242`)。PC の一致だけでは、どの request が現行かを選べない。
+  - **ref の鎖**: review request の ref も §4.1 と同じく `request.json` の commit の鎖にする。先頭が現行の request である。
+    「2 本目は deny」は「先頭が有効な request のときに、transfer 以外の操作で ref を進めることを deny する」の意味である。
+  - **CAS で置き換えてよい条件**: 先頭の oid を期待値にした CAS であること、`reason` と `head` (引き取り時の PR の HEAD) を
+    持つこと、`head` が ref の head sha と一致すること、新しい `request.json` が旧 request の digest と旧 `machine_id` を
+    `previous` に持つこと。どれかが欠ければ deny する。新しい request の digest は、引き取った PC のローカル custody に
+    新しく置いた request の digest である。
+  - **旧 request の失効**: 鎖の中で先頭より前にある request は失効扱いにする。merge gate は、同じ head の request のうち、
+    ref の先頭の digest と一致する 1 件だけを判定の入力にし、鎖の中にある失効した request は `pending_request_for_head` の
+    数に入れない。鎖のどこにも無い request が同じ head にあれば、出所が分からないので従来どおり拒否する (fail-close)。
+    失効した request に後から verdict や receipt が付いても、merge の根拠にしない。
+  - **merge 時の照合**: `ut-tdd pr merge` は、origin の ref の先頭を読み直し、(a) 先頭の `machine_id` が自分の
+    `machine_id` と一致すること、(b) 先頭の request の digest が、ローカル custody にある request の digest と一致すること、
+    の両方を確かめる。(a) が違えば `review_custody_on_other_machine`、(b) が違えば `review_request_superseded` で拒否する。
+    origin に届かなければ拒否する。
+  - **結果**: PC1 が request を出して停止し、PC2 が引き取って同じ head を再レビューした後に PC1 が戻ってきた場合、
+    PC1 の merge は (a) で拒否され、PC1 のローカル custody にある旧 request とその後の receipt は使われない。PC2 は、
+    新しい request に PASS の receipt が揃えば、PC1 の旧 request が残っていても merge できる。
 
 ### §4.3 宛先付き通知
 
@@ -236,7 +254,9 @@ advisor との相談は 2 回行った (`ut-tdd advisor --decision design --curr
 
 1. `machine_id` と `principal` の解決 (§3)
 2. 調整用 ref の claim (§4.1) と、その harness.db への投影
-3. review request の一意性と custody の PC 束縛 (§4.2)
+3. review request の一意性と custody の PC 束縛 (§4.2)。既存の merge gate (`src/feedback/review-merge-gate.ts`) も
+   変える: 同じ head の request を全件判定する代わりに、ref の先頭の digest と一致する request だけを入力にし、鎖の中で
+   失効した request を除く。あわせて `review_custody_on_other_machine` と `review_request_superseded` の拒否を足す
 4. 宛先付き通知の送受信 (§4.3)
 5. worktree 削除 guard の repo 昇格 (§5)
 6. `ut-tdd.product.json` と双方向の登録検査 (§6)

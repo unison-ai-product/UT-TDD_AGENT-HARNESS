@@ -43,6 +43,7 @@ related_issues: [1330, 593]
 | CANDIDATE-ST-TEAM-010 | origin に届かないとき (§4.1) | origin に届かないのに claim が成功を返す。手元の編集まで止まる | claim は fail-close し、手元の編集は止まらない |
 | CANDIDATE-ST-TEAM-011 | guard の repo 昇格 (§5) | 個人の `~/.claude` を持たない新しい clone で、`node_modules` への junction の作成や、`node_modules` の残る worktree の削除が通る | repo の hook だけで両方が拒否される。Codex 側は同じ拒否、または明記した非対称と補う検査の記録がある。`.claude/CLAUDE.md` の Hooks 一覧と `.claude/settings.json` が一致する |
 | CANDIDATE-ST-TEAM-012 | 同時実行数の表示 (§3) — A の事例「PC をまたいで数えられない」 | provider ごとの claim 中の数を、PC をまたいで数えられない | 同じ `principal` の claim を provider ごとに PC をまたいで数えて表示する (止めはしない)。上限 8 は PC 単位で従来どおり |
+| CANDIDATE-ST-TEAM-013 | PC 喪失後の review request の引き取り (§4.2) — PC1 が request を出し receipt の前に停止、PC2 が `reason` と `head` 付きで引き取り同じ head を再レビュー (PASS)、その後 PC1 が復帰 | PC1 の旧 pending request が残っているために PC2 の merge が `pending_request_for_head` で止まる。PC1 の merge が通る。`reason` / `head` / `previous` の無い引き取りや、先頭以外を期待値にした CAS が通る。鎖に無い出所不明の pending request があっても merge が通る | 欠けた引き取りと古い期待値の CAS は deny。PC1 の merge は `review_custody_on_other_machine` で拒否され、PC1 の旧 request とその receipt は merge の根拠にならない。PC2 は PC1 の旧 request が残っていても merge できる。PC2 のローカル custody の digest が ref の先頭と違えば `review_request_superseded` で拒否。鎖に無い request が同じ head にあれば拒否 |
 
 ## oracle 候補: repo とプロダクト (#1330)
 
