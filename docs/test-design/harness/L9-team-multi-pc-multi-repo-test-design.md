@@ -2,7 +2,7 @@
 layer: L4
 executed_at_layer: L9
 artifact_type: test_design
-status: draft
+status: confirmed
 pair_artifact: docs/design/harness/L4-basic-design/team-multi-pc-multi-repo.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 created: 2026-10-26

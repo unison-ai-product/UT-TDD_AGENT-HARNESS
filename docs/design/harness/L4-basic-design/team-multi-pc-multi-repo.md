@@ -2,7 +2,7 @@
 layer: L4
 sub_doc: architecture
 artifact_role: topic_team-multi-pc-multi-repo
-status: draft
+status: confirmed
 pair_artifact: docs/test-design/harness/L9-team-multi-pc-multi-repo-test-design.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 next_pair_freeze: L9
@@ -27,7 +27,7 @@ related_issues: [1330, 593]
 5. repo をまたぐ契約の置き場と、参照側の陳腐化の検知 (§7)
 6. repo をまたぐ変更の順序の管理 (§8)
 
-本書は `status: draft` で起票し、非著者 family の review が PASS した時点で `confirmed` にする。PLAN は凍結中 (#1166) の
+本書は `status: confirmed` で PR に載せ、非著者 family の review が PASS するまで merge しない。PLAN は凍結中 (#1166) の
 ため、本書は PLAN を参照しない。
 
 ## §1 前提
