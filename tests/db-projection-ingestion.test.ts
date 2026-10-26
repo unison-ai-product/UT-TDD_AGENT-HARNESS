@@ -187,6 +187,13 @@ describe("db projection ingestion detector", () => {
     expect(AUTOMATIC_DB_PROJECTION_REQUIREMENTS.map((item) => item.table)).not.toContain(
       "execution_readiness_projection",
     );
+    expect(AUTOMATIC_DB_PROJECTION_REQUIREMENTS.map((item) => item.table).sort()).toEqual(
+      Object.keys(populatedAutomaticProjectionCounts)
+        .filter(
+          (table) => table !== "schedule_entries" && table !== "execution_readiness_projection",
+        )
+        .sort(),
+    );
   });
 
   it.fails("CANDIDATE-U-DBPROJ-ING-002: rejects another empty automatic table", () => {
