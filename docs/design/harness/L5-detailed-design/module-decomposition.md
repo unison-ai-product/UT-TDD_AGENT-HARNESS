@@ -248,7 +248,7 @@ consumer一覧、互換re-export削除条件、module graph cycle 0、targeted t
 
 ### C.3 規模 / 循環 / CQS gate
 
-- 新規source function/methodは80 nonblank lines、cyclomatic complexity 12、制御nesting 3を上限とする。
+- 新規source function/methodの行数・cyclomatic complexity・制御nestingの上限は、`docs/governance/coding-rules.md` §量・分割・Refactor の目安 を正本とし、ここへ数値を写さない。
 - aggregate public methodは概ね7以下。commandはevent/resultを返し、queryは状態を変更しない。
 - public mutable field、setter、二段階初期化、汎用service locator、domainからdoctor/CLI importを禁止する。
 - module graph cycleは0をhard gateとし、既存超過は件数を隠さずdebt PLANへ送る。
