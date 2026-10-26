@@ -166,6 +166,55 @@ function ports(
   };
 }
 
+function seedRefactorReview(
+  root: string,
+  input: {
+    headSha?: string;
+    memoryId?: string;
+    reviewRevision?: string;
+    verdict?: "PASS" | "FLAG";
+    refactorJudgement?: string;
+  } = {},
+): void {
+  const reviewHead = input.headSha ?? head;
+  const memoryId = input.memoryId ?? "review:465:refactor";
+  const reviewRevision = input.reviewRevision ?? "review-refactor";
+  writeRequest(root, {
+    file: `${memoryId.replaceAll(":", "-")}-request.json`,
+    memoryId,
+    exactHead: reviewHead,
+    reviewRevision,
+  });
+  writeVerdict(root, {
+    file: `${memoryId.replaceAll(":", "-")}-receipt.json`,
+    memoryId,
+    head: reviewHead,
+    reviewRevision,
+    verdict: input.verdict ?? "PASS",
+  });
+  if (input.refactorJudgement !== undefined) {
+    const receiptPath = join(
+      root,
+      ".ut-tdd",
+      "review",
+      "receipts",
+      `${memoryId.replaceAll(":", "-")}-receipt.json`,
+    );
+    const receiptValue = JSON.parse(readFileSync(receiptPath, "utf8")) as Record<string, unknown>;
+    receiptValue.refactorJudgement = input.refactorJudgement;
+    writeFileSync(receiptPath, JSON.stringify(receiptValue), "utf8");
+  }
+}
+
+function refactorPorts(
+  input: { changes?: () => unknown; getFacts?: () => MergeGateFacts; merge?: () => void } = {},
+): GhPrMergePorts {
+  return {
+    ...ports(input),
+    getPullRequestChanges: input.changes ?? (() => [{ kind: "modified", path: "src/a.ts" }]),
+  } as never;
+}
+
 function receipt(root: string): Record<string, unknown> {
   const log = readdirSync(join(root, ".ut-tdd", "logs")).find((name) => name.endsWith(".jsonl"));
   if (!log) throw new Error("merge receipt not written");
@@ -977,6 +1026,278 @@ describe("D2-B PR merge gate", () => {
       });
       expect(result.ok).toBe(false);
       expect(result.reason).toContain("result_receipt_write_failed");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("refactor judgement merge integration candidates", () => {
+  it.fails("CANDIDATE-U-REFACTORGATE-073: 対象で判定欄なしなら intent を書かず merge しない", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-rvmg-refactor-deny-"));
+    let merges = 0;
+    try {
+      seedRefactorReview(root);
+      const result = runPrMerge({
+        repoRoot: root,
+        pr: 465,
+        now: () => now,
+        ports: refactorPorts({ merge: () => merges++ }),
+      });
+      const lines = readFileSync(join(root, ".ut-tdd", "logs", "review-merge-gate.jsonl"), "utf8")
+        .trim()
+        .split("\n")
+        .map((line) => JSON.parse(line) as Record<string, unknown>);
+      expect(result).toMatchObject({
+        ok: false,
+        decision: "deny",
+        reason: "refactor_judgement_missing",
+      });
+      expect(merges).toBe(0);
+      expect(lines.some((line) => line.receiptKind === "merge_intent")).toBe(false);
+      expect(lines.at(-1)).toMatchObject({
+        decision: "deny",
+        reason: "refactor_judgement_missing",
+      });
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it.fails("CANDIDATE-U-REFACTORGATE-074: review deny と判定欄 deny の reason を併記する", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-rvmg-refactor-both-"));
+    let merges = 0;
+    try {
+      seedRefactorReview(root, { verdict: "FLAG", refactorJudgement: "none-rejected" });
+      const result = runPrMerge({
+        repoRoot: root,
+        pr: 465,
+        now: () => now,
+        ports: refactorPorts({ merge: () => merges++ }),
+      });
+      expect(result).toMatchObject({
+        ok: false,
+        decision: "deny",
+        reason:
+          "blocking_finding:finding,flagged,refactor_judgement_rejected:none-rejected,state:verdict",
+      });
+      expect(merges).toBe(0);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("CANDIDATE-U-REFACTORGATE-075: docs-only PR is not blocked by missing judgement", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-rvmg-refactor-docs-"));
+    let merges = 0;
+    try {
+      seedRefactorReview(root);
+      const result = runPrMerge({
+        repoRoot: root,
+        pr: 465,
+        now: () => now,
+        ports: refactorPorts({
+          changes: () => [{ kind: "modified", path: "docs/guide.md" }],
+          merge: () => merges++,
+        }),
+      });
+      expect(result).toMatchObject({ ok: true, decision: "merge", reason: "merge_ready" });
+      expect(merges).toBe(1);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("CANDIDATE-U-REFACTORGATE-075: 対象PRのcommit-okはmergeできる", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-rvmg-refactor-commit-ok-"));
+    let merges = 0;
+    try {
+      seedRefactorReview(root, { refactorJudgement: "commit-ok" });
+      const result = runPrMerge({
+        repoRoot: root,
+        pr: 465,
+        now: () => now,
+        ports: refactorPorts({
+          changes: () => [{ kind: "modified", path: "src/a.ts" }],
+          merge: () => merges++,
+        }),
+      });
+      expect(result).toMatchObject({ ok: true, decision: "merge", reason: "merge_ready" });
+      expect(merges).toBe(1);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it.fails("CANDIDATE-U-REFACTORGATE-076: changes 取得失敗はfail-closeでdenyする", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-rvmg-refactor-unavailable-"));
+    let merges = 0;
+    try {
+      seedRefactorReview(root, { refactorJudgement: "commit-ok" });
+      const result = runPrMerge({
+        repoRoot: root,
+        pr: 465,
+        now: () => now,
+        ports: refactorPorts({
+          changes: () => {
+            throw new Error("HTTP 502");
+          },
+          merge: () => merges++,
+        }),
+      });
+      expect(result).toMatchObject({
+        ok: false,
+        decision: "deny",
+        reason: "refactor_target_unavailable:gh_failed:HTTP 502",
+      });
+      expect(merges).toBe(0);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("CANDIDATE-U-REFACTORGATE-076: facts取得失敗時はchanges adapterを呼ばない", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-rvmg-refactor-facts-failed-"));
+    let changesCalls = 0;
+    try {
+      const result = runPrMerge({
+        repoRoot: root,
+        pr: 465,
+        now: () => now,
+        ports: refactorPorts({
+          getFacts: () => {
+            throw new Error("HTTP 503");
+          },
+          changes: () => {
+            changesCalls++;
+            return [];
+          },
+        }),
+      });
+      expect(result.reason).toBe("gh_fetch_failed:HTTP 503");
+      expect(changesCalls).toBe(0);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it.fails("CANDIDATE-U-REFACTORGATE-077: CLI は判定欄 deny を固定形式で出力する", async () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-rvmg-refactor-cli-"));
+    const priorExitCode = process.exitCode;
+    let stdout = "";
+    const writeStdout = process.stdout.write;
+    try {
+      seedRefactorReview(root);
+      process.exitCode = 0;
+      process.stdout.write = ((chunk: string | Uint8Array) => {
+        stdout += String(chunk);
+        return true;
+      }) as typeof process.stdout.write;
+      const program = new Command();
+      registerPrMergeCommands(program, {
+        ports: refactorPorts(),
+        now: () => now,
+        repoRoot: root,
+      });
+      await program.parseAsync(["node", "ut-tdd", "pr", "merge", "--pr", "465"]);
+      expect(stdout).toBe(
+        `pr merge — DENY pr=#465 head=${head} reason=refactor_judgement_missing\n`,
+      );
+      expect(process.exitCode).toBe(1);
+    } finally {
+      process.stdout.write = writeStdout;
+      process.exitCode = priorExitCode;
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it.fails("CANDIDATE-U-REFACTORGATE-078: 新 HEAD の entry だけを使い旧 receipt を保持する", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-rvmg-refactor-head-"));
+    const nextHead = "c".repeat(40);
+    try {
+      seedRefactorReview(root, {
+        headSha: otherHead,
+        memoryId: "review:465:old-head",
+        reviewRevision: "review-old",
+      });
+      seedRefactorReview(root, {
+        headSha: nextHead,
+        memoryId: "review:465:new-head",
+        reviewRevision: "review-new",
+        refactorJudgement: "commit-ok",
+      });
+      const oldReceipt = join(
+        root,
+        ".ut-tdd",
+        "review",
+        "receipts",
+        "review-465-old-head-receipt.json",
+      );
+      const oldBytes = readFileSync(oldReceipt, "utf8");
+      const decision = evaluateMergeGate({
+        pr: 465,
+        requests: [
+          {
+            memoryId: "review:465:old-head",
+            pr: 465,
+            exactHead: otherHead,
+            reviewRevision: "review-old",
+            authorFamily: "claude",
+            requestedAt: "2026-08-07T00:30:00.000Z",
+          },
+          {
+            memoryId: "review:465:new-head",
+            pr: 465,
+            exactHead: nextHead,
+            reviewRevision: "review-new",
+            authorFamily: "claude",
+            requestedAt: "2026-08-07T00:30:00.000Z",
+          },
+        ],
+        receipts: [
+          {
+            memoryId: "review:465:old-head",
+            pr: 465,
+            head: otherHead,
+            reviewRevision: "review-old",
+            reviewerFamily: "codex",
+            kind: "verdict",
+            verdict: "PASS",
+            blockingFindings: [],
+            at: "2026-08-07T00:45:00.000Z",
+          },
+          {
+            memoryId: "review:465:new-head",
+            pr: 465,
+            head: nextHead,
+            reviewRevision: "review-new",
+            reviewerFamily: "codex",
+            kind: "verdict",
+            verdict: "PASS",
+            blockingFindings: [],
+            at: "2026-08-07T00:45:00.000Z",
+            refactorJudgement: "commit-ok",
+          },
+        ] as never,
+        facts: facts({ headSha: nextHead, evaluatedHeadSha: nextHead }),
+        now,
+      });
+      // L6 §4 / L7 C078 require this public decision field; the cast bridges only its intentional
+      // absence in the current Red-stage source and must disappear when the contract is implemented.
+      expect(
+        (decision as unknown as { entriesForHead: Array<{ exactHead: string }> }).entriesForHead,
+      ).toEqual([expect.objectContaining({ exactHead: nextHead })]);
+      const result = runPrMerge({
+        repoRoot: root,
+        pr: 465,
+        now: () => now,
+        ports: refactorPorts({
+          getFacts: () => facts({ headSha: nextHead, evaluatedHeadSha: nextHead }),
+          changes: () => [{ kind: "modified", path: "src/a.ts" }],
+        }),
+      });
+      expect(result).toMatchObject({ ok: true, decision: "merge", headSha: nextHead });
+      expect(readFileSync(oldReceipt, "utf8")).toBe(oldBytes);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
