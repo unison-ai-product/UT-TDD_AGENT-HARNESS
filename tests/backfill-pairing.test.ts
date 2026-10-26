@@ -366,7 +366,7 @@ describe("U-BACKFILL-005b backfill result docs sync", () => {
   });
 });
 
-describe("U-BACKFILL-006 実 repo の back-fill 完全性 (回帰ガード)", () => {
+describe("実 repo の back-fill 完全性 (退役対象 guard)", () => {
   it("docs/plans/ 全 add-impl が Reverse 合流済 + §6 用語が L0 §10 に merge 済 (required orphan 0 / glossary gap 0)", () => {
     if (!existsSync(join(process.cwd(), "docs", "plans"))) return;
     const docs = loadBackfillDocs();
