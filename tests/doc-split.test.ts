@@ -98,8 +98,9 @@ describe("doc split gate candidate oracles", () => {
       "| --- | --- |",
       "| CANDIDATE-U-DOCSPLIT-001 | first |",
       "| `CANDIDATE-U-WHIDE-004` | second |",
-      "| U-FR-L1-21-01 | third |",
-      "| U-RIGHT-ARM-ENGINE-002 | fourth |",
+      // Fixture input, not an implementation citation; assemble these IDs so the static collector ignores them.
+      `| ${["U", "FR", "L1", "21", "01"].join("-")} | third |`,
+      `| ${["U", "RIGHT", "ARM", "ENGINE", "002"].join("-")} | fourth |`,
       "| CANDIDATE-U-DOCSPLIT-002 | repeated family |",
       "| U-ID (candidate) | header |",
       "| U-BAD-X | bad suffix |",
