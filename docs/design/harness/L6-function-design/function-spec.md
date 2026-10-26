@@ -460,17 +460,26 @@ exit code を変えない。証跡 JSON は `.ut-tdd/gate_runs/<gate>-<timestamp
   有無に依存せず、`plan_id` は空、`evidence_path` は A-132 の path とする。A-132 の存在だけで `passed` の
   gate row、`passed_local` の workflow row、`passed` の coverage row を作らない。seed row は
   `gate_runs` の 0 件を避ける入力にはなるが、`routine-gate` の workflow row との対応を充足しない。
+  **正規の seed row** は次をすべて満たす row だけとする: `gate_id` が `G-VERIFY.L8`〜`G-VERIFY.L14` の
+  どれか、`gate_run_id` が `stableId("verification-band-gate", <layer>)` (`<layer>` は `gate_id` の
+  `G-VERIFY.` を除いた部分) と一致、`evidence_path` が A-132 の固定 path と一致し、その A-132 が repo に
+  実在、`status` が `historical`、`plan_id` が空、同じ `gate_id` の seed row が 1 件だけ。正規の seed row
+  に限り、JSON 証跡の検査、JSON 証跡集合との鮮度比較、`routine-gate` workflow row との双方向の対応検査から
+  外す。`status=historical` だけでは外さない。`status=historical` なのに上の条件を 1 つでも満たさない row、
+  および上の 7 件以外の `G-VERIFY.*` row は違反とする。
 - **retry**: `projectRetryEvents` と運用指標の `retry_groups` は、`plan_id` の有無にかかわらず
   `routine-gate` row を retry の推定の対象外とする (同じ gate の別実行を retry の系列と見分ける識別子が無く、
   PLAN の無い無関係な実行を 1 群にまとめないため)。代わりの作業単位ができたら、その単位で retry を定め直す。
   それ以外の workflow は従来どおり同一 `(plan_id, workflow, phase)` の複数 row を retry とする。
 
 `gate-run-coverage` doctor check は、現在の `.ut-tdd/gate_runs/*.json` から投影した行で判定する (永続 DB の
-gate row の集合が証跡の `gate_run_id` と内容に一致しなければ投影し直してから判定し、古い投影で OK を出さない)。
-次を fail-close で検出する: `gate_runs` の 0 件、`routine-gate` の workflow row に対応する gate row の欠落と
-その逆 (gate row に対応する workflow row の欠落)、空の `gate_id`、証跡の欠落・不正 JSON・識別の不一致
-(`gate_run_id` / `gate_id`)。`plan_id` が空の gate row と、`plan_registry` に無い `plan_id` を持つ gate row
-は、それだけでは違反にしない。
+gate row の集合 (正規の seed row を除く) が証跡の `gate_run_id` と内容に一致しなければ投影し直してから判定し、
+古い投影で OK を出さない)。次を fail-close で検出する: `gate_runs` の 0 件、seed を名乗るのに正規の seed row で
+ない row (`status=historical` か `G-VERIFY.*` の row で条件を満たさないもの)、`routine-gate` の workflow row
+に対応する gate row の欠落とその逆 (正規の seed row 以外の gate row に対応する workflow row の欠落)、空の
+`gate_id`、正規の seed row 以外の証跡の欠落・不正 JSON・識別の不一致 (`gate_run_id` / `gate_id`)。
+`plan_id` が空の gate row と、`plan_registry` に無い `plan_id` を持つ gate row は、それだけでは違反にしない。
+A-132 だけがあり JSON 証跡が無い clean tree では、`gate_runs` は正規の seed row 7 件で、violation は 0 となる。
 
 ### §2.3 `trace check` (FR-03)
 
