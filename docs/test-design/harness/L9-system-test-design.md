@@ -257,7 +257,7 @@ Q0の `test` scope は、検証済みgenerationに対して正準 `createNodeInv
 }
 ```
 
-`test_source` / `production_target` は固定値であり、両実装は `compiled_cli_sha256` が束縛するcompiled CLIに含まれる。`compiled_cli_sha256` は検証済みgeneration receiptの `compiled_cli.sha256` と同じ64桁lowercase hexでなければならない。外側Q0は、対象canonical childの直接stdoutと終了結果だけを受理根拠にする。generation ID / subject revision / compiled CLI digestは、外側がその場で検証した同一generation receiptおよびQ0 subjectから独立に得た期待値と完全一致させる。caller引数、保存file、HARNESS Memory、log、別attemptの出力や結果を結果objectまたは受理判定へ注入してはならない。
+`test_source` / `production_target` は固定値であり、両実装は `compiled_cli_sha256` が束縛するcompiled CLIに含まれる。`compiled_cli_sha256` は検証済みgeneration receiptの `compiled_cli.sha256` と同じ64桁lowercase hexでなければならない。現行 `NodeBanGenerationBinding.artifact_digest` は `sha256:` prefix付きなので、Q0入力側ではJSON値がそのprefixを除いたreceipt値とexact一致することを検証する。外側Q0は、対象canonical childの直接stdoutと終了結果だけを受理根拠にする。generation ID / subject revision / compiled CLI digestは、外側がその場で検証した同一generation receiptおよびQ0 subjectから独立に得た期待値と完全一致させる。caller引数、保存file、HARNESS Memory、log、別attemptの出力や結果を結果objectまたは受理判定へ注入してはならない。
 
 | Q0 scope | 固定対象 / 証拠 | 受入条件 |
 |---|---|---|
@@ -269,6 +269,27 @@ Q0の `test` scope は、検証済みgenerationに対して正準 `createNodeInv
 | `download` | 既存runtime image download観測 | 現行契約を維持 |
 
 非0終了、spawn失敗、timeout、stdout欠落・複数・不正JSON、case実行数0、全skip・部分実行、checkの欠落・重複・失敗・順序違い、binding不一致、または結果の出所不明は、すべてQ0未達としてqualificationをfail-closeする。catchして後続scopeの診断を続けてもよいが、失敗をpassへ変換せず、Q0をqualifiedとして発行してはならない。実行結果の受入に保存file、caller supplied counts、HARNESS Memory、log、他attemptは使わない。
+
+#### 負例oracleとtest-only fault injection
+
+失敗伝播は以下の個別負例で検証する。test-only child fixtureはproduction probe handlerを呼び出すが、fault seamをcompiled CLIのoption/environment/receipt/caller inputとして設けない。production `audit node-invocation-probe` は必ず既存のgeneration verificationを通し、実generationとproduction `createNodeInvocation` だけを使う。generation verificationの条件をfixture用に緩和しない。
+
+| 負例 | system testの入力・注入 | 期待するsystem outcome |
+|---|---|---|
+| `P1-NEG-ASSERT` | test専用child entrypoint/shimだけが、同じproduction probe handlerへ `nodePath: "relative-node"` の合成 `NodeGeneration` を渡す。通常のchild executorでshimを実child processとして起動し、実stdout/stderr/exitを捕捉して同じproduction Q0 outcome validatorへ渡す。shimはproduction CLIから選択不能で、fault flag/environment selectorを追加しない。 | 実 `createNodeInvocation` 結果の `node-path-absolute` assertionが失敗し、成功JSON stdoutなし・非0終了となる。stderrは診断のみ。validatorはchild outcomeを失敗として扱い、Q0 qualificationは `qualified` にならない。 |
+| `P1-NEG-SPAWN` | test-only missing child commandを通常child executorで実spawnし、実 `ENOENT` を捕捉して同じproduction Q0 outcome validatorへ渡す。missing commandはfixture専用であり、production generationの `nodePath` を変更・偽装しない。 | child未起動、stdoutなし、spawn errorありとして保持される。process observationだけをtest成功にせず、validatorはQ0 qualificationを `qualified` にしない。 |
+
+この2ケースのshim/commandはtest harnessからだけ実行し、production `audit node-ban` にfixtureを選択する経路を作らない。各負例を別caseで実行し、同一attempt内でも他caseの出力で代替しない。
+
+#### 実装境界
+
+| 責務 | 変更対象と必要な接続 |
+|---|---|
+| child出力・終了の保持 | `src/cli.ts` の `audit node-ban` 内 `runNodeScope` (`src/cli.ts:3553-3577`)。現状の全捨て `stdio: "ignore"` と空catchを置換し、`test` scopeでは直接stdout、終了状態、spawn error、timeoutを保持する。process observerの記録は維持するが、invocation observation / `observedScopes`だけではtest scopeを受理しない。旧 `plan lint PLAN-L7-458` 呼出し (`src/cli.ts:3581-3585`) は新しい `audit node-invocation-probe --generation <verified generation> --json` childへ置換する。 |
+| production probe route | `src/cli.ts` のcompiled CLIに未実装 `audit node-invocation-probe` subcommandを追加する。routeはgenerationを通常検証し、固定のread-only handlerで4 assertionを実評価し、成功時のみ直接stdoutに単一JSONを出す。 |
+| input schema・binding・qualification | `src/lint/bun-permanent-ban.ts` の `NodeBanAuditInput` と `validateBinding` / `runNodeBanAudit` が、捕捉したchild outcomeと閉じたprobe JSON schemaを検証する。候補・probe/source ID、件数、check集合・順序を固定照合し、generation ID / subject revision / `compiled_cli_sha256` を検証済み `NodeBanGenerationBinding` とQ0 subjectへ照合する。失敗・欠落・不一致ならqualifiedを生成しない。既存のQ0 receipt schema、evidence digest、`verifyNodeBanAuditReceipt` の自己検証整合は維持し、新しいreceipt field/evidence digest形式は追加しない。 |
+
+この実装対応により、現行の「失敗してもobserver記録だけでtest scopeがobservedになる」経路 (`src/cli.ts:3614-3616`) は、直接child outcomeと `runNodeBanAudit` の入力検証を通らない限りQ0をqualifiedにできない経路へ置き換わる。6 scopeとprocess observationの既存責務は維持する。
 
 このprobeが証明するのは、sealed Node上でproduction invocation builderの上記4契約assertionが実評価されたことだけである。Bun ban detector全体、全CI、元Vitest test fileの実行、または一般的なtest-runner機能の正しさは主張しない。
 
