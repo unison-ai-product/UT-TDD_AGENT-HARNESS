@@ -320,7 +320,7 @@ describe("F0b sealed Node producer candidate oracles", () => {
     expect(sourceTrackingObservations.gitLsFilesCalls).toBe(1);
   });
 
-  it.fails("CAND-NODEBOOT-001 Issue #1343 variant resolves a type-only nested manifest to its owner", async () => {
+  it("CAND-NODEBOOT-001 Issue #1343 variant resolves a type-only nested manifest to its owner", async () => {
     const fixture = createDependencyFixture();
     const packageRoot = "node_modules/@ut-tdd-test/owner";
     const ownerManifest = `${packageRoot}/package.json`;
@@ -348,7 +348,7 @@ describe("F0b sealed Node producer candidate oracles", () => {
     }
   });
 
-  it.fails("CAND-NODEBOOT-001 Issue #1343 variant does not rescue a missing owner manifest from an ancestor", async () => {
+  it("CAND-NODEBOOT-001 Issue #1343 variant does not rescue a missing owner manifest from an ancestor", async () => {
     const fixture = createDependencyFixture();
     const entry = "node_modules/owner-without-manifest/index.js";
     try {
@@ -369,7 +369,7 @@ describe("F0b sealed Node producer candidate oracles", () => {
     }
   });
 
-  it.fails.each([
+  it.each([
     ["missing", null],
     ["malformed", "{not-json"],
     ["name-version-missing", JSON.stringify({ type: "module" })],
@@ -523,7 +523,7 @@ describe("F0b sealed Node producer candidate oracles", () => {
     }
   });
 
-  it.fails("CAND-NODEBOOT-B1 Issue #1343 variant seals the package-root manifest digest", async () => {
+  it("CAND-NODEBOOT-B1 Issue #1343 variant seals the package-root manifest digest", async () => {
     const fixture = createDependencyFixture();
     const packageRoot = "node_modules/@ut-tdd-test/root-digest";
     const ownerManifest = `${packageRoot}/package.json`;
@@ -559,7 +559,7 @@ describe("F0b sealed Node producer candidate oracles", () => {
     }
   });
 
-  it.fails("CAND-NODEBOOT-B1 Issue #1343 variant retains nested-manifest digest coverage", async () => {
+  it("CAND-NODEBOOT-B1 Issue #1343 variant retains nested-manifest digest coverage", async () => {
     const fixture = createDependencyFixture();
     const packageRoot = "node_modules/@ut-tdd-test/nested-digest";
     const ownerManifest = `${packageRoot}/package.json`;

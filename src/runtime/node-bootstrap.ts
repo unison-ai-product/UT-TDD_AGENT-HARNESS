@@ -452,18 +452,54 @@ function inputPath(
 function isNodeModulesInput(path: string): boolean {
   return path.split("/").includes("node_modules");
 }
-function packageJsonForInput(root: string, input: string): string {
+function packageJsonForInput(
+  root: string,
+  input: string,
+): { packageJson: string; scopeManifests: string[] } {
+  const segments = slash(relative(root, input)).split("/");
+  const nodeModulesIndex = segments.lastIndexOf("node_modules");
+  const packageIndex = nodeModulesIndex + 1;
+  if (nodeModulesIndex < 0 || packageIndex >= segments.length)
+    throw new NodeBootstrapError("node-bootstrap-dependency-package-missing");
+  const packageSegment = segments[packageIndex];
+  if (!packageSegment) throw new NodeBootstrapError("node-bootstrap-dependency-package-missing");
+  const packageEnd = packageSegment.startsWith("@") ? packageIndex + 1 : packageIndex;
+  if (!segments[packageEnd])
+    throw new NodeBootstrapError("node-bootstrap-dependency-package-missing");
+
+  const ownerRoot = resolve(root, ...segments.slice(0, packageEnd + 1));
+  const ownerRelative = relative(root, ownerRoot);
+  if (
+    !ownerRelative ||
+    ownerRelative === ".." ||
+    ownerRelative.startsWith(`..${sep}`) ||
+    isAbsolute(ownerRelative)
+  )
+    throw new NodeBootstrapError("node-bootstrap-dependency-path-escape");
+  const identityManifest = resolve(ownerRoot, "package.json");
+  if (!existsSync(identityManifest))
+    throw new NodeBootstrapError("node-bootstrap-dependency-package-missing");
+  let packageJson: string;
+  try {
+    packageJson = realpathSync(identityManifest);
+  } catch {
+    throw new NodeBootstrapError("node-bootstrap-dependency-package-missing");
+  }
+
+  const scopeManifests: string[] = [];
   let current = dirname(input);
-  const rootReal = realpathSync(root);
   while (true) {
-    const packageJson = resolve(current, "package.json");
-    if (existsSync(packageJson)) return realpathSync(packageJson);
-    if (current === rootReal) break;
+    const withinOwner = relative(ownerRoot, current);
+    if (withinOwner === "") break;
+    if (withinOwner === ".." || withinOwner.startsWith(`..${sep}`) || isAbsolute(withinOwner))
+      throw new NodeBootstrapError("node-bootstrap-dependency-path-escape");
+    const candidate = resolve(current, "package.json");
+    if (existsSync(candidate)) scopeManifests.push(candidate);
     const parent = dirname(current);
-    if (parent === current) break;
+    if (parent === current) throw new NodeBootstrapError("node-bootstrap-dependency-path-escape");
     current = parent;
   }
-  throw new NodeBootstrapError("node-bootstrap-dependency-package-missing");
+  return { packageJson, scopeManifests };
 }
 function externalImports(meta: BuildMetadata): string[] {
   return Object.values(meta.outputs ?? {}).flatMap((output) =>
@@ -475,32 +511,47 @@ function externalDependencies(root: string, meta: BuildMetadata): ExternalDepend
   for (const input of Object.keys(meta.inputs ?? {})) {
     const resolvedInput = inputPath(root, input, "node-bootstrap-dependency-path-escape");
     if (!isNodeModulesInput(resolvedInput.relative)) continue;
-    const packageJson = packageJsonForInput(root, resolvedInput.absolute);
-    const packageJsonPath = slash(relative(root, packageJson));
-    const identity = JSON.parse(readFileSync(packageJson, "utf8")) as {
-      name?: unknown;
-      version?: unknown;
-    };
+    const owner = packageJsonForInput(root, resolvedInput.absolute);
+    const packageJsonPath = slash(relative(root, owner.packageJson));
+    let parsedIdentity: unknown;
+    try {
+      parsedIdentity = JSON.parse(readFileSync(owner.packageJson, "utf8"));
+    } catch {
+      throw new NodeBootstrapError("node-bootstrap-dependency-invalid");
+    }
+    if (!parsedIdentity || typeof parsedIdentity !== "object" || Array.isArray(parsedIdentity))
+      throw new NodeBootstrapError("node-bootstrap-dependency-invalid");
+    const identity = parsedIdentity as { name?: unknown; version?: unknown };
     if (typeof identity.name !== "string" || typeof identity.version !== "string")
       throw new NodeBootstrapError("node-bootstrap-dependency-invalid");
     const existing = byPackage.get(identity.name);
-    const bundleFile = { path: resolvedInput.relative, sha256: hashFile(resolvedInput.absolute) };
+    const bundleFilesByPath = new Map<string, { path: string; sha256: string }>();
+    const addBundleFile = (path: string, absolute: string): void => {
+      if (!bundleFilesByPath.has(path))
+        bundleFilesByPath.set(path, { path, sha256: hashFile(absolute) });
+    };
+    addBundleFile(resolvedInput.relative, resolvedInput.absolute);
+    for (const manifest of owner.scopeManifests)
+      addBundleFile(slash(relative(root, manifest)), manifest);
+    const bundleFilesForInput = [...bundleFilesByPath.values()];
     if (existing) {
       if (
         existing.package_json_path !== packageJsonPath ||
         existing.package_version !== identity.version
       )
         throw new NodeBootstrapError("node-bootstrap-dependency-identity-mismatch");
-      if (!existing.bundle_files.some((file) => file.path === bundleFile.path))
-        existing.bundle_files.push(bundleFile);
+      for (const bundleFile of bundleFilesForInput) {
+        if (!existing.bundle_files.some((file) => file.path === bundleFile.path))
+          existing.bundle_files.push(bundleFile);
+      }
       continue;
     }
     byPackage.set(identity.name, {
       package_name: identity.name,
       package_version: identity.version,
       package_json_path: packageJsonPath,
-      package_json_sha256: hashFile(packageJson),
-      bundle_files: [bundleFile],
+      package_json_sha256: hashFile(owner.packageJson),
+      bundle_files: bundleFilesForInput,
     });
   }
   return [...byPackage.values()]
