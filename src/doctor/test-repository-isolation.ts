@@ -67,6 +67,12 @@ const repositoryReadContracts: Record<string, RepositoryReadContract> = Object.f
     }),
 );
 
+repositoryReadContracts["tests/doc-split-integration.test.ts"] = {
+  mode_calls: { head_snapshot: 1, isolated_fixture: 4 },
+  reason:
+    "doc-split candidate 020/021 inspect the execution snapshot baseline and use temporary repositories for append and CLI state checks",
+};
+
 repositoryReadContracts["tests/design-root.test.ts"] = {
   mode: "head_snapshot",
   calls: 1,
