@@ -152,7 +152,7 @@ describe("U-IPT-006: loadImplPlanTraceInput design-source trace", () => {
   });
 });
 
-describe("Impl-Plan-Trace module ownership candidates (CANDIDATE-U-IPT-007..011)", () => {
+describe("Impl-Plan-Trace module ownership candidates (U-IPT-007..011)", () => {
   const moduleOwnerRoot = makeImplPlanTraceFixture({
     includePlan: false,
     sourcePaths: ["src/foo/a.ts", "src/foo/b.ts", "src/glob/a.ts", "src/glob/b.ts"],
@@ -225,7 +225,7 @@ describe("Impl-Plan-Trace module ownership candidates (CANDIDATE-U-IPT-007..011)
     if (mutationRoot) rmSync(mutationRoot, { recursive: true, force: true });
   });
 
-  it.fails("CANDIDATE-U-IPT-007: the real detached repository is owned with an empty baseline", () => {
+  it.fails("U-IPT-007: the real detached repository is owned with an empty baseline", () => {
     const result = analyzeImplPlanTrace(detachedRepoInput);
     expect({
       baseline: [...detachedRepoInput.baseline].sort(),
@@ -234,7 +234,7 @@ describe("Impl-Plan-Trace module ownership candidates (CANDIDATE-U-IPT-007..011)
     }).toEqual({ baseline: [], orphans: [], ok: true });
   });
 
-  it.fails("CANDIDATE-U-IPT-007: an unmentioned module added to a derived repo is the sole orphan", () => {
+  it.fails("U-IPT-007: an unmentioned module added to a derived repo is the sole orphan", () => {
     const result = analyzeImplPlanTrace(mutationInput);
     expect(result).toEqual({
       orphans: [`src/${mutationModule}/probe.ts`],
@@ -242,17 +242,17 @@ describe("Impl-Plan-Trace module ownership candidates (CANDIDATE-U-IPT-007..011)
     });
   });
 
-  it.fails("CANDIDATE-U-IPT-008: module and glob mentions own all files in that module", () => {
+  it.fails("U-IPT-008: module and glob mentions own all files in that module", () => {
     const result = analyzeImplPlanTrace(loadImplPlanTraceInput(moduleOwnerRoot));
     expect(result).toEqual({ orphans: [], ok: true });
   });
 
-  it.fails("CANDIDATE-U-IPT-009: unmentioned modules remain orphaned at the path boundary", () => {
+  it.fails("U-IPT-009: unmentioned modules remain orphaned at the path boundary", () => {
     const result = analyzeImplPlanTrace(loadImplPlanTraceInput(unownedModuleRoot));
     expect(result).toEqual({ orphans: ["src/bar/c.ts"], ok: false });
   });
 
-  it.fails("CANDIDATE-U-IPT-010: PLAN-only module and file references do not confer ownership", () => {
+  it.fails("U-IPT-010: PLAN-only module and file references do not confer ownership", () => {
     const input = loadImplPlanTraceInput(planOnlyRoot);
     const result = analyzeImplPlanTrace(input);
     expect({ tracedByPlanOnlyPath: input.tracedPaths.has("src/bar/c.ts"), result }).toEqual({
@@ -261,7 +261,7 @@ describe("Impl-Plan-Trace module ownership candidates (CANDIDATE-U-IPT-007..011)
     });
   });
 
-  it("CANDIDATE-U-IPT-011: top-level files require their own exact design path", () => {
+  it("U-IPT-011: top-level files require their own exact design path", () => {
     const result = analyzeImplPlanTrace(loadImplPlanTraceInput(topLevelRoot));
     expect(result).toEqual({ orphans: ["src/secret.ts"], ok: false });
   });
