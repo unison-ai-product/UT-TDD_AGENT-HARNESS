@@ -512,9 +512,7 @@ describe("Q0 Node-only Bun qualification", () => {
     ],
   ];
 
-  it.fails.each(
-    invalidProbeOutcomes,
-  )("ST-NODEPROBE-004 rejects %s", (_case, testProbeOutcome) => {
+  it.fails.each(invalidProbeOutcomes)("ST-NODEPROBE-004 rejects %s", (_case, testProbeOutcome) => {
     const input = {
       ...testProbeAuditInput(),
       testProbeOutcome,
