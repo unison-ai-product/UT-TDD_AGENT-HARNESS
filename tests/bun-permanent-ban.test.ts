@@ -267,7 +267,7 @@ describe("Q0 Node-only Bun qualification", () => {
     ).toThrow("q0-f0c-sealed-generation-conflated");
   });
 
-  it.fails("CANDIDATE-ST-NODEPROBE-002 requires assertion reach and rejects the same child outcome", () => {
+  it.fails("ST-NODEPROBE-002 requires assertion reach and rejects the same child outcome", () => {
     const moduleUrl = pathToFileURL(join(repoRoot, "src/runtime/node-bootstrap.ts")).href;
     const syntheticGeneration = JSON.stringify({
       nodePath: "relative-node",
@@ -328,7 +328,7 @@ describe("Q0 Node-only Bun qualification", () => {
     });
   });
 
-  it.fails("CANDIDATE-ST-NODEPROBE-003 spawn ENOENT cannot qualify the test scope", () => {
+  it.fails("ST-NODEPROBE-003 spawn ENOENT cannot qualify the test scope", () => {
     const missingCommand = join(repoRoot, "node_modules", ".ut-tdd-missing-node-probe-command");
     const child = spawnSync(missingCommand, [], {
       cwd: repoRoot,
@@ -514,7 +514,7 @@ describe("Q0 Node-only Bun qualification", () => {
 
   it.fails.each(
     invalidProbeOutcomes,
-  )("CANDIDATE-ST-NODEPROBE-004 rejects %s", (_case, testProbeOutcome) => {
+  )("ST-NODEPROBE-004 rejects %s", (_case, testProbeOutcome) => {
     const input = {
       ...testProbeAuditInput(),
       testProbeOutcome,
@@ -522,7 +522,7 @@ describe("Q0 Node-only Bun qualification", () => {
     expect(runNodeBanAuditIsUnqualified(input)).toBe(true);
   });
 
-  it("CANDIDATE-ST-NODEPROBE-004 accepts only a valid synthetic validator fixture", () => {
+  it("ST-NODEPROBE-004 accepts only a valid synthetic validator fixture", () => {
     // This fixture exercises input validation only; it is not real probe evidence.
     expect(
       runNodeBanAuditWithTestProbe({

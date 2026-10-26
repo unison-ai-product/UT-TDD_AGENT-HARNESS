@@ -302,10 +302,10 @@ Node build image、authoring qualification、main正常化をblockしない。
 
 | 候補ID | 対応する既存P1要件 | Red test配置 |
 |---|---|---|
-| `CANDIDATE-ST-NODEPROBE-001` | 正準public CLI routeで実4 assertionを実行し、直接stdoutの成功JSONとbindingを検証する | `tests/node-self-host-bootstrap.test.ts` |
-| `CANDIDATE-ST-NODEPROBE-002` | test-only child shimで同じproduction probe handlerへrelative `nodePath` を渡す。同一childのstdout/statusを `testProbeOutcome` として同じQ0 validatorへ渡す。非0・成功JSONなしだけでは足りず、stderrの `node-path-absolute` markerで実 assertion到達を必須とする。現Redでhandler未実装やimport/command失敗なら到達未達であり、assertion負例の成功とは扱わない。Green後の通常testも同じmarker到達を検証する | `tests/bun-permanent-ban.test.ts` |
-| `CANDIDATE-ST-NODEPROBE-003` | missing child commandの実 `ENOENT` outcomeをvalidatorへ渡し、qualificationがfail-closeする | `tests/bun-permanent-ban.test.ts` |
-| `CANDIDATE-ST-NODEPROBE-004` | `testProbeOutcome` の欠落・closed JSON schema違反・generation/subject/digest不一致を拒否し、観測だけではqualificationしない。valid synthetic outcomeはvalidator fixtureに限り、実probe成功の証拠とは扱わない | `tests/bun-permanent-ban.test.ts`; consumer positive fixtureは `tests/bun-final-retirement.test.ts#q0Receipt`（syntheticのみ） |
+| `ST-NODEPROBE-001` | 正準public CLI routeで実4 assertionを実行し、直接stdoutの成功JSONとbindingを検証する | `tests/node-self-host-bootstrap.test.ts` |
+| `ST-NODEPROBE-002` | test-only child shimで同じproduction probe handlerへrelative `nodePath` を渡す。同一childのstdout/statusを `testProbeOutcome` として同じQ0 validatorへ渡す。非0・成功JSONなしだけでは足りず、stderrの `node-path-absolute` markerで実 assertion到達を必須とする。現Redでhandler未実装やimport/command失敗なら到達未達であり、assertion負例の成功とは扱わない。Green後の通常testも同じmarker到達を検証する | `tests/bun-permanent-ban.test.ts` |
+| `ST-NODEPROBE-003` | missing child commandの実 `ENOENT` outcomeをvalidatorへ渡し、qualificationがfail-closeする | `tests/bun-permanent-ban.test.ts` |
+| `ST-NODEPROBE-004` | `testProbeOutcome` の欠落・closed JSON schema違反・generation/subject/digest不一致を拒否し、観測だけではqualificationしない。valid synthetic outcomeはvalidator fixtureに限り、実probe成功の証拠とは扱わない | `tests/bun-permanent-ban.test.ts`; consumer positive fixtureは `tests/bun-final-retirement.test.ts#q0Receipt`（syntheticのみ） |
 
 `testProbeOutcome` はテスト側fixtureで表す未実装入力member名であり、現行APIに存在すると主張しない。Redではproduction sourceや架空handlerを追加せず、現public routeおよび既存 `runNodeBanAudit` がこれらの期待を満たさないことを示す。
 
