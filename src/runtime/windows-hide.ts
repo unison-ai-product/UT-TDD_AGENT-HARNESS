@@ -2,19 +2,10 @@ import childProcess from "node:child_process";
 import { syncBuiltinESMExports } from "node:module";
 
 type ChildProcessFunction = (this: unknown, ...args: unknown[]) => unknown;
-type ChildProcessMethod =
-  | "spawn"
-  | "spawnSync"
-  | "execFile"
-  | "execFileSync"
-  | "exec"
-  | "execSync"
-  | "fork";
-type MutableChildProcessModule = Record<ChildProcessMethod, ChildProcessFunction>;
 type WrappedFunction = ChildProcessFunction & { [key: symbol]: unknown };
 
 const WRAPPED = Symbol.for("ut-tdd.windowsHide.wrapped");
-const childProcessMethods: readonly ChildProcessMethod[] = [
+const childProcessMethods = [
   "spawn",
   "spawnSync",
   "execFile",
@@ -22,7 +13,10 @@ const childProcessMethods: readonly ChildProcessMethod[] = [
   "exec",
   "execSync",
   "fork",
-];
+] as const;
+
+type ChildProcessMethod = (typeof childProcessMethods)[number];
+type MutableChildProcessModule = Record<ChildProcessMethod, ChildProcessFunction>;
 
 function isOptions(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
