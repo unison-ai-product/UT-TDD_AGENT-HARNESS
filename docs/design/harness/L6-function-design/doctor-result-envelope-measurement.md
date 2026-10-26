@@ -5,7 +5,7 @@ status: confirmed
 sub_doc: function-spec
 artifact_role: topic_doctor_result_envelope_measurement
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
-plan: docs/plans/PLAN-L6-99-doctor-result-envelope-measurement-contract.md
+issue: 193
 ---
 
 # doctor result envelope 実測面契約

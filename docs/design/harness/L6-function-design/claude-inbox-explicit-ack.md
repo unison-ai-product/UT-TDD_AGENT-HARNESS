@@ -3,7 +3,7 @@ artifact_type: design_doc
 layer: L6
 status: confirmed
 sub_doc: function-spec
-plan: docs/plans/PLAN-L6-935-claude-inbox-explicit-ack.md
+issue: 935
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 ---
 

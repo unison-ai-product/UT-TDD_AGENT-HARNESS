@@ -7,7 +7,7 @@ pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 related_l3_screen_functional: docs/design/harness/L3-functional/screen-functional.md
 related_l5_ui_detail: docs/design/harness/L5-detailed-design/ui-detail.md
 related_l4_ui_standard: docs/design/harness/L4-basic-design/ui-standard.md
-plan: docs/plans/PLAN-L6-36-screen-spec-body.md
+issue: 1360
 next_pair_freeze: L7
 created: 2026-06-30
 updated: 2026-06-30

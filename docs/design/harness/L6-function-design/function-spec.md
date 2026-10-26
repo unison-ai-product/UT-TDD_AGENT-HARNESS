@@ -6,9 +6,7 @@ pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 related_br: docs/design/harness/L1-requirements/business-requirements.md
 next_pair_freeze: L7
-plan: docs/plans/PLAN-L6-93-node-bootstrap-contract.md
-replacement_issue: 152
-predecessor_plan: docs/plans/PLAN-L6-01-function-spec.md
+issue: 152
 v2_import: docs/migration/v2-import-ledger.md
 ---
 
@@ -316,27 +314,28 @@ doctor 配線: `checkL6Completion` (`src/doctor/process-quality.ts`、`l6-comple
   - L7 の status: L6 文書の `pair_artifact` が指す文書の集合 (重複を除く) のすべてが `status: confirmed` であること。1 本でも draft か status が無い文書があれば not-ready にする。単一の `l7Status` (L7-unit-test-design.md の status) だけで判定しない。
   - G6 の PASS は、従来どおり必須とする。
   - 既存 oracle の改訂と正式昇格: `U-L6COMP-006..012` を正式 oracle として引用する。U-L6COMP-001 の「owning `plan:` が無い」は「所有者 (`plan:` か `issue:`) が無い」に、U-L6COMP-002 の「owning L6 PLAN へ解決する」は「所有者が、実在する PLAN か正の整数の issue へ解決する」に置き換える。U-L6COMP-006..011 は上の所有者・対・逆参照・PLAN status / L7 status 規則を検証し、U-L6COMP-012 は正式 oracle 集合に相反する旧 oracle が併存しないことを検証する。001 / 002 の「L7 の `pair_artifact`」「L7 から名前で参照される」「L7 が confirmed」は、上の対・逆参照・L7 の status の規則に置き換える。旧い文面は、置き換えた時点で残さない (同じ入力に反対の判定を求める oracle を併存させない)。
-  - 上の表の「所有 PLAN」の列は、PLAN を退役させるときに、対応する issue へ置き換える。
+  - `issue:` は文書の出自 Issue を指す。改訂したときは改訂した Issue へ更新する。
+  - 上の表の「所有 PLAN」の列は、PLAN を退役させるときに、対応する issue へ置き換える (#1360 で出自 Issue の列へ置き換え済み)。
 
-| L6 設計文書 | 所有 PLAN | L7 oracle family |
+| L6 設計文書 | 出自 Issue | L7 oracle family |
 |---|---|---|
-| `function-spec.md` | `PLAN-L6-01` (追補 `PLAN-L6-20` / 21) | `U-FUNC` / `U-CORE` / `U-RULE` / `U-FR-L1-*` |
-| `edge-case.md` | `PLAN-L6-02` | `U-EDGE` |
-| `session-log.md` | `PLAN-L6-03` / 20 | `U-SLOG` |
-| `forced-stop-feedback.md` | `PLAN-L6-04` | `U-FSF` |
-| `setup-solo-team.md` | `PLAN-L6-05` | `U-SETUP` |
-| `handover-mechanism.md` | `PLAN-L6-06` / 16 | `U-HOVER` |
-| `agent-slots.md` | `PLAN-L6-07` | `U-SLOT` / `U-TEAM` |
-| `backfill-pairing.md` | `PLAN-L6-08` | `U-BACKFILL` |
-| `governance-enforcement.md` | `PLAN-L6-09` | `U-SCRUMREV` / `U-PROP` |
-| `vmodel-pair-freeze.md` | `PLAN-L6-10` / 11 | `U-VPAIR` / `U-VTRIG` |
-| `review-evidence.md` | `PLAN-L6-12` (`stale` 検知は `PLAN-L6-18`) | `U-REVIEW` |
-| `cross-review-enforcement.md` | `PLAN-L6-13` | `U-XREVIEW` |
-| `test-before-review.md` | `PLAN-L6-14` | `U-TORDER` |
-| `module-drift.md` | `PLAN-L6-15` (追補 `PLAN-L6-26..30`) | `U-MDRIFT` / `U-FR-L1-49` / `U-DDDTDD` / `U-FR-L1-50` |
-| `gate-confirm.md` | `PLAN-L6-17` | `U-GCONF` |
-| `plan-schedule-lint.md` | `PLAN-L6-19` | `U-PLANSCH` |
-| `fr-unit-coverage.md` | `PLAN-L6-21` | `U-FR-L1-01..50` |
+| `function-spec.md` | #152 | `U-FUNC` / `U-CORE` / `U-RULE` / `U-FR-L1-*` |
+| `edge-case.md` | #1360 | `U-EDGE` |
+| `session-log.md` | #1360 | `U-SLOG` |
+| `forced-stop-feedback.md` | #1360 | `U-FSF` |
+| `setup-solo-team.md` | #1360 | `U-SETUP` |
+| `handover-mechanism.md` | #1360 | `U-HOVER` |
+| `agent-slots.md` | #1360 | `U-SLOT` / `U-TEAM` |
+| `backfill-pairing.md` | #1360 | `U-BACKFILL` |
+| `governance-enforcement.md` | #1360 | `U-SCRUMREV` / `U-PROP` |
+| `vmodel-pair-freeze.md` | #1360 | `U-VPAIR` / `U-VTRIG` |
+| `review-evidence.md` | #1360 | `U-REVIEW` |
+| `cross-review-enforcement.md` | #1360 | `U-XREVIEW` |
+| `test-before-review.md` | #1360 | `U-TORDER` |
+| `module-drift.md` | #1360 | `U-MDRIFT` / `U-FR-L1-49` / `U-DDDTDD` / `U-FR-L1-50` |
+| `gate-confirm.md` | #1360 | `U-GCONF` |
+| `plan-schedule-lint.md` | #1360 | `U-PLANSCH` |
+| `fr-unit-coverage.md` | #848 | `U-FR-L1-01..50` |
 
 この表は現時点の PLAN 起点 inventory であり、後から追加された L6 文書 (descent-obligation / skill-index など) の oracle family を網羅しない。これは正式な目標契約上の必須所有者形式を限定しない。後発文書の対応は、正式契約では各文書の所有者 (`plan:` または `issue:`) と選択した L7 文書に束縛される。
 

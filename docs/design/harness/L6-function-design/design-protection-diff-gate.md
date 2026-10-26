@@ -7,7 +7,7 @@ artifact_role: topic_design_protection_diff_gate
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 next_pair_freeze: L7
-plan: docs/plans/PLAN-L6-834-design-protection-diff-gate.md
+issue: 898
 ---
 
 > **L6 contract marker**: `checkDesignProtection(input: DesignProtectionInput) => DesignProtectionResult` は unit-test-granularity contract である。DbC pre/post/invariant は §8 にまとめる。oracle の索引は共有の `docs/test-design/harness/L7-unit-test-design.md` (§設計書保護 diff gate) に置き、詳細 (CANDIDATE-U-DPROT-001〜032) は専用の `docs/test-design/harness/L7-design-protection-diff-gate-test-design.md` が固定する。

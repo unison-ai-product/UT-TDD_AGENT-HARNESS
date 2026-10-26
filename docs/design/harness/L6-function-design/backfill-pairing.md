@@ -7,7 +7,7 @@ artifact_role: topic_backfill_pairing
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 next_pair_freeze: L7
-plan: docs/plans/PLAN-L6-08-backfill-pairing.md
+issue: 1360
 ---
 
 > **L6 contract marker**: `analyzeBackfill(input: BackfillInput) => BackfillResult` は unit-test-granularity contract である。DbC pre/post/invariant は required Reverse back-fill と glossary gap を U-BACKFILL-001..006 に対応づける。

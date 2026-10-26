@@ -7,7 +7,7 @@ artifact_role: topic_agent_slots
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 next_pair_freeze: L7
-plan: docs/plans/PLAN-L6-07-agent-slots.md
+issue: 1360
 ---
 <!--
 ① 設計 (L6 機能設計) — agent-slots 機構 (subagent/team-member の fire→release 状態記録 + 並列上限助言 + stale 検知)。

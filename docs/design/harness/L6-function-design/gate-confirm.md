@@ -3,7 +3,7 @@ layer: L6
 sub_doc: function-spec
 status: confirmed
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
-plan: docs/plans/PLAN-L6-17-gate-confirm.md
+issue: 1360
 ---
 
 > **L6 contract marker**: `analyzeGateConfirm(input: GateConfirmInput) => GateConfirmResult` は unit-test-granularity contract である。DbC pre/post/invariant は gate PASS/park state を U-GCONF-001..005 へ対応付ける。

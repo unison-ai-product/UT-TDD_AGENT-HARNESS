@@ -7,7 +7,7 @@ pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 related_l1_functional: docs/design/harness/L1-requirements/functional-requirements.md
 next_pair_freeze: L7
-plan: docs/plans/PLAN-L6-37-skill-index-category.md
+issue: 1360
 implemented_by: docs/plans/PLAN-L7-211-skill-index-category-materialization.md
 ---
 

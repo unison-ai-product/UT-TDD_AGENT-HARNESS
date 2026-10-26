@@ -7,7 +7,7 @@ artifact_role: topic_forced_stop_feedback
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 next_pair_freeze: L7
-plan: docs/plans/PLAN-L6-04-forced-stop-feedback.md
+issue: 1360
 ---
 
 > **L6 contract marker**: `classifyFeedback(input: FeedbackInput) => FeedbackClassification` と `recordFeedback(input: FeedbackRecordInput) => FeedbackRecordResult` は unit-test-granularity contracts である。DbC pre/post/invariant は forced-stop evidence を U-FSF-001..007 に対応づける。

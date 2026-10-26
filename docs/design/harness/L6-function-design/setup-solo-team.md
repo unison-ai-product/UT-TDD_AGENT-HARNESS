@@ -7,7 +7,7 @@ artifact_role: topic_setup_solo_team
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 next_pair_freeze: L7
-plan: docs/plans/PLAN-L6-05-setup-solo-team.md
+issue: 1360
 ---
 
 > **L6 contract marker**: `planSetup(input: SetupInput) => SetupPlan` と `runSetup(input: SetupInput) => SetupResult` は unit-test-granularity contracts である。DbC pre/post/invariant は solo/team detection と setup outputs を U-SETUP-001..007 に対応づける。

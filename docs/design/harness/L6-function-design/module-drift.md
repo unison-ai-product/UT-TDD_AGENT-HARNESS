@@ -8,7 +8,7 @@ pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 next_pair_freeze: L7
 created: 2026-06-08
-plan: docs/plans/PLAN-L6-15-module-drift.md
+issue: 1360
 ---
 
 > **L6 contract marker**: `parseListedModules`, `scanActualModules`, `analyzeModuleDrift`, `loadModuleDocs`, and `moduleDriftMessages` は unit-test 粒度の contracts とする。DbC pre/post は §2-§3 に置く。L7 oracle family: U-MDRIFT-001..005.

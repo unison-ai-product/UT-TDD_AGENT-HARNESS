@@ -4,7 +4,7 @@ sub_doc: function-spec
 status: confirmed
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
-plan: docs/plans/PLAN-L6-13-cross-review-enforcement.md
+issue: 1360
 ---
 
 > **L6 contract marker**: `extractReviewEntries(input: ReviewEvidenceInput) => ReviewEntry[]` と `analyzeReviewEvidence(input: ReviewEvidenceInput) => ReviewEvidenceResult` は unit-test-granularity contracts である。DbC pre/post/invariant は review tier と same-model checks を U-XREVIEW-001..005 に対応づける。

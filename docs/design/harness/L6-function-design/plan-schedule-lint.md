@@ -3,7 +3,7 @@ layer: L6
 sub_doc: function-spec
 status: confirmed
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
-plan: docs/plans/PLAN-L6-19-plan-schedule-lint.md
+issue: 1360
 ---
 
 > **L6 contract marker**: `analyzePlanSchedule(input: PlanScheduleInput) => PlanScheduleResult` は unit-test-granularity contract である。DbC pre/post/invariant は Step parallel/serial と review-step requirement を U-PLANSCH-001..003 へ対応させる。

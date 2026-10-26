@@ -6,7 +6,7 @@ sub_doc: function-spec
 artifact_role: topic_fr_unit_coverage
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
-plan: docs/plans/PLAN-L6-21-fr-unit-coverage.md
+issue: 848
 ---
 
 > **L6 契約マーカー**: `analyzeL6FrCoverage(input: L6FrCoverageDocs) => L6FrCoverageResult` は unit-test 粒度の契約である。通常状態の FR registry 行は L6 spec、名前付き contract、ID完全一致する U-FR oracle へ解決する。FR registry が明示的に退役を宣言する場合だけ、Issue #848 の退役分岐へ解決する。

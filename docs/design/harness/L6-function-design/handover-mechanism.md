@@ -7,7 +7,7 @@ artifact_role: topic_handover_mechanism
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 next_pair_freeze: L7
-plan: docs/plans/PLAN-L6-06-handover-mechanism.md
+issue: 1360
 ---
 
 > **L6 contract marker**: `runHandover(input: HandoverInput) => HandoverResult` と `checkHandoverDiscipline(input: HandoverDisciplineInput) => HandoverDisciplineResult` は unit-test-granularity contracts である。DbC pre/post/invariant は digest、CURRENT.json、stale/drift checks を U-HOVER-001..012 に対応づける。
