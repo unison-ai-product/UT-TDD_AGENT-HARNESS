@@ -135,9 +135,9 @@ AI が生成する TypeScript core は、後でリファクタする前提では
 
 | rule id | 設計閾値 | hard 化の考え方 |
 |---|---|---|
-| `max-nesting-depth` | source function 内の制御ネストは原則 3 以下。4 以上は early return / guard clause / 関数分割を検討する。 | L7 実装 PLAN で AST lint を追加し、既存 debt は件数を実測して grandfather 期限を切る。 |
-| `max-function-lines` | source function / method は概ね 80 nonblank lines 以下。超過は domain step、policy table、projection helper へ分割する。 | test helper は対象外。source 既存 debt は baseline ではなく refactor candidate へ送る。 |
-| `max-cyclomatic-complexity` | source function の分岐点は概ね 12 以下。分岐表が増える場合は declarative registry / policy module へ外部化する。 | `externalize-policy` refactor candidate と接続する。 |
+| `max-nesting-depth` | source function 内の制御ネストの上限は `docs/governance/coding-rules.md` §量・分割・Refactor の目安 を正本とし、ここへ数値を写さない。上限を超える場合は early return / guard clause / 関数分割を検討する。 | L7 実装 PLAN で AST lint を追加し、既存 debt は件数を実測して grandfather 期限を切る。 |
+| `max-function-lines` | source function / method の行数の上限は `docs/governance/coding-rules.md` §量・分割・Refactor の目安 を正本とし、ここへ数値を写さない。超過は domain step、policy table、projection helper へ分割する。 | test helper は対象外。source 既存 debt は baseline ではなく refactor candidate へ送る。 |
+| `max-cyclomatic-complexity` | source function の分岐点の上限は `docs/governance/coding-rules.md` §量・分割・Refactor の目安 を正本とし、ここへ数値を写さない。分岐表が増える場合は declarative registry / policy module へ外部化する。 | `externalize-policy` refactor candidate と接続する。 |
 | `command-query-separation` | state/file/DB を変更する command は値を query result として返さない。query は mutation しない。 | CLI command handler など副作用境界は例外ではなく、command result DTO として明示する。 |
 | `prefer-guard-clause` | `else` 連鎖で正常経路を深くしない。失敗条件は先に返し、main path を浅く保つ。 | 自動検出は false-positive を避けるため L7 で限定 pattern から始める。 |
 
