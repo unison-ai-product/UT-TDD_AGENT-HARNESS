@@ -49,6 +49,10 @@ const OWNER_PATTERN =
   /\b(doctor|plan-?lint|vmodel|hook|db|database|ci|projection|writer|analyzer|checker|lint|handover|fr-roadmap-coverage)\b/i;
 const JAPANESE_OWNER_PATTERN = /投影|書込み|解析器|チェッカー|検査器|引継ぎ/;
 
+function hasAutomationOwner(owner: string): boolean {
+  return OWNER_PATTERN.test(owner) || JAPANESE_OWNER_PATTERN.test(owner);
+}
+
 function section(content: string): string {
   const match = content.match(SECTION_RE);
   if (!match || match.index === undefined) return "";
@@ -122,7 +126,7 @@ export function analyzeRuleAutomationClosure(
         violations.push({ file: doc.file, rule, reason: "missing_owner" });
         continue;
       }
-      if (!OWNER_PATTERN.test(owner) && !JAPANESE_OWNER_PATTERN.test(owner)) {
+      if (!hasAutomationOwner(owner)) {
         violations.push({ file: doc.file, rule, reason: "unknown_owner" });
         continue;
       }
