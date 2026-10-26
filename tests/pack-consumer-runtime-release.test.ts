@@ -2011,7 +2011,7 @@ describe("Pack consumer runtime release installer", () => {
       const originalDigest = hashHex(fixture.compiledBytes);
       const compiledText = fixture.compiledBytes.toString("utf8");
       const anchorGuard =
-        /if\s*\(\s*`sha256:\$\{digestHex\w*\(checksumBytes\)\}`\s*!==\s*input\.expectedConsumerDigest\s*\)/g;
+        /if\s*\(\s*`sha256:\$\{digestHex\w*\(checksumBytes\)\}`\s*!==\s*input\d*\.expectedConsumerDigest\s*\)/g;
       expect([...compiledText.matchAll(anchorGuard)]).toHaveLength(1);
       const mutantModule = Buffer.from(compiledText.replace(anchorGuard, "if (false)"));
       const unsignedReceipt = JSON.parse(

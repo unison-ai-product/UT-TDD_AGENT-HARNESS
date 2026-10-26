@@ -365,7 +365,7 @@ describe("green command anchor_commit 必須化 (issue #191)", () => {
 describe("green command vocabulary pin (schema ↔ lint SSoT)", () => {
   // PR #293 review 申し送り: schema (frontmatter.ts) と lint (review-evidence.ts) の
   // green_commands 語彙は 2 箇所に重複しており、片側だけの変更が無音で通る。
-  // zod の invalid_enum_value issue が持つ options (= schema 側 enum の実体) を
+  // Zod 4 の invalid_value issue が持つ values (= schema 側 enum の実体) を
   // 突き合わせて同期を恒久固定する (U-VPROF-RUNNER-001 と同型)。
   function schemaEnumOptions(field: "kind" | "runner" | "scope"): string[] {
     const r = frontmatterSchema.safeParse({
@@ -391,11 +391,15 @@ describe("green command vocabulary pin (schema ↔ lint SSoT)", () => {
     });
     expect(r.success).toBe(false);
     if (r.success) return [];
+    const expectedPath = ["review_evidence", 0, "green_commands", 0, field];
     const issue = r.error.issues.find(
-      (i) => i.code === "invalid_enum_value" && i.path.at(-1) === field,
+      (i) =>
+        i.code === "invalid_value" &&
+        i.path.length === expectedPath.length &&
+        i.path.every((segment, index) => segment === expectedPath[index]),
     );
-    expect(issue, `no invalid_enum_value issue for ${field}`).toBeDefined();
-    return [...((issue as { options?: readonly (string | number)[] }).options ?? [])].map(String);
+    expect(issue, `no invalid_value issue for ${field}`).toBeDefined();
+    return [...((issue as { values?: readonly (string | number)[] }).values ?? [])].map(String);
   }
 
   it("U-GREENDEF-007: schema enum と lint 語彙集合が kind/runner/scope の 3 面で一致する", () => {
