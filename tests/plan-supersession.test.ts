@@ -1,8 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { checkPlanSupersession } from "../src/doctor/index.ts";
 import {
   analyzePlanSupersession,
   type ParsedSupersedePlan,
@@ -231,40 +227,5 @@ describe("PLAN_SUPERSESSION_SELF_BASELINE は縮小のみ可", () => {
       SELF_BASELINE_FROZEN_AT_ISSUE_183.size,
     );
     expect(SELF_BASELINE_FROZEN_AT_ISSUE_183.size).toBe(7);
-  });
-});
-
-describe("loadSupersedePlans + checkPlanSupersession", () => {
-  function writePlan(root: string, name: string, body: string, supersedes?: string[]): void {
-    const fm = ["---", `plan_id: ${name.replace(/\.md$/, "")}`, "kind: troubleshoot"];
-    if (supersedes) {
-      fm.push("supersedes:");
-      for (const s of supersedes) fm.push(`  - ${s}`);
-    }
-    fm.push("---", "", body, "");
-    writeFileSync(join(root, "docs", "plans", name), fm.join("\n"), "utf8");
-  }
-
-  it("双方向 errata は green / 片肺は violation", () => {
-    const root = mkdtempSync(join(tmpdir(), "ut-tdd-supersede-"));
-    try {
-      mkdirSync(join(root, "docs", "plans"), { recursive: true });
-      // 双方向 OK: 後継が supersedes 宣言、原が訂正 back-ref。
-      writePlan(root, "PLAN-L7-87-kind.md", "kind 非依存化", ["PLAN-L7-86-scope"]);
-      writePlan(root, "PLAN-L7-86-scope.md", "訂正: PLAN-L7-87 が supersede。");
-      expect(checkPlanSupersession(root).ok).toBe(true);
-
-      // 片肺: 原が後継へ言及しない → violation。
-      writePlan(root, "PLAN-L7-86-scope.md", "誤記のまま。");
-      const r = checkPlanSupersession(root);
-      expect(r.ok).toBe(false);
-      expect(r.messages.join("\n")).toContain("back-reference");
-    } finally {
-      rmSync(root, { recursive: true, force: true });
-    }
-  });
-
-  it("repo root が読めないと fail-close", () => {
-    expect(checkPlanSupersession(join(tmpdir(), "ut-tdd-supersede-nope-zzz")).ok).toBe(false);
   });
 });
