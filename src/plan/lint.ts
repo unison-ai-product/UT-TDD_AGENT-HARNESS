@@ -765,11 +765,11 @@ function claimedBackpropArtifacts(content: string): string[] {
 }
 
 function schemaIssueSummary(issue: {
-  path: (string | number)[];
+  path: readonly PropertyKey[];
   code: string;
   received?: unknown;
 }): string {
-  const path = issue.path.join(".") || "(root)";
+  const path = issue.path.map(String).join(".") || "(root)";
   const received =
     typeof issue.received === "string" || typeof issue.received === "number"
       ? `(${String(issue.received)})`

@@ -282,7 +282,7 @@ const CROSS_KINDS = new Set<string>(["poc", "reverse", "recovery"]);
 /** workflow_phase (S/R) を取る kind (Scrum=poc S0-S4 / Reverse R0-R4)。recovery は phase を持たない */
 const WORKFLOW_KINDS = new Set<string>(["poc", "reverse"]);
 
-const custom = z.ZodIssueCode.custom;
+const custom = "custom";
 
 const ALLOWED_LAYER_BY_KIND: Record<string, readonly string[]> = {
   design: ["L1", "L2", "L3", "L4", "L5", "L6"],
