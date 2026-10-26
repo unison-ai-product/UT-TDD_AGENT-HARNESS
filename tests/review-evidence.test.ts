@@ -391,7 +391,13 @@ describe("green command vocabulary pin (schema ↔ lint SSoT)", () => {
     });
     expect(r.success).toBe(false);
     if (r.success) return [];
-    const issue = r.error.issues.find((i) => i.code === "invalid_value" && i.path.at(-1) === field);
+    const expectedPath = ["review_evidence", 0, "green_commands", 0, field];
+    const issue = r.error.issues.find(
+      (i) =>
+        i.code === "invalid_value" &&
+        i.path.length === expectedPath.length &&
+        i.path.every((segment, index) => segment === expectedPath[index]),
+    );
     expect(issue, `no invalid_value issue for ${field}`).toBeDefined();
     return [...((issue as { values?: readonly (string | number)[] }).values ?? [])].map(String);
   }

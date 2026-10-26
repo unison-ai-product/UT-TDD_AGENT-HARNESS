@@ -236,7 +236,8 @@ describe("plan draft CLI registrar", () => {
       ),
     ).toContainEqual(
       expect.objectContaining({
-        code: "invalid_string",
+        code: "invalid_format",
+        format: "regex",
         path: ["admission", "issue", "projection_digest"],
       }),
     );
@@ -256,7 +257,8 @@ describe("plan draft CLI registrar", () => {
       ),
     ).toContainEqual(
       expect.objectContaining({
-        code: "invalid_union_discriminator",
+        code: "invalid_union",
+        discriminator: "projection_state",
         path: ["admission", "issue", "projection_state"],
       }),
     );
@@ -395,7 +397,8 @@ describe("plan draft CLI: 拒否入力はcommand境界でwrite 0を保つ (#690�
     });
     expect(process.exitCode).toBe(1);
     expectRejectedIssue(output, {
-      code: "invalid_union_discriminator",
+      code: "invalid_union",
+      discriminator: "projection_state",
       path: ["admission", "issue", "projection_state"],
     });
     expect(existsSync(join(f.root, f.sourcePath))).toBe(false);
