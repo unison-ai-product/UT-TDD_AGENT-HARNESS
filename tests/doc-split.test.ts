@@ -42,7 +42,7 @@ const findingMessage = (result: ReturnType<typeof analyzeDocSplit>) =>
     ?.message ?? "";
 
 describe("doc split gate candidate oracles", () => {
-  it.fails("CANDIDATE-U-DOCSPLIT-001: counts lines after newline normalization", () => {
+  it.fails("U-DOCSPLIT-001: counts lines after newline normalization", () => {
     const cases = [
       ["", 0],
       ["a\nb\n", 2],
@@ -55,7 +55,7 @@ describe("doc split gate candidate oracles", () => {
     }
   });
 
-  it.fails("CANDIDATE-U-DOCSPLIT-002: counts fenced lines but excludes fenced headings and IDs", () => {
+  it.fails("U-DOCSPLIT-002: counts fenced lines but excludes fenced headings and IDs", () => {
     const text = ["## Real", "```md", "## Fake", "| U-FAKE-001 | example |", "```"].join("\n");
     const measured = measureDoc(source(l6("fences"), text));
     expect.soft(measured.lines).toBe(5);
@@ -81,7 +81,7 @@ describe("doc split gate candidate oracles", () => {
     expect.soft(unclosedL7.names).toEqual(["REAL"]);
   });
 
-  it.fails("CANDIDATE-U-DOCSPLIT-003: counts all L6 heading levels in order", () => {
+  it.fails("U-DOCSPLIT-003: counts all L6 heading levels in order", () => {
     const measured = measureDoc(
       source(
         l6("headings"),
@@ -92,7 +92,7 @@ describe("doc split gate candidate oracles", () => {
     expect.soft(measured.names).toEqual(["A", "A-1", "B", "Deep", "Last"]);
   });
 
-  it.fails("CANDIDATE-U-DOCSPLIT-004: counts unique L7 oracle families from table cells", () => {
+  it.fails("U-DOCSPLIT-004: counts unique L7 oracle families from table cells", () => {
     const text = [
       "| ID | Description |",
       "| --- | --- |",
@@ -111,7 +111,7 @@ describe("doc split gate candidate oracles", () => {
     expect.soft(measured.names).toEqual(["DOCSPLIT", "WHIDE", "FR", "RIGHT"]);
   });
 
-  it.fails("CANDIDATE-U-DOCSPLIT-005: classifies normalized paths recursively", () => {
+  it.fails("U-DOCSPLIT-005: classifies normalized paths recursively", () => {
     expect.soft(classifyDoc(l6("x"))).toBe("l6-topic");
     expect.soft(classifyDoc(`${L6}sub/deep/x.md`)).toBe("l6-topic");
     expect.soft(classifyDoc(`${L7}L7-x-test-design.md`)).toBe("l7-topic");
@@ -126,7 +126,7 @@ describe("doc split gate candidate oracles", () => {
     expect.soft(classifyDoc("docs\\design\\harness\\L6-function-design\\x.md")).toBe("l6-topic");
   });
 
-  it.fails("CANDIDATE-U-DOCSPLIT-006: enforces class-specific line limits at the boundary", () => {
+  it.fails("U-DOCSPLIT-006: enforces class-specific line limits at the boundary", () => {
     for (const [path, limit] of [
       [l6("l6"), 400],
       [l7("l7"), 400],
@@ -139,7 +139,7 @@ describe("doc split gate candidate oracles", () => {
     }
   });
 
-  it.fails("CANDIDATE-U-DOCSPLIT-007: enforces responsibility limits only for topic docs", () => {
+  it.fails("U-DOCSPLIT-007: enforces responsibility limits only for topic docs", () => {
     expect.soft(analyze([source(l6("sixteen"), headings(16))]).findings).toHaveLength(0);
     expect
       .soft(reasons(analyze([source(l6("seventeen"), headings(17))]), "doc-split-required"))
@@ -155,7 +155,7 @@ describe("doc split gate candidate oracles", () => {
       .toHaveLength(0);
   });
 
-  it.fails("CANDIDATE-U-DOCSPLIT-008: allows baseline contents and rejects growth", () => {
+  it.fails("U-DOCSPLIT-008: allows baseline contents and rejects growth", () => {
     const path = l6("baseline");
     const baseline = { [path]: { lines: 500, responsibilities: 20 } };
     expect.soft(analyze([source(path, documentText(500, 20))], baseline).findings).toHaveLength(0);
@@ -165,7 +165,7 @@ describe("doc split gate candidate oracles", () => {
     }
   });
 
-  it.fails("CANDIDATE-U-DOCSPLIT-009: requires baseline updates for shrinkage", () => {
+  it.fails("U-DOCSPLIT-009: requires baseline updates for shrinkage", () => {
     const path = l6("baseline");
     const baseline = { [path]: { lines: 500, responsibilities: 20 } };
     for (const text of [documentText(499, 20), documentText(500, 19), documentText(499, 19)]) {
@@ -174,7 +174,7 @@ describe("doc split gate candidate oracles", () => {
     }
   });
 
-  it.fails("CANDIDATE-U-DOCSPLIT-010: retires baselines that reach the limit", () => {
+  it.fails("U-DOCSPLIT-010: retires baselines that reach the limit", () => {
     const path = l6("baseline");
     const baseline = { [path]: { lines: 500, responsibilities: 20 } };
     for (const text of [documentText(400, 16), documentText(100, 3)]) {
@@ -183,7 +183,7 @@ describe("doc split gate candidate oracles", () => {
     }
   });
 
-  it.fails("CANDIDATE-U-DOCSPLIT-011: rejects a baseline entry with no source file", () => {
+  it.fails("U-DOCSPLIT-011: rejects a baseline entry with no source file", () => {
     const result = analyze([source(l6("present"), documentText(401, 1))], {
       [l6("gone")]: { lines: 500, responsibilities: 20 },
     });
@@ -191,7 +191,7 @@ describe("doc split gate candidate oracles", () => {
     expect.soft(reasons(result, "doc-split-required")).toContain("new-doc-over-limit");
   });
 
-  it.fails("CANDIDATE-U-DOCSPLIT-012: ignores layer-doc responsibility changes", () => {
+  it.fails("U-DOCSPLIT-012: ignores layer-doc responsibility changes", () => {
     const path = "docs/design/harness/L5/catalog.md";
     const baseline = { [path]: { lines: 1300, responsibilities: null } };
     expect.soft(analyze([source(path, documentText(1300, 2))], baseline).findings).toHaveLength(0);
@@ -211,7 +211,7 @@ describe("doc split gate candidate oracles", () => {
       .toHaveLength(0);
   });
 
-  it.fails("CANDIDATE-U-DOCSPLIT-013: prevents baseline growth and entry swaps", () => {
+  it.fails("U-DOCSPLIT-013: prevents baseline growth and entry swaps", () => {
     const a = l6("a");
     const b = l6("b");
     const aPrevious = { [a]: { lines: 500, responsibilities: 20 } };
@@ -269,13 +269,13 @@ describe("doc split gate candidate oracles", () => {
     }
   });
 
-  it.fails("CANDIDATE-U-DOCSPLIT-015: treats empty sources as unreadable input", () => {
+  it.fails("U-DOCSPLIT-015: treats empty sources as unreadable input", () => {
     const result = analyze([]);
     expect.soft(result.ok).toBe(false);
     expect.soft(reasons(result, "doc-split-input-unreadable")).not.toHaveLength(0);
   });
 
-  it.fails("CANDIDATE-U-DOCSPLIT-016: reports trailing responsibility names and correct target paths", () => {
+  it.fails("U-DOCSPLIT-016: reports trailing responsibility names and correct target paths", () => {
     const many = analyze([source(l6("many"), headings(20))]);
     expect.soft(findingMessage(many)).toContain("H17, H18, H19, H20");
     const linesOnly = analyze([source(l6("lines-only"), documentText(401, 5))]);
@@ -292,7 +292,7 @@ describe("doc split gate candidate oracles", () => {
     expect.soft(findingMessage(layerResult)).not.toContain("<topic>");
   });
 
-  it("CANDIDATE-U-DOCSPLIT-017: preserves deterministic shape and purity for identical inputs", () => {
+  it("U-DOCSPLIT-017: preserves deterministic shape and purity for identical inputs", () => {
     const sources = [source(l6("z"), documentText(501, 2)), source(l6("a"), documentText(501, 2))];
     const baseline = {
       [l6("z")]: { lines: 500, responsibilities: 20 },
@@ -313,7 +313,7 @@ describe("doc split gate candidate oracles", () => {
     );
   });
 
-  it.fails("CANDIDATE-U-DOCSPLIT-018: ignores sources outside the target trees", () => {
+  it.fails("U-DOCSPLIT-018: ignores sources outside the target trees", () => {
     const result = analyze([
       source("docs/plans/PLAN-1.md", lineText(2000)),
       source("src/huge.ts", lineText(2000)),
@@ -323,7 +323,7 @@ describe("doc split gate candidate oracles", () => {
     expect.soft(result.findings).toHaveLength(0);
   });
 
-  it.fails("CANDIDATE-U-DOCSPLIT-019: parses valid and invalid baseline JSON distinctly", () => {
+  it.fails("U-DOCSPLIT-019: parses valid and invalid baseline JSON distinctly", () => {
     expect
       .soft(
         parseDocSplitBaseline(
@@ -342,7 +342,7 @@ describe("doc split gate candidate oracles", () => {
     expect.soft(parseDocSplitBaseline("{")).toBeNull();
   });
 
-  it.fails("CANDIDATE-U-DOCSPLIT-022: does not allow formatting to hide responsibilities", () => {
+  it.fails("U-DOCSPLIT-022: does not allow formatting to hide responsibilities", () => {
     for (const text of [headings(17, 3), headings(17, 4), `${headings(9, 2)}\n${headings(8, 3)}`]) {
       const result = analyze([source(l6("format"), text)]);
       expect.soft(measureDoc(source(l6("format"), text)).responsibilities).toBe(17);
@@ -373,7 +373,7 @@ describe("doc split gate candidate oracles", () => {
       .toHaveLength(0);
   });
 
-  it.fails("CANDIDATE-U-DOCSPLIT-023: carries baseline over safe renames and rejects class changes", () => {
+  it.fails("U-DOCSPLIT-023: carries baseline over safe renames and rejects class changes", () => {
     const oldPath = l6("big");
     const newPath = `${L6}sub/big.md`;
     const previous = { [oldPath]: { lines: 500, responsibilities: 20 } };
