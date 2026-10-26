@@ -944,8 +944,13 @@ PR2 (`add-feature`) は昇格 PR merge 後の main から開始し、PLAN-L7-423
 
 ## PLAN-L7-76 Reliability Remediation Addendum
 
+Issue #1357 の候補 `CANDIDATE-U-DBPROJ-ING-001..003` は、宣言と Red の登録段階である。001/002 は `it.fails`、既に成立する003は通常の `it` による有入力対照とする。正式昇格は別 PR、必須一覧の変更と Green はさらに後続の PR で行い、現段階では実装の membership 対照を維持する。`EVIDENCE_GATED_DB_PROJECTION_TABLES` は変更しない。
+
 | U-ID | Target | Oracle |
 |---|---|---|
+| CANDIDATE-U-DBPROJ-ING-001 | `analyzeDbProjectionIngestion` | `schedule_entries` と `execution_readiness_projection` が 0 行でも、他の全 automatic 要件が populated なら `ok=true` かつ `missingRows=[]`。さらに `AUTOMATIC_DB_PROJECTION_REQUIREMENTS` にこの2表が含まれない。両表は PLAN 入力が無いときの無条件 population 要件ではない。 |
+| CANDIDATE-U-DBPROJ-ING-002 | `analyzeDbProjectionIngestion` | 上記2表と既存 negative fixture の `mcp_server_profiles` が 0 行なら `ok=false` で、`missingRows.map(row => row.table)` の完全一致集合は `mcp_server_profiles` のみ。例外対象は指定の2表だけで、他の automatic 要件は fail-close のまま。 |
+| CANDIDATE-U-DBPROJ-ING-003 | `rebuildHarnessDb` | 隔離 `repoRoot` の明示的な PLAN Markdown fixture 1 件を入力すると `schedule_entries > 0` かつ `execution_readiness_projection > 0`。これは入力が存在する場合の生成保証であり、入力不在時の無条件 population 要件ではない。 |
 | U-DBPROJ-ATOMIC-01 | `rebuildHarnessDb` | The truncate + re-project sequence runs inside one `BEGIN IMMEDIATE` transaction. Injecting a failure during projection (a wrapped `db` that throws on the first `INSERT INTO plan_registry`, i.e. after `truncateProjectionTables` has emptied the tables) re-throws and **rolls back**, leaving the prior committed `plan_registry` projection intact (row count unchanged, not 0). Red→Green: fails pre-fix (188 → 0). |
 | U-DBPROJ-PROV-01 | `analyzeDbProjectionIngestion(..., { enforceTelemetryProvenance: true })` | Populated telemetry tables (`skill_invocations`, `test_runs`, `guardrail_decisions`, `model_runs`) with only projection provenance are not acceptable evidence for "fired/used/works" claims. Default doctor can surface migration state as partial, but provenance-enforced mode fail-closes when runtime rows are 0 and projection rows are non-zero. |
 | U-DBPROJ-PROV-02 | `projectRuntimeTestRunFromSessionEvent` | A session-log Bash verification event (`Bash (vitest)` etc.) creates exactly one `test_runs` row with non-empty `session_id`, `runtime=hook-session-log`, `scope=runtime-hook`, and the JSONL evidence path; non-verification Bash events such as `Bash (git)` do not fabricate runtime test evidence. |
