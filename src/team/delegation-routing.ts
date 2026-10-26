@@ -1,3 +1,4 @@
+import { modelOverrideSchema, reasoningEffortSchema } from "../schema/team.ts";
 import { SUBAGENT_ALLOWLIST } from "../runtime/agent-guard-policy.ts";
 import { READ_ONLY_DELEGATION_ROLES } from "../runtime/review-guard.ts";
 import {
@@ -92,6 +93,14 @@ export function resolveDelegationRouting(input: DelegationRoutingInput): Delegat
         `[ut-tdd-delegation] BLOCK: role=${input.role} is not a registered delegation role.\n` +
         `Allowed: ${allowed}`,
     };
+  }
+
+  // role 検証後・routing 分岐前に model / effort を既存 schema で検証する (model を先に報告)。
+  if (input.model !== undefined && !modelOverrideSchema.safeParse(input.model).success) {
+    return { ok: false, message: "provider_model_invalid" };
+  }
+  if (input.effort !== undefined && !reasoningEffortSchema.safeParse(input.effort).success) {
+    return { ok: false, message: "provider_effort_invalid" };
   }
 
   // 判断ゲート role: 族内の frontier reviewer tier へ固定 (review は worker tier に流さない)。
