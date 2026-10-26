@@ -434,14 +434,52 @@ exit code を変えない。証跡 JSON は `.ut-tdd/gate_runs/<gate>-<timestamp
 `schema_version`、`gate_run_id`、`gate_id`、`timestamp/checked_at`、`plan_id`、`session_id`、
 `mode`、`review_kind`、`worker_model`、`reviewer_model`、`checklist_path`、`coverage_summary_path`、
 `command`、`checks[]`、`messages[]` を持つ。`plan_id` は `--plan`、`UT_TDD_PLAN_ID`、current-plan/branch
-推定の順で解決する。
+推定の順で解決し、解決できなければ `null` のまま書く (PLAN が無いことは証跡の欠陥ではない)。
 
 `rebuildHarnessDb` は `.ut-tdd/gate_runs/*.json` を読み、既存 `gate_runs` 列
 (`gate_run_id/gate_id/plan_id/status/checked_at/evidence_path`) と `workflow_runs`
-(`workflow=routine-gate`, `phase=<gate_id>`) へ投影する。`projectRetryEvents` は同一
-`(plan_id, workflow, phase)` の複数 workflow row を retry として検出する。`gate-run-coverage` doctor
-check は workflow row に対応する gate row 欠落、orphan gate row、plan_id 空の gate row、壊れた gate
-evidence JSON を fail-close で検出する。
+(`workflow=routine-gate`, `phase=<gate_id>`, `workflow_run_id=stableId("gate-workflow", gate_run_id)`)
+へ投影する。gate 実行と PLAN の関係は次のとおりとする (Issue #1359、修正版 A)。
+
+- **実行の識別と整合**: `plan_id` は任意の旧属性であり、解決できなければ空のまま投影する。実行の識別は
+  `gate_run_id` だけで行い、整合は `gate_id` (空は不正) と、解決できる `evidence_path` (`.ut-tdd/gate_runs/`
+  配下の JSON が読め、その `gate_run_id` と `gate_id` が行と一致する) で確かめる。`plan_id` が空であることを
+  理由に、`workflow_runs` への投影を省いたり照合から外したりしない。
+- **workflow との対応は実行単位**: `routine-gate` の workflow row と gate row は `workflow_run_id` の導出で
+  1 対 1 に対応させ、`phase` と `gate_id`、`plan_id` の一致を確かめる。`plan_id` だけで照合しない (無関係な
+  1 件の gate row が他の実行を充足したことにしない)。PLAN の無い `routine-gate` row の `drive_run_id` は空とし、
+  drive との結合検査 (`drive-db-registration`) は `routine-gate` 以外の workflow row にだけ掛ける。
+- **PLAN 単位の consumer**: `evaluateAutomationReadiness` は `routine-gate` row を実行単位で判定し、対応する
+  gate row が `passed` であることを必要条件にする (失敗・対応の欠落は blocked。同じ `plan_id` の別実行の成功を
+  借りない)。`selectScheduleLiveState` など PLAN 単位で gate signal を読む consumer は、`plan_id` が空の row を
+  どの PLAN にも帰属させない。表示だけの consumer (`selectSessionStartDigest`、job summary) は空の `plan_id`
+  をそのまま表示する。
+- **seed (A-132)**: `.ut-tdd/audit/A-132-l8-l14-verification-band-execution.md` (2026-06-11 の L8〜L14
+  local verification band の実行記録) を歴史的な投影元として使う場合、対象は `G-VERIFY.L8`〜`G-VERIFY.L14`
+  の 7 件の `gate_runs` row だけとし、`status` は `historical` (現在の判定ではない) とする。seed は PLAN の
+  有無に依存せず、`plan_id` は空、`evidence_path` は A-132 の path とする。A-132 の存在だけで `passed` の
+  gate row、`passed_local` の workflow row、`passed` の coverage row を作らない。seed row は
+  `gate_runs` の 0 件を避ける入力にはなるが、`routine-gate` の workflow row との対応を充足しない。
+  **正規の seed row** は次をすべて満たす row だけとする: `gate_id` が `G-VERIFY.L8`〜`G-VERIFY.L14` の
+  どれか、`gate_run_id` が `stableId("verification-band-gate", <layer>)` (`<layer>` は `gate_id` の
+  `G-VERIFY.` を除いた部分) と一致、`evidence_path` が A-132 の固定 path と一致し、その A-132 が repo に
+  実在、`status` が `historical`、`plan_id` が空、同じ `gate_id` の seed row が 1 件だけ。正規の seed row
+  に限り、JSON 証跡の検査、JSON 証跡集合との鮮度比較、`routine-gate` workflow row との双方向の対応検査から
+  外す。`status=historical` だけでは外さない。`status=historical` なのに上の条件を 1 つでも満たさない row、
+  および上の 7 件以外の `G-VERIFY.*` row は違反とする。
+- **retry**: `projectRetryEvents` と運用指標の `retry_groups` は、`plan_id` の有無にかかわらず
+  `routine-gate` row を retry の推定の対象外とする (同じ gate の別実行を retry の系列と見分ける識別子が無く、
+  PLAN の無い無関係な実行を 1 群にまとめないため)。代わりの作業単位ができたら、その単位で retry を定め直す。
+  それ以外の workflow は従来どおり同一 `(plan_id, workflow, phase)` の複数 row を retry とする。
+
+`gate-run-coverage` doctor check は、現在の `.ut-tdd/gate_runs/*.json` から投影した行で判定する (永続 DB の
+gate row の集合 (正規の seed row を除く) が証跡の `gate_run_id` と内容に一致しなければ投影し直してから判定し、
+古い投影で OK を出さない)。次を fail-close で検出する: `gate_runs` の 0 件、seed を名乗るのに正規の seed row で
+ない row (`status=historical` か `G-VERIFY.*` の row で条件を満たさないもの)、`routine-gate` の workflow row
+に対応する gate row の欠落とその逆 (正規の seed row 以外の gate row に対応する workflow row の欠落)、空の
+`gate_id`、正規の seed row 以外の証跡の欠落・不正 JSON・識別の不一致 (`gate_run_id` / `gate_id`)。
+`plan_id` が空の gate row と、`plan_registry` に無い `plan_id` を持つ gate row は、それだけでは違反にしない。
+A-132 だけがあり JSON 証跡が無い clean tree では、`gate_runs` は正規の seed row 7 件で、violation は 0 となる。
 
 ### §2.3 `trace check` (FR-03)
 
