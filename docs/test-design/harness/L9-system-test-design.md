@@ -219,7 +219,7 @@ GitHub可用性がLedgerの正本性を左右しないこと。検出器はこ�
 
 ### CAND-NODEBOOT-201/P1 — Issue #1363 下位probe契約（未実装目標）
 
-本節はIssue #1363の未実装目標として、既存候補 `CAND-NODEBOOT-201` の「Bun未導入clean host bootstrap」とその目的を変更せず、`status` / `doctor` / `test` / `hook` / `descendant` / `download` の既存6 scope、他の候補ID、`U-PACKBUN-006` を変更しない。ここで定める下位probeが実装・同一commitのsystem testとして検証されるまでは候補のままとし、Greenや正式 `U-*` を主張しない。
+本節はIssue #1363の未実装目標として、既存候補 `CAND-NODEBOOT-201` の「Bun未導入clean host bootstrap」とその目的を変更せず、`status` / `doctor` / `test` / `hook` / `descendant` / `download` の既存6 scope、他の候補ID、`U-PACKBUN-006` を変更しない。ここで定める下位probeが実装・同一commitのsystem testとして検証されるまでは、親 `CAND-NODEBOOT-201` は候補のままとし、Greenや正式 `U-*` を主張しない。下記 `ST-NODEPROBE-*` の正式宣言は検証契約のID昇格であり、実装済みの主張とは区別する。
 
 Q0の `test` scope は、検証済みgenerationに対して正準 `createNodeInvocation(generation, ["audit", "node-invocation-probe", "--generation", generationPath, "--json"])` で、compiled CLI内の固定read-only probeをちょうど1件実行する。probe routeはproduction `createNodeInvocation` を実際に呼び、Node組込みassertionで次の4 checkを評価する。check IDと順序は固定する。
 
@@ -296,11 +296,11 @@ Q0の `test` scope は、検証済みgenerationに対して正準 `createNodeInv
 Resource Kernel / Rust companionのsystem oracleは別D0-R/L9 pairが所有する。本節はその未着地を理由に
 Node build image、authoring qualification、main正常化をblockしない。
 
-#### Issue #1363 Red test候補（未昇格）
+#### Issue #1363 正式system oracle（Red維持）
 
-次の候補は本節の既存 `CAND-NODEBOOT-201/P1` の下位probeをRedで固定する対応宣言であり、candidate 201、6 scope、既存candidate ID、receipt形式、`U-PACKBUN-006` を変更しない。Red PRでは既存テスト内の `it.fails` として扱い、formal oracle昇格やGreenを主張しない。
+次の正式IDは、PR #1383で候補Redとして登録した既存 `CAND-NODEBOOT-201/P1` の下位probe検証契約を、設計保護gate §10.3の順序で昇格したものである。candidate 201、6 scope、既存candidate ID、receipt形式、`U-PACKBUN-006` を変更しない。IDとcitationの同期だけであり、既存テストの `it.fails`・fixture・assertionを維持し、Greenを主張しない。
 
-| 候補ID | 対応する既存P1要件 | Red test配置 |
+| 正式ID | 対応する既存P1要件 | Red test配置 |
 |---|---|---|
 | `ST-NODEPROBE-001` | 正準public CLI routeで実4 assertionを実行し、直接stdoutの成功JSONとbindingを検証する | `tests/node-self-host-bootstrap.test.ts` |
 | `ST-NODEPROBE-002` | test-only child shimで同じproduction probe handlerへrelative `nodePath` を渡す。同一childのstdout/statusを `testProbeOutcome` として同じQ0 validatorへ渡す。非0・成功JSONなしだけでは足りず、stderrの `node-path-absolute` markerで実 assertion到達を必須とする。現Redでhandler未実装やimport/command失敗なら到達未達であり、assertion負例の成功とは扱わない。Green後の通常testも同じmarker到達を検証する | `tests/bun-permanent-ban.test.ts` |
