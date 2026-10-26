@@ -188,7 +188,11 @@ git fetch -q origin && for d in 28 14 7 0; do c=$(git rev-list -1 --first-parent
 - 計測値は gate にしない。gate にするかは、4 週間分の計測を見てから Issue で判断する。gate にすると決めたときは、先にこのコマンドを純粋関数と CLI (L6 / L7 の対とテスト) へ移し、その後で gate を入れる。
 - ここで測るのはリポジトリ全体の量である。src・tests のファイル単位の行数の上限は #1310 が扱う。
 
-2026-10-23 の `origin/main` (`909b26c77`) で上のコマンドを流した結果は次のとおりである (28 日前の時点 = 2026-09-28 の `89f32c1b1` との比較)。
+次の表は、`origin/main` の first-parent 上の 2 つの commit、`89f32c1b1` (2026-09-28) と `909b26c77` (2026-10-23) を比べた値である。上のコマンドは相対日時で commit を選ぶため、流す日によって比べる commit が変わる。表の値を再現するときは、次のように commit を直接指定する。
+
+```bash
+for c in 89f32c1b1 909b26c77; do printf '== %s %s\n' "$(git log -1 --format=%cs "$c")" "${c:0:9}"; git -c core.quotePath=false ls-tree -r -l "$c" | awk -F'\t' '{split($1,m," "); p=$2; b="other"; if(p~/^src\//)b="src"; else if(p~/^tests\//)b="tests"; else if(p~/^scripts\//)b="scripts"; else if(p~/^docs\/design\//)b="docs/design"; else if(p~/^docs\/test-design\//)b="docs/test-design"; else if(p~/^docs\/plans\//)b="docs/plans"; else if(p~/^docs\/governance\/candidates\//)b="docs/governance/candidates"; else if(p~/^docs\//)b="docs(other)"; n[b]++; s[b]+=m[4]} END{for(k in n) printf "%-27s %5d files %7.0f KB\n",k,n[k],s[k]/1024}' | sort; done
+```
 
 | 区分 | 2026-09-28 | 2026-10-23 | 増加 (サイズ) |
 |---|---|---|---|
