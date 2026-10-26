@@ -163,7 +163,7 @@ R0-R4 + RGC (Reverse Gateway Closure) を Reverse 専用ではなく **共通 cl
 |---|---|---|
 | `ut-tdd bench` (I-1) | observability-metrics dashboard の bench コマンド (legacy bench command 翻案、FR-L1-20 連動、L4 CLI 設計 sub-doc) | observability-metrics.md / functional §1.1 |
 | `ut-tdd pr` (I-1) | CI/PR gate 連携 (legacy PR command 翻案、FR-L1-17 連動、L4 CLI 設計 sub-doc) | ci-pr-workflow.md / functional §1.1 |
-| `ut-tdd cutover` (I-2) | Recovery 収束専用 cutover_orchestrator 翻案。**lock 機構**: ファイルベース実装 (JSON lockfile + DB metadata) または better-sqlite3 advisory lock を L4 で判断 (ADR-001 better-sqlite3 検討時) | recovery-workflow.md / functional §1.1 |
+| `ut-tdd cutover` (I-2) | Recovery 収束専用 cutover_orchestrator 翻案。**lock 機構**: ファイルベース実装 (JSON lockfile + DB metadata) または better-sqlite3 advisory lock を L4 で判断 (ADR-001 better-sqlite3 検討時) | docs/process/modes/recovery.md / functional §1.1 |
 | UT-TDD W Phase 合流 state (I-4) | drive=agent (FR-L1-28、two-stage-agent-design.md) が確定したら Phase 1/2 → L10 合流状態を `phase.yaml` に追記 (`phase_merge` フィールド) | two-stage-agent-design.md |
 
 ## §7 drift 解消方針

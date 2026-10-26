@@ -252,7 +252,7 @@ UT-TDD Agent Harness の運用原則として、**画面・hook・gate のすべ
 | **(tech-docs A-46)** NFR 3-tier classification (A: doctor 自動判定 / B: CI 後人間確認 / C: PO 合意のみ) → `docs/design/nfr-classification.md` | L4 carry | IPA × ISO 25010 二軸の実装適用、L7 で `ut-tdd doctor --nfr` 実装入力 |
 | **(tech-docs A-46)** Neurosymbolic Guard Pattern (LLM 判断ではなく TS 決定論コード + audit append-only) | L4 ADR-002 候補 | AWS Guardrails 事例、agent-guard.ts 設計原則の正本化 |
 | **(tech-docs A-46)** Testable Contract as Freeze Gate (V-model layer exit = artifact テスト可能性の機械検証) → `vmodel_validator` 実装 | L7 carry | DEV V-model+AI 事例、L6→L7 freeze + L3↔L12 pair 機械検証 |
-| **(A-52 audit I-01)** Recovery mode 業務フロー (ガード検出 → 再開ポイント確定 → 認識訂正履歴) を業務要求として独立宣言 (BR-03 の暗黙吸収から明示化、BR-09 候補) | L3 / L4 add-design 候補 | recovery-workflow.md 二段構え、BR-03 では「暴走対応業務フロー」明示なし |
+| **(A-52 audit I-01)** Recovery mode 業務フロー (ガード検出 → 再開ポイント確定 → 認識訂正履歴) を業務要求として独立宣言 (BR-03 の暗黙吸収から明示化、BR-09 候補) | L3 / L4 add-design 候補 | docs/process/modes/recovery.md 二段構え、BR-03 では「暴走対応業務フロー」明示なし |
 | **(A-52 audit I-02)** Learning Engine recipe 蓄積・skill 推薦ループ全体を BR-21 Phase B に明示化 (recipe entity + pattern_key + L 単位注入自動更新) | L3 BR-21 詳細化 / Phase B | learning-engine.md §学習の処理 / 出力、現状 BR-21 は FR-L1-36/38/43 のみ言及 |
 | **(A-52 audit I-04)** AI 選択空間限定 UX (layer-context-injection の「AI が迷わない」原則) を UX-04 候補として宣言 (現 UX-01〜03 は人間 DX のみカバー、AI DX 観点を補強、BR-JTBD-01 と合流可) | L3 / L4 add-design 候補 | layer-context-injection.md §AI の判断の迷いを消す原理、UX-03 (CLI 出力分かりやすい) は人間向け |
 | **(A-52 audit M-03)** handover 業務価値 (セッション間 AI 委譲継続性保証) の BR 明示化検討 (現状 BR-03/BR-05 の暗黙前提、BR-09 候補) | Phase B carry | continuous-run-context-management.md §本命 PoC、D-09 で KPI 化済だが BR 明示なし |
