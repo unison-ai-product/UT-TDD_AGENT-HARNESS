@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -57,8 +57,6 @@ describe("db projection ingestion detector", () => {
       expect(result.rowCounts.test_cases).toBeGreaterThan(0);
       expect(result.rowCounts.spec_defs).toBeGreaterThan(0);
       expect(result.rowCounts.spec_relations).toBeGreaterThan(0);
-      expect(result.rowCounts.schedule_entries).toBeGreaterThan(0);
-      expect(result.rowCounts.execution_readiness_projection).toBeGreaterThan(0);
       expect(result.rowCounts.activation_entries).toBeGreaterThan(0);
       expect(result.rowCounts.activation_schedule_reviews).toBeGreaterThan(0);
       expect(result.rowCounts.document_catalog_entries).toBeGreaterThan(0);
@@ -68,6 +66,43 @@ describe("db projection ingestion detector", () => {
       expect(result.rowCounts.agent_contracts).toBeGreaterThan(0);
     } finally {
       db.close();
+    }
+  });
+
+  it("CANDIDATE-U-DBPROJ-ING-003: explicit PLAN input generates schedule/readiness rows", () => {
+    const repoRoot = mkdtempSync(join(tmpdir(), "ut-tdd-db-projection-ingestion-plan-"));
+    let db: ReturnType<typeof openHarnessDb> | undefined;
+
+    try {
+      db = openHarnessDb(":memory:", { repoRoot });
+      const plansDir = join(repoRoot, "docs", "plans");
+      mkdirSync(plansDir, { recursive: true });
+      writeFileSync(
+        join(plansDir, "PLAN-L7-999-db-projection-ingestion-fixture.md"),
+        [
+          "---",
+          "plan_id: PLAN-L7-999-db-projection-ingestion-fixture",
+          "title: DB projection ingestion fixture",
+          "kind: add-impl",
+          "layer: L7",
+          "drive: db",
+          "status: draft",
+          "route_mode: add-feature",
+          "---",
+          "",
+          "# DB projection ingestion fixture",
+          "",
+        ].join("\n"),
+        "utf8",
+      );
+
+      const rebuilt = rebuildHarnessDb({ repoRoot, db, skipTokenTelemetry: true });
+
+      expect(rebuilt.rowCounts.schedule_entries).toBeGreaterThan(0);
+      expect(rebuilt.rowCounts.execution_readiness_projection).toBeGreaterThan(0);
+    } finally {
+      db?.close();
+      rmSync(repoRoot, { recursive: true, force: true });
     }
   });
 
@@ -135,6 +170,35 @@ describe("db projection ingestion detector", () => {
     expect(dbProjectionIngestionMessages(result).join("\n")).toContain(
       "empty automatic projection table mcp_server_profiles",
     );
+  });
+
+  it.fails("CANDIDATE-U-DBPROJ-ING-001: permits both PLAN-derived tables to be empty", () => {
+    const result = analyzeDbProjectionIngestion({
+      ...populatedAutomaticProjectionCounts,
+      schedule_entries: 0,
+      execution_readiness_projection: 0,
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.missingRows).toEqual([]);
+    expect(AUTOMATIC_DB_PROJECTION_REQUIREMENTS.map((item) => item.table)).not.toContain(
+      "schedule_entries",
+    );
+    expect(AUTOMATIC_DB_PROJECTION_REQUIREMENTS.map((item) => item.table)).not.toContain(
+      "execution_readiness_projection",
+    );
+  });
+
+  it.fails("CANDIDATE-U-DBPROJ-ING-002: rejects another empty automatic table", () => {
+    const result = analyzeDbProjectionIngestion({
+      ...populatedAutomaticProjectionCounts,
+      schedule_entries: 0,
+      execution_readiness_projection: 0,
+      mcp_server_profiles: 0,
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.missingRows.map((row) => row.table).sort()).toEqual(["mcp_server_profiles"]);
   });
 
   it("treats trace_edges as automatic and telemetry-only tables as explicit evidence-gated zeros", () => {
