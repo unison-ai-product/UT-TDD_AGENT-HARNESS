@@ -13,7 +13,7 @@ issue: 1290
 
 # L6 機能設計: test-oracle-strength の同一ファイル helper 解決 (Issue #1290)
 
-> **L6 contract marker**: `analyzeDddTddRules(inputs) => DddTddResult` の `test-oracle-strength` 判定 (module 内部の `assertionSummary` / `testOracleViolations`) を対象とする unit-test-granularity contract である。DbC は §4、oracle は専用 L7 の `U-ORACLEHELPER-001`〜`017` が固定する。
+> **L6 contract marker**: `analyzeDddTddRules(inputs) => DddTddResult` の `test-oracle-strength` 判定 (`src/lint/test-oracle-strength.ts` の `testOracleViolations` と、その module 内部の `assertionSummary` ほか。module 境界は §9) を対象とする unit-test-granularity contract である。DbC は §4、oracle は専用 L7 の `U-ORACLEHELPER-001`〜`017` が固定する。
 
 > **契約状態**: #1290 で凍結済みの未実装目標契約である。今回の ID 昇格は source 実装・Green・本 PR の closing review PASS を示さない。
 
@@ -101,7 +101,7 @@ callback 本文 (§3.1 の 1) とは数え方が違う。callback 本文は現�
 
 ## 4. DbC
 
-関数署名は既存の `analyzeDddTddRules(inputs: DddTddInputs): DddTddResult` を保つ。`assertionSummary` / `testOracleViolations` は module 内部の関数であり、新しい export や source module を足さない。
+関数署名は既存の `analyzeDddTddRules(inputs: DddTddInputs): DddTddResult` を保つ。`test-oracle-strength` 判定の置き場と export の範囲は §9 で定める (#1340 で改訂。それまでは `src/lint/ddd-tdd-rules.ts` の内部関数だった)。
 
 | DbC | 契約 |
 | --- | --- |
@@ -132,3 +132,42 @@ callback 本文 (§3.1 の 1) とは数え方が違う。callback 本文は現�
 ## 8. 対になるテスト設計
 
 正式 oracle と、それぞれが落とす mutation は pair artifact `docs/test-design/harness/L7-test-oracle-strength-helper-resolution-test-design.md` に記す。
+
+## 9. module 境界 (Issue #1340)
+
+#1293 の Green で `src/lint/ddd-tdd-rules.ts` は 886 行、helper の索引を作る関数は 160 非空行になり、`docs/governance/coding-rules.md` §量・分割・Refactor の目安 の候補値 (module 700 行 / helper 120 行) を超えた。`test-oracle-strength` 判定を 1 つの module に分ける。
+
+### 9.1 分け方
+
+| module | 持つもの | export |
+| --- | --- | --- |
+| `src/lint/test-oracle-strength.ts` (新) | `assertionSummary`、oracle の強さの型と判定、helper の索引 (scope・束縛・書き込みの収集)、helper の解決と計数、callback の判定、`testOracleViolations` | `testOracleViolations` と、その引数・戻り値の型だけ |
+| `src/lint/ddd-tdd-rules.ts` (既存) | 入力の読み込み、他の rule (policy / workflow / domain boundary / invariant trace / red-first / integration GWT / unit oracle substance)、baseline debt、`analyzeDddTddRules`、`dddTddRulesMessages` | 変えない |
+
+署名:
+
+```ts
+// src/lint/test-oracle-strength.ts
+export interface OracleTestDoc { path: string; text: string }
+export interface OracleStrengthViolation { path: string; line: number; rule: string; message: string }
+export function testOracleViolations(docs: readonly OracleTestDoc[]): OracleStrengthViolation[];
+```
+
+- 依存は `ddd-tdd-rules.ts` → `test-oracle-strength.ts` の一方向だけにする。`test-oracle-strength.ts` は `ddd-tdd-rules.ts` を import しない (型も含む)。引数と戻り値は構造が同じ自前の型で受け渡す (`DddTddViolation` と同じ field を持つので、`analyzeDddTddRules` はそのまま積める)。
+- `scope === "test"` の絞り込みは呼び出し側 (`analyzeDddTddRules`) に置き、`testOracleViolations` は渡された文書をすべてテスト文書として扱う。
+- `lineOf` など `src/lint/shared.ts` の既存 helper は、新しい module からも import してよい。
+
+### 9.2 変えないこと
+
+- `analyzeDddTddRules` の署名、violation の並び (rule の評価順と、同じ rule の中の順) と内容、baseline debt の key。分割は振る舞いを変えない Refactor であり、§3〜§7 の契約はそのまま新しい module に掛かる。
+- `tests/` とテスト設計の oracle。テストは従来どおり `analyzeDddTddRules` を通して観測する。
+
+### 9.3 量の目安
+
+- 分割後のどちらの module も 700 行以内、どの関数も 120 非空行以内にする。helper の索引を作る関数 (現 160 非空行) は、scope の構築と束縛・書き込みの収集のように責務ごとの関数に分ける。分け方と関数名は実装に任せる (§3.2 の解決規則と §7 の「束縛表は 1 ファイルにつき 1 回作る」を保つこと)。
+- 上限の正式値は #1310 で決まる。それまでは上の候補値を目安とする。
+
+### 9.4 実装の進め方
+
+Codex lane が `refactor:` commit だけで行う。`tests/` とテスト設計の内容差分は 0、commit ごとに full suite を流す。非著者 reviewer (Claude Opus) は verdict の `REFACTOR:` 欄を書く。
+
