@@ -16,7 +16,7 @@ issue: 1290
 
 pair L6: `docs/design/harness/L6-function-design/test-oracle-strength-helper-resolution.md`。
 
-対象: `src/lint/ddd-tdd-rules.ts` の `analyzeDddTddRules` (内部の `assertionSummary` / `testOracleViolations`)。テストの置き場は既存の `tests/ddd-tdd-rules.test.ts` とする (既存の `baseInputs` を使う)。
+対象: `src/lint/ddd-tdd-rules.ts` の `analyzeDddTddRules` (判定の本体は `src/lint/test-oracle-strength.ts` の `testOracleViolations`。L6 §9 で #1340 に分けた。テストは従来どおり `analyzeDddTddRules` を通して観測し、本書の oracle は変えない)。テストの置き場は既存の `tests/ddd-tdd-rules.test.ts` とする (既存の `baseInputs` を使う)。
 
 ## 2. テストの組み方
 
