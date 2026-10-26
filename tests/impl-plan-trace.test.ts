@@ -2,7 +2,7 @@
 // src module/CLI/lint/doctor check が PLAN generates に紐づくか。NEW orphan を fail-close。
 // design-source traceで3件をback-fillした後のknown-debtは5件。IMP-087の4件もREVERSE-40へback-fill済。
 
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -11,14 +11,16 @@ import {
   IMPL_PLAN_TRACE_BASELINE,
   loadImplPlanTraceInput,
 } from "../src/lint/impl-plan-trace.ts";
+import { headSnapshotRoot } from "./support/workspace-roots.ts";
 
 function makeImplPlanTraceFixture(options: {
   sourcePaths: string[];
+  includePlan?: boolean;
   planPaths?: string[];
   designPaths?: string[];
 }): string {
   const root = mkdtempSync(join(tmpdir(), "impl-plan-trace-"));
-  mkdirSync(join(root, "docs", "plans"), { recursive: true });
+  if (options.includePlan !== false) mkdirSync(join(root, "docs", "plans"), { recursive: true });
   mkdirSync(join(root, "docs", "design", "harness", "L6-function-design"), {
     recursive: true,
   });
@@ -27,11 +29,13 @@ function makeImplPlanTraceFixture(options: {
     mkdirSync(join(absolutePath, ".."), { recursive: true });
     writeFileSync(absolutePath, "export {};\n", "utf8");
   }
-  writeFileSync(
-    join(root, "docs", "plans", "PLAN-fixture.md"),
-    (options.planPaths ?? []).join("\n"),
-    "utf8",
-  );
+  if (options.includePlan !== false) {
+    writeFileSync(
+      join(root, "docs", "plans", "PLAN-fixture.md"),
+      (options.planPaths ?? []).join("\n"),
+      "utf8",
+    );
+  }
   writeFileSync(
     join(root, "docs", "design", "harness", "L6-function-design", "fixture.md"),
     (options.designPaths ?? []).join("\n"),
@@ -145,5 +149,120 @@ describe("U-IPT-006: loadImplPlanTraceInput design-source trace", () => {
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
+  });
+});
+
+describe("Impl-Plan-Trace module ownership candidates (CANDIDATE-U-IPT-007..011)", () => {
+  const moduleOwnerRoot = makeImplPlanTraceFixture({
+    includePlan: false,
+    sourcePaths: ["src/foo/a.ts", "src/foo/b.ts", "src/glob/a.ts", "src/glob/b.ts"],
+    designPaths: ["src/foo/", "src/glob/*.ts"],
+  });
+  const unownedModuleRoot = makeImplPlanTraceFixture({
+    includePlan: false,
+    sourcePaths: ["src/foo/a.ts", "src/bar/c.ts"],
+    designPaths: ["src/foo/", "foo/src/bar/"],
+  });
+  const planOnlyRoot = makeImplPlanTraceFixture({
+    sourcePaths: ["src/bar/c.ts"],
+    planPaths: ["src/bar/", "src/bar/c.ts"],
+  });
+  const topLevelRoot = makeImplPlanTraceFixture({
+    includePlan: false,
+    sourcePaths: ["src/cli.ts", "src/secret.ts"],
+    designPaths: ["src/cli.ts"],
+  });
+  const mutationModule = "ut_tdd_issue1354_unmentioned_probe_20261026";
+  let detachedRepoInput: ReturnType<typeof loadImplPlanTraceInput>;
+  let mutationRoot = "";
+  let mutationInput: ReturnType<typeof loadImplPlanTraceInput>;
+
+  beforeAll(() => {
+    for (const root of [moduleOwnerRoot, unownedModuleRoot, planOnlyRoot, topLevelRoot]) {
+      expect(existsSync(join(root, "src"))).toBe(true);
+      expect(existsSync(join(root, "docs/plans/PLAN-fixture.md"))).toBe(root === planOnlyRoot);
+      expect(existsSync(join(root, "docs/design/harness/L6-function-design/fixture.md"))).toBe(
+        true,
+      );
+    }
+    expect(existsSync(join(moduleOwnerRoot, "src/foo/a.ts"))).toBe(true);
+    expect(existsSync(join(moduleOwnerRoot, "src/glob/b.ts"))).toBe(true);
+    expect(existsSync(join(unownedModuleRoot, "src/bar/c.ts"))).toBe(true);
+    expect(existsSync(join(planOnlyRoot, "src/bar/c.ts"))).toBe(true);
+    expect(existsSync(join(topLevelRoot, "src/secret.ts"))).toBe(true);
+
+    const snapshotRoot = headSnapshotRoot();
+    detachedRepoInput = loadImplPlanTraceInput(snapshotRoot);
+    expect(detachedRepoInput.srcFiles.length).toBeGreaterThan(0);
+    expect(existsSync(join(snapshotRoot, "docs/design"))).toBe(true);
+    expect(detachedRepoInput.tracedPaths.size).toBeGreaterThan(0);
+
+    mutationRoot = mkdtempSync(join(tmpdir(), "impl-plan-trace-module-mutation-"));
+    for (const sourcePath of detachedRepoInput.srcFiles) {
+      const target = join(mutationRoot, sourcePath);
+      mkdirSync(join(target, ".."), { recursive: true });
+      writeFileSync(target, "export {};\n", "utf8");
+    }
+    const mutationSource = join(mutationRoot, "src", mutationModule, "probe.ts");
+    mkdirSync(join(mutationSource, ".."), { recursive: true });
+    writeFileSync(mutationSource, "export {};\n", "utf8");
+    cpSync(join(snapshotRoot, "docs", "design"), join(mutationRoot, "docs", "design"), {
+      recursive: true,
+    });
+    expect(
+      existsSync(join(mutationRoot, "docs/design/harness/L6-function-design/module-drift.md")),
+    ).toBe(true);
+    mutationInput = loadImplPlanTraceInput(mutationRoot);
+    expect(mutationInput.srcFiles).toContain(`src/${mutationModule}/probe.ts`);
+    expect(mutationInput.srcFiles.length).toBe(detachedRepoInput.srcFiles.length + 1);
+    expect(mutationInput.tracedPaths.size).toBeGreaterThan(0);
+  });
+
+  afterAll(() => {
+    for (const root of [moduleOwnerRoot, unownedModuleRoot, planOnlyRoot, topLevelRoot]) {
+      rmSync(root, { recursive: true, force: true });
+    }
+    if (mutationRoot) rmSync(mutationRoot, { recursive: true, force: true });
+  });
+
+  it.fails("CANDIDATE-U-IPT-007: the real detached repository is owned with an empty baseline", () => {
+    const result = analyzeImplPlanTrace(detachedRepoInput);
+    expect({
+      baseline: [...detachedRepoInput.baseline].sort(),
+      orphans: result.orphans,
+      ok: result.ok,
+    }).toEqual({ baseline: [], orphans: [], ok: true });
+  });
+
+  it.fails("CANDIDATE-U-IPT-007: an unmentioned module added to a derived repo is the sole orphan", () => {
+    const result = analyzeImplPlanTrace(mutationInput);
+    expect(result).toEqual({
+      orphans: [`src/${mutationModule}/probe.ts`],
+      ok: false,
+    });
+  });
+
+  it.fails("CANDIDATE-U-IPT-008: module and glob mentions own all files in that module", () => {
+    const result = analyzeImplPlanTrace(loadImplPlanTraceInput(moduleOwnerRoot));
+    expect(result).toEqual({ orphans: [], ok: true });
+  });
+
+  it.fails("CANDIDATE-U-IPT-009: unmentioned modules remain orphaned at the path boundary", () => {
+    const result = analyzeImplPlanTrace(loadImplPlanTraceInput(unownedModuleRoot));
+    expect(result).toEqual({ orphans: ["src/bar/c.ts"], ok: false });
+  });
+
+  it.fails("CANDIDATE-U-IPT-010: PLAN-only module and file references do not confer ownership", () => {
+    const input = loadImplPlanTraceInput(planOnlyRoot);
+    const result = analyzeImplPlanTrace(input);
+    expect({ tracedByPlanOnlyPath: input.tracedPaths.has("src/bar/c.ts"), result }).toEqual({
+      tracedByPlanOnlyPath: false,
+      result: { orphans: ["src/bar/c.ts"], ok: false },
+    });
+  });
+
+  it("CANDIDATE-U-IPT-011: top-level files require their own exact design path", () => {
+    const result = analyzeImplPlanTrace(loadImplPlanTraceInput(topLevelRoot));
+    expect(result).toEqual({ orphans: ["src/secret.ts"], ok: false });
   });
 });
