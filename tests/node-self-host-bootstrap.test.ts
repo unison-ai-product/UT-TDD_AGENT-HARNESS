@@ -1,4 +1,4 @@
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import {
   chmodSync,
   copyFileSync,
@@ -717,5 +717,44 @@ describe("F0b sealed Node producer candidate oracles", () => {
       writeFileSync(builderPath, original);
       rmTestDist(fixture.root);
     }
+  });
+
+  it.fails("CANDIDATE-ST-NODEPROBE-001 public probe route emits the bound four-check result", async () => {
+    const real = await buildReal();
+    const invocation = bootstrap.createNodeInvocation(real, [
+      "audit",
+      "node-invocation-probe",
+      "--generation",
+      real.generationPath,
+      "--json",
+    ]);
+    const child = spawnSync(real.nodePath, invocation.args, {
+      cwd: root,
+      ...invocation.options,
+      encoding: "utf8",
+      timeout: 30_000,
+    });
+    expect(child.error).toBeUndefined();
+    expect(child.status).toBe(0);
+    expect(JSON.parse(child.stdout ?? "")).toEqual({
+      schema: "node-invocation-probe-result/v1",
+      candidate_id: "CAND-NODEBOOT-201",
+      probe_id: "CAND-NODEBOOT-201/P1",
+      test_source: "src/cli.ts#audit node-invocation-probe",
+      production_target: "src/runtime/node-bootstrap.ts#createNodeInvocation",
+      generation_id: real.receipt.generation_id,
+      subject_revision: real.receipt.subject_revision,
+      compiled_cli_sha256: real.receipt.compiled_cli.sha256,
+      executed: 1,
+      passed: 1,
+      failed: 0,
+      skipped: 0,
+      checks: [
+        { id: "invocation-options", result: "passed" },
+        { id: "compiled-cli-argv0", result: "passed" },
+        { id: "node-path-absolute", result: "passed" },
+        { id: "compiled-cli-path-absolute", result: "passed" },
+      ],
+    });
   });
 });
