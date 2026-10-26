@@ -214,7 +214,7 @@ describe("upstream schedule reader candidate oracles", () => {
     ).toHaveLength(5);
   });
 
-  it("CANDIDATE-U-UPSTREAM-SCHEDULE-004 negative fixtures change one non-empty cell and keep table shape", () => {
+  it("U-UPSTREAM-SCHEDULE-004 negative fixtures change one non-empty cell and keep table shape", () => {
     const baseline = l3Content();
     const driveVariants = driveMutationVariants();
     const closureVariants = closureMutationVariants();
@@ -258,7 +258,7 @@ describe("upstream schedule reader candidate oracles", () => {
     expect(closureVariants.map(({ name }) => name)).toEqual(["unknown_owner", "unknown_status"]);
   });
 
-  it.fails("CANDIDATE-U-UPSTREAM-SCHEDULE-001: both loaders read only the L3 topic and never probe PLAN", () => {
+  it.fails("U-UPSTREAM-SCHEDULE-001: both loaders read only the L3 topic and never probe PLAN", () => {
     const expected = l3Content();
     const root = fixtureRoot({ l3: expected });
     const drive = observeLoader(() => loadDriveModelPassageDocs(root));
@@ -278,7 +278,7 @@ describe("upstream schedule reader candidate oracles", () => {
     }
   });
 
-  it.fails("CANDIDATE-U-UPSTREAM-SCHEDULE-002: PLAN absent, old, changed, or malformed cannot replace L3", () => {
+  it.fails("U-UPSTREAM-SCHEDULE-002: PLAN absent, old, changed, or malformed cannot replace L3", () => {
     const expected = l3Content();
     const plans: Array<string | undefined> = [
       undefined,
@@ -309,7 +309,7 @@ describe("upstream schedule reader candidate oracles", () => {
     );
   });
 
-  it.fails("CANDIDATE-U-UPSTREAM-SCHEDULE-003: missing or damaged L3 fails closed despite a valid PLAN", () => {
+  it.fails("U-UPSTREAM-SCHEDULE-003: missing or damaged L3 fails closed despite a valid PLAN", () => {
     const content = l3Content();
     const missingRoot = fixtureRoot({ plan: PLAN_CONTENT });
     expect(loadDriveModelPassageDocs(missingRoot)).toEqual([]);
@@ -335,7 +335,7 @@ describe("upstream schedule reader candidate oracles", () => {
     );
   });
 
-  it.fails("CANDIDATE-U-UPSTREAM-SCHEDULE-004: the L3 Japanese passage and closure rows preserve their contract meaning", () => {
+  it.fails("U-UPSTREAM-SCHEDULE-004: the L3 Japanese passage and closure rows preserve their contract meaning", () => {
     const expected = l3Content();
     const root = fixtureRoot({ l3: expected });
     const driveDocs = loadDriveModelPassageDocs(root);
@@ -390,7 +390,7 @@ describe("upstream schedule reader candidate oracles", () => {
   });
 
   for (const variant of driveMutationVariants()) {
-    it.fails(`CANDIDATE-U-UPSTREAM-SCHEDULE-004: ${variant.reason} remains independently observable`, () => {
+    it.fails(`U-UPSTREAM-SCHEDULE-004: ${variant.reason} remains independently observable`, () => {
       const baselineRoot = fixtureRoot({ l3: l3Content() });
       const baselineDocs = loadDriveModelPassageDocs(baselineRoot);
       expect(baselineDocs).toHaveLength(1);
@@ -411,7 +411,7 @@ describe("upstream schedule reader candidate oracles", () => {
   }
 
   for (const variant of closureMutationVariants()) {
-    it.fails(`CANDIDATE-U-UPSTREAM-SCHEDULE-004: ${variant.reason} remains independently observable`, () => {
+    it.fails(`U-UPSTREAM-SCHEDULE-004: ${variant.reason} remains independently observable`, () => {
       const baselineRoot = fixtureRoot({ l3: l3Content() });
       const baselineDocs = loadRuleAutomationClosureDocs(baselineRoot);
       expect(baselineDocs).toHaveLength(1);
