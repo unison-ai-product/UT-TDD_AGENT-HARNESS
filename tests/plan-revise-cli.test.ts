@@ -341,7 +341,7 @@ describe("plan revise CLI: 拒否入力はcommand境界でwrite 0を保つ (#690
    *  ここをparseし直しspecific issue (code+path) を検査する: exit 1だけだとguard削除がGreenのまま通る。 */
   function expectRejectedIssue(
     output: string[],
-    match: { code: string; path: (string | number)[] },
+    match: { code: string; path: (string | number)[]; discriminator?: string },
   ): void {
     const parsed = JSON.parse(output.join("")) as { ok: boolean; error: string };
     expect(parsed.ok).toBe(false);
