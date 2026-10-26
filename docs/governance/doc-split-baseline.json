@@ -1,0 +1,18 @@
+{
+  "docs/design/harness/L5-detailed-design/internal-processing.md": { "lines": 1439, "responsibilities": null },
+  "docs/design/harness/L6-function-design/agent-guard-delegation-boundary.md": { "lines": 244, "responsibilities": 28 },
+  "docs/design/harness/L6-function-design/consumer-trace-gates.md": { "lines": 465, "responsibilities": 46 },
+  "docs/design/harness/L6-function-design/design-protection-diff-gate.md": { "lines": 267, "responsibilities": 17 },
+  "docs/design/harness/L6-function-design/function-spec.md": { "lines": 2933, "responsibilities": 109 },
+  "docs/design/harness/L6-function-design/memory.md": { "lines": 462, "responsibilities": 21 },
+  "docs/design/harness/L6-function-design/provider-invocation-input-validation.md": { "lines": 203, "responsibilities": 21 },
+  "docs/design/harness/L6-function-design/release-channel-manifest.md": { "lines": 203, "responsibilities": 20 },
+  "docs/design/harness/L6-function-design/skill-admission.md": { "lines": 207, "responsibilities": 26 },
+  "docs/design/harness/L6-function-design/state-channel-consolidation.md": { "lines": 296, "responsibilities": 23 },
+  "docs/design/harness/L6-function-design/test-oracle-strength-helper-resolution.md": { "lines": 173, "responsibilities": 17 },
+  "docs/test-design/harness/L7-agent-guard-delegation-boundary-test-design.md": { "lines": 173, "responsibilities": 15 },
+  "docs/test-design/harness/L7-release-consumer-dev-start-test-design.md": { "lines": 224, "responsibilities": 5 },
+  "docs/test-design/harness/L7-session-start-order-test-design.md": { "lines": 74, "responsibilities": 6 },
+  "docs/test-design/harness/L7-unit-test-design.md": { "lines": 3299, "responsibilities": 149 },
+  "docs/test-design/harness/L7-vmodel-pair-map-test-design.md": { "lines": 118, "responsibilities": 19 }
+}
