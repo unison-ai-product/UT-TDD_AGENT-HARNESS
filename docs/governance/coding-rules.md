@@ -133,7 +133,72 @@ hard gate 化の順序:
 
 ### 重複を統合する条件
 
-重複を作らず 1 か所に置く規則文は、`CLAUDE.md` §Rule Placement Convention が持つ。設計文書・コード・tests の重複について、統合を義務にする閾値は #1304 で確定する。確定するまで、本節は閾値を持たない。
+重複を作らず 1 か所に置く規則文は、`CLAUDE.md` §Rule Placement Convention が持つ。設計文書・tests の重複は次のとおり扱う (#1304 で確定)。コードの重複は「Refactor なし」でよい条件 (下の節) と、上の「Refactor の候補を出す値」の `dedupeFunctionMinLines` が扱う。
+
+- **義務 (PR の中で直す)**: PR が新しく作る重複だけを義務の対象にする。設計文書なら、既存の文書に同じ topic の節・候補 (同じ関数名・finding 名・対象 path を契約の対象にしているもの) があるのに、別の文書や別の節に契約を書くこと。tests なら、`tests/support/` に既にある helper・fixture と同じ役割のものを、テストファイルの中に新しく書くこと。どちらも、PR の中で既存の側へ統合して直す。数値の閾値は置かない。文書の重複を測る道具が無く、閾値を書いても確かめられないためである。判定は非著者 family の reviewer が、下の節で PR 本文に貼る grep の結果を材料に行う。
+- **義務にしないもの (計測で拾う)**: 複数の PR にまたがって既に積もった重複は、PR の義務にせず、下の「増加の計測」と「統合候補の抽出」で見つけて Refactor Issue (ラベル `refactor`) に積む。
+
+### 新しい設計文書を作る条件
+
+契約を書くときは、既存の文書へ節を足すことを先に検討する。新しい設計文書 (`docs/design/` と `docs/test-design/` の新規ファイル。L6 / L7 の対を含む) を作ってよいのは、次のどれかに当たるときだけとする。
+
+1. 契約の対象 (関数名・finding 名・対象 path) を `docs/design/` と `docs/test-design/` で grep して、契約の対象として扱っている既存の節が無い。
+2. 既存の文書に節を足すと、その文書が `docs/design/harness/L6-function-design/doc-split-gate.md` §4.2 の上限を超える。
+3. 既存の文書と変更の理由が違う (別の module の契約で、同じ文書に置くと別々の理由で同時に変更されることになる)。
+
+新しく作るときは、PR 本文に `新規文書の理由:` で始まる行を置き、当たる条件の番号と、1 の grep のコマンドと結果を書く。reviewer は、grep の結果と理由が食い違っていないか (同じ対象を扱う節が既にあるのに新しく作っていないか) を見る。食い違いは軽作業の是正 (既存の文書への統合) として同じ PR の中で直す。
+
+### 契約 PR の Refactor 工程
+
+契約 PR (`docs/design/`・`docs/test-design/` を変え、`src/`・`scripts/` を含まない PR) も、契約を書いた後に Refactor 工程を通す。
+
+1. 同じ topic の既存の節・候補を探す (上の条件 1 と同じ grep)。重複していれば 1 か所に統合し、残りは統合先を指す 1 行にするか削除する。
+2. 置き換えた記述は削除する。「旧記述」「撤回」などの注記を付けて残さない。置き換えた `CANDIDATE-*` の行も表から消す。経緯は git の履歴と PR 本文が持つ。ただし、正式 ID の oracle を退役させるときは、下の「tests の Refactor 工程」の手順に従う。
+3. 1 と 2 は、契約を書いた commit の後に `refactor(docs):` の commit として分けて置く。直す余地が無いときは、PR 本文に行頭の `Refactor なし (理由)` を 1 行書く。理由には、1 の grep で何を見たかを書く。
+
+契約 PR の Refactor 工程は、merge gate の `REFACTOR:` 欄 (実装 PR だけが対象) では確かめない。非著者 family の reviewer が、review の観点として commit の順と 1・2 の結果を見る。
+
+### tests の Refactor 工程
+
+実装 PR の Refactor commit は `tests/` の内容差分 0 である (`skills/test-driven-development.md`)。そのため、tests の構造を直す作業は実装 PR に混ぜず、tests の Refactor PR として別に出す。
+
+- **tests の Refactor PR**: `tests/` だけを変え、`src/`・`scripts/`・`docs/test-design/` を変えない。commit は `refactor(tests):` とする。許すのは、重複した helper・fixture の `tests/support/` への統合と、テストファイルの rename・移動・分割である。テストの assertion を変えず、実行されるテストの数と、テストが引用する oracle ID の集合を変えない (`docs/governance/oracle-test-trace-baseline.json` が増えも減りもしない)。PR 本文に、変更前後のテストの数を書く。
+- **統合候補の抽出**: 同じ名前の helper 関数がテストファイルで何か所定義されているかを、次のコマンドで出す。3 か所以上で定義されている名前を統合候補とする。候補であって義務ではない。同じ名前でも役割が違うものは統合しない。`const x = () => ...` の形の helper はこのコマンドでは拾えない。
+
+  ```bash
+  git grep -hoE '^(export )?function [A-Za-z0-9_]+' origin/main -- 'tests/*.test.ts' | sed -E 's/^(export )?function //' | sort | uniq -c | sort -rn | awk '$1>=3'
+  ```
+
+- **退役した oracle の除去**: 既存の ratchet と同じ順で行う。手順の型は `docs/design/harness/L6-function-design/oracle-test-citation-trace.md` §6.5 である。
+  - test-design の宣言と、テストの同じ ID のラベルは、同じ PR で外す。`oracle-test-trace` が、未引用の宣言と未宣言の引用をそれぞれ違反にするためである。この PR は `src/` を含まない (設計書保護 gate、`docs/design/harness/L6-function-design/design-protection-diff-gate.md` §10.2)。
+  - 実装も退役させるときは、テスト本体と `src/` の削除を後の実装 PR で行う。
+  - 最後の引用テストが消える ID は、テストを消す PR で `docs/governance/oracle-test-trace-baseline.json` から外す。baseline は縮小だけを許し、残すと stale baseline として違反になる。
+  - 退役していない oracle のテストを、tests の Refactor PR で消さない。
+
+### 増加の計測
+
+src・tests・docs のサイズと本数の推移は、§定期棚卸し (`CLAUDE.md` の EOD close-out) で次の 1 本のコマンドで出す (Git Bash で実行する)。`origin/main` の first-parent 上で 28・14・7・0 日前の時点の commit を固定し、その tree の blob のサイズ合計とファイル数を区分ごとに出す。履歴は git が持つので、計測値を別に保存しない。
+
+```bash
+git fetch -q origin && for d in 28 14 7 0; do c=$(git rev-list -1 --first-parent --before="$d days ago" origin/main); printf '== %s %s\n' "$(git log -1 --format=%cs "$c")" "${c:0:9}"; git -c core.quotePath=false ls-tree -r -l "$c" | awk -F'\t' '{split($1,m," "); p=$2; b="other"; if(p~/^src\//)b="src"; else if(p~/^tests\//)b="tests"; else if(p~/^scripts\//)b="scripts"; else if(p~/^docs\/design\//)b="docs/design"; else if(p~/^docs\/test-design\//)b="docs/test-design"; else if(p~/^docs\/plans\//)b="docs/plans"; else if(p~/^docs\/governance\/candidates\//)b="docs/governance/candidates"; else if(p~/^docs\//)b="docs(other)"; n[b]++; s[b]+=m[4]} END{for(k in n) printf "%-27s %5d files %7.0f KB\n",k,n[k],s[k]/1024}' | sort; done
+```
+
+- 時点は `ref@{date}` ではなく `git rev-list --before` で commit に固定する。`ref@{date}` はローカルの reflog に依存し、clone ごとに値が変わる。
+- path は `ls-tree` のタブ区切りで読み、`core.quotePath=false` で日本語の path も引用符なしで区分する。空白を含む path でも区分は崩れない。
+- 計測値は gate にしない。gate にするかは、4 週間分の計測を見てから Issue で判断する。gate にすると決めたときは、先にこのコマンドを純粋関数と CLI (L6 / L7 の対とテスト) へ移し、その後で gate を入れる。
+- ここで測るのはリポジトリ全体の量である。src・tests のファイル単位の行数の上限は #1310 が扱う。
+
+2026-10-23 の `origin/main` (`909b26c77`) で上のコマンドを流した結果は次のとおりである (28 日前の時点 = 2026-09-28 の `89f32c1b1` との比較)。
+
+| 区分 | 2026-09-28 | 2026-10-23 | 増加 (サイズ) |
+|---|---|---|---|
+| `src` | 439 本 4236KB | 441 本 4421KB | +4% |
+| `tests` | 336 本 3766KB | 351 本 4898KB | +30% |
+| `docs/design` | 64 本 1458KB | 85 本 2150KB | +47% |
+| `docs/test-design` | 46 本 937KB | 75 本 1549KB | +65% |
+| `docs/governance/candidates` | 54 本 462KB | 76 本 12132KB | 約 26 倍 |
+
+同じ時点で、上の統合候補のコマンドでは、同じ名前の helper `git` が 15 か所、`runCli` が 11 か所で定義されていた。一時ディレクトリは、`mkdtempSync` を直接使うテストファイルが 135 本、`tests/support/temp-tree.ts` を使うものが 28 本である (`git grep -l <語> origin/main -- tests | wc -l`)。
 
 ### 「Refactor なし」でよい条件と判定者
 
