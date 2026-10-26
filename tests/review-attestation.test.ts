@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import {
   chmodSync,
   existsSync,
@@ -102,6 +103,11 @@ function strictRefactorVerdictFixture(
   verdictFile: string;
   attestation: ReviewAttestation;
 } {
+  execFileSync("git", ["init", "--quiet"], {
+    cwd: root,
+    windowsHide: true,
+    stdio: ["ignore", "ignore", "ignore"],
+  });
   const issued = issueReviewRequest({
     repoRoot: root,
     request: {
