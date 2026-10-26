@@ -121,7 +121,7 @@ L9 の受入 oracle (CANDIDATE-ST-TEAM-004) で確かめる。
 - `refs/ut-tdd/*` は branch の ruleset の対象外で、書き込み権限のある人は削除できる。claim は信頼できる書き手どうしの
   調整であり、安全機構ではない。投影と ref の食い違い (ref が消えた等) は doctor の advisory にする。
 
-### §4.2 review request
+### §4.2 review の依頼
 
 - exact head ごとの review request を `refs/ut-tdd/review-requests/pr-<number>/<head sha>` の作成で一意にする。中身は
   依頼者の `principal`・`machine_id` と、ローカル custody に置いた request の digest である。
