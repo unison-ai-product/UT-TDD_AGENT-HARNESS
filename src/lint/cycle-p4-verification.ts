@@ -65,8 +65,6 @@ const OWNER_RE =
 const EVIDENCE_PATH_RE = /`([^`]+)`/g;
 const CURRENT_OPERATIONAL_FILES = [
   "docs/design/harness/L3-functional/roadmap.md",
-  "docs/plans/PLAN-M-00-verify-cutover.md",
-  "docs/plans/PLAN-M-01-cutover-backfill.md",
   ".ut-tdd/audit/A-136-cycle-p4-verification-audit.md",
   "src/lint/roadmap-registry.ts",
 ] as const;
