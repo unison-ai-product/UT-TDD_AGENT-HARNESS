@@ -217,6 +217,61 @@ GitHub可用性がLedgerの正本性を左右しないこと。検出器はこ�
 | `CAND-NODEBOOT-212` | cutover DB version incompatibility | cutover DB独自registryが未知newer schemaとdowngradeを起動前に拒否しcanonical bytes不変 |
 | `CAND-NODEBOOT-213` | 3 DB boundary / projection rebuild independence | harness projection DB再構築後もcutover DBとPLAN ledger DBのhead/refs/object digestが不変 |
 
+### CAND-NODEBOOT-201/P1 — Issue #1363 下位probe契約（未実装目標）
+
+本節はIssue #1363の未実装目標として、既存候補 `CAND-NODEBOOT-201` の「Bun未導入clean host bootstrap」とその目的を変更せず、`status` / `doctor` / `test` / `hook` / `descendant` / `download` の既存6 scope、他の候補ID、`U-PACKBUN-006` を変更しない。ここで定める下位probeが実装・同一commitのsystem testとして検証されるまでは候補のままとし、Greenや正式 `U-*` を主張しない。
+
+Q0の `test` scope は、検証済みgenerationに対して正準 `createNodeInvocation(generation, ["audit", "node-invocation-probe", "--generation", generationPath, "--json"])` で、compiled CLI内の固定read-only probeをちょうど1件実行する。probe routeはproduction `createNodeInvocation` を実際に呼び、Node組込みassertionで次の4 checkを評価する。check IDと順序は固定する。
+
+| check ID | 実 assertion |
+|---|---|
+| `invocation-options` | `invocation.options` が `{ shell: false, windowsHide: true }` と完全一致する |
+| `compiled-cli-argv0` | `invocation.args[0] === generation.compiledCliPath` |
+| `node-path-absolute` | `generation.nodePath` が絶対pathである |
+| `compiled-cli-path-absolute` | `generation.compiledCliPath` が絶対pathである |
+
+これは `tests/node-self-host-bootstrap.test.ts` の `CAND-NODEBOOT-004/008` にある4 assertionの意味を専用probeで再評価する契約である。同Vitest test fileそのものを実行した、またはそのtest IDを実行したとは記録しない。probeは固定route内の実 assertionであり、固定の `passed` 配列や件数だけを返す偽実行を認めない。各checkのpass記録は該当assertionが正常終了した後にだけ追加する。assertion失敗時は成功JSONを出さず、stderr診断は許可する。
+
+成功時、probe routeはstdoutへsingle JSON objectだけを出す。schemaは次の閉じた形とし、未知・欠落・重複field、余分なstdout、複数objectを認めない。
+
+```json
+{
+  "schema": "node-invocation-probe-result/v1",
+  "candidate_id": "CAND-NODEBOOT-201",
+  "probe_id": "CAND-NODEBOOT-201/P1",
+  "test_source": "src/cli.ts#audit node-invocation-probe",
+  "production_target": "src/runtime/node-bootstrap.ts#createNodeInvocation",
+  "generation_id": "<verified generation id>",
+  "subject_revision": "<verified subject revision>",
+  "compiled_cli_sha256": "<64桁lowercase hex>",
+  "executed": 1,
+  "passed": 1,
+  "failed": 0,
+  "skipped": 0,
+  "checks": [
+    { "id": "invocation-options", "result": "passed" },
+    { "id": "compiled-cli-argv0", "result": "passed" },
+    { "id": "node-path-absolute", "result": "passed" },
+    { "id": "compiled-cli-path-absolute", "result": "passed" }
+  ]
+}
+```
+
+`test_source` / `production_target` は固定値であり、両実装は `compiled_cli_sha256` が束縛するcompiled CLIに含まれる。`compiled_cli_sha256` は検証済みgeneration receiptの `compiled_cli.sha256` と同じ64桁lowercase hexでなければならない。外側Q0は、対象canonical childの直接stdoutと終了結果だけを受理根拠にする。generation ID / subject revision / compiled CLI digestは、外側がその場で検証した同一generation receiptおよびQ0 subjectから独立に得た期待値と完全一致させる。caller引数、保存file、HARNESS Memory、log、別attemptの出力や結果を結果objectまたは受理判定へ注入してはならない。
+
+| Q0 scope | 固定対象 / 証拠 | 受入条件 |
+|---|---|---|
+| `status` | 既存status観測 | 現行契約を維持 |
+| `doctor` | 既存doctor観測 | 現行契約を維持 |
+| `test` | `CAND-NODEBOOT-201/P1` のcanonical child invocationと直接stdoutの単一JSON | child exit 0、spawn error / timeoutなし、閉じたJSON shape exact、generation / subject / compiled CLI digest一致、`executed=1, passed=1, failed=0, skipped=0`、4 check IDが固定順で全件passed |
+| `hook` | 既存hook観測 | 現行契約を維持 |
+| `descendant` | 既存forbidden descendant観測 | 現行契約を維持 |
+| `download` | 既存runtime image download観測 | 現行契約を維持 |
+
+非0終了、spawn失敗、timeout、stdout欠落・複数・不正JSON、case実行数0、全skip・部分実行、checkの欠落・重複・失敗・順序違い、binding不一致、または結果の出所不明は、すべてQ0未達としてqualificationをfail-closeする。catchして後続scopeの診断を続けてもよいが、失敗をpassへ変換せず、Q0をqualifiedとして発行してはならない。実行結果の受入に保存file、caller supplied counts、HARNESS Memory、log、他attemptは使わない。
+
+このprobeが証明するのは、sealed Node上でproduction invocation builderの上記4契約assertionが実評価されたことだけである。Bun ban detector全体、全CI、元Vitest test fileの実行、または一般的なtest-runner機能の正しさは主張しない。
+
 Resource Kernel / Rust companionのsystem oracleは別D0-R/L9 pairが所有する。本節はその未着地を理由に
 Node build image、authoring qualification、main正常化をblockしない。
 
