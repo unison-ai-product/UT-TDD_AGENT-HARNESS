@@ -1,7 +1,11 @@
-import type { PlanChange } from "../plan-admission/diff-fence.ts";
 import type { ReviewDispatchEntry } from "./review-dispatch.ts";
 
 type ExecFileSync = typeof import("node:child_process").execFileSync;
+type PlanChange =
+  | { kind: "added"; path: string }
+  | { kind: "modified"; path: string }
+  | { kind: "deleted"; path: string }
+  | { kind: "renamed"; from: string; path: string };
 
 export interface RefactorJudgementGateDecision {
   target: boolean;
