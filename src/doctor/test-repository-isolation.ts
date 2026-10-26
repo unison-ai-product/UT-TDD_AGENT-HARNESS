@@ -68,9 +68,9 @@ const repositoryReadContracts: Record<string, RepositoryReadContract> = Object.f
 );
 
 repositoryReadContracts["tests/impl-plan-trace.test.ts"] = {
-  mode: "head_snapshot",
-  calls: 1,
-  reason: "the real-repository trace guard reads only the immutable detached HEAD snapshot",
+  mode_calls: { head_snapshot: 1, isolated_fixture: 1 },
+  reason:
+    "the immutable HEAD supplies the real trace input and copied design bytes for the isolated mutation fixture",
 };
 
 repositoryReadContracts["tests/doc-split-integration.test.ts"] = {
