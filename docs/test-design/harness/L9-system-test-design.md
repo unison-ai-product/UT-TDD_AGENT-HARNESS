@@ -230,7 +230,7 @@ Q0の `test` scope は、検証済みgenerationに対して正準 `createNodeInv
 | `node-path-absolute` | `generation.nodePath` が絶対pathである |
 | `compiled-cli-path-absolute` | `generation.compiledCliPath` が絶対pathである |
 
-これは `tests/node-self-host-bootstrap.test.ts` の `CAND-NODEBOOT-004/008` にある4 assertionの意味を専用probeで再評価する契約である。同Vitest test fileそのものを実行した、またはそのtest IDを実行したとは記録しない。probeは固定route内の実 assertionであり、固定の `passed` 配列や件数だけを返す偽実行を認めない。各checkのpass記録は該当assertionが正常終了した後にだけ追加する。assertion失敗時は成功JSONを出さず、stderr診断は許可する。
+これは `tests/node-self-host-bootstrap.test.ts` の `CAND-NODEBOOT-004/008` にある4 assertionの意味を専用probeで再評価する契約である。同Vitest test fileそのものを実行した、またはそのtest IDを実行したとは記録しない。probeは固定route内の実 assertionであり、固定の `passed` 配列や件数だけを返す偽実行を認めない。各checkのpass記録は該当assertionが正常終了した後にだけ追加する。assertion失敗時は成功JSONを出さず、stderr診断は許可する。`P1-NEG-ASSERT` では失敗診断に固定check ID `node-path-absolute` を含め、実 assertionへの到達を識別できるようにする。unknown command、missing handler/module、spawn error等の別原因による非0終了は、このassertion失敗の証拠に数えない。
 
 成功時、probe routeはstdoutへsingle JSON objectだけを出す。schemaは次の閉じた形とし、未知・欠落・重複field、余分なstdout、複数objectを認めない。
 
@@ -295,6 +295,19 @@ Q0の `test` scope は、検証済みgenerationに対して正準 `createNodeInv
 
 Resource Kernel / Rust companionのsystem oracleは別D0-R/L9 pairが所有する。本節はその未着地を理由に
 Node build image、authoring qualification、main正常化をblockしない。
+
+#### Issue #1363 Red test候補（未昇格）
+
+次の候補は本節の既存 `CAND-NODEBOOT-201/P1` の下位probeをRedで固定する対応宣言であり、candidate 201、6 scope、既存candidate ID、receipt形式、`U-PACKBUN-006` を変更しない。Red PRでは既存テスト内の `it.fails` として扱い、formal oracle昇格やGreenを主張しない。
+
+| 候補ID | 対応する既存P1要件 | Red test配置 |
+|---|---|---|
+| `CANDIDATE-ST-NODEPROBE-001` | 正準public CLI routeで実4 assertionを実行し、直接stdoutの成功JSONとbindingを検証する | `tests/node-self-host-bootstrap.test.ts` |
+| `CANDIDATE-ST-NODEPROBE-002` | test-only child shimで同じproduction probe handlerへrelative `nodePath` を渡す。同一childのstdout/statusを `testProbeOutcome` として同じQ0 validatorへ渡す。非0・成功JSONなしだけでは足りず、stderrの `node-path-absolute` markerで実 assertion到達を必須とする。現Redでhandler未実装やimport/command失敗なら到達未達であり、assertion負例の成功とは扱わない。Green後の通常testも同じmarker到達を検証する | `tests/bun-permanent-ban.test.ts` |
+| `CANDIDATE-ST-NODEPROBE-003` | missing child commandの実 `ENOENT` outcomeをvalidatorへ渡し、qualificationがfail-closeする | `tests/bun-permanent-ban.test.ts` |
+| `CANDIDATE-ST-NODEPROBE-004` | `testProbeOutcome` の欠落・closed JSON schema違反・generation/subject/digest不一致を拒否し、観測だけではqualificationしない。valid synthetic outcomeはvalidator fixtureに限り、実probe成功の証拠とは扱わない | `tests/bun-permanent-ban.test.ts`; consumer positive fixtureは `tests/bun-final-retirement.test.ts#q0Receipt`（syntheticのみ） |
+
+`testProbeOutcome` はテスト側fixtureで表す未実装入力member名であり、現行APIに存在すると主張しない。Redではproduction sourceや架空handlerを追加せず、現public routeおよび既存 `runNodeBanAudit` がこれらの期待を満たさないことを示す。
 
 ## §9 資源統制Execution Kernelシステムテスト設計（PLAN-L4-32）
 
