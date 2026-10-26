@@ -5,7 +5,7 @@ status: confirmed
 sub_doc: function-spec
 artifact_role: topic_oracle_test_citation_trace
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
-plan: docs/plans/PLAN-L6-98-oracle-test-citation-contract.md
+issue: 259
 ---
 
 # oracle-test-trace 逆向き citation 契約

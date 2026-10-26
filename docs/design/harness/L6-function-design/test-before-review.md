@@ -4,7 +4,7 @@ sub_doc: function-spec
 status: confirmed
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
-plan: docs/plans/PLAN-L6-14-test-before-review.md
+issue: 1360
 ---
 
 > **L6 contract marker**: `analyzeReviewEvidence(input: ReviewEvidenceInput) => ReviewEvidenceResult` は unit-test-granularity contract である。DbC pre/post/invariant は `tests_green_at <= reviewed_at` ordering を U-TORDER-001..005 へ対応させる。

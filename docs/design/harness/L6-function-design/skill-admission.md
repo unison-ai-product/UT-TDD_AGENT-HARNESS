@@ -8,7 +8,7 @@ related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 related_l1_functional: docs/design/harness/L1-requirements/functional-requirements.md
 extends: docs/design/harness/L6-function-design/skill-index.md
 next_pair_freeze: L7
-plan: docs/plans/PLAN-L6-67-skill-admission-gate.md
+issue: 1360
 ---
 
 > **L6 契約マーカー**: `analyzeSkillFit`、`computeSkillNovelty`、`analyzeDecisionPoints`、`repairSkillCandidate`、`resolveAdmission`、`analyzeSkillSupersession`、`renderSkillCatalogIndex`、`analyzeAdmissionCoverage` は unit-test 粒度の契約である。DoD の pre/post/invariant は `docs/test-design/harness/L7-unit-test-design.md` §1.24b `U-SKILL-ADMIT-001..009` に対応する。judge dispatch は純関数ではなく runtime orchestration であり、CI/doctor 経路には入れない（§8）。

@@ -7,7 +7,7 @@ artifact_role: topic_confirmed_document_placeholder_detection
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 next_pair_freeze: L7
-plan: docs/plans/PLAN-L6-833-confirmed-document-placeholder-detection.md
+issue: 894
 ---
 
 # 確定文書に残ったテンプレート記入欄の検出契約

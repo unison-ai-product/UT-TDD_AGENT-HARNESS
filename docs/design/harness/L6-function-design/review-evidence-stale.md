@@ -3,7 +3,7 @@ layer: L6
 sub_doc: function-spec
 status: confirmed
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
-plan: docs/plans/PLAN-L6-18-review-evidence-stale.md
+issue: 1360
 ---
 
 > **L6 contract marker**: `analyzeReviewEvidence(input: ReviewEvidenceInput) => ReviewEvidenceResult` は unit-test 粒度の contract とする。DbC pre/post/invariant は stale approval residue を U-REVIEW-007..008 に map する。

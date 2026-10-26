@@ -4,7 +4,7 @@ artifact_type: design_doc
 status: confirmed
 sub_doc: function-spec
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
-plan: docs/plans/PLAN-L6-01-function-spec.md
+issue: 152
 forward_plan: docs/plans/PLAN-L7-473-staged-release-channel-manifest.md
 reverse_plan: docs/plans/PLAN-REVERSE-473-staged-release-backfill.md
 ---

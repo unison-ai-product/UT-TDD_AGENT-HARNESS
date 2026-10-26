@@ -7,7 +7,7 @@ artifact_role: topic_session_log
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 next_pair_freeze: L7
-plan: docs/plans/PLAN-L6-03-session-log.md
+issue: 1360
 ---
 
 > **L6 contract marker**: `recordEvent(input: SessionHookInput) => void` と `compressPlanDigest(input: PlanDigestInput) => PlanDigest` は unit-test-granularity contract である。DbC pre/post/invariant は hook/session event と PLAN digest generation を U-SLOG-001..008 へ対応させる。

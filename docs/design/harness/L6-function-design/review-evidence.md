@@ -8,7 +8,7 @@ pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 next_pair_freeze: L7
 created: 2026-06-05
-plan: docs/plans/PLAN-L6-12-review-evidence.md
+issue: 1360
 ---
 
 > **L6 contract marker**: `analyzeReviewEvidence(input: ReviewEvidenceInput) => ReviewEvidenceResult` は unit-test-granularity contract である。DbC pre/post/invariant は review evidence presence と tier checks を U-REVIEW-001..008 に対応づける。

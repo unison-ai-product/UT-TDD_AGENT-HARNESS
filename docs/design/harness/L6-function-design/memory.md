@@ -8,7 +8,7 @@ artifact_role: topic_memory
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 next_pair_freeze: L7
-plan: docs/plans/PLAN-L6-01-function-spec.md
+issue: 152
 ---
 
 # L6 機能設計: memory
