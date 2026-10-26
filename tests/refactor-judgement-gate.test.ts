@@ -70,7 +70,9 @@ describe("refactor judgement gate candidates", () => {
       { kind: "renamed", from: "src/c.ts", path: "lib/c.ts" },
       { kind: "modified", path: "src/d.ts" },
     ] satisfies PlanChange[]);
-    expect(observed[1]).toContain("pulls/465/files");
+    expect(observed[0]).toBe("gh");
+    expect(observed[1]).toContain("api");
+    expect(observed[1]).toContain("repos/{owner}/{repo}/pulls/465/files");
     expect(observed[1]).toContain("--paginate");
   });
 
