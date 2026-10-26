@@ -79,6 +79,12 @@ repositoryReadContracts["tests/doc-split-integration.test.ts"] = {
     "doc-split candidate 020/021 inspect the execution snapshot baseline and use temporary repositories for append and CLI state checks",
 };
 
+repositoryReadContracts["tests/code-size-integration.test.ts"] = {
+  mode_calls: { head_snapshot: 1, isolated_fixture: 5 },
+  reason:
+    "code-size candidate 016/017 inspect the execution snapshot baseline and use temporary repositories for append and CLI state checks",
+};
+
 repositoryReadContracts["tests/design-root.test.ts"] = {
   mode: "head_snapshot",
   calls: 1,

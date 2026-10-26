@@ -32,6 +32,8 @@ export const RUNTIME_ENTRYPOINTS = ["src/cli.ts"] as const;
  * 純関数ライブラリ / 統合待ちなど「inert だが意図的」なものを honest に明示する。
  */
 export const DEFERRED_LINTS: Record<string, string> = {
+  "code-size": "#1310 Red の stub。runtime 配線とこの保留登録の撤去は Green で行う。",
+  "code-size-inputs": "#1310 Red の stub。runtime 配線とこの保留登録の撤去は Green で行う。",
   "consumer-trace": "#1282 Red の stub。runtime 配線とこの保留登録の撤去は #1314 Green で行う。",
   "doc-split": "#1307 Red の stub。runtime 配線とこの保留登録の撤去は #1309 Green で行う。",
   "doc-split-inputs": "#1307 Red の stub。runtime 配線とこの保留登録の撤去は #1309 Green で行う。",

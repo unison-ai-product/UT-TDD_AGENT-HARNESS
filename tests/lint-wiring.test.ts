@@ -88,7 +88,14 @@ describe("loadLintWiringInput (live repo regression fence)", () => {
     expect(r.unwired).toEqual([]);
     expect(r.staleDeferred).toEqual([]);
     // #1307 doc-split stubs stay deferred until #1309 Green wires them; DEFERRED_LINTS records why.
-    expect(r.deferred).toEqual(["consumer-trace", "doc-split", "doc-split-inputs", "tool-adapter"]);
+    expect(r.deferred).toEqual([
+      "code-size",
+      "code-size-inputs",
+      "consumer-trace",
+      "doc-split",
+      "doc-split-inputs",
+      "tool-adapter",
+    ]);
     expect(r.ok).toBe(true);
     // The audits this PLAN re-wired into doctor are now genuinely reachable.
     for (const m of [
