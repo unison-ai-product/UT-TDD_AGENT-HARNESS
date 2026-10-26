@@ -10,7 +10,7 @@ next_pair_freeze: L7
 issue: 1310
 ---
 
-> **L6 contract marker**: `analyzeCodeSize(input: CodeSizeInput) => CodeSizeResult` は unit-test-granularity contract である (未実装の目標契約。実装は本書の凍結後)。DbC pre/post/invariant は §11 にまとめる。oracle の詳細 (CANDIDATE-U-CODESIZE-001〜) は専用の `docs/test-design/harness/L7-code-size-gate-test-design.md` が固定する。閾値 (§4.2) は**推奨値 (PO 確定待ち)** であり、PO の確定を受けて本書と L7 を同時に改訂する。
+> **L6 contract marker**: `analyzeCodeSize(input: CodeSizeInput) => CodeSizeResult` は unit-test-granularity contract である (未実装の目標契約。実装は本書の凍結後)。DbC pre/post/invariant は §11 にまとめる。oracle の詳細 (CANDIDATE-U-CODESIZE-001〜) は専用の `docs/test-design/harness/L7-code-size-gate-test-design.md` が固定する。閾値 (§4.2) は **PO 確定値 (2026-10-26)** である。値を変えるときは本書と L7 を同時に改訂する。
 
 # コードとテストの量の検査 (code-size gate) — 関数設計 (issue #1310)
 
@@ -30,16 +30,16 @@ issue: 1310
 
 内容は CRLF を LF に直してから数える。
 
-- **ファイルの行数 (`lines`)**: 空白文字以外を 1 文字以上含む行の数 (空行を数えない、コメント行は数える)。`grep -c '[^[:space:]]' <file>` と同じ値になる。既存の `src/state-db/refactor-candidate-policy.ts` の `splitModuleLines` (700) と同じ単位 (nonblank) に揃える。doc-split gate の物理行 (`wc -l`) は文書の単位であり、コードには合わせない。
+- **ファイルの行数 (`lines`)**: 空白文字以外を 1 文字以上含む行の数 (空行を数えない、コメント行は数える)。`grep -c '[^[:space:]]' <file>` と同じ値になる。既存の `src/state-db/refactor-candidate-policy.ts` の `splitModuleLines` (現行 700、§10 で 400 に下げる) と同じ単位 (nonblank) に揃える。doc-split gate の物理行 (`wc -l`) は文書の単位であり、コードには合わせない。
 - **関数の行数** (`src` だけ): TypeScript の構文木 (`typescript` の `createSourceFile`) で、関数宣言・関数式・arrow function・method・constructor・getter・setter の本体を対象とする。本体がブロックなら開き括弧と閉じ括弧の間、式なら式の範囲で、**トークンを 1 個以上含む行の数**を数える (空行とコメントだけの行を数えない)。入れ子の関数の行も外側の関数に含める (`refactor-candidate-policy.ts` の `extractHelperLines` と同じ数え方)。入れ子の callback を名前付きの関数へ出せば外側の値は減る。
 - **関数超過量 (`functionExcess`)** (`src` だけ): ファイル内の全関数について `max(0, 関数の行数 - 関数の行数の上限)` を足した値。超えている関数の個数は表示だけに使い、判定には使わない (200 行の関数を 90 行 2 本に分ける正当な分割で個数が増えるため)。
 - `tests` の関数は測らない (`describe` / `it` の callback を関数の上限に掛ける意味が無い)。`tests` の `functionExcess` は `null`。
-- **循環的複雑度と制御のネスト**は測らない (§4.2 の推奨。gate にする案を PO が選んだときは、本節に測り方を足す改訂を行う)。
+- **循環的複雑度と制御のネスト**は測らない (§4.2 の PO 確定 = 案 1。gate にするときは、本節に測り方を足す改訂を行う)。
 - 各 `CodeMeasure` は、分割先の指示 (§7) のために、トップレベルの文の名前と行数を出現順に持つ。名前は宣言の名前 (`function` / `class` / `const` / `interface` / `type` / `enum`)、`export default` は `default`、トップレベルの `describe(` 呼び出しは第 1 引数の文字列 (`describe: <題>`)、それ以外は `<statement@行番号>` とする。
 
-## 4. 閾値 (推奨値、PO 確定待ち)
+## 4. 閾値 (PO 確定 2026-10-26)
 
-閾値は 2026-10-26 の `origin/main` (`909b26c7792c1c22adeaea58030917fe3b265285`) の実測から決める。**本節の値は推奨値であり、PO の確定を受けていない**。確定した値が推奨と異なるときは、本書 §4.2 と L7 の境界値の oracle を同時に改訂する。
+閾値は 2026-10-26 の `origin/main` (`909b26c7792c1c22adeaea58030917fe3b265285`) の実測をもとに、PO が 2026-10-26 に確定した。値を変えるときは、本書 §4.2 と L7 の閾値に依存する oracle を同時に改訂する。
 
 ### 4.1 実測の分布
 
@@ -54,14 +54,14 @@ git ls-files src tests | grep -E '\.(ts|tsx|mts|cts)$' | grep -v '\.d\.ts$' | xa
 | class | 本数 | 中央値 | p90 | p95 | p99 | 最大 |
 |---|---|---|---|---|---|---|
 | `src` (空行を除く) | 440 | 173 | 564 | 710 | 1546 | 4549 (`src/cli.ts`) |
-| `tests` (空行を除く) | 344 | 229 | 825 | 1055 | 2167 | 2958 (`tests/release-consumer-gates.test.ts`) |
+| `tests` (空行を除く) | 343 | 231 | 825 | 1055 | 2167 | 2958 (`tests/release-consumer-gates.test.ts`) |
 
 | 上限 (空行を除く) | 500 | 600 | 700 | 800 | 900 | 1000 | 1200 | 1500 |
 |---|---|---|---|---|---|---|---|---|
 | `src` で超える本数 | 59 | 39 | 25 | 16 | 14 | 14 | 10 | 6 |
 | `tests` で超える本数 | 82 | 67 | 46 | 39 | 29 | 21 | 18 | 12 |
 
-物理行で数えると issue の記載と同じ値になる (src 440 本のうち 1000 行超 14 本・2000 行超 4 本、tests 344 本のうち 1000 行超 24 本・2000 行超 6 本)。`src` の物理行は 890 行 (`src/plan-admission/node-atomic-draft-publisher.ts`) の次が 1220 行で切れ目があるが、1 本育てば消える切れ目なので閾値の根拠にしない。`tests` の分布は連続している。
+物理行で数えると issue の記載と同じ値になる (src 440 本のうち 1000 行超 14 本・2000 行超 4 本、tests 343 本 (`tests/fixtures/` を除く) のうち 1000 行超 24 本・2000 行超 6 本)。`src` の物理行は 890 行 (`src/plan-admission/node-atomic-draft-publisher.ts`) の次が 1220 行で切れ目があるが、1 本育てば消える切れ目なので閾値の根拠にしない。`tests` の分布は連続している。
 
 関数の行数は、§3 の測り方を実装した使い捨ての script (repo に置いていない。Green の実装が再現可能な測り方の正本になる) で `src` の関数 7181 個を測った。中央値 3、p90 28、p95 46、p99 112、最大 480 (`src/cli/distribution.ts` の `registerDistributionCommands`)。
 
@@ -72,16 +72,16 @@ git ls-files src tests | grep -E '\.(ts|tsx|mts|cts)$' | grep -v '\.d\.ts$' | xa
 
 参考 (gate にしない量): ESLint の `complexity` / `max-depth` 相当の数え方では、循環的複雑度 12 超の関数が 410 個 (15 超 273 個)、ネスト 3 超が 71 個 (4 超 21 個) あり、`coding-rules.md` の 3 つの目安 (80 / 12 / 3) のいずれかを超える関数は 460 個・205 ファイル (src の約 47%) である。
 
-### 4.2 推奨値と選択肢
+### 4.2 確定値と選択肢
 
-| 量 | 推奨値 (PO 確定待ち) | 推奨時の baseline | 決め方 |
+| 量 | PO 確定値 (2026-10-26) | baseline の見積もり | 決め方 |
 |---|---|---|---|
-| `src` のファイルの行数 | 800 | 16 本 | p95 (710) の内側を自由に育て、上位 5% だけを止める。`splitModuleLines` 700 が分割候補を先に出し、800 で止まる |
-| `tests` のファイルの行数 | 1000 | 21 本 | 同じく p95 (1055) 付近。src より長い (fixture の組み立てとケースの列挙) ので 200 行多くする |
-| `src` の関数の行数 | 120 | 61 関数 / 49 ファイル | `extractHelperLines` (120) と同じ値にし、候補と上限を一致させる |
+| `src` のファイルの行数 | 500 | 59 本 | PO 確定 (「500 以下にしてほしい」)。中央値 173 の約 3 倍で、p75 (330) より外側を止める。分割候補 400 (§10) を先に出し、500 で止める |
+| `tests` のファイルの行数 | 500 | 82 本 | PO 確定。`src` と同じ値に揃える |
+| `src` の関数の行数 | 120 | 61 関数 / 49 ファイル | PO 確定 (案 1)。`extractHelperLines` (120) と同じ値にし、候補と上限を一致させる |
 | 循環的複雑度・制御のネスト | gate にしない | ― | 目安のまま。80 / 12 / 3 を gate にすると src の約半分が baseline に入り、gate ではなく凍結になる |
 
-PO に示す選択肢 (ファイル): 案 A `src` 1000 / `tests` 1200 (baseline 14 + 18 本、上位 3% だけを止め、残りは上限近くまで育つ)、案 B `src` 800 / `tests` 1000 (推奨)、案 C `src` 600 / `tests` 800 (baseline 39 + 39 本、触るたびに分割が要るファイルが増える)。baseline に入るファイルの直近 30 日 (2026-09-26〜10-26、`main` への merge 360 本) の変更頻度は、案 A 32 本中 22 本が変更され 59 本の merge が触れた、案 B 37 本中 24 本・62 本、案 C 78 本中 49 本・102 本である (`git log --since=2026-09-26 --first-parent --merges` の各 merge の第 1 親との差分で数えた)。baseline のファイルは縮小しか許されないので、触れる merge の数が、分割を先に求められうる作業の数の上限の目安になる (行を足さない変更は止まらない)。選択肢 (関数): 案 1 行数 120 だけを gate (推奨)、案 2 `coding-rules.md` の 80 / 12 / 3 を全て gate、案 3 関数は gate にしない。閾値は `src/lint/code-size.ts` の定数 `CODE_SIZE_LIMITS` に置く。値の変更は設計の改訂であり、baseline への追記では通さない (§5)。
+ファイルの行数で比べた選択肢は、案 A `src` 1000 / `tests` 1200 (baseline 14 + 18 本)、案 B `src` 800 / `tests` 1000 (最初の推奨、16 + 21 本)、案 C `src` 600 / `tests` 800 (39 + 39 本)、**確定 `src` 500 / `tests` 500 (59 + 82 本 = 141 本)** である。PO は案 B を選んだ直後に「500 以下」を求め、500 / 500 に確定した (2026-10-26)。baseline の行は、この 141 本に、行数が上限の内側で関数だけが超えるファイルを足したものになる (本数は Green の base commit で決まる、§5)。baseline に入るファイルの直近 30 日 (2026-09-26〜10-26、`main` への merge 360 本) の変更頻度は、案 A 32 本中 22 本が変更され 59 本の merge が触れた、案 B 37 本中 24 本・62 本、案 C 78 本中 49 本・102 本である (`git log --since=2026-09-26 --first-parent --merges` の各 merge の第 1 親との差分で数えた)。確定の 500 / 500 は測っていないが、baseline に入るファイルは案 C の集合を含むので、触れる merge は 102 本以上になる。baseline のファイルは縮小しか許されないので、触れる merge の数が、分割を先に求められうる作業の数の上限の目安になる (行を足さない変更は止まらない)。選択肢 (関数): 案 1 行数 120 だけを gate (PO 確定)、案 2 `coding-rules.md` の 80 / 12 / 3 を全て gate、案 3 関数は gate にしない。閾値は `src/lint/code-size.ts` の定数 `CODE_SIZE_LIMITS` に置く。値の変更は設計の改訂であり、baseline への追記では通さない (§5)。
 
 ## 5. baseline
 
@@ -144,14 +144,14 @@ PO に示す選択肢 (ファイル): 案 A `src` 1000 / `tests` 1200 (baseline 
 
 - doctor: check 名 `code-size`、CI の doctor (governance hard gates) で fail-close する。`checkCodeSize` の `{ messages, ok }` を返す。
 - PR 前に流す軽い CLI: `ut-tdd code-size check`。`ok` なら exit 0、そうでなければ exit 1。読み取りだけで、harness.db にも `.ut-tdd/` にも書かない。doctor の singleton には入らない。
-- PR の順序は doc-split gate §8.2 と同じ (設計書保護 gate §10.3 の三段階): (0) 本書と L7 の契約 PR、(1) 登録 + Red PR (実 repo を読む 016 と 017 は `src/doctor/test-repository-isolation.ts` の `repositoryReadContracts` へ登録行を足す。テスト名は候補 ID を引用する)、(2) src を含まない昇格 PR (`CANDIDATE-U-CODESIZE-*` を `U-CODESIZE-*` へ 1:1 で昇格)、(3) 実装 PR (Green。`src/lint/code-size*.ts`、doctor と CLI の配線、`docs/governance/code-size-baseline.json` の初期値)。分割 PR は src と tests と baseline を同じ PR で変える (設計文書に触れないので設計書保護 gate に当たらない)。
+- PR の順序は doc-split gate §8.2 と同じ (設計書保護 gate §10.3 の三段階): (0) 本書と L7 の契約 PR、(1) 登録 + Red PR (実 repo を読む 016 と 017 は `src/doctor/test-repository-isolation.ts` の `repositoryReadContracts` へ登録行を足す。テスト名は候補 ID を引用する)、(2) src を含まない昇格 PR (`CANDIDATE-U-CODESIZE-*` を `U-CODESIZE-*` へ 1:1 で昇格)、(3) 実装 PR (Green。`src/lint/code-size*.ts`、doctor と CLI の配線、`docs/governance/code-size-baseline.json` の初期値、`refactor-candidate-policy.ts` の `splitModuleLines` を 400 へ下げる変更 (§10))。分割 PR は src と tests と baseline を同じ PR で変える (設計文書に触れないので設計書保護 gate に当たらない)。
 
 ## 10. 既存の値との整合
 
-- `src/state-db/refactor-candidate-policy.ts` の値は、Refactor の候補を出す値として残す (超えても違反ではない)。gate と同じ単位 (空行を除く行数) なので、大小関係を「候補 ≤ 上限」と定める。推奨値では `splitModuleLines` 700 < `src` の上限 800 で、上限に届く前に分割候補が出る。`extractHelperLines` 120 = 関数の行数の上限 120 で、候補と上限が一致する (候補は 120 以上、上限は 120 を超えたら違反)。`splitModuleExports` 24 と `dedupeFunctionMinLines` 10 は gate にしない。「候補 ≤ 上限」は L7 の `CANDIDATE-U-CODESIZE-018` が定数どうしの比較で固定する。
-- PO が案 2 や案 C を選んで上限が候補の値を下回るときは、候補の値を上限以下へ下げる変更を実装 PR に含める (候補が上限より遅く出ると、候補の意味が無くなるため)。
+- `src/state-db/refactor-candidate-policy.ts` の値は、Refactor の候補を出す値として残す (超えても違反ではない)。gate と同じ単位 (空行を除く行数) なので、大小関係を「候補 ≤ 上限」と定める。確定値では `src` の上限 500 が現行の `splitModuleLines` 700 を下回り「候補 ≤ 上限」が崩れるので、**`splitModuleLines` を 400 に下げる** (実装 PR の Green で `refactor-candidate-policy.ts` を変える)。理由: 上限 500 に届く前の 100 行の幅で分割候補を出し、gate で止まる前に分割を計画できるようにするため。`splitModuleLines` は `src` だけを走査する (`REFACTOR_SCAN_ROOTS`) ので、`tests` には候補の段を置かない。`extractHelperLines` 120 = 関数の行数の上限 120 で、候補と上限が一致する (候補は 120 以上、上限は 120 を超えたら違反)。`splitModuleExports` 24 と `dedupeFunctionMinLines` 10 は gate にしない。「候補 ≤ 上限」は L7 の `CANDIDATE-U-CODESIZE-018` が定数どうしの比較で固定する。
+- 今後上限を下げるときも、候補の値を上限以下へ下げる変更を同じ実装 PR に含める (候補が上限より遅く出ると、候補の意味が無くなるため)。
 - **module の責務の数え方**: `coding-rules.md` は「1 module の責務の数え方とファイル単位の上限は #1310 で決める」としている。本書はファイル単位の上限を行数だけで決め、module の責務の数 (export の数など) は gate にしない。export の数は宣言の粒度 (型の export、catalog module) で大きく揺れ、責務の数を表さないためである。`splitModuleExports` は候補のまま残す。
-- `coding-rules.md` の 80 / 12 / 3 は目安のまま残す (推奨案 1)。`coding-rules.md` の「量の上限」表の更新は、PO 確定後に同書の持ち主が行う (本書は値を写さない)。
+- `coding-rules.md` の 80 / 12 / 3 は目安のまま残す (案 1、PO 確定)。
 
 ## 11. 不変条件 (DbC)
 
@@ -161,7 +161,8 @@ PO に示す選択肢 (ファイル): 案 A `src` 1000 / `tests` 1200 (baseline 
 
 ## 12. 範囲外
 
-- 循環的複雑度・制御のネストの gate (推奨案 1 では目安のまま。PO が案 2 を選んだときに §3 と §4.2 を改訂する)。
+- 循環的複雑度・制御のネストの gate (案 1 の確定により目安のまま。gate にするときは §3 と §4.2 を改訂する)。
+- **後続 (未解決)**: `docs/governance/coding-rules.md` の「量の上限」表 (src・tests のファイルの行数 = 未定、関数の行数の扱い) と「Refactor の候補を出す値」表 (module の行数 700) は本書の PR では変えない。本書の merge 後に、別の PR で確定値 (500 / 500、関数 120、候補 400) と揃える。
 - 責務の分け方の意味的な良し悪し、名前の付け方 (review が見る)。
 - `scripts/`、`docs/`、生成物の量。設計文書の量は doc-split gate が持つ。
 - 既存の baseline のファイルの分割そのもの (実装後に Refactor Issue で 1 本ずつ行う)。
