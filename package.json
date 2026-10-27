@@ -22,8 +22,8 @@
     "ut-tdd": "./src/cli.ts"
   },
   "engines": {
-    "node": "24.22.1",
-    "npm": "11.19.1"
+    "node": ">=24.22.1 <25",
+    "npm": ">=11.19.1 <12"
   },
   "scripts": {
     "dev": "node src/cli.ts",
