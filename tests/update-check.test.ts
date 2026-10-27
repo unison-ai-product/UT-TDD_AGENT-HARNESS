@@ -304,7 +304,7 @@ describe("checkForUpdate", () => {
     expect(checkForUpdate(moved)).toMatchObject({ latestVersion: "v0.1.6", source: "remote" });
   });
 
-  it.fails("CANDIDATE-U-CMDINPUT-012: rejects an option-like remote override before git or cache write", () => {
+  it.fails("U-CMDINPUT-012: rejects an option-like remote override before git or cache write", () => {
     const deps = mockDeps({
       version: "0.1.4",
       remoteOverride: () => "--upload-pack=touch pwned",
@@ -329,7 +329,7 @@ describe("checkForUpdate", () => {
     expect(result.detail).not.toContain("upload-pack");
   });
 
-  it.fails("CANDIDATE-U-CMDINPUT-013: rejects a package repository remote after git+ normalization", () => {
+  it.fails("U-CMDINPUT-013: rejects a package repository remote after git+ normalization", () => {
     const deps = mockDeps({
       version: "0.1.4",
       repository: { type: "git", url: "git+-oProxyCommand=x" },
@@ -352,7 +352,7 @@ describe("checkForUpdate", () => {
     expect(writeCalls).toBe(0);
   });
 
-  it.fails("CANDIDATE-U-CMDINPUT-014: rejects before reading a fresh cache for the same remote", () => {
+  it.fails("U-CMDINPUT-014: rejects before reading a fresh cache for the same remote", () => {
     const deps = mockDeps({ version: "0.1.4", remoteOverride: () => "-x" });
     const cachePath = join(ROOT, UPDATE_CHECK_CACHE_PATH);
     const packagePath = join(ROOT, "package.json");
@@ -389,7 +389,7 @@ describe("checkForUpdate", () => {
     expect(readCalls.filter((path) => path === cachePath)).toHaveLength(0);
   });
 
-  it("CANDIDATE-U-CMDINPUT-015: preserves remotes with an internal hyphen and the origin fallback", () => {
+  it("U-CMDINPUT-015: preserves remotes with an internal hyphen and the origin fallback", () => {
     const repository = mockDeps({
       version: "0.1.4",
       repository: "https://example.invalid/a-b.git",
@@ -417,7 +417,7 @@ describe("checkForUpdate", () => {
     expect(origin.remoteCalls).toEqual(["origin"]);
   });
 
-  it("CANDIDATE-U-CMDINPUT-016: does not trim the resolved remote before checking or dispatch", () => {
+  it("U-CMDINPUT-016: does not trim the resolved remote before checking or dispatch", () => {
     const deps = mockDeps({
       version: "0.1.4",
       tags: ["v0.1.5"],
