@@ -85,7 +85,7 @@ describe("IT-AUTOMATION-01 / IT-GUARDRAIL-01", () => {
     }
   });
 
-  describe("CANDIDATE-U-READY-GATE-01 routine-gate evidence", () => {
+  describe("U-READY-GATE-01 routine-gate evidence", () => {
     it("unblocks only the routine-gate workflow mapped to its passed gate run", () => {
       const db = openHarnessDb(":memory:");
       try {
