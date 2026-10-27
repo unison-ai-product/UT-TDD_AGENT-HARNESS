@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -11,6 +11,7 @@ import {
 } from "../src/lint/merged-plan-status.ts";
 import { classifyTargetArtifacts } from "../src/lint/merged-plan-target-evidence.ts";
 import { gitChecked as git } from "./support/git.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 
 describe("merged-plan-status diagnostics (Issue #390 / PLAN-L7-506)", () => {
   it("U-MPSTATUS-506-001: landing violation separates preflight confirm from exact-head close evidence", () => {
@@ -256,7 +257,7 @@ describe("loadMergedPlanStatusInput + checkMergedPlanStatus", () => {
     } finally {
       if (previousEventPath === undefined) delete process.env.GITHUB_EVENT_PATH;
       else process.env.GITHUB_EVENT_PATH = previousEventPath;
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -281,7 +282,7 @@ describe("loadMergedPlanStatusInput + checkMergedPlanStatus", () => {
       expect(plan?.mergedArtifacts).toEqual(["src/merged.ts"]);
       expect(analyzeMergedPlanStatus(input).ok).toBe(true);
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -305,7 +306,7 @@ describe("loadMergedPlanStatusInput + checkMergedPlanStatus", () => {
       const merged = input.plans.find((p) => p.planId === "PLAN-TEST-90-merged");
       expect(merged?.mergedArtifacts).toContain("src/merged.ts");
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -366,7 +367,7 @@ describe("loadMergedPlanStatusInput + checkMergedPlanStatus", () => {
       // the PLAN's own docs/ artifact must NOT count as a merged deliverable
       expect(flagged?.mergedArtifacts).not.toContain("docs/plans/PLAN-TEST-71-cmd.md");
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -396,7 +397,7 @@ describe("loadMergedPlanStatusInput + checkMergedPlanStatus", () => {
       const result = checkMergedPlanStatus(root);
       expect(result.ok).toBe(true);
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -434,7 +435,7 @@ describe("loadMergedPlanStatusInput + checkMergedPlanStatus", () => {
       const flagged = input.plans.find((p) => p.planId === "PLAN-TEST-87-adsrc");
       expect(flagged?.mergedArtifacts).toContain("src/lint/y.ts");
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 });
@@ -581,7 +582,7 @@ describe("pre-merge landing detection (issue #162)", () => {
     } finally {
       if (previousEventPath === undefined) delete process.env.GITHUB_EVENT_PATH;
       else process.env.GITHUB_EVENT_PATH = previousEventPath;
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -629,7 +630,7 @@ describe("pre-merge landing detection (issue #162)", () => {
     } finally {
       if (previousEventPath === undefined) delete process.env.GITHUB_EVENT_PATH;
       else process.env.GITHUB_EVENT_PATH = previousEventPath;
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -686,7 +687,7 @@ describe("pre-merge landing detection (issue #162)", () => {
     } finally {
       if (previousEventPath === undefined) delete process.env.GITHUB_EVENT_PATH;
       else process.env.GITHUB_EVENT_PATH = previousEventPath;
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 });

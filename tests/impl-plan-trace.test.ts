@@ -2,7 +2,7 @@
 // src module/CLI/lint/doctor check が PLAN generates に紐づくか。NEW orphan を fail-close。
 // design-source traceで3件をback-fillした後のknown-debtは5件。IMP-087の4件もREVERSE-40へback-fill済。
 
-import { cpSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -11,6 +11,7 @@ import {
   IMPL_PLAN_TRACE_BASELINE,
   loadImplPlanTraceInput,
 } from "../src/lint/impl-plan-trace.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 import { headSnapshotRoot } from "./support/workspace-roots.ts";
 
 function makeImplPlanTraceFixture(options: {
@@ -97,7 +98,7 @@ describe("U-IPT-006: loadImplPlanTraceInput design-source trace", () => {
     expect(existsSync(join(root, "docs/design/harness/L6-function-design/fixture.md"))).toBe(true);
   });
 
-  afterAll(() => rmSync(root, { recursive: true, force: true }));
+  afterAll(() => removeTestTree(root));
 
   it("the isolated fixture has both source files and their design references", () => {
     expect([...loadImplPlanTraceInput(root).srcFiles].sort()).toEqual([
@@ -128,7 +129,7 @@ describe("U-IPT-006: loadImplPlanTraceInput design-source trace", () => {
       expect(result.orphans).toEqual(["src/unowned.ts"]);
       expect(result.ok).toBe(false);
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 });
@@ -201,9 +202,9 @@ describe("Impl-Plan-Trace module ownership candidates (U-IPT-007..011)", () => {
 
   afterAll(() => {
     for (const root of [moduleOwnerRoot, unownedModuleRoot, planOnlyRoot, topLevelRoot]) {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
-    if (mutationRoot) rmSync(mutationRoot, { recursive: true, force: true });
+    if (mutationRoot) removeTestTree(mutationRoot);
   });
 
   it("U-IPT-007: the real detached repository is owned with an empty baseline", () => {

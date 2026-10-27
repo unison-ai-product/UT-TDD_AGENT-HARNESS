@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -18,6 +18,7 @@ import {
   REAL_RUNNER_LANES,
   resourceKernelPairMappingMessages,
 } from "../src/lint/resource-kernel-pair-mapping.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 import { headSnapshotRoot, workspaceRead } from "./support/workspace-roots.ts";
 
 const L8_DOC = "docs/test-design/harness/L8-integration-test-design.md";
@@ -54,7 +55,7 @@ function planlessPairFixture(): { root: string; cleanup: () => void } {
     root,
     reason: "候補RedはL5 canonical文書とL8 freeze表だけのsnapshotでgate readerを検証する",
   });
-  return { root: isolatedRoot, cleanup: () => rmSync(root, { recursive: true, force: true }) };
+  return { root: isolatedRoot, cleanup: () => removeTestTree(root) };
 }
 
 function parsePlanlessPair(root: string) {
@@ -85,7 +86,7 @@ function mutatedRepo(mutate: (docs: { l8: string; l5: string }) => { l8: string;
     mkdirSync(dirname(join(root, rel)), { recursive: true });
     writeFileSync(join(root, rel), text, "utf8");
   }
-  return { root, cleanup: () => rmSync(root, { recursive: true, force: true }) };
+  return { root, cleanup: () => removeTestTree(root) };
 }
 
 describe("Resource Kernel L5↔L8 pair mapping lint (U-RGKPAIR, PLAN-L5-25 §7.1)", () => {
@@ -568,7 +569,7 @@ describe("Resource Kernel L5↔L8 pair mapping lint (U-RGKPAIR, PLAN-L5-25 §7.1
       expect(result.ok).toBe(false);
       expect(result.messages.join(" ")).toContain("読めなかった");
     } finally {
-      rmSync(unreadable, { recursive: true, force: true });
+      removeTestTree(unreadable);
     }
   });
 

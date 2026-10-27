@@ -6,7 +6,6 @@ import {
   mkdtempSync,
   readdirSync,
   readFileSync,
-  rmSync,
   statSync,
   writeFileSync,
 } from "node:fs";
@@ -21,6 +20,7 @@ import {
   parseCodeSizeBaseline,
 } from "../src/lint/code-size.ts";
 import { checkCodeSize } from "../src/lint/code-size-inputs.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 import { headSnapshotRoot } from "./support/workspace-roots.ts";
 
 const BASELINE_PATH = "docs/governance/code-size-baseline.json";
@@ -169,7 +169,7 @@ beforeAll(() => {
 });
 
 afterAll(() => {
-  if (scratchRoot) rmSync(scratchRoot, { recursive: true, force: true });
+  if (scratchRoot) removeTestTree(scratchRoot);
 });
 
 describe("code-size live repository and CLI integration candidates", () => {
