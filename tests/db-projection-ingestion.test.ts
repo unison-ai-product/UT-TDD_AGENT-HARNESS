@@ -172,7 +172,7 @@ describe("db projection ingestion detector", () => {
     );
   });
 
-  it.fails("U-DBPROJ-ING-001: permits both PLAN-derived tables to be empty", () => {
+  it("U-DBPROJ-ING-001: permits both PLAN-derived tables to be empty", () => {
     const result = analyzeDbProjectionIngestion({
       ...populatedAutomaticProjectionCounts,
       schedule_entries: 0,
@@ -196,7 +196,7 @@ describe("db projection ingestion detector", () => {
     );
   });
 
-  it.fails("U-DBPROJ-ING-002: rejects another empty automatic table", () => {
+  it("U-DBPROJ-ING-002: rejects another empty automatic table", () => {
     const result = analyzeDbProjectionIngestion({
       ...populatedAutomaticProjectionCounts,
       schedule_entries: 0,
