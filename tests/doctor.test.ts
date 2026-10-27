@@ -96,6 +96,7 @@ import {
 } from "../src/state-db/design-detection.ts";
 import { defaultHarnessDbPath, openHarnessDb } from "../src/state-db/index.ts";
 import { consumeDoctorResultEnvelope } from "./support/doctor-envelope.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 import { headSnapshotRoot } from "./support/workspace-roots.ts";
 
 const NOW = "2026-06-04T00:00:00.000Z";
@@ -356,7 +357,7 @@ describe("gate-run-coverage doctor", () => {
       expect(result.ok).toBe(false);
       expect(result.messages.join("\n")).toContain("missing_gate_runs");
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -378,7 +379,7 @@ describe("gate-run-coverage doctor", () => {
       expect(result.ok).toBe(false);
       expect(result.messages.join("\n")).toContain("invalid_gate_run_evidence");
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -412,7 +413,7 @@ describe("gate-run-coverage doctor", () => {
         },
       ]);
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -440,7 +441,7 @@ describe("gate-run-coverage doctor", () => {
       expect(projection.gateRuns).toHaveLength(1);
       expect(projection.routineGateWorkflows).toHaveLength(1);
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -477,7 +478,7 @@ describe("gate-run-coverage doctor", () => {
       expect(gateRunProjection(root).gateRuns).toEqual(before.gateRuns);
       expect(checkGateRunCoverage(root).ok).toBe(false);
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -504,7 +505,7 @@ describe("gate-run-coverage doctor", () => {
       expect(gateRunProjection(root).gateRuns).toEqual(before.gateRuns);
       expect(checkGateRunCoverage(root).ok).toBe(false);
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -537,7 +538,7 @@ describe("gate-run-coverage doctor", () => {
       expect(gateRunProjection(root).gateRuns).toEqual(before.gateRuns);
       expect(checkGateRunCoverage(root).ok).toBe(false);
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -580,11 +581,13 @@ describe("gate-run-coverage doctor", () => {
       const projection = gateRunProjection(root);
       const [gateRun] = projection.gateRuns;
       const [workflow] = projection.routineGateWorkflows;
-      expect(workflow.workflow_run_id).toBe(stableId("gate-workflow", gateRun.gate_run_id as string));
+      expect(workflow.workflow_run_id).toBe(
+        stableId("gate-workflow", gateRun.gate_run_id as string),
+      );
       expect(workflow.phase).toBe(gateRun.gate_id);
       expect(checkGateRunCoverage(root).ok).toBe(false);
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -608,7 +611,7 @@ describe("gate-run-coverage doctor", () => {
         phase: "G5",
       });
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -626,7 +629,7 @@ describe("gate-run-coverage doctor", () => {
       expect(result.ok).toBe(false);
       expect(result.messages.join("\n")).toContain("missing_gate_runs");
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -651,7 +654,7 @@ describe("gate-run-coverage doctor", () => {
       expect(projection.routineGateWorkflows).toEqual([]);
       expect(projection.verificationBandCoverageCount).toBe(0);
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -697,7 +700,7 @@ describe("gate-run-coverage doctor", () => {
       expect(result.messages.join("\n")).toContain("workflow_without_gate_run");
       expect(result.messages.join("\n")).not.toContain("blank_plan_gate_run");
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -743,7 +746,7 @@ describe("gate-run-coverage doctor", () => {
 
       expect(checkGateRunCoverage(root).ok).toBe(false);
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -771,7 +774,7 @@ describe("gate-run-coverage doctor", () => {
 
       expect(checkGateRunCoverage(root).ok).toBe(false);
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -785,7 +788,7 @@ describe("gate-run-coverage doctor", () => {
 
       expect(checkGateRunCoverage(root).ok).toBe(false);
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 });
@@ -1005,7 +1008,7 @@ describe("checkHandoverDisciplineMessages", () => {
         true,
       );
     } finally {
-      rmSync(fixtureParent, { recursive: true, force: true });
+      removeTestTree(fixtureParent);
     }
   });
 });
@@ -1096,7 +1099,7 @@ describe("runDoctor", () => {
       expect(r.messages.some((m) => m.includes("propagation"))).toBe(true);
       expect(r.messages.some((m) => m.includes("coding-rules"))).toBe(true);
     } finally {
-      rmSync(fixtureParent, { recursive: true, force: true });
+      removeTestTree(fixtureParent);
     }
   });
 
@@ -1437,7 +1440,7 @@ describe("runDoctor", () => {
       expect(result.ok).toBe(false);
       expect(result.messages.join("\n")).toContain("design-doc-duplicate-definition");
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -1473,7 +1476,7 @@ describe("runDoctor", () => {
       expect(result.messages.join("\n")).toContain("typed-spec-test-backlink-missing");
       expect(result.messages.join("\n")).toContain("typed-spec-test-missing");
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -1537,7 +1540,7 @@ describe("runDoctor", () => {
       expect(result.messages.join("\n")).toContain("typed-spec-ledger-unknown-id");
       expect(result.messages.join("\n")).toContain("typed-spec-phase-direction-invalid");
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -1582,7 +1585,7 @@ describe("runDoctor", () => {
       expect(result.ok).toBe(false);
       expect(result.messages.join("\n")).toContain("typed-spec-owned-source-mismatch");
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -1633,7 +1636,7 @@ describe("runDoctor", () => {
       expect(result.ok).toBe(false);
       expect(result.messages.join("\n")).toContain("typed-spec-phase-layer-mismatch");
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -1682,7 +1685,7 @@ describe("runDoctor", () => {
       expect(result.messages.join("\n")).toContain("agent-contract-doctor-gate-unknown");
       expect(result.messages.join("\n")).toContain("VAGENT-301:no-such-gate");
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -1764,7 +1767,7 @@ describe("runDoctor", () => {
       ).toBe(true);
       expect(messages.every((message) => message.startsWith("doctor: "))).toBe(true);
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -1809,7 +1812,7 @@ describe("runDoctor", () => {
       expect(result.messages.join("\n")).toContain("descent-obligation - unmet");
       expect(result.messages.join("\n")).toContain("FR-L1-99");
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -1856,7 +1859,7 @@ describe("runDoctor", () => {
       expect(result.ok).toBe(true);
       expect(result.messages.join("\n")).toContain("guardrail-invariants");
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -1883,7 +1886,7 @@ describe("runDoctor", () => {
       expect(result.messages.join("\n")).toContain("same-model-self-review");
       expect(result.messages.join("\n")).toContain("PLAN-TEST-02-selfreview");
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -1902,7 +1905,7 @@ describe("runDoctor", () => {
 
       expect(result.ok).toBe(true);
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -1936,7 +1939,7 @@ describe("runDoctor", () => {
 
       expect(result.ok).toBe(true);
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -1976,7 +1979,7 @@ describe("runDoctor", () => {
       expect(result.messages.join("\n")).toContain("plan-dod - violation");
       expect(result.messages.join("\n")).toContain("PLAN-L7-99-unchecked:9");
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -2005,7 +2008,7 @@ describe("runDoctor", () => {
       expect(result.messages.join("\n")).toContain("placeholder-deps - violation");
       expect(result.messages.join("\n")).toContain("physical-data.md:6");
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -2034,7 +2037,7 @@ describe("runDoctor", () => {
       expect(result.messages.join("\n")).toContain("l7-completion - violation");
       expect(result.messages.join("\n")).toContain("function.md:6");
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -2049,7 +2052,7 @@ describe("runDoctor", () => {
       expect(result.messages.join("\n")).toContain("codex-wrapper-parity - OK");
       expect(result.messages.join("\n")).toContain("codex=ut-tdd-wrapper-lifecycle");
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -2068,7 +2071,7 @@ describe("runDoctor", () => {
       expect(result.ok).toBe(false);
       expect(result.messages.join("\n")).toContain("Codex wrapper lifecycle test missing");
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -2159,7 +2162,7 @@ describe("runDoctor", () => {
       expect(integrity.ok).toBe(true);
       expect(integrity.messages.join("\n")).toMatch(/skipped \(not a git repository\)/);
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
