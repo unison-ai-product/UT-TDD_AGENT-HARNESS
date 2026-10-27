@@ -40,7 +40,7 @@ function checkFixture(name: string, role: boolean, table: boolean) {
 }
 
 describe("FR contract document split candidates", () => {
-  it("CANDIDATE-U-DOCSPLIT-025a: accepts the original function-spec DbC table", () => {
+  it("U-DOCSPLIT-025a: accepts the original function-spec DbC table", () => {
     expect(checkFixture("function-spec", false, true)).toMatchObject({
       ok: true,
       weakContracts: [],
@@ -48,7 +48,7 @@ describe("FR contract document split candidates", () => {
     });
   });
 
-  it("CANDIDATE-U-DOCSPLIT-025b: accepts a split FR contract with a DbC table", () => {
+  it("U-DOCSPLIT-025b: accepts a split FR contract with a DbC table", () => {
     expect(checkFixture("fr-split", true, true)).toMatchObject({
       ok: true,
       weakContracts: [],
@@ -56,7 +56,7 @@ describe("FR contract document split candidates", () => {
     });
   });
 
-  it.fails("CANDIDATE-U-DOCSPLIT-025c: rejects a split FR contract without its DbC table", () => {
+  it.fails("U-DOCSPLIT-025c: rejects a split FR contract without its DbC table", () => {
     const result = checkFixture("fr-split", true, false);
     expect(result.weakContracts).toContainEqual({
       fr_id: "FR-L1-01",
@@ -66,7 +66,7 @@ describe("FR contract document split candidates", () => {
     expect(result.ok).toBe(false);
   });
 
-  it.fails("CANDIDATE-U-DOCSPLIT-025d: rejects an FR contract with no role marker or DbC table", () => {
+  it.fails("U-DOCSPLIT-025d: rejects an FR contract with no role marker or DbC table", () => {
     expect(checkFixture("fr-split", false, false).ok).toBe(false);
   });
 });

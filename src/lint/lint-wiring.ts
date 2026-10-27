@@ -32,11 +32,19 @@ export const RUNTIME_ENTRYPOINTS = ["src/cli.ts"] as const;
  * 純関数ライブラリ / 統合待ちなど「inert だが意図的」なものを honest に明示する。
  */
 export const DEFERRED_LINTS: Record<string, string> = {
+  "backfill-pairing":
+    "#1358でruntime guard退役。凍結済み合成oracleとL14 evidenceのためlibraryとして残す。完全退役は#1379",
   "code-size": "#1310 Red の stub。runtime 配線とこの保留登録の撤去は Green で行う。",
   "code-size-inputs": "#1310 Red の stub。runtime 配線とこの保留登録の撤去は Green で行う。",
   "consumer-trace": "#1282 Red の stub。runtime 配線とこの保留登録の撤去は #1314 Green で行う。",
   "doc-split": "#1307 Red の stub。runtime 配線とこの保留登録の撤去は #1309 Green で行う。",
   "doc-split-inputs": "#1307 Red の stub。runtime 配線とこの保留登録の撤去は #1309 Green で行う。",
+  "forward-convergence":
+    "#1358でruntime guard退役。凍結済み合成oracleとL14 evidenceのためlibraryとして残す。完全退役は#1379",
+  "plan-supersession":
+    "#1358でruntime guard退役。凍結済み合成oracleとL14 evidenceのためlibraryとして残す。完全退役は#1379",
+  "scrum-reverse":
+    "#1358でruntime guard退役。凍結済み合成oracleとL14 evidenceのためlibraryとして残す。完全退役は#1379",
   "tool-adapter":
     "adapter-probe 純関数ライブラリ (catalog/probe/normalize/planDiagramRefresh)。`ut-tdd adapter` 統合は IMP-033 rule-engine / PLAN-L7-50 R8 で deferred (closed-as-library)。",
 };
