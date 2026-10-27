@@ -1,6 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { LEGACY_SOURCE_REPO } from "./personal-path.ts";
 import { normalizePath } from "./shared.ts";
 
 export interface RuntimePortabilityDoc {
@@ -63,8 +64,9 @@ const GIT_HOOK_DISPATCHER_PATH = "scripts/git-hooks/pre-push";
 const CORE_FILE_PATTERN = /\.(?:ts|gitkeep)$/;
 const HOOK_FILE_PATTERN = /\.ts$/;
 const DISALLOWED_RUNTIME_FILE_PATTERN = /\.(?:py|sh|bash|js|mjs|cjs)$/;
-const LOCAL_ABSOLUTE_PATH_PATTERN =
-  /(?:[A-Za-z]:\\Users\\|\/home\/|\/Users\/|~\/ai-dev-kit-vscode)/;
+const LOCAL_ABSOLUTE_PATH_PATTERN = new RegExp(
+  String.raw`(?:[A-Za-z]:\\Users\\|/home/|/Users/|~/${LEGACY_SOURCE_REPO})`,
+);
 const SHELL_RUNTIME_PATTERN =
   /\b(?:spawn|spawnSync|exec|execSync|execFile|execFileSync)\s*\(\s*["'`](?:bash|sh|python|python3|powershell|pwsh|cmd(?:\.exe)?)(?:["'`]|\s)/;
 // PLAN-L7-462 step 3 (AC-3): bun 実発火 spawn 引数 / bun: import / Bun-global 参照の

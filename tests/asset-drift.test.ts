@@ -9,6 +9,7 @@ import {
   assetDriftMessages,
   loadAssetDriftInput,
 } from "../src/lint/asset-drift.ts";
+import { LEGACY_SOURCE_REPO } from "../src/lint/personal-path.ts";
 
 const agent = (id: string, text = "---\nmodel: claude-sonnet-4-6\n---\nbody"): AssetDoc => ({
   path: `.claude/agents/${id}.md`,
@@ -39,7 +40,7 @@ describe("asset-drift lint (U-FR-L1-49)", () => {
   it("detects legacy source personal path residue in enrolled assets", () => {
     const r = analyzeAssetDrift(
       input({
-        assets: [agent("pmo-sonnet", "Read ~/ai-dev-kit-vscode/skills/SKILL_MAP.md")],
+        assets: [agent("pmo-sonnet", `Read ~/${LEGACY_SOURCE_REPO}/skills/SKILL_MAP.md`)],
       }),
     );
     expect(r.ok).toBe(false);
