@@ -2415,7 +2415,7 @@ runtime 固有 projection であり、意味論正本ではない。これによ
 template が同じ invocation を比較しつつ、runtime ごとの schema capability を混同しない。
 ## Node self-host bootstrap機能契約（Issue #152 D0-N）
 
-関数`buildNodeGeneration(candidateRevision)`はexact Node `24.13.0` / npm `11.6.2`、review済み
+関数`buildNodeGeneration(candidateRevision)`はexact Node `24.22.1` / npm `11.19.1`、review済み
 検証済みツールチェーン来歴（Node配布物digest、同梱npm CLIの期待digest、package/lock identity）、
 入力には`package-lock.json`とbuilder/source graphも含め、compiled ESMと`NodeBootstrapReceipt`を
 同一generationへ原子的に公開する。receiptは少なくとも
