@@ -541,6 +541,53 @@ describe("gate-run-coverage doctor", () => {
     }
   });
 
+  it.each([
+    [
+      "gate_run_id",
+      "UPDATE gate_runs SET gate_run_id = ? WHERE gate_run_id = ?",
+      "gate-run:evidence-id-mismatch:projection",
+      "UPDATE workflow_runs SET workflow_run_id = ? WHERE workflow_run_id = ?",
+      stableId("gate-workflow", "gate-run:evidence-id-mismatch:projection"),
+    ],
+    [
+      "gate_id",
+      "UPDATE gate_runs SET gate_id = ? WHERE gate_run_id = ?",
+      "G2",
+      "UPDATE workflow_runs SET phase = ? WHERE workflow_run_id = ?",
+      "G2",
+    ],
+  ])("U-DOCTOR-GATE-01 rejects evidence %s mismatch", (_field, gateSql, gateValue, workflowSql, workflowValue) => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-doctor-gate-run-evidence-identity-mismatch-"));
+    const gateRunId = "gate-run:evidence-id-mismatch";
+    const planId = "PLAN-GATE-COVERAGE-EVIDENCE-IDENTITY-MISMATCH";
+    try {
+      writePlanFixture(root, planId);
+      writeGateRunEvidence(root, { gateRunId, gateId: "G1", planId });
+      expect(checkGateRunCoverage(root).ok).toBe(true);
+
+      const before = gateRunProjection(root);
+      expect(before.gateRuns).toHaveLength(1);
+      expect(before.routineGateWorkflows).toHaveLength(1);
+
+      const db = openHarnessDb(defaultHarnessDbPath(root), { repoRoot: root });
+      try {
+        db.prepare(gateSql).run(gateValue, gateRunId);
+        db.prepare(workflowSql).run(workflowValue, stableId("gate-workflow", gateRunId));
+      } finally {
+        db.close();
+      }
+
+      const projection = gateRunProjection(root);
+      const [gateRun] = projection.gateRuns;
+      const [workflow] = projection.routineGateWorkflows;
+      expect(workflow.workflow_run_id).toBe(stableId("gate-workflow", gateRun.gate_run_id));
+      expect(workflow.phase).toBe(gateRun.gate_id);
+      expect(checkGateRunCoverage(root).ok).toBe(false);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it.fails("U-DOCTOR-GATE-01 reprojects when evidence changes after a persistent projection", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-doctor-gate-run-stale-"));
     const gateRunId = "gate-run:planless-1";
