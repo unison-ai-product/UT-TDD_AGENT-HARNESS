@@ -34,6 +34,7 @@ import {
 } from "./cli/delegation.ts";
 import { registerDistributionCommands } from "./cli/distribution.ts";
 import { registerFeedbackCommands } from "./cli/feedback.ts";
+import { registerGuardrailCommands } from "./cli/guardrail.ts";
 import { registerPlanAdmissionCommands } from "./cli/plan-admission.ts";
 import { registerPlanAssetCommands } from "./cli/plan-asset.ts";
 import { registerPlanDraftCommand } from "./cli/plan-draft.ts";
@@ -2372,28 +2373,7 @@ automation
     }
   });
 
-const guardrail = program.command("guardrail").description("guardrail decision ledger");
-guardrail
-  .command("status")
-  .description("list guardrail decisions from harness.db")
-  .option("--json", "JSON output")
-  .action((opts: { json?: boolean }) => {
-    const db = openHarnessDb(defaultHarnessDbPath(process.cwd()), { repoRoot: process.cwd() });
-    try {
-      const rows = db.prepare("SELECT * FROM guardrail_decisions ORDER BY decided_at").all();
-      if (opts.json) process.stdout.write(`${JSON.stringify(rows, null, 2)}\n`);
-      else {
-        for (const row of rows) {
-          process.stdout.write(
-            `${row.plan_id ?? ""} ${row.guardrail ?? ""}: ${row.decision ?? ""} evidence=${row.evidence_path ?? ""}\n`,
-          );
-        }
-      }
-    } finally {
-      db.close();
-    }
-  });
-
+registerGuardrailCommands(program);
 const docSplit = program.command("doc-split").description("design document split gate (#1032)");
 docSplit
   .command("check")
