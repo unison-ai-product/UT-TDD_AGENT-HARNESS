@@ -541,8 +541,9 @@ effort は codex にも argv (`-c model_reasoning_effort=...`) で実注入さ�
 
 Task-kind ベースの割当 (PO rule 2026-07-14、旧 tier 記述を supersede):
 
-- Codex (GPT-6 の 3 モデルだけ、PO 2026-10-09): 実装/テスト実装/ドキュメント修正/軽量探索 =
+- Codex (GPT-6 の 4 モデルだけ、PO 2026-10-09 / 2026-10-27): 実装/テスト実装/ドキュメント修正/軽量探索 =
   Luna (`gpt-6-luna`、effort `high`); 検証/設計/判断 = Sol (`gpt-6.1-sol`、effort `low`);
+  GUI lane の指揮 = Terra (`gpt-6.1-terra`。フロントエンド・UI と設計の判断だけ Sol に相談する);
   超局所の難所の相談だけ = Astra (`gpt-6-astra`、常用しない)。指揮モデル別の振る舞いは
   `AGENTS.md` §Codex / Claude Code Harness の「あなたが○○なら」の表。
 - Claude: フロントデザイン/UI デザインの判断・レビュー/設計ドキュメント作成 = Opus (`claude-opus-5-5`);
