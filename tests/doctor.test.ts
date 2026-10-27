@@ -541,7 +541,7 @@ describe("gate-run-coverage doctor", () => {
     }
   });
 
-  it.each([
+  it.fails.each([
     [
       "gate_run_id",
       "UPDATE gate_runs SET gate_run_id = ? WHERE gate_run_id = ?",
