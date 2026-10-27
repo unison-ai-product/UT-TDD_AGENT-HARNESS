@@ -13,6 +13,6 @@
   "docs/test-design/harness/L7-agent-guard-delegation-boundary-test-design.md": { "lines": 173, "responsibilities": 15 },
   "docs/test-design/harness/L7-release-consumer-dev-start-test-design.md": { "lines": 224, "responsibilities": 5 },
   "docs/test-design/harness/L7-session-start-order-test-design.md": { "lines": 74, "responsibilities": 6 },
-  "docs/test-design/harness/L7-unit-test-design.md": { "lines": 3299, "responsibilities": 149 },
+  "docs/test-design/harness/L7-unit-test-design.md": { "lines": 3299, "responsibilities": 148 },
   "docs/test-design/harness/L7-vmodel-pair-map-test-design.md": { "lines": 118, "responsibilities": 19 }
 }

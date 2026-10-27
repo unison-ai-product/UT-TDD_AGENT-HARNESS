@@ -1451,9 +1451,7 @@ spec:
 | U-VTRIG-REVISION-001 | `analyzeVerificationGroups` | confirmed base + valid additive draftをbase freeze完了 / active revision `IN-PROGRESS`として別集計する。 |
 | U-VTRIG-REVISION-002 | `analyzeVerificationGroups` / `analyzePairFreeze` | base欠落/未confirmed/layer不一致は免除せず、delta exact pairの双方向参照を検証する。 |
 
-### 退役記録
-
-`U-RIGHT-ARM-ENGINE-001` と `U-RIGHT-ARM-ENGINE-002` は、PLAN-onlyのright-arm engine gate planning（`loadRightArmGatePlanningInput` / `analyzeRightArmGatePlanning`）に属する旧oracle宣言であり、#1382 PR-1で退役した。ここでのIDは履歴記録であり、active oracle宣言ではない。
+> **歴史的退役**: `U-RIGHT-ARM-ENGINE-001` と `U-RIGHT-ARM-ENGINE-002` は、PLAN-onlyのright-arm engine gate planning（`loadRightArmGatePlanningInput` / `analyzeRightArmGatePlanning`）に属する旧oracle宣言であり、#1382 PR-1で退役した。ここでのIDは履歴記録であり、active oracle宣言ではない。
 
 ## Engine-swap unit/property/mutation oracle (PLAN-L6-70〜77)
 
