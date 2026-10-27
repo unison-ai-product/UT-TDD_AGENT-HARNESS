@@ -719,7 +719,7 @@ describe("F0b sealed Node producer candidate oracles", () => {
     }
   });
 
-  it.fails("ST-NODEPROBE-001 public probe route emits the bound four-check result", async () => {
+  it("ST-NODEPROBE-001 public probe route emits the bound four-check result", async () => {
     const real = await buildReal();
     const invocation = bootstrap.createNodeInvocation(real, [
       "audit",

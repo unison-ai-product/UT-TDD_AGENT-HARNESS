@@ -267,7 +267,7 @@ describe("Q0 Node-only Bun qualification", () => {
     ).toThrow("q0-f0c-sealed-generation-conflated");
   });
 
-  it.fails("ST-NODEPROBE-002 requires assertion reach and rejects the same child outcome", () => {
+  it("ST-NODEPROBE-002 requires assertion reach and rejects the same child outcome", () => {
     const moduleUrl = pathToFileURL(join(repoRoot, "src/runtime/node-bootstrap.ts")).href;
     const syntheticGeneration = JSON.stringify({
       nodePath: "relative-node",
@@ -328,7 +328,7 @@ describe("Q0 Node-only Bun qualification", () => {
     });
   });
 
-  it.fails("ST-NODEPROBE-003 spawn ENOENT cannot qualify the test scope", () => {
+  it("ST-NODEPROBE-003 spawn ENOENT cannot qualify the test scope", () => {
     const missingCommand = join(repoRoot, "node_modules", ".ut-tdd-missing-node-probe-command");
     const child = spawnSync(missingCommand, [], {
       cwd: repoRoot,
@@ -512,7 +512,7 @@ describe("Q0 Node-only Bun qualification", () => {
     ],
   ];
 
-  it.fails.each(invalidProbeOutcomes)("ST-NODEPROBE-004 rejects %s", (_case, testProbeOutcome) => {
+  it.each(invalidProbeOutcomes)("ST-NODEPROBE-004 rejects %s", (_case, testProbeOutcome) => {
     const input = {
       ...testProbeAuditInput(),
       testProbeOutcome,
