@@ -24,7 +24,6 @@ import {
   checkAgentContractDetection,
   checkAgentSlots,
   checkAssetDrift,
-  checkBackfillResult,
   checkBranchKind,
   checkChangeImpact,
   checkChangeSetIntegrity,
@@ -40,8 +39,6 @@ import {
   checkDesignDocCrossIntegrity,
   checkDriveDbRegistration,
   checkDriveModelPassage,
-  checkForwardConvergence,
-  checkForwardConvergenceAudit,
   checkFrRoadmapCoverage,
   checkGateConfirm,
   checkGateIdFormat,
@@ -72,7 +69,6 @@ import {
   checkRuleDrift,
   checkRuntimePortability,
   checkRuntimeReadability,
-  checkScrumReverse,
   checkSkillAssignment,
   checkTelemetryClosure,
   checkTrackedCanonical,
@@ -533,8 +529,7 @@ describe("runDoctor", () => {
       expect(r.messages.some((m) => m.includes("verification group lint could not run"))).toBe(
         true,
       );
-      // Keep warning-only surfaces from masking hard-fail lint coverage.
-      expect(r.messages.some((m) => m.includes("scrum-reverse"))).toBe(true);
+      // Keep surviving hard-fail lint surfaces visible alongside warning-only checks.
       expect(r.messages.some((m) => m.includes("propagation"))).toBe(true);
       expect(r.messages.some((m) => m.includes("coding-rules"))).toBe(true);
     } finally {
@@ -1146,8 +1141,6 @@ describe("runDoctor", () => {
     expect(checkPlanSchedule).toBeTypeOf("function");
     expect(checkPlanGovernance).toBeTypeOf("function");
     expect(checkPlanReferenceFreshnessAdvisory).toBeTypeOf("function");
-    expect(checkForwardConvergence).toBeTypeOf("function");
-    expect(checkForwardConvergenceAudit).toBeTypeOf("function");
   });
 
   it("keeps doctor lint gate re-exports stable after extraction", () => {
@@ -1519,8 +1512,6 @@ describe("runDoctor", () => {
   it("fails closed when hard-gate checker inputs cannot be read", () => {
     const missingRoot = join(tmpdir(), `ut-tdd-doctor-missing-${Date.now()}-nope`);
     const checks = [
-      ["backfill", checkBackfillResult(missingRoot)],
-      ["scrum-reverse", checkScrumReverse(missingRoot)],
       ["propagation", checkPropagation(missingRoot)],
       ["pair-freeze", checkPairFreeze(missingRoot)],
       ["module-drift", checkModuleDrift(missingRoot)],
@@ -1673,8 +1664,6 @@ describe("runDoctor", () => {
       "workflow-and-final",
     ]);
     const expectedHardGates = [
-      "backfill",
-      "scrum-reverse",
       "propagation",
       "pair-freeze",
       "module-drift",

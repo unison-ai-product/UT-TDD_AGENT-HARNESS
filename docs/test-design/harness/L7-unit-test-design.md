@@ -194,11 +194,12 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 | U-BACKFILL-003 | `KIND_BACKFILL` マトリクス | `"add-impl"` → `"required"` / `"refactor"` → `"conditional"` / `"troubleshoot"` → `"conditional"` / `"impl"` → `"none"` / `"design"` → `"none"` / `"reverse"` → `"none"` / `"recovery"` → `"none"` の全種確認 |
 | U-BACKFILL-004 | `analyzeBackfill` | ① required (add-impl) に Reverse requires 有 → `reverseOrphans=[]` / `ok=true` / ② required (add-impl) に Reverse 無 → `reverseOrphans=[{plan_id, kind}]` / `ok=false` / ③ conditional (refactor) に Reverse 無 → `conditionalPending` に 1 件 / `reverseOrphans=[]` / `ok=true` (warn のみ、ok を落とさない) / ④ §6 用語が glossary 未 merge → `glossaryGaps=[{plan_id, term}]` / `ok=false` / ⑤ `status="archived"` → 対象外 (reverseOrphans に含まれない) |
 | U-BACKFILL-005 | `backfillMessages` | 孤児なし (空 plans) → `"OK"` を含む文言 1 件 / reverseOrphan あり → `"Reverse 無き impl"` を含む warn 文言 |
-| U-BACKFILL-006 | `loadBackfillDocs` + `analyzeBackfill` (実 repo 回帰ガード) | `loadBackfillDocs()` で実 `docs/plans/` 全 PLAN を読み `analyzeBackfill` を実行 → `reverseOrphans=[]` / `glossaryGaps=[]` (実 repo の back-fill 完全性を CI で継続確認) |
+
+> **歴史的退役**: `U-BACKFILL-006` の正式 oracle 宣言は #1358 A4 PR-1 で退役した。実 `docs/plans/` コーパスを入力にする実装 guard と test body は後続 PR（退役 2/2）で物理削除する。合成入力で振る舞いを検証する `U-BACKFILL-001..005` は維持する。
 
 ### §1.12 U-SCRUMREV / U-PROP (governance enforcement lints 由来、PLAN-L7-10 / IMP-064/065)
 
-> pair = L6 governance-enforcement.md §2。A=scrum-reverse / C=propagation。B (backfill hard) は U-BACKFILL-006 + doctor.ok 連動で被覆。
+> pair = L6 governance-enforcement.md §2。A=scrum-reverse / C=propagation。B の実 PLAN コーパス guard の正式 oracle 宣言は #1358 A4 PR-1 で退役した。実装 guard と test body の物理削除は後続 PR（退役 2/2）で行う。
 
 | U-ID | 関数 | oracle (DbC) |
 |------|------|--------------|
@@ -206,11 +207,12 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 | U-SCRUMREV-002 | `analyzeScrumReverse` (pocOrphans) | confirmed poc (reuse-with-hardening) を指す reverse 無 → `pocOrphans` 1件/`ok=false` / reverse 有 → 0件/`ok=true` / `promotion_strategy=redesign` → 孤児にしない / 非 confirmed (pivot) → 対象外 |
 | U-SCRUMREV-003 | `analyzeScrumReverse` (badReverseRefs) | reverse が confirmed でない poc (pivot) を参照 → `badReverseRefs` 1件/`ok=false` / `status=archived` → 対象外 |
 | U-SCRUMREV-004 | `scrumReverseMessages` | 孤児なし → `"OK"` / 孤児あり → `"Reverse 合流が無い"` 文言 |
-| U-SCRUMREV-005 | `loadSrPlans`+`analyzeScrumReverse` (実 repo 回帰ガード) | **退役 (PLAN 機構撤去 = #1168 A4 / #1078)**: 実 `docs/plans/` を読んで `pocOrphans=[]` / `badReverseRefs=[]` を要求する live guard は要求から外す。維持するのは合成入力による U-SCRUMREV-001..004 (parse / pocOrphans / badReverseRefs / messages) の製品回帰のみで、実 PLAN コーパスには依存させない |
 | U-PROP-001 | `extractSignals` | `\| signal \| mode \|` ヘッダのテーブルのみから signal 列 token 抽出 / 別表 (reverse/fullstack) と interrupt subtype は除外 |
 | U-PROP-002 | `analyzePropagation` | 両 doc 一致 → `ok=true` / concept のみ → `conceptOnly`+`ok=false` / requirements のみ → `requirementsOnly`+`ok=false` |
 | U-PROP-003 | `propagationMessages` | 一致 → `"OK"` / 不一致 → `"未伝播"` 文言 |
 | U-PROP-004 | `loadPropagationDocs`+`analyzePropagation` (実 repo 回帰ガード) | concept §2.6 ⇔ requirements §7.8.1 の signal 語彙一致 (`conceptOnly=[]`/`requirementsOnly=[]`) |
+
+> **歴史的退役**: `U-SCRUMREV-005` の正式 oracle 宣言は #1358 A4 PR-1 で退役した。実 `docs/plans/` の `pocOrphans` / `badReverseRefs` を要求する実装 guard と test body は後続 PR（退役 2/2）で物理削除する。合成入力を使う `U-SCRUMREV-001..004` は維持する。
 
 ### §1.13 U-VPAIR (vmodel pair-freeze lint 由来、PLAN-L7-11 / IMP-067)
 
@@ -295,16 +297,16 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 
 ### §1.16.0b U-IPT (implementation-to-design source trace / PLAN-REVERSE-40)
 
-> ペア = `module-drift.md` §3.2 の `analyzeImplPlanTrace` addendum。再帰的な設計文書本文から src への所有 (module 単位、PLAN は入力にしない) を検証する。`CANDIDATE-U-IPT-007..011` は #1169 の契約改訂 (#1078 A5) の oracle で、Red で `it.fails` として入れ、Green で実装する。U-IPT-001..005 は `src/lint/oracle-test-citation-baseline.ts` の stale baseline が #1099 で解消するまで宣言しない。
+> ペア = `module-drift.md` §3.2 の `analyzeImplPlanTrace` addendum。再帰的な設計文書本文から src への所有 (module 単位、PLAN は入力にしない) を検証する。`U-IPT-007..011` は #1169 の契約改訂 (#1078 A5) の oracle で、Red で `it.fails` として入れ、Green で実装する。U-IPT-001..005 は `src/lint/oracle-test-citation-baseline.ts` の stale baseline が #1099 で解消するまで宣言しない。
 
 | U-ID | 対象関数 | DbC oracle |
 |---|---|---|
 | U-IPT-006 | `loadImplPlanTraceInput` + `analyzeImplPlanTrace` (recursive design-source trace) | 孤立 fixture に `src/runtime/windows-hide.ts` と `src/doctor/windows-hide.ts` の source files を置き、PLAN に path を含めず、深い階層の `docs/design/harness/L6-function-design/fixture.md` だけに両 path を記載する → 両 path が `tracedPaths` に含まれ、`orphans=[]` / `ok=true`。loader が再帰的な設計本文を読まないと path が欠落し、orphan が出て失敗する。 |
-| `CANDIDATE-U-IPT-007` | `loadImplPlanTraceInput` + `analyzeImplPlanTrace` (実 repo guard、module 単位) | 実 repo で、tracked の `.ts` を持つ `src/` 直下の全 module (測定時 40 件、origin/main `28ab6b138`) が、`docs/design/**/*.md` の本文で `src/<module>/` として名指しされている。`src/` 直下の単体ファイル (測定時は `cli.ts` / `secret.ts` / `stable-id.ts`) は path が完全一致で現れる。→ `orphans=[]`、baseline は空。mutation: architecture §3.1 の 1 module の行を消す、または実 repo に未名指しの `src/<new>/x.ts` を足す → その module の全ファイルが orphan になり失敗する。 |
-| `CANDIDATE-U-IPT-008` | `analyzeImplPlanTrace` (positive fixture: module 名指し) | 孤立 fixture に `src/foo/a.ts` と `src/foo/b.ts` を置き、PLAN は置かず、設計文書 1 本に `src/foo/` だけを書く (個別の file path は書かない) → 2 件とも所有され `orphans=[]` / `ok=true`。mutation: matcher を file path の完全一致に戻す → 2 件が orphan になり失敗する。`src/foo/*.ts` の glob 形でも同じ結果になること (先頭が `src/foo/` なので名指しに数える)。 |
-| `CANDIDATE-U-IPT-009` | `analyzeImplPlanTrace` (negative: 未名指し module) | 孤立 fixture に `src/foo/a.ts` と `src/bar/c.ts` を置き、設計文書は `src/foo/` だけを名指しする → `orphans=["src/bar/c.ts"]` / `ok=false`。`foo/src/bar/` のような別 path の一部は名指しに数えない (直前の文字の条件)。mutation: 名指し判定を常に真にする → orphan が出ず失敗する。 |
-| `CANDIDATE-U-IPT-010` | `loadImplPlanTraceInput` + `analyzeImplPlanTrace` (negative: PLAN は入力ではない) | 孤立 fixture に `src/bar/c.ts` を置き、`docs/plans/PLAN-X.md` の本文に `src/bar/` と `src/bar/c.ts` の両方を書き、設計文書には書かない → `orphans=["src/bar/c.ts"]` / `ok=false`。mutation: loader が `docs/plans/*.md` を読む → orphan が消え失敗する。 |
-| `CANDIDATE-U-IPT-011` | `analyzeImplPlanTrace` (top-level 単体ファイルは path 完全一致だけ) | 孤立 fixture に `src/cli.ts` と `src/secret.ts` を置き、設計文書に `src/cli.ts` だけを書く → `orphans=["src/secret.ts"]` / `ok=false`。`src/` 直下の単体ファイルは module 名指し (`src/<module>/`) では所有されない。mutation: 単体ファイルを module 規則で判定する (`src/` 直下を 1 module とみなす) → `src/secret.ts` が所有され失敗する。 |
+| `U-IPT-007` | `loadImplPlanTraceInput` + `analyzeImplPlanTrace` (実 repo guard、module 単位) | 実 repo で、tracked の `.ts` を持つ `src/` 直下の全 module (測定時 40 件、origin/main `28ab6b138`) が、`docs/design/**/*.md` の本文で `src/<module>/` として名指しされている。`src/` 直下の単体ファイル (測定時は `cli.ts` / `secret.ts` / `stable-id.ts`) は path が完全一致で現れる。→ `orphans=[]`、baseline は空。mutation: architecture §3.1 の 1 module の行を消す、または実 repo に未名指しの `src/<new>/x.ts` を足す → その module の全ファイルが orphan になり失敗する。 |
+| `U-IPT-008` | `analyzeImplPlanTrace` (positive fixture: module 名指し) | 孤立 fixture に `src/foo/a.ts` と `src/foo/b.ts` を置き、PLAN は置かず、設計文書 1 本に `src/foo/` だけを書く (個別の file path は書かない) → 2 件とも所有され `orphans=[]` / `ok=true`。mutation: matcher を file path の完全一致に戻す → 2 件が orphan になり失敗する。`src/foo/*.ts` の glob 形でも同じ結果になること (先頭が `src/foo/` なので名指しに数える)。 |
+| `U-IPT-009` | `analyzeImplPlanTrace` (negative: 未名指し module) | 孤立 fixture に `src/foo/a.ts` と `src/bar/c.ts` を置き、設計文書は `src/foo/` だけを名指しする → `orphans=["src/bar/c.ts"]` / `ok=false`。`foo/src/bar/` のような別 path の一部は名指しに数えない (直前の文字の条件)。mutation: 名指し判定を常に真にする → orphan が出ず失敗する。 |
+| `U-IPT-010` | `loadImplPlanTraceInput` + `analyzeImplPlanTrace` (negative: PLAN は入力ではない) | 孤立 fixture に `src/bar/c.ts` を置き、`docs/plans/PLAN-X.md` の本文に `src/bar/` と `src/bar/c.ts` の両方を書き、設計文書には書かない → `orphans=["src/bar/c.ts"]` / `ok=false`。mutation: loader が `docs/plans/*.md` を読む → orphan が消え失敗する。 |
+| `U-IPT-011` | `analyzeImplPlanTrace` (top-level 単体ファイルは path 完全一致だけ) | 孤立 fixture に `src/cli.ts` と `src/secret.ts` を置き、設計文書に `src/cli.ts` だけを書く → `orphans=["src/secret.ts"]` / `ok=false`。`src/` 直下の単体ファイルは module 名指し (`src/<module>/`) では所有されない。mutation: 単体ファイルを module 規則で判定する (`src/` 直下を 1 module とみなす) → `src/secret.ts` が所有され失敗する。 |
 
 ### §1.16.1 U-CHGIMPACT (code change impact lint = コード変更時の設計・テスト更新漏れ検出)
 
@@ -816,7 +818,7 @@ SMB/NFS/OneDrive をまたぐ strict lease、heartbeat、clock-skew 耐性は主
 - **module-drift.md coding-rules addendum (analyzeCodingRules/loadCodingRuleDocs/loadCodingWorkflowDocs/codingRulesMessages/checkCodingRules) → U-CODE-001〜010** (requirements-level coding rule SSoT + workflow placement + error/module-boundary + machine-surface-language の機械検出。doctor hard guard。孤児 0)
 - **module-drift.md DDD/TDD strictness addendum (analyzeDddTddRules/loadDddTddInputs/dddTddRulesMessages/checkDddTddRules) → U-DDDTDD-001〜008** (DDD/TDD SSoT + workflow placement + Red-first evidence + test oracle + integration GWT の機械検出。doctor hard guard。孤児 0)
 - **team.ts §2.2 schema / 関数 (teamDefinitionSchema/mustSerialize) + team/launch-policy.ts → U-TEAM-001〜003** (add-feature 差分、IMP-050。孤児 0)
-- **backfill-pairing.md §2.3 関数 (parseRequires/parseGlossaryTerms/normalizeTerm/parsePlan/analyzeBackfill/loadBackfillDocs/backfillMessages/checkBackfill) → U-BACKFILL-001〜006** (add-feature 差分、IMP-051。normalizeTerm は parseGlossaryTerms/analyzeBackfill の内部パス経由で被覆。checkBackfill は doctor/index.ts の try-catch ラッパーで U-BACKFILL-006 実 repo ガードに内包。孤児 0)
+- **backfill-pairing.md §2.3 関数 (parseRequires/parseGlossaryTerms/normalizeTerm/parsePlan/analyzeBackfill/backfillMessages) → U-BACKFILL-001〜005** (add-feature 差分、IMP-051。normalizeTerm は parseGlossaryTerms/analyzeBackfill の内部パス経由で被覆。U-BACKFILL-006 の正式宣言は #1358 A4 PR-1 で退役。PLAN コーパス guard の実装と test body は後続 PR（退役 2/2）で物理削除。孤児 0)
 - **vmodel-pair-freeze.md §1-§3 関数 (loadPairDocs/analyzePairFreeze/pairFreezeMessages/lintVmodel) → U-VPAIR-001〜006** (add-feature 差分、PLAN-L7-11/IMP-067。lintVmodel は loadPairDocs→analyzePairFreeze→pairFreezeMessages の orchestration で U-VPAIR-005 実 repo ガードに内包。孤児 0)
 - **vmodel-pair-freeze.md §7 関数 (analyzeVerificationGroups/verificationGroupMessages、loadPairDocs status 拡張) → U-VTRIG-001〜005** (add-feature 差分、PLAN-L7-12/IMP-068。doctor checkVerificationGroups は U-VTRIG-005 実 repo ガードに内包。孤児 0)
 - **review-evidence.md §2-§4 関数 (hasReviewEvidence/parseReviewPlan/analyzeReviewEvidence/loadReviewPlans/reviewEvidenceMessages、schema review_evidence、doctor checkReviewEvidence) → U-REVIEW-001〜006** (add-feature 差分、PLAN-L7-13/IMP-071。reviewEvidenceMessages は U-REVIEW-003/006 経路で被覆、checkReviewEvidence は doctor try-catch ラッパーで U-REVIEW-006 実 repo ガードに内包。孤児 0)
@@ -944,13 +946,13 @@ PR2 (`add-feature`) は昇格 PR merge 後の main から開始し、PLAN-L7-423
 
 ## PLAN-L7-76 Reliability Remediation Addendum
 
-Issue #1357 の候補 `CANDIDATE-U-DBPROJ-ING-001..003` は、宣言と Red の登録段階である。001/002 は `it.fails`、既に成立する003は通常の `it` による有入力対照とする。正式昇格は別 PR、必須一覧の変更と Green はさらに後続の PR で行い、現段階では実装の membership 対照を維持する。`EVIDENCE_GATED_DB_PROJECTION_TABLES` は変更しない。
+Issue #1357 の `U-DBPROJ-ING-001..003` は正式 ID へ昇格済み。001/002 は `it.fails` で実装 Green 待ち、003 は通常の `it` の有入力対照とする。必須一覧の変更と Green は後続 PR で行う。`EVIDENCE_GATED_DB_PROJECTION_TABLES` は変更しない。
 
 | U-ID | Target | Oracle |
 |---|---|---|
-| CANDIDATE-U-DBPROJ-ING-001 | `analyzeDbProjectionIngestion` | `schedule_entries` と `execution_readiness_projection` が 0 行でも、他の全 automatic 要件が populated なら `ok=true` かつ `missingRows=[]`。さらに `AUTOMATIC_DB_PROJECTION_REQUIREMENTS` にこの2表が含まれない。両表は PLAN 入力が無いときの無条件 population 要件ではない。 |
-| CANDIDATE-U-DBPROJ-ING-002 | `analyzeDbProjectionIngestion` | 上記2表と既存 negative fixture の `mcp_server_profiles` が 0 行なら `ok=false` で、`missingRows.map(row => row.table)` の完全一致集合は `mcp_server_profiles` のみ。例外対象は指定の2表だけで、他の automatic 要件は fail-close のまま。 |
-| CANDIDATE-U-DBPROJ-ING-003 | `rebuildHarnessDb` | 隔離 `repoRoot` の明示的な PLAN Markdown fixture 1 件を入力すると `schedule_entries > 0` かつ `execution_readiness_projection > 0`。これは入力が存在する場合の生成保証であり、入力不在時の無条件 population 要件ではない。 |
+| U-DBPROJ-ING-001 | `analyzeDbProjectionIngestion` | `schedule_entries` と `execution_readiness_projection` が 0 行でも、他の全 automatic 要件が populated なら `ok=true` かつ `missingRows=[]`。さらに `AUTOMATIC_DB_PROJECTION_REQUIREMENTS` にこの2表が含まれない。両表は PLAN 入力が無いときの無条件 population 要件ではない。 |
+| U-DBPROJ-ING-002 | `analyzeDbProjectionIngestion` | 上記2表と既存 negative fixture の `mcp_server_profiles` が 0 行なら `ok=false` で、`missingRows.map(row => row.table)` の完全一致集合は `mcp_server_profiles` のみ。例外対象は指定の2表だけで、他の automatic 要件は fail-close のまま。 |
+| U-DBPROJ-ING-003 | `rebuildHarnessDb` | 隔離 `repoRoot` の明示的な PLAN Markdown fixture 1 件を入力すると `schedule_entries > 0` かつ `execution_readiness_projection > 0`。これは入力が存在する場合の生成保証であり、入力不在時の無条件 population 要件ではない。 |
 | U-DBPROJ-ATOMIC-01 | `rebuildHarnessDb` | The truncate + re-project sequence runs inside one `BEGIN IMMEDIATE` transaction. Injecting a failure during projection (a wrapped `db` that throws on the first `INSERT INTO plan_registry`, i.e. after `truncateProjectionTables` has emptied the tables) re-throws and **rolls back**, leaving the prior committed `plan_registry` projection intact (row count unchanged, not 0). Red→Green: fails pre-fix (188 → 0). |
 | U-DBPROJ-PROV-01 | `analyzeDbProjectionIngestion(..., { enforceTelemetryProvenance: true })` | Populated telemetry tables (`skill_invocations`, `test_runs`, `guardrail_decisions`, `model_runs`) with only projection provenance are not acceptable evidence for "fired/used/works" claims. Default doctor can surface migration state as partial, but provenance-enforced mode fail-closes when runtime rows are 0 and projection rows are non-zero. |
 | U-DBPROJ-PROV-02 | `projectRuntimeTestRunFromSessionEvent` | A session-log Bash verification event (`Bash (vitest)` etc.) creates exactly one `test_runs` row with non-empty `session_id`, `runtime=hook-session-log`, `scope=runtime-hook`, and the JSONL evidence path; non-verification Bash events such as `Bash (git)` do not fabricate runtime test evidence. |

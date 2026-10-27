@@ -75,14 +75,6 @@ export const AUTOMATIC_DB_PROJECTION_REQUIREMENTS: DbProjectionIngestionRequirem
     reason: "spec relations are derived from PLAN dependencies and design/test pairs",
   },
   {
-    table: "schedule_entries",
-    reason: "schedule entries are derived from PLAN schedule/frontmatter state",
-  },
-  {
-    table: "execution_readiness_projection",
-    reason: "Forward readiness is derived from schedule predecessor state",
-  },
-  {
     table: "activation_entries",
     reason: "activation entries are derived from route mode and drive profile declarations",
   },
