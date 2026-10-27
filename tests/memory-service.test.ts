@@ -1,4 +1,4 @@
-import { execFileSync, spawnSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -21,6 +21,7 @@ import {
   renderMemoryHealth,
   writeMemory,
 } from "../src/memory/service.ts";
+import { gitTextTrimmed as git } from "./support/git.ts";
 import { removeTestTree } from "./support/temp-tree.ts";
 import { workspaceRead } from "./support/workspace-roots.ts";
 
@@ -695,13 +696,6 @@ describe("registrationReceiptFor (PLAN-L6-104 §3.1 decision 7)", () => {
 describe("ut-tdd memory add --receipt-json (CLI, PLAN-L6-104 §3.1 decision 7)", () => {
   const cliPath = resolve("src/cli.ts");
   const cliFixtures: string[] = [];
-
-  function git(cwd: string, args: readonly string[]): string {
-    return execFileSync("git", ["-C", cwd, ...args], {
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "pipe"],
-    }).trim();
-  }
 
   function createReceiptRepo(projectId = "example/receipt"): string {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-memory-receipt-"));
