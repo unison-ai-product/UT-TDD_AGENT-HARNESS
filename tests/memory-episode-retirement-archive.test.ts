@@ -10,7 +10,6 @@
  * Every fixture is an isolated temp git repo with an isolated projection DB;
  * neither the shared harness.db nor the real memory corpus is opened.
  */
-import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
   copyFileSync,
@@ -35,6 +34,7 @@ import {
   HARNESS_DB_TABLE_BY_NAME,
   SCHEMA_VERSION,
 } from "../src/schema/harness-db.ts";
+import { gitTextTrimmedWindowsHidden as git } from "./support/git.ts";
 import { ensureTrackedProjectIdentity } from "./support/project-identity-fixture.ts";
 import { removeTestTree } from "./support/temp-tree.ts";
 
@@ -107,13 +107,6 @@ function isolatedDbPort(root: string): MemoryArchiveDbPort {
 
 function retire(input: RetireInput, ports: RetirePorts = {}) {
   return retireMemoryEpisodes(input, { ...ports, db: isolatedDbPort(input.repoRoot) });
-}
-
-function git(root: string, args: string[]): string {
-  return execFileSync("git", ["-C", root, ...args], {
-    encoding: "utf8",
-    windowsHide: true,
-  }).trim();
 }
 
 function sha256(text: string): string {
