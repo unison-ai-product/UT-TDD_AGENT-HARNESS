@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -8,6 +8,7 @@ import {
   collectSpecIrProjection,
   deriveSpecRagClosureEntries,
 } from "../src/state-db/spec-ir-projections.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 
 function writePlan(root: string, name: string, body: string): void {
   const dir = join(root, "docs", "plans");
@@ -104,7 +105,7 @@ describe("spec IR projections", () => {
         ]),
       );
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -158,7 +159,7 @@ describe("spec IR projections", () => {
         projection.schedule_entries.filter((row) => row.plan_id === "PLAN-L7-999-schedule-fixture"),
       ).toHaveLength(1);
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -189,7 +190,7 @@ describe("spec IR projections", () => {
       expect(after?.plan_revision).toBe(before?.plan_revision);
       expect(after?.source_hash).not.toBe(before?.source_hash);
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -234,7 +235,7 @@ describe("spec IR projections", () => {
       expect(schedules.map((row) => row.plan_id)).toEqual(["PLAN-L7-998-legacy"]);
       expect(schedules[0]?.plan_revision).toMatch(/^legacy:sha256:/);
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -255,7 +256,7 @@ describe("spec IR projections", () => {
       const projection = collectSpecIrProjection(root, "2026-07-31T00:00:00.000Z");
       expect(projection.schedule_entries).toEqual([]);
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -331,7 +332,7 @@ describe("spec IR projections", () => {
         ]),
       );
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -388,7 +389,7 @@ describe("spec IR projections", () => {
         }),
       ]);
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -431,7 +432,7 @@ describe("spec IR projections", () => {
         ]),
       );
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -693,7 +694,7 @@ describe("spec IR projections", () => {
         ]),
       );
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -753,7 +754,7 @@ describe("spec IR projections", () => {
         test_count: 0,
       });
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -800,7 +801,7 @@ describe("spec IR projections", () => {
         ]),
       );
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -866,7 +867,7 @@ describe("spec IR projections", () => {
         ]),
       );
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -906,7 +907,7 @@ describe("spec IR projections", () => {
         ]),
       );
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -952,7 +953,7 @@ describe("spec IR projections", () => {
         ]),
       );
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -998,7 +999,7 @@ describe("spec IR projections", () => {
         ]),
       );
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -1040,7 +1041,7 @@ describe("spec IR projections", () => {
         ]),
       );
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -1077,7 +1078,7 @@ describe("spec IR projections", () => {
         ]),
       );
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -1131,7 +1132,7 @@ describe("spec IR projections", () => {
         }),
       );
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -1245,7 +1246,7 @@ describe("spec IR projections", () => {
         ),
       ).toHaveLength(1);
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -1320,7 +1321,7 @@ describe("spec IR projections", () => {
         ),
       ).toEqual([]);
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -1360,7 +1361,7 @@ describe("spec IR projections", () => {
       expect(new Set(sectionIds).size).toBe(2);
       expect(sectionIds.every((id) => /--[a-f0-9]{12}$/.test(id))).toBe(true);
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -1403,7 +1404,7 @@ describe("spec IR projections", () => {
         ]),
       );
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 });

@@ -26,7 +26,7 @@ vi.mock("node:fs", async (importOriginal) => {
   };
 });
 
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import {
@@ -39,6 +39,7 @@ import {
   g1TraceOk,
   loadG1TraceDocs,
 } from "../src/lint/g1-trace.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 
 const REQUIRED_DOCS = [
   ["business", "docs/design/harness/L1-requirements/business-requirements.md"],
@@ -83,7 +84,7 @@ function normalized(path: string): string {
 afterEach(() => {
   readTrace.active = false;
   readTrace.calls = [];
-  for (const root of temporaryRoots.splice(0)) rmSync(root, { recursive: true, force: true });
+  for (const root of temporaryRoots.splice(0)) removeTestTree(root);
 });
 
 describe("G1-trace coverage (business/screen/functional)", () => {

@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -10,6 +10,7 @@ import {
 } from "../src/assets/catalog.ts";
 import { openHarnessDb } from "../src/state-db/index.ts";
 import { migrate, rowCounts } from "../src/state-db/migration.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 
 const legacyRuntimeName = ["he", "lix"].join("");
 
@@ -80,7 +81,7 @@ describe("IT-ASSET-DB-01: automation asset catalog", () => {
       });
     } finally {
       db.close();
-      rmSync(repo, { recursive: true, force: true });
+      removeTestTree(repo);
     }
   });
 
@@ -102,7 +103,7 @@ describe("IT-ASSET-DB-01: automation asset catalog", () => {
       expect(rowCounts(db).findings).toBeGreaterThan(0);
     } finally {
       db.close();
-      rmSync(repo, { recursive: true, force: true });
+      removeTestTree(repo);
     }
   });
 });
@@ -154,7 +155,7 @@ describe("IT-ASSET-04: in-memory skill catalog scan", () => {
       ]);
       expect(existsSync(join(repo, ".ut-tdd"))).toBe(false);
     } finally {
-      rmSync(repo, { recursive: true, force: true });
+      removeTestTree(repo);
     }
   });
 
@@ -188,7 +189,7 @@ describe("IT-ASSET-04: in-memory skill catalog scan", () => {
         }),
       ]);
     } finally {
-      rmSync(repo, { recursive: true, force: true });
+      removeTestTree(repo);
     }
   });
 
@@ -226,7 +227,7 @@ describe("IT-ASSET-04: in-memory skill catalog scan", () => {
       );
       expect(existsSync(join(repo, ".ut-tdd"))).toBe(false);
     } finally {
-      rmSync(repo, { recursive: true, force: true });
+      removeTestTree(repo);
     }
   });
 
@@ -287,7 +288,7 @@ describe("roster registry and guard consistency", () => {
       expect(result.entries.map((entry) => entry.model_family)).toEqual(["haiku", "sonnet"]);
       expect(result.entries.every((entry) => entry.allowlisted)).toBe(true);
     } finally {
-      rmSync(repo, { recursive: true, force: true });
+      removeTestTree(repo);
     }
   });
 
@@ -335,7 +336,7 @@ describe("roster registry and guard consistency", () => {
       ]);
       expect(result.nonAllowlisted).toEqual(["be-logic"]);
     } finally {
-      rmSync(repo, { recursive: true, force: true });
+      removeTestTree(repo);
     }
   });
 

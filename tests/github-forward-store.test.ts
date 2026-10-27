@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -21,6 +21,7 @@ import {
 import { openHarnessDb } from "../src/state-db/index.ts";
 import { migrate } from "../src/state-db/migration.ts";
 import { clearRebuildableProjectionTables } from "../src/state-db/sqlite-projection-rebuild.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 
 describe("GitHub Forward SQLite store", () => {
   const insertSchedule = (
@@ -815,7 +816,7 @@ ${source.citations.map((citation) => `      - "${citation}"`).join("\n")}`,
       ]);
     } finally {
       db.close();
-      rmSync(repoRoot, { recursive: true, force: true });
+      removeTestTree(repoRoot);
     }
   });
 
@@ -924,7 +925,7 @@ ${source.citations.map((citation) => `      - "${citation}"`).join("\n")}`,
       });
     } finally {
       db.close();
-      rmSync(repoRoot, { recursive: true, force: true });
+      removeTestTree(repoRoot);
     }
   });
 
@@ -1056,7 +1057,7 @@ ${source.citations.map((citation) => `      - "${citation}"`).join("\n")}`,
       ).not.toHaveProperty("mergeVerified");
     } finally {
       db.close();
-      rmSync(repoRoot, { recursive: true, force: true });
+      removeTestTree(repoRoot);
     }
   });
 
