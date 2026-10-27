@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -10,6 +10,7 @@ import { loadScreenImplPairFreezeInput } from "../src/lint/screen-impl-pair-free
 import { lintPlanWithGate } from "../src/plan/lint.ts";
 import { resolveAuthoringSourcePath, resolveVModelRoots } from "../src/shared/design-root.ts";
 import { lintVmodel, loadPairDocs } from "../src/vmodel/lint.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 import { headSnapshotRoot } from "./support/workspace-roots.ts";
 
 function fixtureRoot(): string {
@@ -43,7 +44,7 @@ describe("release consumer design root (PLAN-L7-676 PR-2b)", () => {
         "docs/design/harness/L6/x.md",
       );
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -66,7 +67,7 @@ describe("release consumer design root (PLAN-L7-676 PR-2b)", () => {
       expect(loadL7CompletionDocs(root)).toEqual([]);
       expect(loadScreenImplPairFreezeInput(root).screenDesignPresent).toBe(false);
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -88,7 +89,7 @@ describe("release consumer design root (PLAN-L7-676 PR-2b)", () => {
       expect(present.messages[0]).toContain("checked=1");
       expect(existsSync(join(root, "docs", "plans"))).toBe(true);
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 });
