@@ -1,5 +1,6 @@
 /**
- * Contract-shape stub for the #1310 Red tests.
+ * Contract-shape stub for the #1310 Red tests (design-protection-diff-gate §10.3 step 1').
+ * It returns fail-close values only.
  * Filesystem/git loading and check composition belong to the Green PR.
  */
 
@@ -28,9 +29,9 @@ export function loadCodeSizeMergeBaseMeasures(
 export function loadRenamedCodeFiles(
   _repoRoot: string,
 ): { kind: "found"; renames: CodeRename[] } | { kind: "unreadable" } {
-  return { kind: "found", renames: [] };
+  return { kind: "unreadable" };
 }
 
 export function checkCodeSize(_repoRoot: string): { messages: string[]; ok: boolean } {
-  return { messages: ["checked=0 over=0 stale=0 baseline=0"], ok: true };
+  return { messages: [], ok: false };
 }

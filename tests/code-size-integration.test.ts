@@ -226,11 +226,17 @@ describe("code-size live repository and CLI integration candidates", () => {
     expect.soft(result.messages.join("\n")).toContain("code-size-required:new-file-over-limit");
   });
 
-  it.fails("CANDIDATE-U-CODESIZE-017: registers code-size in the full doctor hard-gate definitions", () => {
+  it.fails("CANDIDATE-U-CODESIZE-017: registers code-size in the full doctor hard-gate definitions and fails it on a violation", () => {
     const definitions = buildFullDoctorCheckDefinitions(nodeDoctorDeps(headSnapshotRoot()));
     const definition = definitions.find((item) => item.id === "code-size");
     expect(definition).toBeDefined();
     expect(definition?.profiles).toContain("full");
+    const doctorCheck = (root: string) =>
+      buildFullDoctorCheckDefinitions(nodeDoctorDeps(root))
+        .find((item) => item.id === "code-size")
+        ?.run();
+    expect.soft(doctorCheck(cliGreenRoot)?.ok).toBe(true);
+    expect.soft(doctorCheck(cliViolationRoot)?.ok).toBe(false);
   });
 
   it.fails("CANDIDATE-U-CODESIZE-017: the green CLI worktree exits successfully with the summary", () => {

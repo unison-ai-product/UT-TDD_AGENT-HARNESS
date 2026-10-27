@@ -1,5 +1,6 @@
 /**
- * Contract-shape stub for the #1310 Red tests.
+ * Contract-shape stub for the #1310 Red tests (design-protection-diff-gate §10.3 step 1').
+ * It returns fail-close values only; no measuring or judging lives here.
  * The code-size behavior and runtime wiring belong to the Green PR.
  */
 
@@ -43,6 +44,7 @@ export interface CodeMeasure {
   codeClass: CodeClass;
   lines: number;
   functionExcess: number | null;
+  functions: CodeFunctionMeasure[];
   overFunctions: CodeFunctionMeasure[];
   topLevel: CodeStatementMeasure[];
 }
@@ -81,6 +83,7 @@ export function measureCodeFile(source: CodeSizeSource): CodeMeasure {
     codeClass: "src",
     lines: 0,
     functionExcess: null,
+    functions: [],
     overFunctions: [],
     topLevel: [],
   };
@@ -88,7 +91,7 @@ export function measureCodeFile(source: CodeSizeSource): CodeMeasure {
 
 export function analyzeCodeSize(_input: CodeSizeInput): CodeSizeResult {
   return {
-    ok: true,
+    ok: false,
     findings: [],
     summary: { checked: 0, over: 0, stale: 0, baseline: 0 },
   };

@@ -15,9 +15,6 @@ const source = (path: string, text: string): CodeSizeSource => ({ path, text });
 const lines = (count: number) => "const a = 1;\n".repeat(count);
 const body = (count: number) => "x++;\n".repeat(count);
 const fn = (name: string, bodyLines: number) => `function ${name}() {\n${body(bodyLines)}}\n`;
-/** A top-level statement spanning exactly `count` nonblank lines and no function. */
-const statement = (name: string, count: number) =>
-  `const ${name} = [\n${"1,\n".repeat(count - 2)}];\n`;
 /** A file of `total` nonblank lines whose function overshoots the function limit by `excess`. */
 function codeFile(path: string, total: number, excess = 0): CodeSizeSource {
   const functionLines = excess > 0 ? CODE_SIZE_LIMITS.src.functionLines + excess + 2 : 0;
@@ -40,10 +37,6 @@ const analyze = (
 const reasons = (result: CodeSizeResult, kind: string) =>
   result.findings.filter((finding) => finding.kind === kind).map((finding) => finding.reason);
 const kindsOf = (result: CodeSizeResult) => result.findings.map((finding) => finding.kind);
-const messageOf = (result: CodeSizeResult) =>
-  result.findings
-    .map((finding) => (finding as typeof finding & { message?: string }).message ?? "")
-    .join("\n");
 
 describe("code size gate candidate oracles", () => {
   it.fails("CANDIDATE-U-CODESIZE-001: counts nonblank lines after newline normalization", () => {
@@ -78,28 +71,31 @@ describe("code size gate candidate oracles", () => {
     }
   });
 
-  it.fails("CANDIDATE-U-CODESIZE-003: measures function lines and the per-file excess", () => {
+  it.fails("CANDIDATE-U-CODESIZE-003: measures every function line count and the per-file excess", () => {
     const blockWithNoise = `function f() {\n${body(130)}\n  \n\n\n\n${"// c\n".repeat(5)}}\n`;
     const methodClass = `class C {\n  m() {\n${body(125)}  }\n}\n`;
     const arrowBlock = `const f = () => {\n${body(120)}};\n`;
-    const arrowExpression = "const f = () => [\n  1,\n  2,\n];\n";
+    const arrowExpression = "const f = (x: number) =>\n  x +\n  1 +\n  2;\n";
     const nested = `function outer() {\n${body(100)}  const cb = () => {\n${body(30)}  };\n}\n`;
     const constructorAndGetter = `class C {\n  constructor() {\n${body(121)}  }\n  get g() {\n${body(10)}  }\n}\n`;
-    const cases: Array<[string, number, number[]]> = [
-      [blockWithNoise, 10, [130]],
-      [methodClass, 5, [125]],
-      [arrowBlock, 0, []],
-      [arrowExpression, 0, []],
-      [nested, 12, [132]],
-      [constructorAndGetter, 1, [121]],
+    // [text, functions[].lines in order of appearance, functionExcess, overFunctions[].lines]
+    const cases: Array<[string, number[], number, number[]]> = [
+      [blockWithNoise, [130], 10, [130]],
+      [methodClass, [125], 5, [125]],
+      [arrowBlock, [120], 0, []],
+      [arrowExpression, [3], 0, []],
+      [nested, [132, 30], 12, [132]],
+      [constructorAndGetter, [121, 10], 1, [121]],
     ];
-    for (const [text, excess, overLines] of cases) {
+    for (const [text, functionLines, excess, overLines] of cases) {
       const measured = measureCodeFile(source("src/x.ts", text));
+      expect.soft(measured.functions.map((item) => item.lines)).toEqual(functionLines);
       expect.soft(measured.functionExcess).toBe(excess);
       expect.soft(measured.overFunctions.map((item) => item.lines)).toEqual(overLines);
     }
     const inTests = measureCodeFile(source("tests/x.test.ts", blockWithNoise));
     expect.soft(inTests.functionExcess).toBeNull();
+    expect.soft(inTests.functions).toEqual([]);
     expect.soft(inTests.overFunctions).toEqual([]);
   });
 
@@ -111,7 +107,6 @@ describe("code size gate candidate oracles", () => {
         .soft(reasons(over, "code-size-required"), `${path} 501`)
         .toContain("new-file-over-limit");
       expect.soft(over.ok).toBe(false);
-      expect.soft(messageOf(over)).toContain("lines=501/500");
     }
   });
 
@@ -119,7 +114,6 @@ describe("code size gate candidate oracles", () => {
     expect.soft(analyze([source("src/x.ts", fn("f", 120))]).findings).toHaveLength(0);
     const over = analyze([source("src/x.ts", fn("f", 121))]);
     expect.soft(reasons(over, "code-size-required")).toContain("new-file-over-limit");
-    expect.soft(messageOf(over)).toContain("functionExcess=1/0");
     const callback = `it("x", () => {\n${body(300)}});\n`;
     expect.soft(analyze([source("tests/x.test.ts", callback)]).findings).toHaveLength(0);
   });
@@ -331,37 +325,6 @@ describe("code size gate candidate oracles", () => {
     const unreadable = initial([codeFile("src/a.ts", 1300)], { "src/a.ts": row(1300) }, null);
     expect(kindsOf(unreadable)).toContain("code-size-baseline-base-unreadable");
     expect(unreadable.ok).toBe(false);
-  });
-
-  it.fails("CANDIDATE-U-CODESIZE-012: points to what to split and where", () => {
-    const limit = CODE_SIZE_LIMITS.src.lines;
-    // (a) over by 20: the trailing statements are selected from the back
-    const featureText =
-      statement("alpha", 3) + statement("beta", limit + 20 - 3 - 15) + statement("gamma", 15);
-    const featureMessage = messageOf(analyze([source("src/feature/x.ts", featureText)]));
-    expect(featureMessage).toContain("gamma (15 行)");
-    expect(featureMessage).toContain("beta");
-    expect(featureMessage).not.toContain("alpha");
-    expect(featureMessage).toContain("src/feature/");
-    expect(featureMessage).toContain("tests/");
-    // (b) over by 1: at least one statement, the last one
-    const tailText = statement("head", limit + 1 - 5) + statement("tail", 5);
-    const tailMessage = messageOf(analyze([source("src/feature/y.ts", tailText)]));
-    expect(tailMessage).toContain("tail (5 行)");
-    expect(tailMessage).not.toContain("head");
-    // (c) tests: a describe statement is named by its title and only tests/ is suggested
-    const describeText = `${statement("filler", limit + 10 - 30)}describe("末尾の題", () => {\n${body(28)}});\n`;
-    const testsMessage = messageOf(analyze([source("tests/x.test.ts", describeText)]));
-    expect(testsMessage).toContain("describe: 末尾の題");
-    expect(testsMessage).toContain("tests/");
-    expect(testsMessage).not.toContain("src/");
-    // (d) functions over the limit, longest first, anonymous ones by line number
-    const functionText = `${fn("big", 150)}run(() => {\n${body(130)}});\n`;
-    const functionMessage = messageOf(analyze([source("src/f.ts", functionText)]));
-    expect(functionMessage).toContain("150/120");
-    expect(functionMessage).toContain("<anon@153>");
-    expect(functionMessage).toContain("130/120");
-    expect(functionMessage.indexOf("big")).toBeLessThan(functionMessage.indexOf("<anon@153>"));
   });
 
   it.fails("CANDIDATE-U-CODESIZE-013: treats unreadable input as a failure and stays pure", () => {

@@ -44,6 +44,20 @@ function initRepo(files: Record<string, string>, exposeAsOriginMain = true): str
   return root;
 }
 
+const body = (count: number) => "x++;\n".repeat(count);
+const fn = (name: string, bodyLines: number) => `function ${name}() {\n${body(bodyLines)}}\n`;
+/** A top-level statement spanning exactly `count` nonblank lines and no function. */
+const statement = (name: string, count: number) =>
+  `const ${name} = [\n${"1,\n".repeat(count - 2)}];\n`;
+/** checkCodeSize messages for one committed file against an empty baseline. */
+function messagesFor(path: string, text: string): string {
+  const root = initRepo({ [path]: text, [BASELINE]: "{}\n" });
+  try {
+    return checkCodeSize(root).messages.join("\n");
+  } finally {
+    removeRepo(root);
+  }
+}
 const lines = (count: number) => "const a = 1;\n".repeat(count);
 
 function baselineEntry(path: string, lineCount: number | null, excess: number | null): string {
@@ -200,5 +214,50 @@ describe("code size gate filesystem and git adapter candidate oracles", () => {
     } finally {
       removeRepo(root);
     }
+  });
+
+  it.fails("CANDIDATE-U-CODESIZE-004(message): reports lines=501/500 through the check messages", () => {
+    expect.soft(messagesFor("src/x.ts", lines(501))).toContain("lines=501/500");
+    expect.soft(messagesFor("tests/x.test.ts", lines(501))).toContain("lines=501/500");
+    expect.soft(messagesFor("src/x.ts", lines(500))).not.toContain("code-size-required");
+  });
+
+  it.fails("CANDIDATE-U-CODESIZE-005(message): reports functionExcess=1/0 through the check messages", () => {
+    expect.soft(messagesFor("src/x.ts", fn("f", 121))).toContain("functionExcess=1/0");
+    expect.soft(messagesFor("src/x.ts", fn("f", 120))).not.toContain("code-size-required");
+  });
+
+  it.fails("CANDIDATE-U-CODESIZE-012: points to what to split and where through the check messages", () => {
+    const limit = 500;
+    // (a) over by 20: trailing statements are selected from the back
+    const featureText =
+      statement("alpha", 3) + statement("beta", limit + 20 - 3 - 15) + statement("gamma", 15);
+    const feature = messagesFor("src/feature/x.ts", featureText);
+    expect.soft(feature).toContain("gamma (15 行)");
+    expect.soft(feature).toContain("beta");
+    expect.soft(feature).not.toContain("alpha");
+    expect.soft(feature).toContain("src/feature/");
+    expect.soft(feature).toContain("tests/");
+    // (b) over by 1: at least one statement, the last one
+    const tailMessage = messagesFor(
+      "src/feature/y.ts",
+      statement("head", limit + 1 - 5) + statement("tail", 5),
+    );
+    expect.soft(tailMessage).toContain("tail (5 行)");
+    expect.soft(tailMessage).not.toContain("head");
+    // (c) tests: a describe statement is named by its title and only tests/ is suggested
+    const describeText = `${statement("filler", limit + 10 - 30)}describe("末尾の題", () => {\n${body(28)}});\n`;
+    const testsMessage = messagesFor("tests/x.test.ts", describeText);
+    expect.soft(testsMessage).toContain("describe: 末尾の題");
+    expect.soft(testsMessage).not.toContain("src/");
+    // (d) functions over the limit, longest first, anonymous ones by line number
+    const functionMessage = messagesFor(
+      "src/f.ts",
+      `${fn("big", 150)}run(() => {\n${body(130)}});\n`,
+    );
+    expect.soft(functionMessage).toContain("150/120");
+    expect.soft(functionMessage).toContain("<anon@153>");
+    expect.soft(functionMessage).toContain("130/120");
+    expect.soft(functionMessage.indexOf("big")).toBeLessThan(functionMessage.indexOf("<anon@153>"));
   });
 });
