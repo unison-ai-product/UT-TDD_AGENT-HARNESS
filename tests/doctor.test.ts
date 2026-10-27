@@ -204,11 +204,21 @@ const GATE_RUN_CHECKED_AT = "2026-10-26T00:00:00.000Z";
 
 function writeGateRunEvidence(
   repoRoot: string,
-  input: { gateRunId?: string; gateId?: string; planId?: string | null; status?: string } = {},
+  input: {
+    gateRunId?: string;
+    gateId?: string;
+    planId?: string | null;
+    status?: string;
+    evidenceFileName?: string;
+  } = {},
 ): void {
+  const evidenceFileName = input.evidenceFileName ?? GATE_RUN_EVIDENCE_PATH.split("/").at(-1);
+  if (!evidenceFileName || !/^[A-Za-z0-9][A-Za-z0-9._-]*\.json$/u.test(evidenceFileName)) {
+    throw new Error("gate run evidence fixture must be a safe JSON file name");
+  }
   mkdirSync(join(repoRoot, ".ut-tdd", "gate_runs"), { recursive: true });
   writeFileSync(
-    join(repoRoot, ...GATE_RUN_EVIDENCE_PATH.split("/")),
+    join(repoRoot, ".ut-tdd", "gate_runs", evidenceFileName),
     `${JSON.stringify({
       schema_version: 1,
       gate_run_id: input.gateRunId ?? "gate-run:planless-1",
@@ -593,23 +603,48 @@ describe("gate-run-coverage doctor", () => {
 
   it.fails("U-DOCTOR-GATE-01 reprojects when evidence changes after a persistent projection", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-doctor-gate-run-stale-"));
-    const gateRunId = "gate-run:planless-1";
+    const firstGateRunId = "gate-run:append-first";
+    const secondGateRunId = "gate-run:append-second";
     const planId = "PLAN-GATE-COVERAGE-STALE";
     try {
       writePlanFixture(root, planId);
-      writeGateRunEvidence(root, { gateRunId, gateId: "G4", planId });
+      writeGateRunEvidence(root, {
+        gateRunId: firstGateRunId,
+        gateId: "G4",
+        planId,
+      });
       expect(checkGateRunCoverage(root).ok).toBe(true);
 
-      writeGateRunEvidence(root, { gateRunId, gateId: "G5", planId });
+      writeGateRunEvidence(root, {
+        gateRunId: secondGateRunId,
+        gateId: "G5",
+        planId,
+        evidenceFileName: "gate-run-second.json",
+      });
       const result = checkGateRunCoverage(root);
       const projection = gateRunProjection(root);
 
       expect(result.ok).toBe(true);
-      expect(projection.gateRuns[0]).toMatchObject({ gate_run_id: gateRunId, gate_id: "G5" });
-      expect(projection.routineGateWorkflows[0]).toMatchObject({
-        workflow_run_id: stableId("gate-workflow", gateRunId),
-        phase: "G5",
-      });
+      expect(projection.gateRuns).toHaveLength(2);
+      expect(projection.gateRuns).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ gate_run_id: firstGateRunId, gate_id: "G4" }),
+          expect.objectContaining({ gate_run_id: secondGateRunId, gate_id: "G5" }),
+        ]),
+      );
+      expect(projection.routineGateWorkflows).toHaveLength(2);
+      expect(projection.routineGateWorkflows).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            workflow_run_id: stableId("gate-workflow", firstGateRunId),
+            phase: "G4",
+          }),
+          expect.objectContaining({
+            workflow_run_id: stableId("gate-workflow", secondGateRunId),
+            phase: "G5",
+          }),
+        ]),
+      );
     } finally {
       removeTestTree(root);
     }
