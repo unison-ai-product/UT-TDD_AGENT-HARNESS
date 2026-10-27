@@ -14,7 +14,7 @@ issue: 1261
 
 > **契約状態**: 本文はM1の目標契約である。Issue #1284で対になるL7の11件を正式oracleへ昇格した。このID昇格はsource実装、Green結果、closing review PASSを示すものではない。frontmatterのconfirmedは文書revisionの固定を示し、実装完了を表さない。
 
-L6 contract marker: M1は既存の `buildProviderInvocation(input: ProviderInvocationInput) => ProviderInvocation` と `buildAdapterPlan(intent: AdapterIntent, mode: ExecutionMode) => AdapterPlan` (§5、正式oracle `U-CMDINPUT-001`〜`011`)、L1は `checkForUpdate(deps: UpdateCheckDeps) => UpdateCheckResult` (§7、候補 `U-CMDINPUT-012`〜`016`)、L2は `ghCommandEnv(env: NodeJS.ProcessEnv) => NodeJS.ProcessEnv` と定数 `GH_COMMAND_TIMEOUT_MS` (§8、候補 `CANDIDATE-U-CMDINPUT-017`〜`028`) を契約面とする。§7・§8の候補は正式oracleではない。
+L6 contract marker: M1は既存の `buildProviderInvocation(input: ProviderInvocationInput) => ProviderInvocation` と `buildAdapterPlan(intent: AdapterIntent, mode: ExecutionMode) => AdapterPlan` (§5、正式oracle `U-CMDINPUT-001`〜`011`)、L1は `checkForUpdate(deps: UpdateCheckDeps) => UpdateCheckResult` (§7、正式oracle `U-CMDINPUT-012`〜`016`)、L2は `ghCommandEnv(env: NodeJS.ProcessEnv) => NodeJS.ProcessEnv` と定数 `GH_COMMAND_TIMEOUT_MS` (§8、候補 `CANDIDATE-U-CMDINPUT-017`〜`028`) を契約面とする。§7の012〜016は昇格済みの正式oracle、§8の017〜028は正式oracleではない候補である。
 
 ## 1. 目的と範囲
 
@@ -91,7 +91,7 @@ CLIからprovider invocationを組み立てる前にmodel / reasoning effortを�
 
 ## 7. git ls-remote の remote 引数 (Issue #1261 L1)
 
-> **契約状態**: 本節はL1のpair-freezeのための契約案であり、非著者のclosing review前である。未実装の目標契約であり、source実装・L7候補の正式昇格・実行証跡を示さない。§1〜§6のM1契約は本節で変えない。
+> **契約状態**: 本節はL1のpair-freezeのための契約案であり、非著者のclosing review前である。未実装の目標契約であり、source実装・実行証跡を示さない (L7の012〜016は正式oracleへ昇格済み、Issue #1280)。§1〜§6のM1契約は本節で変えない。
 
 ### 7.1 入力境界
 
@@ -127,7 +127,7 @@ gitの起動に対してはfail-closeとする: 拒否時は `listRemoteTags` �
 | pre | 無し (never throws)。remoteの出所は§7.1の3種で、どれも外部入力として扱う。 |
 | post | `-`始まりのremoteは§7.3の結果となり、`listRemoteTags`呼出し0回・cache書込み0回。それ以外のremoteは既存挙動のまま。 |
 | invariant | remote解決順、cache TTL、`gitLsRemoteInvocation`のargvと`%`回避、advisoryの非gate性を維持する。 |
-| oracle | 専用L7の `U-CMDINPUT-012`〜`016` (016は§7.2の再正規化禁止を固定する)。まだ正式oracleではない。 |
+| oracle | 専用L7の `U-CMDINPUT-012`〜`016` (016は§7.2の再正規化禁止を固定する)。正式oracleへ昇格済み (Issue #1280)。 |
 
 ## 8. 外部コマンドのtimeoutとgh promptの抑止 (Issue #1261 L2)
 

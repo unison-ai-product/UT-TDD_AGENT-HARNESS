@@ -72,11 +72,11 @@ pair L6: `docs/design/harness/L6-function-design/provider-invocation-input-valid
 
 ## 6. L1: git ls-remote の remote 引数 (Issue #1261 L1)
 
-> **状態**: L6 §7のpair-freezeのための候補test design。非著者closing review前であり、候補IDは正式oracleではない。工程は§4と同じ (Red → 昇格 → Green → Refactor)。
+> **状態**: L6 §7のpair-freezeのためのtest design。`U-CMDINPUT-012`〜`016`は正式oracleへ昇格済み (Issue #1280)。012〜014は`it.fails`のRed、015・016は回帰fenceの通常`it`であり、昇格はsource実装やGreen結果を意味しない。工程は§4と同じ (Red → 昇格 → Green → Refactor)。
 
 対象: `src/setup/update-check.ts` の `checkForUpdate`。既存test配置の候補は `tests/update-check.test.ts` の `describe("checkForUpdate")` である。`UpdateCheckDeps` を注入し、`listRemoteTags` / `readText` / `writeText` をspyする純unitとし、実gitやnetworkを使わない。期待する`detail`はL6 §7.3のliteralを明示して書き、production定数から生成しない。
 
-| Candidate ID | 関数 / surface | 反証可能な主張 |
+| oracle ID | 関数 / surface | 反証可能な主張 |
 |---|---|---|
 | U-CMDINPUT-012 | `checkForUpdate` (override) | `remoteOverride`が`--upload-pack=touch pwned`のとき、`checked: false`、`source: "none"`、`detail`が厳密に`remote rejected: starts with "-"`、`listRemoteTags` 0回、`writeText` 0回。`detail`に`upload-pack`を含まない。検査を削除するmutationを殺す。 |
 | U-CMDINPUT-013 | `checkForUpdate` (package.json) | override無しでpackage.jsonの`repository.url`が`git+-oProxyCommand=x`のとき (`git+`除去後に`-`始まり)、012と同じshape・`listRemoteTags` 0回。検査をoverride経路だけに置くmutationを殺す。 |
