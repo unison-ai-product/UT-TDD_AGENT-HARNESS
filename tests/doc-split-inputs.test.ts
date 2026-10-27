@@ -178,13 +178,13 @@ describe("doc split gate filesystem and git adapter candidate oracles", () => {
       writeRepoFile(root, BASELINE, baselineEntry(path, 600, 20));
       commit(root, "grow the document and record the grown value");
 
-      expect.soft(loadMergeBaseMeasures(root, [path])).toEqual({
+      expect(loadMergeBaseMeasures(root, [path])).toEqual({
         kind: "found",
         measures: { [path]: { lines: 500, responsibilities: 20 } },
       });
       const result = checkDocSplit(root);
-      expect.soft(result.ok).toBe(false);
-      expect.soft(hasMessage(result, "doc-split-initial-baseline-grown")).toBe(true);
+      expect(result.ok).toBe(false);
+      expect(hasMessage(result, "doc-split-initial-baseline-grown")).toBe(true);
     } finally {
       removeRepo(root);
     }
@@ -198,10 +198,10 @@ describe("doc split gate filesystem and git adapter candidate oracles", () => {
       writeRepoFile(root, BASELINE, baselineEntry(path, 600, 20));
       commit(root, "add and initially baseline a new document");
 
-      expect.soft(loadMergeBaseMeasures(root, [path])).toEqual({ kind: "found", measures: {} });
+      expect(loadMergeBaseMeasures(root, [path])).toEqual({ kind: "found", measures: {} });
       const result = checkDocSplit(root);
-      expect.soft(result.ok).toBe(false);
-      expect.soft(hasMessage(result, "doc-split-initial-baseline-new-entry")).toBe(true);
+      expect(result.ok).toBe(false);
+      expect(hasMessage(result, "doc-split-initial-baseline-new-entry")).toBe(true);
     } finally {
       removeRepo(root);
     }
@@ -214,13 +214,13 @@ describe("doc split gate filesystem and git adapter candidate oracles", () => {
       writeRepoFile(root, BASELINE, baselineEntry(path, 300, 5));
       commit(root, "record a below-limit initial baseline entry");
 
-      expect.soft(loadMergeBaseMeasures(root, [path])).toEqual({
+      expect(loadMergeBaseMeasures(root, [path])).toEqual({
         kind: "found",
         measures: { [path]: { lines: 300, responsibilities: 5 } },
       });
       const result = checkDocSplit(root);
-      expect.soft(result.ok).toBe(false);
-      expect.soft(hasMessage(result, "doc-split-initial-baseline-new-entry")).toBe(true);
+      expect(result.ok).toBe(false);
+      expect(hasMessage(result, "doc-split-initial-baseline-new-entry")).toBe(true);
     } finally {
       removeRepo(root);
     }
@@ -233,14 +233,14 @@ describe("doc split gate filesystem and git adapter candidate oracles", () => {
       writeRepoFile(root, BASELINE, baselineEntry(path, 500, 20));
       commit(root, "record the unchanged over-limit initial value");
 
-      expect.soft(loadMergeBaseMeasures(root, [path])).toEqual({
+      expect(loadMergeBaseMeasures(root, [path])).toEqual({
         kind: "found",
         measures: { [path]: { lines: 500, responsibilities: 20 } },
       });
       const result = checkDocSplit(root);
-      expect.soft(result.ok).toBe(true);
-      expect.soft(hasFindingMessage(result)).toBe(false);
-      expect.soft(hasMessage(result, "checked=1 over=0 stale=0 baseline=1")).toBe(true);
+      expect(result.ok).toBe(true);
+      expect(hasFindingMessage(result)).toBe(false);
+      expect(hasMessage(result, "checked=1 over=0 stale=0 baseline=1")).toBe(true);
     } finally {
       removeRepo(root);
     }
@@ -276,11 +276,11 @@ describe("doc split gate filesystem and git adapter candidate oracles", () => {
     rmSync(root, { recursive: true, force: true });
     try {
       const loaded = loadDocSplitSources(root);
-      expect.soft(loaded.sources).toEqual([]);
-      expect.soft(loaded.unreadable.length).toBeGreaterThan(0);
+      expect(loaded.sources).toEqual([]);
+      expect(loaded.unreadable.length).toBeGreaterThan(0);
       const result = checkDocSplit(root);
-      expect.soft(result.ok).toBe(false);
-      expect.soft(hasMessage(result, "doc-split-input-unreadable")).toBe(true);
+      expect(result.ok).toBe(false);
+      expect(hasMessage(result, "doc-split-input-unreadable")).toBe(true);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
@@ -299,13 +299,14 @@ describe("doc split gate filesystem and git adapter candidate oracles", () => {
       writeRepoFile(root, BASELINE, baselineEntry(newPath, 500, 20));
       commit(root, "move the topic without changing its class or size");
 
-      expect
-        .soft(loadRenamedDocs(root))
-        .toEqual({ kind: "found", renames: [{ from: oldPath, to: newPath }] });
+      expect(loadRenamedDocs(root)).toEqual({
+        kind: "found",
+        renames: [{ from: oldPath, to: newPath }],
+      });
       const result = checkDocSplit(root);
-      expect.soft(result.ok).toBe(true);
-      expect.soft(hasFindingMessage(result)).toBe(false);
-      expect.soft(hasMessage(result, "checked=1 over=0 stale=0 baseline=1")).toBe(true);
+      expect(result.ok).toBe(true);
+      expect(hasFindingMessage(result)).toBe(false);
+      expect(hasMessage(result, "checked=1 over=0 stale=0 baseline=1")).toBe(true);
     } finally {
       removeRepo(root);
     }
@@ -363,12 +364,13 @@ describe("doc split gate filesystem and git adapter candidate oracles", () => {
       git(root, "mv", oldPath, newPath);
       commit(root, "remove the L7 topic prefix");
 
-      expect
-        .soft(loadRenamedDocs(root))
-        .toEqual({ kind: "found", renames: [{ from: oldPath, to: newPath }] });
+      expect(loadRenamedDocs(root)).toEqual({
+        kind: "found",
+        renames: [{ from: oldPath, to: newPath }],
+      });
       const result = checkDocSplit(root);
-      expect.soft(result.ok).toBe(false);
-      expect.soft(hasMessage(result, "doc-split-class-changed")).toBe(true);
+      expect(result.ok).toBe(false);
+      expect(hasMessage(result, "doc-split-class-changed")).toBe(true);
     } finally {
       removeRepo(root);
     }
@@ -398,10 +400,10 @@ describe("doc split gate filesystem and git adapter candidate oracles", () => {
   it.fails("U-DOCSPLIT-024(d): fails closed when git rename input is unreadable", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-doc-split-no-git-"));
     try {
-      expect.soft(loadRenamedDocs(root)).toEqual({ kind: "unreadable" });
+      expect(loadRenamedDocs(root)).toEqual({ kind: "unreadable" });
       const result = checkDocSplit(root);
-      expect.soft(result.ok).toBe(false);
-      expect.soft(hasMessage(result, "doc-split-baseline-base-unreadable")).toBe(true);
+      expect(result.ok).toBe(false);
+      expect(hasMessage(result, "doc-split-baseline-base-unreadable")).toBe(true);
     } finally {
       removeRepo(root);
     }
