@@ -1,3 +1,4 @@
+import { deepStrictEqual, strictEqual } from "node:assert";
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
@@ -64,6 +65,29 @@ export interface NodeInvocation {
   command: string;
   args: string[];
   options: { shell: false; windowsHide: true };
+}
+export interface NodeInvocationProbeCheck {
+  id:
+    | "invocation-options"
+    | "compiled-cli-argv0"
+    | "node-path-absolute"
+    | "compiled-cli-path-absolute";
+  result: "passed";
+}
+export interface NodeInvocationProbeResult {
+  schema: "node-invocation-probe-result/v1";
+  candidate_id: "CAND-NODEBOOT-201";
+  probe_id: "CAND-NODEBOOT-201/P1";
+  test_source: "src/cli.ts#audit node-invocation-probe";
+  production_target: "src/runtime/node-bootstrap.ts#createNodeInvocation";
+  generation_id: string;
+  subject_revision: string;
+  compiled_cli_sha256: string;
+  executed: 1;
+  passed: 1;
+  failed: 0;
+  skipped: 0;
+  checks: NodeInvocationProbeCheck[];
 }
 export interface NodeGenerationBuildInput {
   readonly repoRoot?: string;
@@ -621,6 +645,51 @@ export function createNodeInvocation(
     command: generation.nodePath,
     args: [generation.compiledCliPath, ...args],
     options: { shell: false, windowsHide: true },
+  };
+}
+
+/** Run the fixed read-only probe against the production invocation builder. */
+export function runNodeInvocationProbe(generation: NodeGeneration): NodeInvocationProbeResult {
+  const invocation = createNodeInvocation(generation, [
+    "audit",
+    "node-invocation-probe",
+    "--generation",
+    generation.generationPath,
+    "--json",
+  ]);
+  const checks: NodeInvocationProbeCheck[] = [];
+  const check = (id: NodeInvocationProbeCheck["id"], assertion: () => void): void => {
+    try {
+      assertion();
+    } catch {
+      throw new NodeBootstrapError(id);
+    }
+    checks.push({ id, result: "passed" });
+  };
+
+  check("invocation-options", () =>
+    deepStrictEqual(invocation.options, { shell: false, windowsHide: true }),
+  );
+  check("compiled-cli-argv0", () => strictEqual(invocation.args[0], generation.compiledCliPath));
+  check("node-path-absolute", () => strictEqual(isAbsolute(generation.nodePath), true));
+  check("compiled-cli-path-absolute", () =>
+    strictEqual(isAbsolute(generation.compiledCliPath), true),
+  );
+
+  return {
+    schema: "node-invocation-probe-result/v1",
+    candidate_id: "CAND-NODEBOOT-201",
+    probe_id: "CAND-NODEBOOT-201/P1",
+    test_source: "src/cli.ts#audit node-invocation-probe",
+    production_target: "src/runtime/node-bootstrap.ts#createNodeInvocation",
+    generation_id: generation.receipt.generation_id,
+    subject_revision: generation.receipt.subject_revision,
+    compiled_cli_sha256: generation.receipt.compiled_cli.sha256,
+    executed: 1,
+    passed: 1,
+    failed: 0,
+    skipped: 0,
+    checks,
   };
 }
 
