@@ -580,7 +580,7 @@ describe("gate-run-coverage doctor", () => {
       const projection = gateRunProjection(root);
       const [gateRun] = projection.gateRuns;
       const [workflow] = projection.routineGateWorkflows;
-      expect(workflow.workflow_run_id).toBe(stableId("gate-workflow", gateRun.gate_run_id));
+      expect(workflow.workflow_run_id).toBe(stableId("gate-workflow", gateRun.gate_run_id as string));
       expect(workflow.phase).toBe(gateRun.gate_id);
       expect(checkGateRunCoverage(root).ok).toBe(false);
     } finally {
