@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -8,6 +8,7 @@ import {
   l6CompletionMessages,
   loadL6CompletionInputs,
 } from "../src/lint/l6-completion.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 
 const gatePass = `
 | Gate | Status | Evidence |
@@ -124,7 +125,7 @@ function withFixtureRoot(run: (root: string) => void): void {
   try {
     run(root);
   } finally {
-    rmSync(root, { recursive: true, force: true });
+    removeTestTree(root);
   }
 }
 
