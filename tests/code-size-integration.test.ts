@@ -173,12 +173,12 @@ afterAll(() => {
 });
 
 describe("code-size live repository and CLI integration candidates", () => {
-  it.fails("CANDIDATE-U-CODESIZE-016: has a parseable live code-size baseline", () => {
+  it.fails("U-CODESIZE-016: has a parseable live code-size baseline", () => {
     expect(existsSync(join(authorRoot, BASELINE_PATH))).toBe(true);
     expect(liveBaseline).not.toBeNull();
   });
 
-  it.fails("CANDIDATE-U-CODESIZE-016: records the measured form for every live baseline file", () => {
+  it.fails("U-CODESIZE-016: records the measured form for every live baseline file", () => {
     expect(liveBaseline).not.toBeNull();
     for (const [path, expected] of Object.entries(liveBaseline ?? {})) {
       const measured = measureCodeFile({
@@ -193,7 +193,7 @@ describe("code-size live repository and CLI integration candidates", () => {
     }
   });
 
-  it.fails("CANDIDATE-U-CODESIZE-016: accepts the live repository and reports the live summary", () => {
+  it.fails("U-CODESIZE-016: accepts the live repository and reports the live summary", () => {
     const result = checkCodeSize(authorRoot);
     const checked =
       countTargetFiles(join(authorRoot, "src")) + countTargetFiles(join(authorRoot, "tests"), true);
@@ -205,7 +205,7 @@ describe("code-size live repository and CLI integration candidates", () => {
       );
   });
 
-  it.fails("CANDIDATE-U-CODESIZE-016: rejects one appended line in the largest baseline src file", () => {
+  it.fails("U-CODESIZE-016: rejects one appended line in the largest baseline src file", () => {
     expect(largestSrcFixture).not.toBe("");
     const result = checkCodeSize(largestSrcFixture);
     expect.soft(result.ok).toBe(false);
@@ -213,20 +213,20 @@ describe("code-size live repository and CLI integration candidates", () => {
     expect.soft(result.messages.join("\n")).toContain("ファイル:");
   });
 
-  it.fails("CANDIDATE-U-CODESIZE-016: rejects one appended line in the largest baseline tests file", () => {
+  it.fails("U-CODESIZE-016: rejects one appended line in the largest baseline tests file", () => {
     expect(largestTestsFixture).not.toBe("");
     const result = checkCodeSize(largestTestsFixture);
     expect.soft(result.ok).toBe(false);
     expect.soft(result.messages.join("\n")).toContain("code-size-required:exceeds-baseline");
   });
 
-  it.fails("CANDIDATE-U-CODESIZE-016: rejects a new src file with a function over the limit", () => {
+  it.fails("U-CODESIZE-016: rejects a new src file with a function over the limit", () => {
     const result = checkCodeSize(newFunctionFixture);
     expect.soft(result.ok).toBe(false);
     expect.soft(result.messages.join("\n")).toContain("code-size-required:new-file-over-limit");
   });
 
-  it.fails("CANDIDATE-U-CODESIZE-017: registers code-size in the full doctor hard-gate definitions and fails it on a violation", () => {
+  it.fails("U-CODESIZE-017: registers code-size in the full doctor hard-gate definitions and fails it on a violation", () => {
     const definitions = buildFullDoctorCheckDefinitions(nodeDoctorDeps(headSnapshotRoot()));
     const definition = definitions.find((item) => item.id === "code-size");
     expect(definition).toBeDefined();
@@ -239,13 +239,13 @@ describe("code-size live repository and CLI integration candidates", () => {
     expect.soft(doctorCheck(cliViolationRoot)?.ok).toBe(false);
   });
 
-  it.fails("CANDIDATE-U-CODESIZE-017: the green CLI worktree exits successfully with the summary", () => {
+  it.fails("U-CODESIZE-017: the green CLI worktree exits successfully with the summary", () => {
     const result = runCli(cliGreenRoot);
     expect.soft(result.status).toBe(0);
     expect.soft(result.stdout).toContain("checked=");
   });
 
-  it.fails("CANDIDATE-U-CODESIZE-017: the violating CLI worktree exits 1, prints the finding and writes no state", () => {
+  it.fails("U-CODESIZE-017: the violating CLI worktree exits 1, prints the finding and writes no state", () => {
     const before = stateMtimes(cliViolationRoot);
     const result = runCli(cliViolationRoot);
     expect.soft(result.status).toBe(1);
