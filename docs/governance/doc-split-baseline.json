@@ -2,7 +2,7 @@
   "docs/design/harness/L5-detailed-design/internal-processing.md": { "lines": 1439, "responsibilities": null },
   "docs/design/harness/L6-function-design/agent-guard-delegation-boundary.md": { "lines": 244, "responsibilities": 28 },
   "docs/design/harness/L6-function-design/consumer-trace-gates.md": { "lines": 465, "responsibilities": 46 },
-  "docs/design/harness/L6-function-design/design-protection-diff-gate.md": { "lines": 267, "responsibilities": 17 },
+  "docs/design/harness/L6-function-design/design-protection-diff-gate.md": { "lines": 268, "responsibilities": 17 },
   "docs/design/harness/L6-function-design/function-spec.md": { "lines": 2933, "responsibilities": 109 },
   "docs/design/harness/L6-function-design/memory.md": { "lines": 462, "responsibilities": 21 },
   "docs/design/harness/L6-function-design/provider-invocation-input-validation.md": { "lines": 203, "responsibilities": 21 },
