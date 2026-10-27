@@ -78,11 +78,11 @@ pair L6: `docs/design/harness/L6-function-design/provider-invocation-input-valid
 
 | Candidate ID | 関数 / surface | 反証可能な主張 |
 |---|---|---|
-| CANDIDATE-U-CMDINPUT-012 | `checkForUpdate` (override) | `remoteOverride`が`--upload-pack=touch pwned`のとき、`checked: false`、`source: "none"`、`detail`が厳密に`remote rejected: starts with "-"`、`listRemoteTags` 0回、`writeText` 0回。`detail`に`upload-pack`を含まない。検査を削除するmutationを殺す。 |
-| CANDIDATE-U-CMDINPUT-013 | `checkForUpdate` (package.json) | override無しでpackage.jsonの`repository.url`が`git+-oProxyCommand=x`のとき (`git+`除去後に`-`始まり)、012と同じshape・`listRemoteTags` 0回。検査をoverride経路だけに置くmutationを殺す。 |
-| CANDIDATE-U-CMDINPUT-014 | `checkForUpdate` (cache順序) | `remoteOverride`が`-x`で、remote keyが`-x`かつTTL内のcacheを`readText`が返しても、`source: "cache"`にならず012と同じ拒否結果。加えて`readText`の呼び出し引数を記録し、`harnessRoot`直下の`package.json`の読取りは許容しつつ、cache path (`cacheRoot?.() ?? harnessRoot`配下の`UPDATE_CHECK_CACHE_PATH`) への`readText`が0回であることをassertする (cache path宛の呼び出し数と、package.json宛の呼び出し数を区別して数える)。検査をcache参照の後へ置くmutation (`readCache(deps)`の直後、cache採用分岐の前に拒否を置く実装) は、cache pathを1回読むため落ちる。
-| CANDIDATE-U-CMDINPUT-015 | `checkForUpdate` (正常系) | `https://example.invalid/a-b.git`と、`.git`を持つharness rootでの`origin`は従来どおり`listRemoteTags`を各1回、そのremote値で呼ぶ。`includes("-")`等の過剰拒否mutationを殺す。正常系なので`it`で登録する。 |
-| CANDIDATE-U-CMDINPUT-016 | `checkForUpdate` (再正規化禁止) | 注入した`remoteOverride`が先頭空白の` -x`を返すとき、解決済みremoteは再trimされず、`startsWith("-")`に該当しないため拒否されない (`detail`が`remote rejected`でない)。その値 ` -x` がそのまま (trimされずに) `listRemoteTags`へ1回渡されることをassertする。解決済みremoteを`remote.trim().startsWith("-")`のようにtrimしてから判定するmutationは、` -x`を`-x`として拒否し`listRemoteTags` 0回となるため落ちる (L6 §7.2の再正規化禁止)。正常系の固定なので`it`で登録する。
+| U-CMDINPUT-012 | `checkForUpdate` (override) | `remoteOverride`が`--upload-pack=touch pwned`のとき、`checked: false`、`source: "none"`、`detail`が厳密に`remote rejected: starts with "-"`、`listRemoteTags` 0回、`writeText` 0回。`detail`に`upload-pack`を含まない。検査を削除するmutationを殺す。 |
+| U-CMDINPUT-013 | `checkForUpdate` (package.json) | override無しでpackage.jsonの`repository.url`が`git+-oProxyCommand=x`のとき (`git+`除去後に`-`始まり)、012と同じshape・`listRemoteTags` 0回。検査をoverride経路だけに置くmutationを殺す。 |
+| U-CMDINPUT-014 | `checkForUpdate` (cache順序) | `remoteOverride`が`-x`で、remote keyが`-x`かつTTL内のcacheを`readText`が返しても、`source: "cache"`にならず012と同じ拒否結果。加えて`readText`の呼び出し引数を記録し、`harnessRoot`直下の`package.json`の読取りは許容しつつ、cache path (`cacheRoot?.() ?? harnessRoot`配下の`UPDATE_CHECK_CACHE_PATH`) への`readText`が0回であることをassertする (cache path宛の呼び出し数と、package.json宛の呼び出し数を区別して数える)。検査をcache参照の後へ置くmutation (`readCache(deps)`の直後、cache採用分岐の前に拒否を置く実装) は、cache pathを1回読むため落ちる。
+| U-CMDINPUT-015 | `checkForUpdate` (正常系) | `https://example.invalid/a-b.git`と、`.git`を持つharness rootでの`origin`は従来どおり`listRemoteTags`を各1回、そのremote値で呼ぶ。`includes("-")`等の過剰拒否mutationを殺す。正常系なので`it`で登録する。 |
+| U-CMDINPUT-016 | `checkForUpdate` (再正規化禁止) | 注入した`remoteOverride`が先頭空白の` -x`を返すとき、解決済みremoteは再trimされず、`startsWith("-")`に該当しないため拒否されない (`detail`が`remote rejected`でない)。その値 ` -x` がそのまま (trimされずに) `listRemoteTags`へ1回渡されることをassertする。解決済みremoteを`remote.trim().startsWith("-")`のようにtrimしてから判定するmutationは、` -x`を`-x`として拒否し`listRemoteTags` 0回となるため落ちる (L6 §7.2の再正規化禁止)。正常系の固定なので`it`で登録する。
 
 012〜014は未実装の負系として`it.fails`で登録し、015・016は`it`で登録する。`gitLsRemoteInvocation`のargv不変は既存の`U-UPDCHK-021`〜`024`が回帰fenceであり、本節で置き換えない。
 
