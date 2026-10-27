@@ -472,12 +472,12 @@ exit code を変えない。証跡 JSON は `.ut-tdd/gate_runs/<gate>-<timestamp
   PLAN の無い無関係な実行を 1 群にまとめないため)。代わりの作業単位ができたら、その単位で retry を定め直す。
   それ以外の workflow は従来どおり同一 `(plan_id, workflow, phase)` の複数 row を retry とする。
 
-`gate-run-coverage` doctor check は、現在の `.ut-tdd/gate_runs/*.json` から投影した行で判定する (永続 DB の
-gate row の集合 (正規の seed row を除く) が証跡の `gate_run_id` と内容に一致しなければ投影し直してから判定し、
-古い投影で OK を出さない)。次を fail-close で検出する: `gate_runs` の 0 件、seed を名乗るのに正規の seed row で
-ない row (`status=historical` か `G-VERIFY.*` の row で条件を満たさないもの)、`routine-gate` の workflow row
-に対応する gate row の欠落とその逆 (正規の seed row 以外の gate row に対応する workflow row の欠落)、空の
-`gate_id`、正規の seed row 以外の証跡の欠落・不正 JSON・識別の不一致 (`gate_run_id` / `gate_id`)。
+`writeGateRunEvidence` は証跡を排他作成し衝突時は上書き・別名救済をせず拒否する (gate verdict / exit は従来どおり)。
+`gate-run-coverage` は現在の `.ut-tdd/gate_runs/*.json` で判定し、新規 `gate_run_id` を投影、証跡の無い DB-only 行を正規 seed 以外削除する。
+実在証跡と対応 DB 行の `gate_run_id` / `gate_id` / `plan_id` / `status` / `checked_at` / `evidence_path` は全て比較し、不一致は fail-close、両方空の `plan_id` は一致とする。
+新規追加と既存行の不一致が同時でも独立に処理し、追加を投影しても不一致行を上書きしない。次も fail-close で検出する:
+`gate_runs` の 0 件、seed を名乗るのに正規でない row、`routine-gate` workflow row と正規 seed 以外の gate row の対応欠落、
+空の `gate_id`、証跡欠落による対応欠落、不正 JSON・識別の不一致 (`gate_run_id` / `gate_id`)。
 `plan_id` が空の gate row と、`plan_registry` に無い `plan_id` を持つ gate row は、それだけでは違反にしない。
 A-132 だけがあり JSON 証跡が無い clean tree では、`gate_runs` は正規の seed row 7 件で、violation は 0 となる。
 

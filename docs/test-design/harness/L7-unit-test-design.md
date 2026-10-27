@@ -695,6 +695,7 @@ SMB/NFS/OneDrive をまたぐ strict lease、heartbeat、clock-skew 耐性は主
 | U-GATE-006 | `ut-tdd gate --checklist` | checklist YAML 読込・parse 失敗は CLI crash ではなく review checklist violation として gate failure |
 | U-GATE-007 | `ut-tdd gate --plan --session` / `writeGateRunEvidence` | gate 判定後に `.ut-tdd/gate_runs/*.json` が作成され、`gate_id`、`plan_id`、`status`、`session_id`、`command`、`checks[]`、`source=ut-tdd gate` を持つ。証跡書込は gate verdict を変えない。 |
 | U-GATE-008 | `writeGateRunEvidence` failure boundary | `.ut-tdd/gate_runs` 書込失敗は `gate_run_evidence_warning` として surface されるが、`evaluateGateReview` / `evaluateStaticGate` の合成結果と exit code を変更しない。 |
+| CANDIDATE-U-GATE-009 | `writeGateRunEvidence` 排他作成 | 同一入力の2回目は fail-close し、初回 bytes と path が不変で、別名への救済ファイルを作らない。 |
 | U-TEAMRUN-001 | `validateTeamRun` | hybrid 以外は fail / hybrid で worker(se) と reviewer(tl/qa) が別 provider なら pass |
 | U-TEAMRUN-002 | `validateTeamRun` | 同一 role/provider 重複、worker/reviewer 同一 provider は fail |
 | U-TEAMRUN-003 | `recommendTeamLaunch` + `buildTeamRunPlan` | `team suggest` が返す critical definition は `se -> tl -> qa` の依存順へ正規化され、全 member が high effort selection を持つ。member prompt は resolved `provider` を header に出し、`model_family` 推奨ラベルと runtime provider を混同しない |
@@ -2903,8 +2904,7 @@ post-merge closure 正常系・`mergedAt` drift・runner の state 導出を同�
 
 ## oracle-test-trace 検出範囲拡張 (issue #165 / PLAN-L7-480)
 
-PLAN-L7-480 の CANDIDATE-OIDGATE-001〜007 (昇格済みのため candidate 台帳には残さない) を、実装と同 commit で以下へ昇格する
-(tests/oracle-test-trace.test.ts が citation)。
+PLAN-L7-480 の CANDIDATE-OIDGATE-001〜007 (昇格済みのため candidate 台帳には残さない) を、実装と同 commit で以下へ昇格する (tests/oracle-test-trace.test.ts が citation)。
 
 注 (契約衝突の記録): 上の D3c freeze は「generic regex を 4 segment へ広げない」前提で
 `U-RVGHA-D3C-NNN` → `U-RVGHAD3C-NNN` の原子的 rename を計画していたが、後発の PLAN-L7-480
