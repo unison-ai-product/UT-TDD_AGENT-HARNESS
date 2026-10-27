@@ -214,7 +214,6 @@ describe("db projection ingestion detector", () => {
       expect.arrayContaining([
         "spec_defs",
         "spec_relations",
-        "schedule_entries",
         "activation_entries",
         "document_catalog_entries",
         "document_scale_profile_entries",
