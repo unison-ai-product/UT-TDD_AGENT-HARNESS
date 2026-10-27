@@ -39,7 +39,7 @@ const reasons = (result: CodeSizeResult, kind: string) =>
 const kindsOf = (result: CodeSizeResult) => result.findings.map((finding) => finding.kind);
 
 describe("code size gate candidate oracles", () => {
-  it.fails("CANDIDATE-U-CODESIZE-001: counts nonblank lines after newline normalization", () => {
+  it.fails("U-CODESIZE-001: counts nonblank lines after newline normalization", () => {
     const cases = [
       ["", 0],
       ["a;\n\n  \nb;\n", 2],
@@ -51,7 +51,7 @@ describe("code size gate candidate oracles", () => {
     }
   });
 
-  it.fails("CANDIDATE-U-CODESIZE-002: classifies normalized paths", () => {
+  it.fails("U-CODESIZE-002: classifies normalized paths", () => {
     const expected: Array<[string, "src" | "tests" | null]> = [
       ["src/x.ts", "src"],
       ["src/a/b.tsx", "src"],
@@ -71,7 +71,7 @@ describe("code size gate candidate oracles", () => {
     }
   });
 
-  it.fails("CANDIDATE-U-CODESIZE-003: measures every function line count and the per-file excess", () => {
+  it.fails("U-CODESIZE-003: measures every function line count and the per-file excess", () => {
     const blockWithNoise = `function f() {\n${body(130)}\n  \n\n\n\n${"// c\n".repeat(5)}}\n`;
     const methodClass = `class C {\n  m() {\n${body(125)}  }\n}\n`;
     const arrowBlock = `const f = () => {\n${body(120)}};\n`;
@@ -99,7 +99,7 @@ describe("code size gate candidate oracles", () => {
     expect.soft(inTests.overFunctions).toEqual([]);
   });
 
-  it.fails("CANDIDATE-U-CODESIZE-004: enforces file line limits at the boundary", () => {
+  it.fails("U-CODESIZE-004: enforces file line limits at the boundary", () => {
     for (const path of ["src/x.ts", "tests/x.test.ts"]) {
       expect.soft(analyze([source(path, lines(500))]).findings, `${path} 500`).toHaveLength(0);
       const over = analyze([source(path, lines(501))]);
@@ -110,7 +110,7 @@ describe("code size gate candidate oracles", () => {
     }
   });
 
-  it.fails("CANDIDATE-U-CODESIZE-005: applies the function limit to src only", () => {
+  it.fails("U-CODESIZE-005: applies the function limit to src only", () => {
     expect.soft(analyze([source("src/x.ts", fn("f", 120))]).findings).toHaveLength(0);
     const over = analyze([source("src/x.ts", fn("f", 121))]);
     expect.soft(reasons(over, "code-size-required")).toContain("new-file-over-limit");
@@ -118,7 +118,7 @@ describe("code size gate candidate oracles", () => {
     expect.soft(analyze([source("tests/x.test.ts", callback)]).findings).toHaveLength(0);
   });
 
-  it.fails("CANDIDATE-U-CODESIZE-006: lets baseline rows cap growth and requires shrink updates", () => {
+  it.fails("U-CODESIZE-006: lets baseline rows cap growth and requires shrink updates", () => {
     const baseline = { "src/big.ts": row(1300) };
     const run = (file: CodeSizeSource) => analyze([file], baseline);
     expect.soft(run(codeFile("src/big.ts", 1300)).findings).toHaveLength(0);
@@ -136,7 +136,7 @@ describe("code size gate candidate oracles", () => {
     );
   });
 
-  it.fails("CANDIDATE-U-CODESIZE-007: keeps function-only baseline rows from freezing the file size", () => {
+  it.fails("U-CODESIZE-007: keeps function-only baseline rows from freezing the file size", () => {
     const limit = CODE_SIZE_LIMITS.src.lines;
     const baseline = { "src/mid.ts": row(null, 30) };
     const run = (file: CodeSizeSource) => analyze([file], baseline);
@@ -155,14 +155,14 @@ describe("code size gate candidate oracles", () => {
     );
   });
 
-  it.fails("CANDIDATE-U-CODESIZE-008: rejects a baseline row whose file is gone and keeps evaluating", () => {
+  it.fails("U-CODESIZE-008: rejects a baseline row whose file is gone and keeps evaluating", () => {
     const result = analyze([codeFile("src/other.ts", 501)], { "src/gone.ts": row(900) });
     expect.soft(reasons(result, "code-size-stale-baseline")).toContain("missing-file");
     expect.soft(reasons(result, "code-size-required")).toContain("new-file-over-limit");
     expect.soft(result.ok).toBe(false);
   });
 
-  it.fails("CANDIDATE-U-CODESIZE-009: forbids baseline growth but allows function excess moves", () => {
+  it.fails("U-CODESIZE-009: forbids baseline growth but allows function excess moves", () => {
     const grown = (result: CodeSizeResult) => reasons(result, "code-size-baseline-grown");
     const a = (lineCount: number, excess = 0) => codeFile("src/a.ts", lineCount, excess);
     const b = (excess: number) => codeFile("src/b.ts", 300, excess);
@@ -214,7 +214,7 @@ describe("code size gate candidate oracles", () => {
       .toHaveLength(0);
   });
 
-  it.fails("CANDIDATE-U-CODESIZE-010: carries rows over same-class renames and rejects class changes", () => {
+  it.fails("U-CODESIZE-010: carries rows over same-class renames and rejects class changes", () => {
     const previous = { "src/big.ts": row(1300) };
     const rename = (to: string): CodeRename[] => [{ from: "src/big.ts", to }];
     const moved = analyze(
@@ -257,7 +257,7 @@ describe("code size gate candidate oracles", () => {
     expect.soft(imported.findings).toHaveLength(0);
   });
 
-  it.fails("CANDIDATE-U-CODESIZE-011: checks an initial baseline against the merge-base measurement", () => {
+  it.fails("U-CODESIZE-011: checks an initial baseline against the merge-base measurement", () => {
     const initial = (
       sources: CodeSizeSource[],
       baseline: CodeSizeBaseline,
@@ -327,7 +327,7 @@ describe("code size gate candidate oracles", () => {
     expect(unreadable.ok).toBe(false);
   });
 
-  it.fails("CANDIDATE-U-CODESIZE-013: treats unreadable input as a failure and stays pure", () => {
+  it.fails("U-CODESIZE-013: treats unreadable input as a failure and stays pure", () => {
     const empty = analyze([]);
     expect.soft(kindsOf(empty)).toContain("code-size-input-unreadable");
     expect.soft(empty.ok).toBe(false);
@@ -359,7 +359,7 @@ describe("code size gate candidate oracles", () => {
     expect.soft(mixed.summary).toEqual({ checked: 1, over: 0, stale: 0, baseline: 0 });
   });
 
-  it.fails("CANDIDATE-U-CODESIZE-014: parses valid baselines and rejects broken ones", () => {
+  it.fails("U-CODESIZE-014: parses valid baselines and rejects broken ones", () => {
     const valid = JSON.stringify({
       "src/a.ts": { lines: 900, functionExcess: null },
       "src/b.ts": { lines: null, functionExcess: 30 },
