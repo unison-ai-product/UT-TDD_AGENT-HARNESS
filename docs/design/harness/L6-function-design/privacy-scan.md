@@ -168,7 +168,7 @@ finding ごとに 1 行 `<location>:<line>:<kind>[:<reason>]` を出し、末尾
 
 - Pre: 入力は mode、走査する単位の列、binary として飛ばした数、`pack` のときは denylist の状態、`tree` のときは現在の baseline と比較元。読み取りだけを行い、ファイルを書かない。
 - Post: `ok` は §7 の finding が 0 件のときだけ true。finding は入力の順序に依存せず一意に並ぶ。同じ入力から同じ出力を返す (純粋性)。
-- Invariant (denylist の中身を出さない): denylist のファイルの中身 (entry、コメント行を含む) と、一致した文字列・行の内容・当たりを含む path の平文は、出力 (メッセージ、finding、Pack の JSON、例外のメッセージ、distribution の evidence) に現れない。repo の中のファイル・`.ut-tdd/`・harness.db にも現れない。denylist は `~/.ut-tdd/privacy-denylist.txt` からだけ読み、repo の中の path を denylist として使わない。
+- Invariant (denylist の中身を出さない): denylist のファイルの中身 (entry、コメント行を含む) と、一致した文字列・行の内容・当たりを含む path の平文は、出力 (メッセージ、finding、Pack の JSON、例外のメッセージ、distribution の evidence) に現れない。検査が新しく書く、または変えるファイル (repo の中、`.ut-tdd/`、harness.db を含む) にも現れない。入力にもとからある当たりは、検査が書き換えずにそのまま残す (止めて直させるのが検査の役目であり、入力の当たりはこの不変条件の違反ではない)。denylist は `~/.ut-tdd/privacy-denylist.txt` からだけ読み、repo の中の path を denylist として使わない。
 - Invariant (fail-safe): 読めない入力 (git、artifact、baseline、比較元、denylist のファイル) を、当たりなし・空・比較なしと取り違えない。`pack` は denylist が `provided` でなければ `ok=true` を返さない。baseline は `tree` の email にしか効かず、縮小しかできない。`diff` は merge commit を含む範囲内の全 commit の追加行を読む。
 - Invariant (判定): email の除外は一致したアドレスごとに判定し、行の語で行ごと許さない。denylist には除外が無い。判定は repo の中身とローカルの denylist のファイルだけで決まり、GitHub 側の設定に依存しない。
 
