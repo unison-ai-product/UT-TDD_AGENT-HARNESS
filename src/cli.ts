@@ -94,6 +94,7 @@ import {
 } from "./lint/bun-final-retirement.ts";
 import {
   type NodeBanF0cAggregateBinding,
+  type NodeBanTestProbeOutcome,
   nodeBanAuditMessages,
   runNodeBanAudit,
 } from "./lint/bun-permanent-ban.ts";
@@ -3526,6 +3527,28 @@ team
 
 const audit = program.command("audit").description("read-only repository audits");
 
+function spawnNodeTestProbe(
+  invocation: ReturnType<typeof createNodeInvocation>,
+  repoRoot: string,
+  input?: string,
+): NodeBanTestProbeOutcome {
+  const child = spawnSync(invocation.command, invocation.args, {
+    cwd: repoRoot,
+    ...invocation.options,
+    ...(input ? { input } : {}),
+    encoding: "utf8",
+    stdio: "pipe",
+    timeout: 30_000,
+  });
+  return {
+    stdout: child.stdout ?? "",
+    stderr: child.stderr ?? "",
+    status: child.status,
+    spawnError: child.error?.message ?? null,
+    timedOut: (child.error as NodeJS.ErrnoException | undefined)?.code === "ETIMEDOUT",
+  };
+}
+
 audit
   .command("node-invocation-probe")
   .description("audit the production Node child-invocation contract")
@@ -3580,15 +3603,7 @@ audit
           subjectRevision,
         );
         const observer = new NodeOnlyProcessObserver();
-        let testProbeOutcome:
-          | {
-              stdout: string;
-              stderr: string;
-              status: number | null;
-              spawnError: string | null;
-              timedOut: boolean;
-            }
-          | undefined;
+        let testProbeOutcome: NodeBanTestProbeOutcome | undefined;
         const runNodeScope = (
           scope: "status" | "doctor" | "test" | "hook",
           args: readonly string[],
@@ -3599,22 +3614,7 @@ audit
             invocation,
             () => {
               if (scope === "test") {
-                const child = spawnSync(invocation.command, invocation.args, {
-                  cwd: repoRoot,
-                  ...invocation.options,
-                  ...(input ? { input } : {}),
-                  encoding: "utf8",
-                  stdio: "pipe",
-                  timeout: 30_000,
-                });
-                testProbeOutcome = {
-                  stdout: child.stdout ?? "",
-                  stderr: child.stderr ?? "",
-                  status: child.status,
-                  spawnError: child.error?.message ?? null,
-                  timedOut:
-                    (child.error as NodeJS.ErrnoException | undefined)?.code === "ETIMEDOUT",
-                };
+                testProbeOutcome = spawnNodeTestProbe(invocation, repoRoot, input);
                 return;
               }
               try {

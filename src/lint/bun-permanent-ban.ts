@@ -541,20 +541,33 @@ function validateObservationCoverage(input: NodeBanAuditInput): void {
     throw new NodeBanAuditError("q0-runtime-observer-scope-mismatch");
 }
 
-function validateTestProbeOutcome(input: NodeBanAuditInput): void {
-  const outcome = input.testProbeOutcome;
+function hasValidTestProbeOutcomeShape(
+  outcome: NodeBanTestProbeOutcome | undefined,
+): outcome is NodeBanTestProbeOutcome {
   if (
     !outcome ||
     typeof outcome.stdout !== "string" ||
     typeof outcome.stderr !== "string" ||
     (outcome.status !== null && typeof outcome.status !== "number") ||
     (outcome.spawnError !== null && typeof outcome.spawnError !== "string") ||
-    typeof outcome.timedOut !== "boolean" ||
-    outcome.status !== 0 ||
-    outcome.spawnError !== null ||
-    outcome.timedOut ||
-    outcome.stdout.length === 0
+    typeof outcome.timedOut !== "boolean"
   )
+    return false;
+  return true;
+}
+
+function isSuccessfulTestProbeOutcome(outcome: NodeBanTestProbeOutcome): boolean {
+  return (
+    outcome.status === 0 &&
+    outcome.spawnError === null &&
+    !outcome.timedOut &&
+    outcome.stdout.length > 0
+  );
+}
+
+function validateTestProbeOutcome(input: NodeBanAuditInput): void {
+  const outcome = input.testProbeOutcome;
+  if (!hasValidTestProbeOutcomeShape(outcome) || !isSuccessfulTestProbeOutcome(outcome))
     throw new NodeBanAuditError("q0-node-invocation-probe-outcome-invalid");
 
   let parsed: unknown;
