@@ -138,6 +138,11 @@ const exceeds = (value: Measured, limit: Measured): boolean =>
     limit.responsibilities !== null &&
     value.responsibilities > limit.responsibilities);
 
+/** baseline の記録値が比較元より緩い。増えた値に加え、数値の責務を null に落とすことも緩和とみなす (§5)。 */
+const loosens = (recorded: Measured, bound: Measured): boolean =>
+  exceeds(recorded, bound) ||
+  (bound.responsibilities !== null && recorded.responsibilities === null);
+
 const isSmaller = (value: Measured, limit: Measured): boolean =>
   value.lines < limit.lines ||
   (value.responsibilities !== null &&
@@ -238,7 +243,7 @@ function baselineGrowthFindings(
   const findings: DocSplitFinding[] = [];
   for (const [path, recorded] of Object.entries(input.baseline)) {
     if (Object.hasOwn(previous, path)) {
-      if (exceeds(recorded, previous[path])) {
+      if (loosens(recorded, previous[path])) {
         findings.push(docSplitFinding(path, "doc-split-baseline-grown", "grown"));
       }
       continue;
@@ -249,7 +254,7 @@ function baselineGrowthFindings(
         normalizePath(rename.to) === path &&
         Object.hasOwn(previous, from) &&
         classifyDoc(from) === classifyDoc(path) &&
-        !exceeds(recorded, previous[from])
+        !loosens(recorded, previous[from])
       );
     });
     if (!carried) findings.push(docSplitFinding(path, "doc-split-baseline-grown", "added"));
@@ -270,7 +275,7 @@ function initialBaselineFindings(
       findings.push(
         docSplitFinding(path, "doc-split-initial-baseline-new-entry", "not-over-limit-at-base"),
       );
-    } else if (exceeds(recorded, base)) {
+    } else if (loosens(recorded, base)) {
       findings.push(docSplitFinding(path, "doc-split-initial-baseline-grown", "grown-since-base"));
     }
   }
@@ -327,7 +332,12 @@ export function parseDocSplitBaseline(sourceText: string): DocSplitBaseline | nu
   for (const [path, entry] of Object.entries(parsed)) {
     if (typeof entry !== "object" || entry === null) return null;
     const { lines, responsibilities } = entry as Record<string, unknown>;
-    if (!isCount(lines) || !(responsibilities === null || isCount(responsibilities))) return null;
+    // 責務の数を null にできるのは layer-doc だけ (§5)。topic 文書は非負整数に限る。
+    const docClass = classifyDoc(path);
+    const topic = docClass === "l6-topic" || docClass === "l7-topic";
+    const validResponsibilities =
+      isCount(responsibilities) || (responsibilities === null && !topic);
+    if (!isCount(lines) || !validResponsibilities) return null;
     baseline[path] = { lines, responsibilities };
   }
   return baseline;

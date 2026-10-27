@@ -329,6 +329,36 @@ describe("doc split gate candidate oracles", () => {
     expect(parseDocSplitBaseline("{")).toBeNull();
   });
 
+  it("U-DOCSPLIT-019: rejects null responsibilities for topic baseline entries", () => {
+    for (const path of [l6("x"), l7("x")]) {
+      expect(
+        parseDocSplitBaseline(JSON.stringify({ [path]: { lines: 500, responsibilities: null } })),
+      ).toBeNull();
+    }
+    const layer = { "docs/design/harness/L5/x.md": { lines: 1201, responsibilities: null } };
+    expect(parseDocSplitBaseline(JSON.stringify(layer))).toEqual(layer);
+  });
+
+  it("U-DOCSPLIT-013: rejects loosening topic baseline responsibilities to null", () => {
+    const path = l6("big");
+    const previous = { [path]: { lines: 500, responsibilities: 20 } };
+    const loosened = { [path]: { lines: 500, responsibilities: null } };
+    const grown = analyze([source(path, documentText(500, 30))], loosened, previous);
+    expect(grown.ok).toBe(false);
+    expect(reasons(grown, "doc-split-baseline-grown")).not.toHaveLength(0);
+    const newPath = `${L6}sub/big.md`;
+    const carried = analyze(
+      [source(newPath, documentText(500, 20))],
+      { [newPath]: { lines: 500, responsibilities: null } },
+      previous,
+      null,
+      [{ from: path, to: newPath }],
+    );
+    expect(reasons(carried, "doc-split-baseline-grown")).not.toHaveLength(0);
+    const initial = analyze([source(path, documentText(500, 20))], loosened, null, previous);
+    expect(reasons(initial, "doc-split-initial-baseline-grown")).not.toHaveLength(0);
+  });
+
   it("U-DOCSPLIT-022: does not allow formatting to hide responsibilities", () => {
     for (const text of [headings(17, 3), headings(17, 4), `${headings(9, 2)}\n${headings(8, 3)}`]) {
       const result = analyze([source(l6("format"), text)]);
