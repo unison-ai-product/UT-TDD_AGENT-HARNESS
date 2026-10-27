@@ -1,5 +1,5 @@
 import { execFileSync, spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -14,6 +14,7 @@ import {
   REQUIRED_AGGREGATE_COMMAND,
   resolveGithubCiRuntimeProfile,
 } from "../src/lint/github-ci-policy.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 
 const AGGREGATE_ALWAYS = "$" + "{{ always() }}";
 // PLAN-L7-455 (troubleshoot): doc-only lane 分岐の canonical if 条件式。
@@ -458,7 +459,7 @@ describe("github-ci-policy lint", () => {
       expect(result.ok).toBe(true);
       expect(result.violations).toEqual([]);
     } finally {
-      rmSync(repo, { recursive: true, force: true });
+      removeTestTree(repo);
     }
   });
 
@@ -493,7 +494,7 @@ describe("github-ci-policy lint", () => {
       expect(result.ok).toBe(true);
       expect(result.violations).toEqual([]);
     } finally {
-      rmSync(repo, { recursive: true, force: true });
+      removeTestTree(repo);
     }
   });
 
@@ -846,7 +847,7 @@ describe("github-ci-policy lint", () => {
       );
       expect(resolveGithubCiRuntimeProfile(repo)).toBe("pack");
     } finally {
-      rmSync(repo, { recursive: true, force: true });
+      removeTestTree(repo);
     }
   });
 
@@ -878,7 +879,7 @@ describe("github-ci-policy lint", () => {
         detail: "jobs.harness-check-linux",
       });
     } finally {
-      rmSync(repo, { recursive: true, force: true });
+      removeTestTree(repo);
     }
   });
 

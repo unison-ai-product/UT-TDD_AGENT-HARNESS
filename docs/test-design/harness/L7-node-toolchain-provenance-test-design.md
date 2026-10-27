@@ -99,17 +99,18 @@ runtime verifier、Bun 経路、CI workflow、consumer package、既存 build sc
 契約は `docs/design/harness/L5-detailed-design/internal-processing.md` の
 §Node toolchain authority。`analyzeToolchainPin` の `node-version-mismatch` /
 `npm-version-mismatch` は `engines` の脚を外し、`engines` には「有効な semver 範囲であり、
-審査済みの pin を含む」ことだけを要求する。候補であり、正式 `U-*` への昇格は後続実装が
-Red を記録した後に行う。pin は `.node-version` の版（Node）と `packageManager` の版
+審査済みの pin を含む」ことだけを要求する。以下の8件は #1416 の Red PR で実測済みであり、
+この変更で正式 oracle `U-TOOLPIN-001..008` へ昇格する。Red PR で実測した `it.fails` / 通常 `it`
+の区別は対応するテスト引用で維持する。pin は `.node-version` の版（Node）と `packageManager` の版
 （npm）とし、`NODE_TOOLCHAIN_POLICY` の版との完全一致は従来どおり残す。
 
 | ID | Red mutation | Green oracle |
 |---|---|---|
-| `CANDIDATE-U-TOOLPIN-001` | `.node-version` を `NODE_TOOLCHAIN_POLICY.nodeVersion` と異なる版へ変更 | `node-version-mismatch` を報告する（従来どおり） |
-| `CANDIDATE-U-TOOLPIN-002` | `engines.node` を pin を含む範囲（例: pin が `24.22.1` のとき `>=24.22.1 <25`）にする | `node-version-mismatch` を報告しない（従来は完全一致でないため不一致だった） |
-| `CANDIDATE-U-TOOLPIN-003` | `engines.node` を pin を含まない有効な範囲（例: `>=24.23.0 <25`、`<24`）にする | `node-version-mismatch` を報告する |
-| `CANDIDATE-U-TOOLPIN-004` | `engines.node` を有効な semver 範囲でない文字列（例: `latest`、空文字、`24.x.y.z`）にする | `node-version-mismatch` を報告する。例外で落ちず finding として返る |
-| `CANDIDATE-U-TOOLPIN-005` | `packageManager` の npm 版を `NODE_TOOLCHAIN_POLICY.npmVersion` と異なる版へ変更 | `npm-version-mismatch` を報告する（従来どおり） |
-| `CANDIDATE-U-TOOLPIN-006` | `engines.npm` を pin（`packageManager` の npm 版）を含む範囲（例: `>=11.19.1 <12`）にする | `npm-version-mismatch` を報告しない |
-| `CANDIDATE-U-TOOLPIN-007` | `engines.npm` を pin を含まない有効な範囲（例: `>=11.20.0 <12`）、または有効な semver 範囲でない文字列にする | `npm-version-mismatch` を報告する |
-| `CANDIDATE-U-TOOLPIN-008` | `packageManager` を integrity 欠落（`npm@<版>`）または同版で別 digest にする | `npm-package-manager-integrity-missing` / `npm-package-manager-integrity-mismatch` を従来どおり報告する。本変更で `npm-package-manager-*` rule は変わらない |
+| `U-TOOLPIN-001` | `.node-version` を `NODE_TOOLCHAIN_POLICY.nodeVersion` と異なる版へ変更 | `node-version-mismatch` を報告する（従来どおり） |
+| `U-TOOLPIN-002` | `engines.node` を pin を含む範囲（例: pin が `24.22.1` のとき `>=24.22.1 <25`）にする | `node-version-mismatch` を報告しない（従来は完全一致でないため不一致だった） |
+| `U-TOOLPIN-003` | `engines.node` を pin を含まない有効な範囲（例: `>=24.23.0 <25`、`<24`）にする | `node-version-mismatch` を報告する |
+| `U-TOOLPIN-004` | `engines.node` を有効な semver 範囲でない文字列（例: `latest`、空文字、`24.x.y.z`）にする | `node-version-mismatch` を報告する。例外で落ちず finding として返る |
+| `U-TOOLPIN-005` | `packageManager` の npm 版を `NODE_TOOLCHAIN_POLICY.npmVersion` と異なる版へ変更 | `npm-version-mismatch` を報告する（従来どおり） |
+| `U-TOOLPIN-006` | `engines.npm` を pin（`packageManager` の npm 版）を含む範囲（例: `>=11.19.1 <12`）にする | `npm-version-mismatch` を報告しない |
+| `U-TOOLPIN-007` | `engines.npm` を pin を含まない有効な範囲（例: `>=11.20.0 <12`）、または有効な semver 範囲でない文字列にする | `npm-version-mismatch` を報告する |
+| `U-TOOLPIN-008` | `packageManager` を integrity 欠落（`npm@<版>`）または同版で別 digest にする | `npm-package-manager-integrity-missing` / `npm-package-manager-integrity-mismatch` を従来どおり報告する。本変更で `npm-package-manager-*` rule は変わらない |

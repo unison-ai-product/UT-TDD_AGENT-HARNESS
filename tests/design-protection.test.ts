@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -10,6 +10,7 @@ import {
   type GitDiffAdapterErrorCode,
 } from "../src/plan-admission/git-diff-adapter.ts";
 import { gitTextRaw as git } from "./support/git.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 
 /* Contract-first Red. Module absence is not individual guard mutation evidence. */
 
@@ -154,7 +155,7 @@ function commit(root: string, message: string): string {
 
 function removeRepo(root: string): void {
   // `root` is always the unique mkdtempSync path created by initRepo or the test.
-  rmSync(root, { recursive: true, force: true });
+  removeTestTree(root);
 }
 
 function runCli(root: string, args: string[], env: NodeJS.ProcessEnv = process.env) {
