@@ -69,7 +69,7 @@ describe("db projection ingestion detector", () => {
     }
   });
 
-  it("CANDIDATE-U-DBPROJ-ING-003: explicit PLAN input generates schedule/readiness rows", () => {
+  it("U-DBPROJ-ING-003: explicit PLAN input generates schedule/readiness rows", () => {
     const repoRoot = mkdtempSync(join(tmpdir(), "ut-tdd-db-projection-ingestion-plan-"));
     let db: ReturnType<typeof openHarnessDb> | undefined;
 
@@ -172,7 +172,7 @@ describe("db projection ingestion detector", () => {
     );
   });
 
-  it.fails("CANDIDATE-U-DBPROJ-ING-001: permits both PLAN-derived tables to be empty", () => {
+  it.fails("U-DBPROJ-ING-001: permits both PLAN-derived tables to be empty", () => {
     const result = analyzeDbProjectionIngestion({
       ...populatedAutomaticProjectionCounts,
       schedule_entries: 0,
@@ -196,7 +196,7 @@ describe("db projection ingestion detector", () => {
     );
   });
 
-  it.fails("CANDIDATE-U-DBPROJ-ING-002: rejects another empty automatic table", () => {
+  it.fails("U-DBPROJ-ING-002: rejects another empty automatic table", () => {
     const result = analyzeDbProjectionIngestion({
       ...populatedAutomaticProjectionCounts,
       schedule_entries: 0,
