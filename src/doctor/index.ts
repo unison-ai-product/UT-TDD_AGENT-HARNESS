@@ -51,10 +51,6 @@ export {
   checkVerificationProfile,
 } from "./lint-gates.ts";
 export {
-  checkBackfill,
-  checkBackfillResult,
-  checkForwardConvergence,
-  checkForwardConvergenceAudit,
   checkGuardrailInvariants,
   checkPairFreeze,
   checkPlanBodySubstance,
@@ -62,10 +58,8 @@ export {
   checkPlanGovernance,
   checkPlanReferenceFreshnessAdvisory,
   checkPlanSchedule,
-  checkPlanSupersession,
   checkPropagation,
   checkReviewEvidence,
-  checkScrumReverse,
 } from "./plan-governance.ts";
 export {
   checkCycleP4Verification,

@@ -34,19 +34,14 @@ import {
   checkVerificationProfile,
 } from "./lint-gates.ts";
 import {
-  checkBackfillResult,
-  checkForwardConvergence,
-  checkForwardConvergenceAudit,
   checkGuardrailInvariants,
   checkPairFreeze,
   checkPlanBodySubstance,
   checkPlanCompletionDrift,
   checkPlanGovernance,
   checkPlanSchedule,
-  checkPlanSupersession,
   checkPropagation,
   checkReviewEvidence,
-  checkScrumReverse,
   checkTestDesignNaming,
 } from "./plan-governance.ts";
 import {
@@ -155,9 +150,6 @@ export function buildDoctorCheckDefinitionGroups(
     {
       id: "plan-governance",
       definitions: [
-        full("backfill", () => checkBackfillResult(deps.repoRoot)),
-        full("scrum-reverse", () => checkScrumReverse(deps.repoRoot)),
-        full("plan-supersession", () => checkPlanSupersession(deps.repoRoot)),
         full("plan-body-substance", () => checkPlanBodySubstance(deps.repoRoot)),
         full("plan-completion-drift", () => checkPlanCompletionDrift(deps.repoRoot)),
         full("propagation", () => checkPropagation(deps.repoRoot)),
@@ -309,8 +301,6 @@ export function buildDoctorCheckDefinitionGroups(
         full("advisory-strict-gate-aging", () =>
           checkAdvisoryGateAging({ repoRoot: deps.repoRoot }),
         ),
-        full("forward-convergence", () => checkForwardConvergence(deps.repoRoot)),
-        full("forward-convergence-audit", () => checkForwardConvergenceAudit(deps.repoRoot)),
       ],
     },
   ];
