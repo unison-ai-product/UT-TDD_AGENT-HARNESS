@@ -92,10 +92,11 @@ export function loadImplPlanTraceInput(repoRoot: string): ImplPlanTraceInput {
 }
 
 export function implPlanTraceMessages(r: ImplPlanTraceResult): string[] {
+  // メッセージ形式は既存の G7 公開出力契約を維持する。入力と所有判定は設計文書だけを使う。
   if (r.orphans.length === 0) {
-    return ["impl-plan-trace — OK (src 全件 design module/path に被覆、NEW orphan 0)"];
+    return ["impl-plan-trace — OK (src 全件 PLAN generates / baseline に被覆、NEW orphan 0)"];
   }
   return [
-    `impl-plan-trace — ⚠ design module/path trace 無き src ${r.orphans.length} 件 (trace/baseline 不在): ${r.orphans.join(", ")}`,
+    `impl-plan-trace — ⚠ PLAN / design source trace 無き src ${r.orphans.length} 件 (trace/baseline 不在): ${r.orphans.join(", ")}`,
   ];
 }
