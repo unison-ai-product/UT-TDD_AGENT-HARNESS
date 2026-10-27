@@ -90,6 +90,8 @@ describe("loadLintWiringInput (live repo regression fence)", () => {
     // #1307 doc-split stubs stay deferred until #1309 Green wires them; DEFERRED_LINTS records why.
     expect(r.deferred).toEqual([
       "backfill-pairing",
+      "code-size",
+      "code-size-inputs",
       "consumer-trace",
       "doc-split",
       "doc-split-inputs",
