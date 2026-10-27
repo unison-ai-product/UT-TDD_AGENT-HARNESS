@@ -99,6 +99,7 @@ import {
   runNodeBanAudit,
 } from "./lint/bun-permanent-ban.ts";
 import { loadChangedFiles, loadStagedFiles } from "./lint/change-impact.ts";
+import { checkDocSplit } from "./lint/doc-split-inputs.ts";
 import {
   applyDigestAnchorCandidatesToContent,
   nodeHistoryScanDeps,
@@ -2391,6 +2392,16 @@ guardrail
     } finally {
       db.close();
     }
+  });
+
+const docSplit = program.command("doc-split").description("design document split gate (#1032)");
+docSplit
+  .command("check")
+  .description("measure design / test-design documents against the doc-split limits and baseline")
+  .action(() => {
+    const result = checkDocSplit(process.cwd());
+    for (const message of result.messages) process.stdout.write(`${message}\n`);
+    process.exitCode = result.ok ? 0 : 1;
   });
 
 const issue = program.command("issue").description("external issue dry-run queue");

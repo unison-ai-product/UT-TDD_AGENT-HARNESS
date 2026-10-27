@@ -222,7 +222,7 @@ describe("doc-split live repository and CLI integration candidates", () => {
     expect(checkDocSplit(authorRoot).ok).toBe(true);
   });
 
-  it.fails("U-DOCSPLIT-020: loads tracked design and test-design documents", () => {
+  it("U-DOCSPLIT-020: loads tracked design and test-design documents", () => {
     const loaded = loadDocSplitSources(authorRoot);
     expect(loaded.sources.length).toBeGreaterThan(0);
   });
@@ -231,7 +231,7 @@ describe("doc-split live repository and CLI integration candidates", () => {
     expect(loadDocSplitSources(authorRoot).unreadable).toEqual([]);
   });
 
-  it.fails("U-DOCSPLIT-020: reports the live checked/over/stale/baseline summary", () => {
+  it("U-DOCSPLIT-020: reports the live checked/over/stale/baseline summary", () => {
     const result = checkDocSplit(authorRoot);
     const expectedChecked =
       countMarkdownFiles(join(authorRoot, "docs/design/harness")) +
@@ -242,13 +242,13 @@ describe("doc-split live repository and CLI integration candidates", () => {
     );
   });
 
-  it.fails("U-DOCSPLIT-020: has a parseable live doc-split baseline", () => {
+  it("U-DOCSPLIT-020: has a parseable live doc-split baseline", () => {
     const baselinePath = join(authorRoot, BASELINE_PATH);
     expect(existsSync(baselinePath)).toBe(true);
     expect(liveBaseline).not.toBeNull();
   });
 
-  it.fails("U-DOCSPLIT-020: records the measured values for every live baseline document", () => {
+  it("U-DOCSPLIT-020: records the measured values for every live baseline document", () => {
     const baseline = liveBaselineOrFail();
     for (const [path, expected] of Object.entries(baseline)) {
       const measured = measureDoc({ path, text: readFileSync(join(authorRoot, path), "utf8") });
@@ -259,7 +259,7 @@ describe("doc-split live repository and CLI integration candidates", () => {
     }
   });
 
-  it.fails("U-DOCSPLIT-020: lists only live documents above their class limit", () => {
+  it("U-DOCSPLIT-020: lists only live documents above their class limit", () => {
     const baseline = liveBaselineOrFail();
     expect(Object.keys(baseline).length).toBeGreaterThan(0);
     const overLimit = Object.entries(baseline).every(([path, expected]) => {
@@ -307,38 +307,38 @@ describe("doc-split live repository and CLI integration candidates", () => {
     expect(result.messages.join("\n")).toContain("doc-split-required:exceeds-baseline");
   });
 
-  it.fails("U-DOCSPLIT-020: rejects a grown initial baseline entry", () => {
+  it("U-DOCSPLIT-020: rejects a grown initial baseline entry", () => {
     expect(checkDocSplit(initialGrowthRoot).ok).toBe(false);
   });
 
-  it.fails("U-DOCSPLIT-020: reports initial-baseline-grown for the grown entry", () => {
+  it("U-DOCSPLIT-020: reports initial-baseline-grown for the grown entry", () => {
     expect(checkDocSplit(initialGrowthRoot).messages.join("\n")).toContain(
       "doc-split-initial-baseline-grown",
     );
   });
 
-  it.fails("U-DOCSPLIT-020: rejects a new initial baseline entry", () => {
+  it("U-DOCSPLIT-020: rejects a new initial baseline entry", () => {
     expect(checkDocSplit(initialNewEntryRoot).ok).toBe(false);
   });
 
-  it.fails("U-DOCSPLIT-020: reports initial-baseline-new-entry for a new document", () => {
+  it("U-DOCSPLIT-020: reports initial-baseline-new-entry for a new document", () => {
     expect(checkDocSplit(initialNewEntryRoot).messages.join("\n")).toContain(
       "doc-split-initial-baseline-new-entry",
     );
   });
 
-  it.fails("U-DOCSPLIT-021: registers doc-split in the full doctor hard-gate definitions", () => {
+  it("U-DOCSPLIT-021: registers doc-split in the full doctor hard-gate definitions", () => {
     const definitions = buildFullDoctorCheckDefinitions(nodeDoctorDeps(headSnapshotRoot()));
     const definition = definitions.find((item) => item.id === "doc-split");
     expect(definition).toBeDefined();
     expect(definition?.profiles).toContain("full");
   });
 
-  it.fails("U-DOCSPLIT-021: the green CLI worktree exits successfully", () => {
+  it("U-DOCSPLIT-021: the green CLI worktree exits successfully", () => {
     expect(createViolatingCliResult(cliGreenRoot).status).toBe(0);
   });
 
-  it.fails("U-DOCSPLIT-021: the green CLI worktree prints the check summary", () => {
+  it("U-DOCSPLIT-021: the green CLI worktree prints the check summary", () => {
     expect(createViolatingCliResult(cliGreenRoot).stdout).toContain("checked=");
   });
 
@@ -347,7 +347,7 @@ describe("doc-split live repository and CLI integration candidates", () => {
     expect(createViolatingCliResult(cliViolationRoot).status).toBe(1);
   });
 
-  it.fails("U-DOCSPLIT-021: the violating CLI worktree prints the baseline finding", () => {
+  it("U-DOCSPLIT-021: the violating CLI worktree prints the baseline finding", () => {
     expect(createViolatingCliResult(cliViolationRoot).stdout).toContain(
       "doc-split-required:exceeds-baseline",
     );

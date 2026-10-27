@@ -115,6 +115,7 @@ export const FULL_DOCTOR_OUTPUT_IDS = [
   "secret-scan",
   "feedback-log",
   "l6-completion",
+  "doc-split",
   "l7-completion",
   "review-evidence",
   "guardrail-invariants",
