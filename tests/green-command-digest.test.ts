@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -16,6 +16,7 @@ import {
   toGitPath,
 } from "../src/lint/green-command-digest.ts";
 import type { GreenCommandEvidence, ParsedReviewPlan } from "../src/lint/review-evidence.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 
 function plan(
   planId: string,
@@ -399,7 +400,7 @@ describe("nodeHistoryScanDeps (git 履歴走査)", () => {
         realSha256Of("green-content"),
       );
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 });

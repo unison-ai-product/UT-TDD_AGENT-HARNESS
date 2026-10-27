@@ -1,8 +1,9 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { analyzeL6FrCoverage } from "../src/lint/l6-fr-coverage.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 
 const basePath = "docs/design/harness/L6-function-design/";
 const substance = [
@@ -35,7 +36,7 @@ function checkFixture(name: string, role: boolean, table: boolean) {
       repoRoot: root,
     });
   } finally {
-    rmSync(root, { recursive: true, force: true });
+    removeTestTree(root);
   }
 }
 
