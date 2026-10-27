@@ -25,6 +25,7 @@ import {
 import { resolvePlanRevisionIdentity } from "../src/state-db/github-review-lane-provenance.ts";
 import { openHarnessDb } from "../src/state-db/index.ts";
 import { migrate } from "../src/state-db/migration.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 
 class FakeGh implements GhCommandPort {
   readonly #payloads: unknown[];
@@ -217,7 +218,7 @@ describe("GitHub repository facts binding", () => {
       });
     } finally {
       db.close();
-      rmSync(repoRoot, { recursive: true, force: true });
+      removeTestTree(repoRoot);
     }
   });
 
@@ -289,7 +290,7 @@ describe("GitHub repository facts binding", () => {
       ]);
     } finally {
       db.close();
-      rmSync(repoRoot, { recursive: true, force: true });
+      removeTestTree(repoRoot);
     }
   });
 
@@ -343,7 +344,7 @@ describe("GitHub repository facts binding", () => {
       expect(accepted.tracedPullRequests).toBe(1);
     } finally {
       db.close();
-      rmSync(repoRoot, { recursive: true, force: true });
+      removeTestTree(repoRoot);
     }
   });
 
@@ -591,7 +592,7 @@ describe("GitHub repository facts binding", () => {
       });
     } finally {
       db.close();
-      rmSync(repoRoot, { recursive: true, force: true });
+      removeTestTree(repoRoot);
     }
   });
 
@@ -789,7 +790,7 @@ describe("GitHub repository facts binding", () => {
           ).toEqual([]);
       } finally {
         db.close();
-        rmSync(repoRoot, { recursive: true, force: true });
+        removeTestTree(repoRoot);
       }
     }
   });
@@ -971,7 +972,7 @@ describe("GitHub repository facts binding", () => {
       ).toEqual([{ binding_id: "foreign-branch" }]);
     } finally {
       db.close();
-      rmSync(repoRoot, { recursive: true, force: true });
+      removeTestTree(repoRoot);
     }
   });
 
@@ -1063,7 +1064,7 @@ describe("GitHub repository facts binding", () => {
       ).toEqual({ count: 0 });
     } finally {
       db.close();
-      rmSync(repoRoot, { recursive: true, force: true });
+      removeTestTree(repoRoot);
     }
   });
 
@@ -1115,7 +1116,7 @@ describe("GitHub repository facts binding", () => {
       expect(providerCalls).toBe(4);
     } finally {
       db.close();
-      rmSync(repoRoot, { recursive: true, force: true });
+      removeTestTree(repoRoot);
     }
   });
 
@@ -1233,7 +1234,7 @@ describe("GitHub repository facts binding", () => {
       });
     } finally {
       db.close();
-      rmSync(repoRoot, { recursive: true, force: true });
+      removeTestTree(repoRoot);
     }
   });
 });

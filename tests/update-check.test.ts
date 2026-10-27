@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { delimiter, join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -20,6 +20,7 @@ import {
   type UpdateCheckDeps,
   updateCheckDisabled,
 } from "../src/setup/update-check.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 
 const ROOT = "/harness";
 const EXECUTION_ROOT = process.env.UT_TDD_TEST_EXECUTION_ROOT;
@@ -500,7 +501,7 @@ describe("gitLsRemoteInvocation (PLAN-L7-462 step 2 .cmd shim 対応)", () => {
       expect(inner).toContain(" ls-remote --tags https://example.com/pack.git");
       expect(inner).not.toContain('"ls-remote"');
     } finally {
-      rmSync(tmp, { recursive: true, force: true });
+      removeTestTree(tmp);
     }
   });
 
@@ -514,7 +515,7 @@ describe("gitLsRemoteInvocation (PLAN-L7-462 step 2 .cmd shim 対応)", () => {
       expect(inv.args).toEqual(["ls-remote", "--tags", "https://x/y.git"]);
       expect(inv.windowsVerbatimArguments).toBeUndefined();
     } finally {
-      rmSync(tmp, { recursive: true, force: true });
+      removeTestTree(tmp);
     }
   });
 
@@ -528,7 +529,7 @@ describe("gitLsRemoteInvocation (PLAN-L7-462 step 2 .cmd shim 対応)", () => {
         args: ["ls-remote", "--tags", "https://x/%PATH%.git"],
       });
     } finally {
-      rmSync(tmp, { recursive: true, force: true });
+      removeTestTree(tmp);
     }
   });
 });
@@ -604,7 +605,7 @@ describe("status CLI wiring", () => {
       expect(logText).toContain(remote);
       expect(logText).not.toContain("origin");
     } finally {
-      rmSync(tmp, { recursive: true, force: true });
+      removeTestTree(tmp);
     }
   });
 });

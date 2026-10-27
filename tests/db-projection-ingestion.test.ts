@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -11,6 +11,7 @@ import {
 } from "../src/lint/db-projection-ingestion.ts";
 import { openHarnessDb } from "../src/state-db/index.ts";
 import { rebuildHarnessDb } from "../src/state-db/projection-writer.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 
 const populatedAutomaticProjectionCounts = {
   graph_nodes: 1,
@@ -102,7 +103,7 @@ describe("db projection ingestion detector", () => {
       expect(rebuilt.rowCounts.execution_readiness_projection).toBeGreaterThan(0);
     } finally {
       db?.close();
-      rmSync(repoRoot, { recursive: true, force: true });
+      removeTestTree(repoRoot);
     }
   });
 
@@ -155,7 +156,7 @@ describe("db projection ingestion detector", () => {
       } else {
         process.env.UT_TDD_CODEX_SESSIONS_DIR = previousCodex;
       }
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
