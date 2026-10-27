@@ -129,7 +129,7 @@ git ls-files src tests | grep -E '\.(ts|tsx|mts|cts)$' | grep -v '\.d\.ts$' | xa
 | Function | Signature | pre | post | invariant | oracle |
 |---|---|---|---|---|---|
 | `classifyCodeFile` | `classifyCodeFile(path: string) => CodeClass \| null` | path は repo 相対 | `"src"` / `"tests"` / `null` (§2) | path だけで決まる | `CANDIDATE-U-CODESIZE-002` |
-| `measureCodeFile` | `measureCodeFile(source: CodeSizeSource) => CodeMeasure` | `source.path` が対象 | `{ path, codeClass, lines, functionExcess, overFunctions, topLevel }` | 同じ文字列から同じ値 | `CANDIDATE-U-CODESIZE-001`, `CANDIDATE-U-CODESIZE-003` |
+| `measureCodeFile` | `measureCodeFile(source: CodeSizeSource) => CodeMeasure` | `source.path` が対象 | `{ path, codeClass, lines, functionExcess, functions, overFunctions, topLevel }` | 同じ文字列から同じ値 | `CANDIDATE-U-CODESIZE-001`, `CANDIDATE-U-CODESIZE-003`, `CANDIDATE-U-CODESIZE-019` |
 | `analyzeCodeSize` | `analyzeCodeSize(input: CodeSizeInput) => CodeSizeResult` | 入力は §11 の Pre | `{ ok, findings, summary }` (§6) | 純粋。入力順に依存しない | `CANDIDATE-U-CODESIZE-004`〜`013` |
 | `parseCodeSizeBaseline` | `parseCodeSizeBaseline(sourceText: string) => CodeSizeBaseline \| null` | 文字列 | 解釈できなければ `null` | 壊れた入力を空とみなさない | `CANDIDATE-U-CODESIZE-014` |
 | `loadCodeSizeSources` | `loadCodeSizeSources(repoRoot: string) => { sources: CodeSizeSource[]; unreadable: string[] }` | repo root | 対象ファイルの内容と読めない path | 書き込まない | `CANDIDATE-U-CODESIZE-015` |
@@ -138,13 +138,15 @@ git ls-files src tests | grep -E '\.(ts|tsx|mts|cts)$' | grep -v '\.d\.ts$' | xa
 | `loadRenamedCodeFiles` | `loadRenamedCodeFiles(repoRoot: string) => { kind: "found"; renames: CodeRename[] } \| { kind: "unreadable" }` | repo root | 対象に関係する rename の列 | 読めない git を rename なしにしない | `CANDIDATE-U-CODESIZE-015` |
 | `checkCodeSize` | `checkCodeSize(repoRoot: string) => { messages: string[]; ok: boolean }` | repo root | adapter を合成し `analyzeCodeSize` を呼ぶ | 例外を握りつぶさない | `CANDIDATE-U-CODESIZE-016`, `CANDIDATE-U-CODESIZE-017` |
 
+`CodeMeasure` の `functions` は `{ name: string; line: number; lines: number }[]` で、§3 の測り方で測った**全関数**(上限以下も含む)を出現順に持つ。名前の無い関数は `<anon@行番号>`、`tests` では空配列、`functionExcess` が `null`。`overFunctions` は `functions` から行数が上限(120)を超える要素を抜き出した導出値で、行数の降順(同数は出現順)に並べる(field は残す)。`functionExcess` は `functions` から導ける。
+
 `CodeSizeInput` は `{ sources: readonly CodeSizeSource[]; baseline: CodeSizeBaseline; previousBaseline: CodeSizeBaseline | null; mergeBaseMeasures: CodeSizeBaseline | null; renames: readonly CodeRename[] }` (`max-source-params` に合わせて 1 つの object にまとめる)。`CodeSizeSource` は `{ path: string; text: string }`、`CodeRename` は `{ from: string; to: string }`、`CodeSizeBaseline` は `Readonly<Record<string, { lines: number | null; functionExcess: number | null }>>`。
 
 ## 9. 配線と PR の順序
 
 - doctor: check 名 `code-size`、CI の doctor (governance hard gates) で fail-close する。`checkCodeSize` の `{ messages, ok }` を返す。
 - PR 前に流す軽い CLI: `ut-tdd code-size check`。`ok` なら exit 0、そうでなければ exit 1。読み取りだけで、harness.db にも `.ut-tdd/` にも書かない。doctor の singleton には入らない。
-- PR の順序は doc-split gate §8.2 と同じ (設計書保護 gate §10.3 の三段階): (0) 本書と L7 の契約 PR、(1) 登録 + Red PR (実 repo を読む 016 と 017 は `src/doctor/test-repository-isolation.ts` の `repositoryReadContracts` へ登録行を足す。テスト名は候補 ID を引用する)、(2) src を含まない昇格 PR (`CANDIDATE-U-CODESIZE-*` を `U-CODESIZE-*` へ 1:1 で昇格)、(3) 実装 PR (Green。`src/lint/code-size*.ts`、doctor と CLI の配線、`docs/governance/code-size-baseline.json` の初期値、`refactor-candidate-policy.ts` の `splitModuleLines` を 400 へ下げる変更と、`refactor-candidates.ts` の関数の拾い方と行数の数え方を §3 に揃える変更 (§10))。分割 PR は src と tests と baseline を同じ PR で変える (設計文書に触れないので設計書保護 gate に当たらない)。
+- PR の順序は doc-split gate §8.2 と同じ (設計書保護 gate §10.3 の三段階): (0) 本書と L7 の契約 PR、(1) 登録 + Red PR (実 repo を読む 016 と 017 は `src/doctor/test-repository-isolation.ts` の `repositoryReadContracts` へ登録行を足す。テスト名は候補 ID を引用する。`src/lint/code-size*.ts` は設計書保護 gate §10.3 の 1' に従い、契約形 stub (fail-close の値だけを返す) と `DEFERRED_LINTS` 登録に限って足す)、(2) src を含まない昇格 PR (`CANDIDATE-U-CODESIZE-*` を `U-CODESIZE-*` へ 1:1 で昇格)、(3) 実装 PR (Green。`src/lint/code-size*.ts` の stub を実装に置き換えて `DEFERRED_LINTS` の行を撤去し、doctor と CLI の配線、`docs/governance/code-size-baseline.json` の初期値、`refactor-candidate-policy.ts` の `splitModuleLines` を 400 へ下げる変更と、`refactor-candidates.ts` の関数の拾い方と行数の数え方を §3 に揃える変更 (§10))。分割 PR は src と tests と baseline を同じ PR で変える (設計文書に触れないので設計書保護 gate に当たらない)。
 
 ## 10. 既存の値との整合
 

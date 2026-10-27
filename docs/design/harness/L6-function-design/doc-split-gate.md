@@ -141,9 +141,9 @@ path は `/` 区切りに正規化する。内容は CRLF を LF に直してか
 
 0. **契約 PR (docs と tests のみ)**: 本書と `L7-doc-split-gate-test-design.md` (候補 ID `CANDIDATE-U-DOCSPLIT-*`)。
 1. **読み先の直し PR (src のみ。docs/design・docs/test-design に触れない)**: §8.3 の読み先を、分割後の複数文書でも動く形に直す。振る舞いは変えない (分割前の現行 repo でテストが同じ結果になる)。契約 PR の直後に入れる。入れるまで、新しい L6 文書が `L7-unit-test-design.md` を指さないため doctor の `l6-completion` が赤になる (§8.3 末尾)。
-2. **登録 + Red PR (§10.3 の 1)**: 020 と 021 は実 repo を読むため、`src/doctor/test-repository-isolation.ts` の `repositoryReadContracts` に登録行を足す (src の変更は登録行だけ)。Red のテストは `it.fails` で、テスト名は候補 ID `CANDIDATE-U-DOCSPLIT-*` を引用する。登録は読むテストファイルと同じ PR でしか入れられない。
+2. **登録 + Red PR (§10.3 の 1)**: 020 と 021 は実 repo を読むため、`src/doctor/test-repository-isolation.ts` の `repositoryReadContracts` に登録行を足す (src の変更は登録行と、§10.3 の 1' が許す契約形 stub・`DEFERRED_LINTS` 登録だけ。stub は fail-close の値だけを返す)。Red のテストは `it.fails` で、テスト名は候補 ID `CANDIDATE-U-DOCSPLIT-*` を引用する。登録は読むテストファイルと同じ PR でしか入れられない。
 3. **昇格 PR (§10.3 の 2、src/scripts を含まない)**: L7 の候補 ID を正式 ID `U-DOCSPLIT-*` へ 1:1 で昇格し、テスト名の引用を同じ PR で書き換える。
-4. **実装 PR (§10.3 の 3、Green)**: `it.fails` を `it` に戻し、`src/lint/doc-split*.ts`、doctor と CLI の配線、`docs/governance/doc-split-baseline.json` の初期値を入れる。test-design は触らない。
+4. **実装 PR (§10.3 の 3、Green)**: `it.fails` を `it` に戻し、手順 2 の stub を実装に置き換えて `DEFERRED_LINTS` の行を撤去し、`src/lint/doc-split*.ts`、doctor と CLI の配線、`docs/governance/doc-split-baseline.json` の初期値を入れる。test-design は触らない。
 5. **分割 PR (docs と tests のみ、§8.4)**: 文書の移動と、`doc-split-baseline.json` の縮小を**同じ PR** で出す。`src/` を含まないので設計書保護 gate に当たらない。
 
 ### 8.3 `L7-unit-test-design.md` を名指しで読む箇所と直し方 (手順 1 の PR で直す)
