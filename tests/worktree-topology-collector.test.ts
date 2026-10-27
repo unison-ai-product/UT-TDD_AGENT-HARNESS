@@ -10,6 +10,7 @@ import {
   type GitCommandResult,
   observeTopologyPath,
 } from "../src/runtime/worktree-topology-collector.ts";
+import { gitTextTrimmedWindowsHidden as git } from "./support/git.ts";
 
 const roots: string[] = [];
 const cleanups: Array<() => void> = [];
@@ -19,10 +20,6 @@ function tempRoot(): string {
   const root = realpathSync(mkdtempSync(join(tmpdir(), "ut-tdd-wttopo-pf2-")));
   roots.push(root);
   return root;
-}
-
-function git(root: string, args: string[]): string {
-  return execFileSync("git", ["-C", root, ...args], { encoding: "utf8", windowsHide: true }).trim();
 }
 
 function initRepository(): { root: string; merged: string; active: string; detached: string } {
