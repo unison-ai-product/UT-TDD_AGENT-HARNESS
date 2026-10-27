@@ -1,12 +1,4 @@
 import { existsSync } from "node:fs";
-import { analyzeBackfill, backfillMessages, loadBackfillDocs } from "../lint/backfill-pairing.ts";
-import {
-  analyzeForwardConvergence,
-  forwardConvergenceMessages,
-  legacyAuditDriftMessages,
-  loadConvergenceDocs,
-  loadLegacyAuditDrift,
-} from "../lint/forward-convergence.ts";
 import {
   analyzePlanBodySubstance,
   loadPlanBodySubstanceInput,
@@ -18,11 +10,6 @@ import {
   planCompletionDriftMessages,
 } from "../lint/plan-completion-drift.ts";
 import {
-  analyzePlanSupersession,
-  loadSupersedePlans,
-  planSupersessionMessages,
-} from "../lint/plan-supersession.ts";
-import {
   analyzePropagation,
   loadPropagationDocs,
   propagationMessages,
@@ -32,7 +19,6 @@ import {
   loadReviewPlans,
   reviewEvidenceMessages,
 } from "../lint/review-evidence.ts";
-import { analyzeScrumReverse, loadSrPlans, scrumReverseMessages } from "../lint/scrum-reverse.ts";
 import {
   analyzeTestDesignNaming,
   loadTestDesignDocs,
@@ -48,44 +34,6 @@ import {
 import type { GuardrailDecisionInput } from "../state-db/guardrail-invariants.ts";
 import { inspectGuardrailInvariants } from "../state-db/guardrail-invariants.ts";
 import { analyzePairFreeze, loadPairDocs, pairFreezeMessages } from "../vmodel/lint.ts";
-
-export function checkBackfillResult(repoRoot: string): { messages: string[]; ok: boolean } {
-  try {
-    const docs = loadBackfillDocs(repoRoot);
-    const r = analyzeBackfill(docs.plans, docs.glossaryText, docs.auditedLegacyIds);
-    return { messages: backfillMessages(r), ok: r.ok };
-  } catch {
-    return { messages: ["backfill - violation: PLAN/glossary could not be read"], ok: false };
-  }
-}
-
-export function checkBackfill(repoRoot: string): string[] {
-  return checkBackfillResult(repoRoot).messages;
-}
-
-export function checkScrumReverse(repoRoot: string): { messages: string[]; ok: boolean } {
-  if (!existsSync(repoRoot)) {
-    return { messages: ["scrum-reverse - violation: repo root could not be read"], ok: false };
-  }
-  try {
-    const r = analyzeScrumReverse(loadSrPlans(repoRoot));
-    return { messages: scrumReverseMessages(r), ok: r.ok };
-  } catch {
-    return { messages: ["scrum-reverse - violation: PLAN could not be read"], ok: false };
-  }
-}
-
-export function checkPlanSupersession(repoRoot: string): { messages: string[]; ok: boolean } {
-  if (!existsSync(repoRoot)) {
-    return { messages: ["plan-supersession - violation: repo root could not be read"], ok: false };
-  }
-  try {
-    const r = analyzePlanSupersession(loadSupersedePlans(repoRoot));
-    return { messages: planSupersessionMessages(r), ok: r.ok };
-  } catch {
-    return { messages: ["plan-supersession - violation: PLAN could not be read"], ok: false };
-  }
-}
 
 export function checkPlanBodySubstance(repoRoot: string): { messages: string[]; ok: boolean } {
   if (!existsSync(repoRoot)) {
@@ -149,34 +97,6 @@ export function checkPlanReferenceFreshnessAdvisory(repoRoot: string): string[] 
     return planReferenceFreshnessMessages(freshness).map((message) => `doctor: ${message}`);
   } catch {
     return ["doctor: plan-reference-freshness - advisory: skipped (PLAN refs could not be read)"];
-  }
-}
-
-export function checkForwardConvergence(repoRoot: string): { messages: string[]; ok: boolean } {
-  try {
-    const docs = loadConvergenceDocs(repoRoot);
-    const r = analyzeForwardConvergence(docs.plans, docs.roadmapSpanIds, docs.reverseReferencedIds);
-    return { messages: forwardConvergenceMessages(r), ok: r.ok };
-  } catch {
-    return {
-      messages: ["forward-convergence — violation: PLAN を読めず spine-外集約を検査できない"],
-      ok: false,
-    };
-  }
-}
-
-export function checkForwardConvergenceAudit(repoRoot: string): {
-  messages: string[];
-  ok: boolean;
-} {
-  try {
-    const r = loadLegacyAuditDrift(repoRoot);
-    return { messages: legacyAuditDriftMessages(r), ok: r.ok };
-  } catch {
-    return {
-      messages: ["forward-convergence-audit — violation: legacy debt audit を検査できない"],
-      ok: false,
-    };
   }
 }
 

@@ -20,15 +20,13 @@
  * いずれか欠落 → violation。`supersedes` 非宣言の PLAN は対象外 (誤記の有無は判定しない = prose 真偽は
  * 機械化しない)。宣言された errata リンクの整合のみを強制する。
  *
- * 純関数 (analyze) + I/O loader 分離 (scrum-reverse / backfill-pairing と同方針)。
+ * 純関数 (parse/analyze/messages) の synthetic unit coverage を維持する。
  */
-import { readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
 import { fmValue } from "./shared.ts";
 
 export interface ParsedSupersedePlan {
   plan_id: string;
-  /** frontmatter supersedes の plan_id 群 (path / .md は loader で正規化済)。 */
+  /** frontmatter supersedes の plan_id 群。 */
   supersedes: string[];
   /** 本文全体 (back-reference 走査用)。 */
   content: string;
@@ -152,17 +150,6 @@ export function analyzePlanSupersession(
       selfSupersedes.length === 0 &&
       staleSelfBaseline.length === 0,
   };
-}
-
-/** docs/plans/*.md を読み込む (archive/template は plan_id frontmatter が無いので自然に skip)。 */
-export function loadSupersedePlans(repoRoot: string = process.cwd()): ParsedSupersedePlan[] {
-  const plansDir = join(repoRoot, "docs", "plans");
-  const plans: ParsedSupersedePlan[] = [];
-  for (const f of readdirSync(plansDir)) {
-    if (!f.endsWith(".md")) continue;
-    plans.push(parseSupersedePlan(f, readFileSync(join(plansDir, f), "utf8")));
-  }
-  return plans;
 }
 
 export function planSupersessionMessages(r: PlanSupersessionResult): string[] {
