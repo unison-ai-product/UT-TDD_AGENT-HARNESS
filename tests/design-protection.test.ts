@@ -1,4 +1,4 @@
-import { execFileSync, spawnSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -9,6 +9,7 @@ import {
   GitDiffAdapterError,
   type GitDiffAdapterErrorCode,
 } from "../src/plan-admission/git-diff-adapter.ts";
+import { gitTextRaw as git } from "./support/git.ts";
 
 /* Contract-first Red. Module absence is not individual guard mutation evidence. */
 
@@ -137,13 +138,6 @@ function initRepo(files: Record<string, string>): { root: string; base: string }
   for (const [path, content] of Object.entries(files)) writeRepoFile(root, path, content);
   commit(root, "seed");
   return { root, base: git(root, "rev-parse", "HEAD").trim() };
-}
-
-function git(root: string, ...args: string[]): string {
-  return execFileSync("git", ["-C", root, ...args], {
-    encoding: "utf8",
-    stdio: ["ignore", "pipe", "pipe"],
-  });
 }
 
 function writeRepoFile(root: string, path: string, content: string): void {
