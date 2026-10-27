@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -8,6 +8,7 @@ import {
   dodChecklistState,
   loadPlanCompletionDriftInput,
 } from "../src/lint/plan-completion-drift.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 
 // PLAN-L7-93: 「DoD 全消化なのに status 非終端」= 完了 bookkeeping drift を機械検出する gate の回帰。
 // 動機 = PLAN-RECOVERY-02 が freeze-ready (全 phase 完了 + gated downstream 全 confirmed) なのに
@@ -142,7 +143,7 @@ describe("loadPlanCompletionDriftInput + checkPlanCompletionDrift", () => {
       const stuck = rows.find((r) => r.planId === "PLAN-TEST-93-stuck");
       expect(stuck).toMatchObject({ checkedItems: 3, uncheckedItems: 0 });
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -153,7 +154,7 @@ describe("loadPlanCompletionDriftInput + checkPlanCompletionDrift", () => {
       writePlan(root, "PLAN-TEST-93-arch.md", "archived", "recovery", "## §7 DoD\n\n- [x] done");
       expect(checkPlanCompletionDrift(root).ok).toBe(true);
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 

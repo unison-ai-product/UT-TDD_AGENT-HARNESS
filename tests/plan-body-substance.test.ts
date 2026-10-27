@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -8,6 +8,7 @@ import {
   countSubstantiveBodyLines,
   loadPlanBodySubstanceInput,
 } from "../src/lint/plan-body-substance.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 
 // PLAN-L7-92: concept AP-13「本文 0 行・declare のみの PLAN は無効」を機械強制する gate の回帰。
 
@@ -100,7 +101,7 @@ describe("loadPlanBodySubstanceInput + checkPlanBodySubstance", () => {
       const rows = loadPlanBodySubstanceInput(root);
       expect(rows.find((r) => r.planId === "PLAN-TEST-92-hollow")?.substantiveLines).toBe(0);
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 

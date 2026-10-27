@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -9,6 +9,7 @@ import {
   type OutstandingPlanRow,
   outstandingSummaryLine,
 } from "../src/lint/outstanding.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 
 // IMP-139: 「未了の正の集計シグナル」(非終端 PLAN 層別 + open defer) の additive surface 回帰。
 
@@ -116,7 +117,7 @@ describe("loadOutstandingPlanRows + computeOutstandingWork", () => {
       expect(o.nonTerminalPlansTotal).toBe(2);
       expect(o.openDefers).toBe(0); // design/test-design 不在 → 0 (fail-open)
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -127,7 +128,7 @@ describe("loadOutstandingPlanRows + computeOutstandingWork", () => {
       expect(o.nonTerminalPlansTotal).toBe(0);
       expect(o.openDefers).toBe(0);
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 });

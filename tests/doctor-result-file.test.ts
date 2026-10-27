@@ -10,7 +10,7 @@
  * gitignored state や process 環境が同値だとは主張しない。
  */
 
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -29,6 +29,7 @@ import {
 import { nodeDoctorDeps } from "../src/doctor/runtime-state.ts";
 import { defaultBranchRefMap, headSha } from "../src/git/default-branch.ts";
 import { consumeDoctorResultEnvelopeWithReason } from "./support/doctor-envelope.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 import { headSnapshotRoot } from "./support/workspace-roots.ts";
 
 const RESULT = { ok: true, messages: ["doctor: rule-drift — OK"] };
@@ -374,7 +375,7 @@ describe("doctor result envelope measured surface (PLAN-L7-484)", () => {
       expect(written?.scope).toBe("setup-smoke");
       expect(written?.profile).toBe("consumer-setup-smoke");
     } finally {
-      rmSync(dir, { recursive: true, force: true });
+      removeTestTree(dir);
     }
   });
 
