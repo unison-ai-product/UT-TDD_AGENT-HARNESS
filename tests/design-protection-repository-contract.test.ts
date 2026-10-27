@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -7,6 +7,7 @@ import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 import * as designProtection from "../src/github/design-protection.ts";
 import { analyzeGithubCiPolicy, loadGithubCiPolicyDocs } from "../src/lint/github-ci-policy.ts";
 import { gitTextRaw as git } from "./support/git.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 
 /*
  * Contract-first Red: the subject module is intentionally absent in this slice.
@@ -54,7 +55,7 @@ function commit(root: string, message: string): string {
 
 function removeRepo(root: string): void {
   // `root` is always the unique mkdtempSync path created by initRepo or the test.
-  rmSync(root, { recursive: true, force: true });
+  removeTestTree(root);
 }
 
 function designStep(): Record<string, unknown> {

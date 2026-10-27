@@ -601,23 +601,9 @@ clean checkout では、`harness-check` が tests の前に deterministic `db re
 
 PLAN-L7-51 が impl-ahead で着地した 4 モジュール (`plan-dod`, `placeholder-deps`, `l7-completion`, `drive-db-registration`) の L6 契約を後追いで明文化する。parent PLAN = PLAN-L7-51。oracle ID 宣言 (U-* / FR-L1-*) は L7 oracle slice で別途行うため本 addendum では省略し、関数 signature + DbC + doctor 配線のみを記録する。
 
-### D.1 `src/lint/plan-dod.ts`
+### D.1 退役記録: `src/lint/plan-dod.ts`
 
-| 関数 (実 export) | signature | pre | post | doctor 配線 |
-|---|---|---|---|---|
-| `loadPlanDodDocs` | `(root?: string) => PlanDodDoc[]` | `root` 省略時は `process.cwd()`; `docs/plans/` が存在しない場合は空配列を返す | fs read のみ (write なし); 返り値は `PLAN-L7-*.md` ファイルを sort 順で列挙した `PlanDodDoc[]` | `checkPlanDod` 内部で呼ばれる |
-| `analyzePlanDod` | `(docs: PlanDodDoc[]) => PlanDodResult` | `docs` は `loadPlanDodDocs` の返り値相当; 純粋関数 (fs アクセスなし) | `status` が `confirmed` または `completed` の PLAN の DoD セクション内に未チェック項目 (`- [ ]`) が 1 件でもあれば `ok=false`; 対象 PLAN が 0 件の場合は `checked=0` (警告扱い) | `checkPlanDod` が `planDodMessages` とともに `runDoctor` へ集約 |
-| `planDodMessages` | `(result: PlanDodResult) => string[]` | `result` は `analyzePlanDod` の返り値 | `checked=0` のとき警告メッセージを 1 件返す; `ok=true` のとき合格メッセージを返す; 違反時は最大 8 件のサンプル (`planId:line`) を含む違反メッセージを返す | `checkPlanDod` → `runDoctor.messages` に `doctor:` プレフィックスで合流 |
-
-型定義:
-
-```ts
-interface PlanDodDoc { path: string; planId: string; status: string; text: string }
-interface PlanDodViolation { planId: string; path: string; line: number; item: string }
-interface PlanDodResult { checked: number; violations: PlanDodViolation[]; ok: boolean }
-```
-
-共通 invariant: `analyzePlanDod` は純粋関数 (同入力→同出力)。`loadPlanDodDocs` が唯一の fs 端点。`status` フィルタは `confirmed` / `completed` のみ対象とし、それ以外の PLAN は DoD 検査をスキップする。
+`plan-dod` は PLAN の DoD 台帳だけを検査する doctor check として、後続の #1382 PR2 で退役させる目標である。この docs-only PR の時点では実装はまだ存在する。PR2 適用後は旧関数契約 (`loadPlanDodDocs` / `analyzePlanDod` / `planDodMessages`) を active な L6 契約から外し、履歴記録として扱う。唯一の production consumer は `src/doctor/process-quality.ts` の wrapper を通る doctor 配線である。PLAN の schema や他の DoD 関連契約の退役は対象外。
 
 ### D.2 `src/lint/placeholder-deps.ts`
 
@@ -740,12 +726,12 @@ parent PLAN = PLAN-L7-50。L6 契約なし着地分の後追い明文化。oracl
 
 | 関数 (実 export) | signature | pre | post | doctor 配線 |
 |---|---|---|---|---|
-| `analyzeFrRoadmapCoverage` | `(docs: FrRoadmapCoverageDoc[]) => FrRoadmapCoverageResult` | `docs` は `loadFrRoadmapCoverageDocs` 等で事前に取得したもの; fs アクセスなし (純粋); `repoRoot` は `process.cwd()` で補完 | `FrRoadmapCoverageResult` を返す; `checked=docs.length`; 各 doc の残留 bucket テーブル (`## Residual Feature Buckets`) が存在しない場合 `violations` に `missing_section` を積む; 既定 bucket 集合 (R1〜R9) のうち doc 内に未出現のものは `missing_expected_bucket` として違反; 解決が特定できない open 行は `ambiguous_resolution` 違反; `closed` 行には closure evidence セクション (`## Residual Feature Closure Evidence`) の対照検査を行い、plan/source/test 各参照先の fs 実在を `process.cwd()` 基準で検証; 全 violations = 0 かつ open rows = 0 のとき `ok=true` | `checkFrRoadmapCoverage` → `runDoctor.ok` / `runDoctor.messages` |
-| `analyzeFrRoadmapCoverageWithRoot` | `(docs: FrRoadmapCoverageDoc[], repoRoot: string) => FrRoadmapCoverageResult` | `docs` は取得済み; `repoRoot` は fs 実在確認の基点パス; `analyzeFrRoadmapCoverage` の実装委譲先 (repoRoot を明示渡し) | 同上; closure evidence の plan/source/test 参照先は `join(repoRoot, path)` で存在検証; `missing_evidence_file` 違反はファイルが実在しない場合に積む; 純粋性の例外 = fs 実在確認 (`existsSync`) を内部で呼ぶ | `checkFrRoadmapCoverage` の内部委譲先 |
+| `analyzeFrRoadmapCoverage` | `(docs: FrRoadmapCoverageDoc[]) => FrRoadmapCoverageResult` | `docs` は `loadFrRoadmapCoverageDocs` 等で事前に取得したもの; fs アクセスなし (純粋); `repoRoot` は `process.cwd()` で補完 | `FrRoadmapCoverageResult` を返す; `checked=docs.length`; 各 doc の残留 bucket テーブル (`## Residual Feature Buckets`) が存在しない場合 `violations` に `missing_section` を積む; 既定 bucket 集合 (R1〜R9) のうち doc 内に未出現のものは `missing_expected_bucket` として違反; 解決が特定できない open 行は `ambiguous_resolution` 違反; `closed` 行には closure evidence セクション (`## Residual Feature Closure Evidence`) の対照検査を行い、source/test 参照先の fs 実在を `process.cwd()` 基準で検証; 全 violations = 0 かつ open rows = 0 のとき `ok=true` | `checkFrRoadmapCoverage` → `runDoctor.ok` / `runDoctor.messages` |
+| `analyzeFrRoadmapCoverageWithRoot` | `(docs: FrRoadmapCoverageDoc[], repoRoot: string) => FrRoadmapCoverageResult` | `docs` は取得済み; `repoRoot` は fs 実在確認の基点パス; `analyzeFrRoadmapCoverage` の実装委譲先 (repoRoot を明示渡し) | 同上; closure evidence の source/test 参照先は `join(repoRoot, path)` で存在検証; `missing_evidence_file` 違反はファイルが実在しない場合に積む; 純粋性の例外 = fs 実在確認 (`existsSync`) を内部で呼ぶ | `checkFrRoadmapCoverage` の内部委譲先 |
 | `loadFrRoadmapCoverageDocs` | `(repoRoot?: string) => FrRoadmapCoverageDoc[]` | `repoRoot` 省略時は `process.cwd()` を使用; fs 端点; 対象ファイルが存在しない場合は空配列を返す (fail-open) | `.ut-tdd/audit/A-133-upstream-vmodel-coverage-audit.md` を読み込み `FrRoadmapCoverageDoc[]` として返す; `file` フィールドは `join(".ut-tdd", "audit", "A-133-upstream-vmodel-coverage-audit.md")` (repo 相対) | `checkFrRoadmapCoverage` の唯一の fs 端点 |
 | `frRoadmapCoverageMessages` | `(result: FrRoadmapCoverageResult) => string[]` | `result` は `analyzeFrRoadmapCoverage` / `analyzeFrRoadmapCoverageWithRoot` の返り値; 純粋関数 | `checked=0` のとき bucket テーブル不在を示す単一違反メッセージを返す; violations > 0 のとき最大 8 件のサンプル (`file[:bucket]:reason`) を含む違反メッセージを返す; open rows > 0 のとき status 別カウントと bucket 一覧を含むメッセージを返す; すべて解決済みのとき `OK (checked=N, buckets=N, closure=N)` 形式の合格メッセージを返す | `checkFrRoadmapCoverage` → `runDoctor.messages` |
 
-closure evidence 表の `PLAN / WBS` 列は、closed の行の上流の根拠 (設計文書か、tracked の audit 文書の path) を指す。header の文字列 `PLAN / WBS` は互換のために維持し、検査は path 部分 (`#` より前) の fs 実在だけを見る (出典: #1169 判断 4)。
+closure evidence 表の `PLAN / WBS` 列は互換のために維持する。後続の #1382 PR2 で、closed 行の任意の文脈情報として扱い、空欄や参照pathの実在を検査しないよう実装する。source/test 参照先の実在検査は維持する。
 
 型定義:
 
@@ -764,7 +750,7 @@ interface FrRoadmapCoverageRow {
 }
 
 interface FrRoadmapClosureEvidenceRow {
-  file: string; bucket: string; planTarget: string;
+  file: string; bucket: string; planTarget?: string;
   sourceTarget: string; testTarget: string;
   coverageGate: string; status: FrRoadmapCoverageStatus;
 }
@@ -778,7 +764,7 @@ interface FrRoadmapCoverageViolation {
     | "missing_next_artifact" | "unknown_status" | "ambiguous_resolution"
     | "missing_closure_section" | "missing_closure_table"
     | "malformed_closure_row" | "missing_closure_evidence"
-    | "missing_plan_target" | "missing_source_target"
+    | "missing_source_target"
     | "missing_test_target" | "missing_coverage_gate"
     | "missing_evidence_file" | "closure_status_mismatch";
 }
@@ -1175,20 +1161,9 @@ statusはschema `VALID_STATUSES`から導出する。表欠落、必須列欠落
 - `upgradeFrontierMessage(entries): string` — 0件のみ`CLEAR`、1件以上は`IN-PROGRESS`を返す。
 - `checkRoadmap(repoRoot)` — source欠落/破損/redをhard failure、yellow/draftを可視な進行中として扱う。
 
-### EngineSwapRightArmCoverage
+### EngineSwapRightArmCoverage 退役記録
 
-L8〜L14の完了判定はrepository全体の`kind=verify`件数ではなく、frontmatterの`dependencies.parent/requires/references`で
-`PLAN-L1-07`または`PLAN-L4-24`を構造的に依存・参照するengine-swap verify PLANだけを対象とする。本文の偶発言及はlinkにしない。`archived`、無関係、draftのverify PLANは
-層の完了証拠に数えない。L4-24がdraftなら、全層が存在してもstateは`in_progress`のままにする。
-L4-24がconfirmed/completedになるdesign freezeでは、linkedかつ非archivedのL8〜L14 PLANが全層起票済みであることだけを要求し、
-下流実行中を許可する。`program_exit_status=accepted`へのprogram accept遷移で初めて、linkedかつconfirmed/completedの
-L8〜L14全層をhard gateにする。`program_exit_status=in_progress`では未完層を`IN-PROGRESS`表示し、設計承認とprogram完遂を再結合しない。
-
-公開関数契約:
-
-- `loadRightArmGatePlanningInput(repoRoot)` — verify PLANごとにlayer/status/engine-swap linkを読み取る。
-- `analyzeRightArmGatePlanning(input)` — linked active verify PLANだけで不足層を計算し、design statusと整合するstateを返す。
-- `rightArmGatePlanningMessages(result)` — draftは`IN-PROGRESS`、完了は`OK`、契約違反は`violation`を返す。
+`EngineSwapRightArmCoverage` と `loadRightArmGatePlanningInput` / `analyzeRightArmGatePlanning` / `rightArmGatePlanningMessages` のPLAN-only doctor check契約は、後続の #1382 PR2 で退役させる目標である。この docs-only PRの時点では実装はまだ存在する。PR2適用後は、linked verify PLANに基づくL8〜L14の不足層、design status、program exit statusの旧判定を含めて退役し、旧関数名と判定範囲は履歴記録として扱う。唯一の production consumer は `src/doctor/workflow-quality.ts` を通る doctor 配線である。
 
 ### AdditiveRevisionFreeze
 
