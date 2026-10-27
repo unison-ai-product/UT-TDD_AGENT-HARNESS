@@ -73,7 +73,7 @@ W3a 範囲外として明示 carry:
 - W1 plan_lint + W2 vmodel_lint が完成し、PLAN frontmatter / 4 artifact + 8 edge / kind dispatcher が確立した。次の必須機能は **タスク受領時の経路判定** で、これ無しでは G0.5 (企画突合) / G1 (要件完了) が rule-based で機械化できない
 - HELIX vendor は `task_type_inference.py` で kind/drive/size を hard-coded keyword で推定する rule-based、`effort_classifier.py` で三点見積を出す。UT-TDD §7.2 仕様の JSON contract に揃えれば port 可能
 - `task_dispatcher.py` は HELIX role/model 名 (gpt-5.5 high 等) を hard-coded で出力する。UT-TDD では `cli/config/models.yaml` ではなく **capability class** (`frontier-reviewer` / `worker` / `fast-checker` 等) で抽象化する仕様 (§7.1) のため、model 名 hard-code を rewrite
-- UT-TDD では HELIX skill 体系 (`~/ai-dev-kit-vscode/skills/`) を直接参照しない。skill 推挙は W3b で `docs/skills/*.md` を canonical として再実装
+- UT-TDD では HELIX skill 体系 (`~/社内の別 repo/skills/`) を直接参照しない。skill 推挙は W3b で `docs/skills/*.md` を canonical として再実装
 
 ## §3 実装計画 (Sprint 標準 8 ステップ)
 

@@ -52,7 +52,7 @@ PLAN-L4-10 (Master) §2 triage の child。**FR-L1-49 (内部資産 drift lint)*
 drift lint の検査項目 (system 粒度で確定するもの) を architecture lint building block + ADR-004 Consequences に記述:
 
 1. **検査項目** (inventory §1 / ADR-004 由来):
-   - HELIX 絶対パス残存 (`~/ai-dev-kit-vscode/` / `C:\Users\micro`) を `.claude/agents/*.md` が含まない
+   - HELIX 絶対パス残存 (`~/社内の別 repo/` / `C:\Users\micro`) を `.claude/agents/*.md` が含まない
    - `helix codex` 直叩きが subagent 本文に残らない
    - `docs/skills/` が空でない (curate 着手済)
    - roster ↔ guard allowlist の model family 整合 (二重定義の乖離 0)

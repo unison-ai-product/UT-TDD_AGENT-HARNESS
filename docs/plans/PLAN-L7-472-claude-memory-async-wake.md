@@ -36,7 +36,7 @@ dependencies:
     - docs/plans/PLAN-REVERSE-472-claude-memory-async-wake-backfill.md
     - docs/design/harness/L6-function-design/memory.md
     - docs/test-design/harness/L7-unit-test-design.md
-    - https://github.com/RetryYN/HELIX-HARNESS
+    - (社内の別 repo、公開 repo のため名前を伏せる)
 review_evidence:
   - reviewer: claude-opus-5-blind-reviewer
     review_kind: cross_agent

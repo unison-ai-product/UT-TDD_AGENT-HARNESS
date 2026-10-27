@@ -1,7 +1,7 @@
 # HELIX v2 Import Ledger — 採択 / 保留 / 見送り の軌跡
 
 > 目的: HELIX v2 (helix-workflows を L0→L1 で dogfooding した更新分) から UT-TDD へ**何を取り込み / 後段に回し / 見送ったか**を 1 本で追跡する採択台帳。
-> 由来: `RetryYN/ai-dev-kit-vscode` `origin/main` (2026-05-28 時点)。v2 docs = `docs/v2/L0-helix-workflows/concept.md` / `docs/v2/L1-REQUIREMENTS.md` / `docs/v2/L1-requirements/*` / `docs/plans/L0,L1/*`。
+> 由来: `社内の別 repo` `origin/main` (2026-05-28 時点)。v2 docs = `docs/v2/L0-helix-workflows/concept.md` / `docs/v2/L1-REQUIREMENTS.md` / `docs/v2/L1-requirements/*` / `docs/plans/L0,L1/*`。
 > 起票: 2026-05-28 (session 28a)。本台帳自体が v2 の「移行 PLAN = 採択軌跡を残す」パターンの dogfood。
 > 注: HELIX は PLAN を**日本語ファイル名**で管理するが、UT-TDD は Windows 文字化け回避で**英語ファイル名のみ** ([[memory: filename-english-only]])。取り込み時に翻訳する。
 

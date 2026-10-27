@@ -46,7 +46,7 @@ Verdict: PASS for L0-L6 verification readiness and HELIX cutover hardening. This
 - Added `src/lint/asset-drift.ts` as the current FR-L1-49 hard gate slice.
 - Wired `checkAssetDrift` into `runDoctor.ok`.
 - Added U-ASSETDRIFT-001..006 unit-test oracles to L7 unit test design.
-- Updated `.claude/agents/*.md` active internal assets and `docs/templates/prompts/*.md` to stop reading `~/ai-dev-kit-vscode` and stop delegating through legacy `helix codex`.
+- Updated `.claude/agents/*.md` active internal assets and `docs/templates/prompts/*.md` to stop reading `~/社内の別 repo` and stop delegating through legacy `helix codex`.
 - Re-scoped pmo-helix explorer/scout to `vendor/helix-source/` snapshot exploration instead of a personal workspace.
 
 ## Non-Blocker Carry
