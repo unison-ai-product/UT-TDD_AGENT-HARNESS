@@ -946,7 +946,7 @@ PR2 (`add-feature`) は昇格 PR merge 後の main から開始し、PLAN-L7-423
 
 ## PLAN-L7-76 Reliability Remediation Addendum
 
-Issue #1357 の候補 `U-DBPROJ-ING-001..003` は、宣言と Red の登録段階である。001/002 は `it.fails`、既に成立する003は通常の `it` による有入力対照とする。正式昇格は別 PR、必須一覧の変更と Green はさらに後続の PR で行い、現段階では実装の membership 対照を維持する。`EVIDENCE_GATED_DB_PROJECTION_TABLES` は変更しない。
+Issue #1357 の `U-DBPROJ-ING-001..003` は正式 ID へ昇格済み。001/002 は `it.fails` で実装 Green 待ち、003 は通常の `it` の有入力対照とする。必須一覧の変更と Green は後続 PR で行う。`EVIDENCE_GATED_DB_PROJECTION_TABLES` は変更しない。
 
 | U-ID | Target | Oracle |
 |---|---|---|
