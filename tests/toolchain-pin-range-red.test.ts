@@ -52,12 +52,12 @@ function fixture(
 }
 
 describe("toolchain pin engines range raw Red candidates", () => {
-  it("CANDIDATE-U-TOOLPIN-001 rejects .node-version drift from the exact reviewed pin", () => {
+  it("U-TOOLPIN-001 rejects .node-version drift from the exact reviewed pin", () => {
     const result = analyzeToolchainPin(fixture({ nodeFile: "23.0.0" }));
     expect(result.violations.map((violation) => violation.rule)).toContain("node-version-mismatch");
   });
 
-  it.fails("CANDIDATE-U-TOOLPIN-002 accepts a valid Node range containing the reviewed pin", () => {
+  it.fails("U-TOOLPIN-002 accepts a valid Node range containing the reviewed pin", () => {
     const baseline = analyzeToolchainPin(fixture());
     expect(baseline.ok).toBe(true);
 
@@ -68,7 +68,7 @@ describe("toolchain pin engines range raw Red candidates", () => {
     expect(result.ok).toBe(true);
   });
 
-  it("CANDIDATE-U-TOOLPIN-003 rejects valid Node ranges that exclude the reviewed pin", () => {
+  it("U-TOOLPIN-003 rejects valid Node ranges that exclude the reviewed pin", () => {
     for (const nodeEngine of ["<24", ">=25 <26", `>${nodePin} <25`]) {
       const result = analyzeToolchainPin(fixture({ nodeEngine }));
       expect(result.violations.map((violation) => violation.rule)).toContain(
@@ -77,7 +77,7 @@ describe("toolchain pin engines range raw Red candidates", () => {
     }
   });
 
-  it("CANDIDATE-U-TOOLPIN-004 reports invalid Node ranges without throwing", () => {
+  it("U-TOOLPIN-004 reports invalid Node ranges without throwing", () => {
     for (const nodeEngine of ["latest", "", "  ", "24.x.y.z"]) {
       const result = analyzeToolchainPin(fixture({ nodeEngine }));
       expect(result.violations.map((violation) => violation.rule)).toContain(
@@ -86,12 +86,12 @@ describe("toolchain pin engines range raw Red candidates", () => {
     }
   });
 
-  it("CANDIDATE-U-TOOLPIN-005 rejects packageManager version drift from the exact npm pin", () => {
+  it("U-TOOLPIN-005 rejects packageManager version drift from the exact npm pin", () => {
     const result = analyzeToolchainPin(fixture({ packageManager: `npm@10.0.0+${npmIntegrity}` }));
     expect(result.violations.map((violation) => violation.rule)).toContain("npm-version-mismatch");
   });
 
-  it.fails("CANDIDATE-U-TOOLPIN-006 accepts a valid npm range containing the packageManager pin", () => {
+  it.fails("U-TOOLPIN-006 accepts a valid npm range containing the packageManager pin", () => {
     const baseline = analyzeToolchainPin(fixture());
     expect(baseline.ok).toBe(true);
 
@@ -102,7 +102,7 @@ describe("toolchain pin engines range raw Red candidates", () => {
     expect(result.ok).toBe(true);
   });
 
-  it("CANDIDATE-U-TOOLPIN-007 rejects npm ranges outside or invalid for the packageManager pin", () => {
+  it("U-TOOLPIN-007 rejects npm ranges outside or invalid for the packageManager pin", () => {
     for (const npmEngine of [">=12 <13", `>${npmPin} <12`, "latest", "", "  "]) {
       const result = analyzeToolchainPin(fixture({ npmEngine }));
       expect(result.violations.map((violation) => violation.rule)).toContain(
@@ -111,7 +111,7 @@ describe("toolchain pin engines range raw Red candidates", () => {
     }
   });
 
-  it("CANDIDATE-U-TOOLPIN-008 retains packageManager integrity-missing and wrong-digest findings", () => {
+  it("U-TOOLPIN-008 retains packageManager integrity-missing and wrong-digest findings", () => {
     const missing = analyzeToolchainPin(fixture({ packageManager: `npm@${npmPin}` }));
     expect(missing.violations.map((violation) => violation.rule)).toContain(
       "npm-package-manager-integrity-missing",
