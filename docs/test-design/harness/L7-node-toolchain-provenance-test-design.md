@@ -15,8 +15,14 @@ verifier、Bun の削除、CI、consumer の変更は本書の成果物ではな
 
 正本データは
 `docs/design/harness/L5-detailed-design/node-toolchain-provenance-registry-v1.json`。
-公式 archive filename/SHA-256 は Node.js v24.13.0 の archive index と
-`SHASUMS256.txt` からレビューした。registry は `linux-x64` と `windows-x64`
+本書が束縛する3入力の実在 source revision は `git-sha1:4bf577433cc209576636609280b236149d4bdb1f` であり、
+同 revision の `.node-version`、`package-lock.json`、`package.json` の tracked blob と raw-byte digest をregistryで検証する。
+本書の更新対象 pin は Node.js v24.22.1 / 同梱 npm 11.19.1 とする。公式 archive filename/SHA-256 は
+Node.js v24.22.1 の archive index と `SHASUMS256.txt` に照合済みである。archive SHA と、照合済み archive 内の
+Node/npm CLI member SHA は別の digest として記録する。registry の pinned values と
+Git custody は L5 `internal-processing.md` §7 の更新順序に従い、対応する source/package/.node-version
+変更後に実在する Git object から記録する。registry の更新・来歴確認と非著者レビューが完了するまでは
+本書を draft のまま維持する。registry は `linux-x64` と `windows-x64`
 だけを supported 候補とし、非著者レビュー完了までは `pair_frozen_pending_review`
 とする。macOS (`darwin-*`) は `unsupported_os` として明示する。
 公式ページに archive があることだけから macOS の対応を推論してはならない。
@@ -32,7 +38,7 @@ support/activation authority でもない。Bun の削除や runtime 切替は�
 
 | 入力 | 固定内容 |
 |---|---|
-| Node/npm | Node `24.13.0`、同梱 npm `11.6.2` |
+| Node/npm | Node `24.22.1`、同梱 npm `11.19.1` |
 | package manager | `package.json.packageManager` の exact string（`engines` は範囲であり、この exact identity には含めない。範囲と pin の整合は §3 の engines 範囲 oracle と §5 が扱う） |
 | lock identity | `package-lock.json`、lockfileVersion `3`、name/version、content SHA-256 |
 | archive | supported OS/arch ごとの公式 filename と SHA-256 |
