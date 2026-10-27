@@ -1,11 +1,12 @@
 import { createHash } from "node:crypto";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { LegacyMigrationLedger } from "../../src/plan-asset/ledger/legacy-migration-ledger.ts";
 import { migratePlanLedger, openPlanLedger } from "../../src/plan-asset/ledger/schema.ts";
 import { openHarnessDb } from "../../src/state-db/index.ts";
+import { removeTestTree } from "../support/temp-tree.ts";
 
 describe("legacy migration ledger application", () => {
   it("U-PA-026: atomically observes once and rejects a competing state command", () => {
@@ -169,7 +170,7 @@ describe("legacy migration ledger application", () => {
       expect(after).toEqual(before);
       reopened.close();
     } finally {
-      rmSync(repoRoot, { recursive: true, force: true });
+      removeTestTree(repoRoot);
     }
   });
 

@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -7,6 +7,7 @@ import {
   l14CloseAuditMessages,
   loadL14CloseAuditDocs,
 } from "../src/lint/l14-close-audit.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 
 const compliant = `# A-TEST
 
@@ -68,7 +69,7 @@ describe("l14-close-audit", () => {
       expect(result.rows).toHaveLength(17);
       expect(l14CloseAuditMessages(result)[0]).toContain("OK");
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -88,7 +89,7 @@ describe("l14-close-audit", () => {
         reason: "missing_expected_item",
       });
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -105,7 +106,7 @@ describe("l14-close-audit", () => {
         reason: "open_without_next_action",
       });
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -125,7 +126,7 @@ describe("l14-close-audit", () => {
         reason: "missing_evidence_path",
       });
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -157,7 +158,7 @@ describe("l14-close-audit", () => {
         "green-evidence-integrity",
       ]);
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -174,7 +175,7 @@ describe("l14-close-audit", () => {
         reason: "missing_required_evidence_path",
       });
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -190,7 +191,7 @@ describe("l14-close-audit", () => {
       expect(result.ok).toBe(false);
       expect(l14CloseAuditMessages(result)[0]).toContain("A-143 audit not found");
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -210,7 +211,7 @@ describe("l14-close-audit", () => {
         reason: "missing_boundary_marker",
       });
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 });

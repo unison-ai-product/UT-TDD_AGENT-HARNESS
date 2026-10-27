@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
@@ -8,6 +8,7 @@ import {
   buildModelEvaluationEvent,
   type ModelEvaluationFacts,
 } from "../src/projection/domain/model-evaluations.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 
 const facts: ModelEvaluationFacts = {
   model: "model-A",
@@ -76,7 +77,7 @@ describe("U-DOMAIN-005: model evaluation domain/application", () => {
       writeFileSync(join(root, ".ut-tdd", "config", "model-opt-in.yaml"), yaml);
       expect(new RepositoryModelEvaluationConfig(root).isEnabled()).toBe(expected);
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 });
