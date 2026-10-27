@@ -33,8 +33,8 @@ import {
   registerDelegationCommands,
 } from "./cli/delegation.ts";
 import { registerDistributionCommands } from "./cli/distribution.ts";
-import { registerFeedbackCommands } from "./cli/feedback.ts";
 import { registerDocSplitCommands } from "./cli/doc-split.ts";
+import { registerFeedbackCommands } from "./cli/feedback.ts";
 import { registerGuardrailCommands } from "./cli/guardrail.ts";
 import { registerPlanAdmissionCommands } from "./cli/plan-admission.ts";
 import { registerPlanAssetCommands } from "./cli/plan-asset.ts";

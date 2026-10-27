@@ -12,5 +12,4 @@ export function registerDocSplitCommands(program: Command): void {
       for (const message of result.messages) process.stdout.write(`${message}\n`);
       process.exitCode = result.ok ? 0 : 1;
     });
-
 }
