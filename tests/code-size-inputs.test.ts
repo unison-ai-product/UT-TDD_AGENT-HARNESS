@@ -10,7 +10,6 @@ import {
   loadPreviousCodeSizeBaseline,
   loadRenamedCodeFiles,
 } from "../src/lint/code-size-inputs.ts";
-import { removeTestTree } from "./support/temp-tree.ts";
 
 const BASELINE = "docs/governance/code-size-baseline.json";
 
@@ -67,7 +66,7 @@ function baselineEntry(path: string, lineCount: number | null, excess: number | 
 
 function removeRepo(root: string): void {
   // root is only the unique mkdtempSync fixture created by this file.
-  removeTestTree(root);
+  rmSync(root, { recursive: true, force: true });
 }
 
 function hasMessage(result: { messages: string[] }, code: string): boolean {
@@ -102,7 +101,7 @@ describe("code size gate filesystem and git adapter candidate oracles", () => {
       expect.soft(result.ok).toBe(false);
       expect.soft(hasMessage(result, "code-size-input-unreadable")).toBe(true);
     } finally {
-      removeTestTree(root);
+      rmSync(root, { recursive: true, force: true });
     }
   });
 
