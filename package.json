@@ -9,7 +9,7 @@
   "license": "Apache-2.0",
   "type": "module",
   "private": true,
-  "packageManager": "npm@11.6.2+sha512-7iKzNfy8lWYs3zq4oFPa8EXZz5xt9gQNKJZau3B1ErLBb6bF7sBJ00x09485DOvRT2l5Gerbl3VlZNT57MxJVA==",
+  "packageManager": "npm@11.19.1+sha512-ztsxKxt/kkIaAs+2i0GU6I+DRmUdrNasxTZKJe9TCdSjKxlhah/4r/hl5ygMD6XAg1qZ9c2TNomR4qgOydp10g==",
   "utTdd": {
     "artifactProfile": "source",
     "nodeToolchain": {
@@ -22,8 +22,8 @@
     "ut-tdd": "./src/cli.ts"
   },
   "engines": {
-    "node": "24.13.0",
-    "npm": "11.6.2"
+    "node": "24.22.1",
+    "npm": "11.19.1"
   },
   "scripts": {
     "dev": "node src/cli.ts",
