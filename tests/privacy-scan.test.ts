@@ -18,7 +18,8 @@ import {
 const at = "@";
 const mail = (local: string, domain: string) => [local, domain].join(at);
 const P = mail("alice", "mail-provider.jp");
-const D = "example-private-repo";
+// L7 §2: tests/ ship in the Pack, so the synthetic denylist word is joined at runtime too.
+const D = ["example", "private", "repo"].join("-");
 const COMMIT_A = "a".repeat(40);
 const COMMIT_M = "c".repeat(40);
 

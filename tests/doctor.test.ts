@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -84,6 +84,10 @@ import {
 } from "../src/doctor/index.ts";
 import { checkGateRunCoverage } from "../src/doctor/process-quality.ts";
 import { buildDoctorResult } from "../src/doctor/result.ts";
+import {
+  buildGateRunEvidence,
+  writeGateRunEvidence as writeGateRunEvidenceArtifact,
+} from "../src/gate/run-evidence.ts";
 import { analyzeGateRunCoverage, gateRunCoverageMessages } from "../src/lint/gate-run-coverage.ts";
 import { CODEX_GIT_ROOT_PREFIX } from "../src/lint/hook-invocation.ts";
 import type { AgentSlotsDeps, Slot } from "../src/runtime/agent-slots.ts";
@@ -204,11 +208,21 @@ const GATE_RUN_CHECKED_AT = "2026-10-26T00:00:00.000Z";
 
 function writeGateRunEvidence(
   repoRoot: string,
-  input: { gateRunId?: string; gateId?: string; planId?: string | null; status?: string } = {},
+  input: {
+    gateRunId?: string;
+    gateId?: string;
+    planId?: string | null;
+    status?: string;
+    evidenceFileName?: string;
+  } = {},
 ): void {
+  const evidenceFileName = input.evidenceFileName ?? GATE_RUN_EVIDENCE_PATH.split("/").at(-1);
+  if (!evidenceFileName || !/^[A-Za-z0-9][A-Za-z0-9._-]*\.json$/u.test(evidenceFileName)) {
+    throw new Error("gate run evidence fixture must be a safe JSON file name");
+  }
   mkdirSync(join(repoRoot, ".ut-tdd", "gate_runs"), { recursive: true });
   writeFileSync(
-    join(repoRoot, ...GATE_RUN_EVIDENCE_PATH.split("/")),
+    join(repoRoot, ".ut-tdd", "gate_runs", evidenceFileName),
     `${JSON.stringify({
       schema_version: 1,
       gate_run_id: input.gateRunId ?? "gate-run:planless-1",
@@ -287,6 +301,45 @@ function writePlanFixture(repoRoot: string, planId: string): void {
 }
 
 describe("gate-run-coverage doctor", () => {
+  it.fails("CANDIDATE-U-GATE-010 derives new run IDs independently of PLAN values", () => {
+    const input = {
+      repoRoot: "/repo",
+      gateId: "G4",
+      status: "passed" as const,
+      checkedAt: GATE_RUN_CHECKED_AT,
+      sessionId: "session-gate-run-id",
+    };
+
+    const withPlan = buildGateRunEvidence({ ...input, planId: "PLAN-GATE-RUN-ID" });
+    const withoutPlan = buildGateRunEvidence({ ...input, planId: null });
+
+    expect(withPlan.gate_run_id).toBe(withoutPlan.gate_run_id);
+  });
+
+  it.fails("CANDIDATE-U-GATE-009 refuses to overwrite a colliding evidence path", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-gate-run-evidence-exclusive-"));
+    const input = {
+      repoRoot: root,
+      gateId: "G4",
+      planId: null,
+      status: "passed" as const,
+      checkedAt: GATE_RUN_CHECKED_AT,
+      sessionId: "session-gate-run-collision",
+    };
+    try {
+      const first = writeGateRunEvidenceArtifact(input);
+      const initialBytes = readFileSync(join(root, first.path), "utf8");
+
+      expect(() => writeGateRunEvidenceArtifact(input)).toThrow();
+      expect(readFileSync(join(root, first.path), "utf8")).toBe(initialBytes);
+      expect(readdirSync(join(root, ".ut-tdd", "gate_runs"))).toEqual([
+        first.path.split("/").at(-1),
+      ]);
+    } finally {
+      removeTestTree(root);
+    }
+  });
+
   it("analyzer reports both reciprocal projection omissions", () => {
     const result = analyzeGateRunCoverage({
       gateRuns: 1,
@@ -543,26 +596,61 @@ describe("gate-run-coverage doctor", () => {
   });
 
   it.fails.each([
-    [
-      "gate_run_id",
-      "UPDATE gate_runs SET gate_run_id = ? WHERE gate_run_id = ?",
-      "gate-run:evidence-id-mismatch:projection",
-      "UPDATE workflow_runs SET workflow_run_id = ? WHERE workflow_run_id = ?",
-      stableId("gate-workflow", "gate-run:evidence-id-mismatch:projection"),
-    ],
-    [
-      "gate_id",
-      "UPDATE gate_runs SET gate_id = ? WHERE gate_run_id = ?",
-      "G2",
-      "UPDATE workflow_runs SET phase = ? WHERE workflow_run_id = ?",
-      "G2",
-    ],
-  ])("U-DOCTOR-GATE-01 rejects evidence %s mismatch", (_field, gateSql, gateValue, workflowSql, workflowValue) => {
+    {
+      field: "gate_run_id",
+      gateSql: "UPDATE gate_runs SET gate_run_id = ? WHERE gate_run_id = ?",
+      gateValue: "gate-run:evidence-id-mismatch:projection",
+      workflowSql: "UPDATE workflow_runs SET workflow_run_id = ? WHERE workflow_run_id = ?",
+      workflowValue: stableId("gate-workflow", "gate-run:evidence-id-mismatch:projection"),
+    },
+    {
+      field: "gate_id",
+      gateSql: "UPDATE gate_runs SET gate_id = ? WHERE gate_run_id = ?",
+      gateValue: "G2",
+      workflowSql: "UPDATE workflow_runs SET phase = ? WHERE workflow_run_id = ?",
+      workflowValue: "G2",
+    },
+    {
+      field: "plan_id",
+      gateSql: "UPDATE gate_runs SET plan_id = ? WHERE gate_run_id = ?",
+      gateValue: "PLAN-GATE-COVERAGE-EVIDENCE-IDENTITY-OTHER",
+      workflowSql: "UPDATE workflow_runs SET plan_id = ? WHERE workflow_run_id = ?",
+      workflowValue: "PLAN-GATE-COVERAGE-EVIDENCE-IDENTITY-OTHER",
+    },
+    {
+      field: "status",
+      gateSql: "UPDATE gate_runs SET status = ? WHERE gate_run_id = ?",
+      gateValue: "failed",
+      workflowSql: undefined,
+      workflowValue: undefined,
+    },
+    {
+      field: "checked_at",
+      gateSql: "UPDATE gate_runs SET checked_at = ? WHERE gate_run_id = ?",
+      gateValue: "2026-10-27T00:00:00.000Z",
+      workflowSql: undefined,
+      workflowValue: undefined,
+    },
+    {
+      field: "evidence_path",
+      gateSql: "UPDATE gate_runs SET evidence_path = ? WHERE gate_run_id = ?",
+      gateValue: ".ut-tdd/gate_runs/other.json",
+      workflowSql: undefined,
+      workflowValue: undefined,
+    },
+  ])("CANDIDATE-U-DOCTOR-GATE-02 rejects evidence $field mismatch", ({
+    gateSql,
+    gateValue,
+    workflowSql,
+    workflowValue,
+  }) => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-doctor-gate-run-evidence-identity-mismatch-"));
     const gateRunId = "gate-run:evidence-id-mismatch";
     const planId = "PLAN-GATE-COVERAGE-EVIDENCE-IDENTITY-MISMATCH";
+    const otherPlanId = "PLAN-GATE-COVERAGE-EVIDENCE-IDENTITY-OTHER";
     try {
       writePlanFixture(root, planId);
+      writePlanFixture(root, otherPlanId);
       writeGateRunEvidence(root, { gateRunId, gateId: "G1", planId });
       expect(checkGateRunCoverage(root).ok).toBe(true);
 
@@ -573,7 +661,9 @@ describe("gate-run-coverage doctor", () => {
       const db = openHarnessDb(defaultHarnessDbPath(root), { repoRoot: root });
       try {
         db.prepare(gateSql).run(gateValue, gateRunId);
-        db.prepare(workflowSql).run(workflowValue, stableId("gate-workflow", gateRunId));
+        if (workflowSql && workflowValue !== undefined) {
+          db.prepare(workflowSql).run(workflowValue, stableId("gate-workflow", gateRunId));
+        }
       } finally {
         db.close();
       }
@@ -591,31 +681,79 @@ describe("gate-run-coverage doctor", () => {
     }
   });
 
-  it.fails("U-DOCTOR-GATE-01 reprojects when evidence changes after a persistent projection", () => {
-    const root = mkdtempSync(join(tmpdir(), "ut-tdd-doctor-gate-run-stale-"));
-    const gateRunId = "gate-run:planless-1";
-    const planId = "PLAN-GATE-COVERAGE-STALE";
+  it.fails("CANDIDATE-U-DOCTOR-GATE-02 treats null evidence plan_id and empty DB plan_id as equal", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-doctor-gate-run-empty-plan-equal-"));
     try {
-      writePlanFixture(root, planId);
-      writeGateRunEvidence(root, { gateRunId, gateId: "G4", planId });
-      expect(checkGateRunCoverage(root).ok).toBe(true);
+      writeGateRunEvidence(root, { gateRunId: "gate-run:empty-plan-equal", planId: null });
 
-      writeGateRunEvidence(root, { gateRunId, gateId: "G5", planId });
       const result = checkGateRunCoverage(root);
       const projection = gateRunProjection(root);
 
       expect(result.ok).toBe(true);
-      expect(projection.gateRuns[0]).toMatchObject({ gate_run_id: gateRunId, gate_id: "G5" });
+      expect(projection.gateRuns).toEqual([
+        expect.objectContaining({ gate_run_id: "gate-run:empty-plan-equal", plan_id: "" }),
+      ]);
+      expect(projection.routineGateWorkflows).toEqual([
+        expect.objectContaining({
+          workflow_run_id: stableId("gate-workflow", "gate-run:empty-plan-equal"),
+          plan_id: "",
+        }),
+      ]);
+    } finally {
+      removeTestTree(root);
+    }
+  });
+
+  it.fails("CANDIDATE-U-DOCTOR-GATE-04 adds new evidence while checking all existing rows", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-doctor-gate-run-stale-"));
+    const firstGateRunId = "gate-run:append-first";
+    const secondGateRunId = "gate-run:append-second";
+    const planId = "PLAN-GATE-COVERAGE-STALE";
+    try {
+      writePlanFixture(root, planId);
+      writeGateRunEvidence(root, {
+        gateRunId: firstGateRunId,
+        gateId: "G4",
+        planId,
+      });
+      expect(checkGateRunCoverage(root).ok).toBe(true);
+
+      const db = openHarnessDb(defaultHarnessDbPath(root), { repoRoot: root });
+      try {
+        db.prepare("UPDATE gate_runs SET status = 'failed' WHERE gate_run_id = ?").run(
+          firstGateRunId,
+        );
+      } finally {
+        db.close();
+      }
+
+      writeGateRunEvidence(root, {
+        gateRunId: secondGateRunId,
+        gateId: "G5",
+        planId,
+        evidenceFileName: "gate-run-second.json",
+      });
+      const result = checkGateRunCoverage(root);
+      const projection = gateRunProjection(root);
+
+      expect(result.ok).toBe(false);
+      expect(projection.gateRuns).toEqual([
+        expect.objectContaining({ gate_run_id: firstGateRunId, gate_id: "G4", status: "failed" }),
+      ]);
+      expect(projection.gateRuns).not.toEqual(
+        expect.arrayContaining([expect.objectContaining({ gate_run_id: secondGateRunId })]),
+      );
+      expect(projection.routineGateWorkflows).toHaveLength(1);
       expect(projection.routineGateWorkflows[0]).toMatchObject({
-        workflow_run_id: stableId("gate-workflow", gateRunId),
-        phase: "G5",
+        workflow_run_id: stableId("gate-workflow", firstGateRunId),
+        phase: "G4",
       });
     } finally {
       removeTestTree(root);
     }
   });
 
-  it.fails("U-DOCTOR-GATE-01 does not accept a stale gate row after its evidence disappears", () => {
+  it.fails("CANDIDATE-U-DOCTOR-GATE-03 removes the DB-only gate/workflow pair after evidence disappears", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-doctor-gate-run-missing-evidence-"));
     const planId = "PLAN-GATE-COVERAGE-MISSING-EVIDENCE";
     try {
@@ -625,9 +763,16 @@ describe("gate-run-coverage doctor", () => {
       rmSync(join(root, ...GATE_RUN_EVIDENCE_PATH.split("/")));
 
       const result = checkGateRunCoverage(root);
+      const afterFirstCheck = gateRunProjection(root);
+      const secondResult = checkGateRunCoverage(root);
+      const afterSecondCheck = gateRunProjection(root);
 
       expect(result.ok).toBe(false);
       expect(result.messages.join("\n")).toContain("missing_gate_runs");
+      expect(afterFirstCheck.gateRuns).toEqual([]);
+      expect(afterFirstCheck.routineGateWorkflows).toEqual([]);
+      expect(secondResult).toEqual(result);
+      expect(afterSecondCheck).toEqual(afterFirstCheck);
     } finally {
       removeTestTree(root);
     }

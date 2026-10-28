@@ -32,7 +32,8 @@ import {
 const at = "@";
 const mail = (local: string, domain: string) => [local, domain].join(at);
 const P = mail("alice", "mail-provider.jp");
-const D = "example-private-repo";
+// L7 §2: tests/ ship in the Pack, so the synthetic denylist word is joined at runtime too.
+const D = ["example", "private", "repo"].join("-");
 const BASELINE_PATH = "docs/governance/privacy-scan-baseline.json";
 const DENYLIST = [".ut-tdd", "privacy-denylist.txt"];
 const TAG = "v0.0.0-test";
@@ -275,28 +276,41 @@ describe("privacy scan candidate oracles (distribution)", () => {
     expect(kinds(privacyJson(baselined.stdout))).toContain("privacy-email-hit");
   }, 600_000);
 
-  it("U-PRIVSCAN-018: never leaks denylist contents into output, evidence, or source", () => {
+  describe("U-PRIVSCAN-018: never leaks denylist contents into output, evidence, or source", () => {
+    // L7 018: each of the 8 runs (2 denylist states x 2 commands x json on/off) is its own
+    // test with its own timeout, so one slow spawn cannot starve the rest.
     const commentMarker = "unique-comment-marker-1391";
     const invalidEntry = "unclosed-group-entry(";
-    const home = makeHome("l-home", `# ${commentMarker}\n${D}\n${invalidEntry}\n`);
-    const source = cleanSource("l-source", `mentions ${D}`);
-    const packDir = join(scratchRoot, "l-pack");
-    const releaseDir = join(scratchRoot, "l-release");
-    mkdirSync(packDir, { recursive: true });
     const forbidden = [D, commentMarker, "unclosed-group-entry"];
-    const runAll = () => {
+    const homes = { invalid: "", hit: "" };
+    let source = "";
+    let packDir = "";
+    let releaseDir = "";
+
+    beforeAll(() => {
+      homes.invalid = makeHome("l-home-invalid", `# ${commentMarker}\n${D}\n${invalidEntry}\n`);
+      homes.hit = makeHome("l-home-hit", `# ${commentMarker}\n${D}\n`);
+      source = cleanSource("l-source", `mentions ${D}`);
+      packDir = join(scratchRoot, "l-pack");
+      releaseDir = join(scratchRoot, "l-release");
+      mkdirSync(packDir, { recursive: true });
+    }, 300_000);
+
+    const cases = (["invalid", "hit"] as const).flatMap((state) =>
+      [true, false].flatMap((json) =>
+        (["sync-pack", "package"] as const).map((command) => ({ state, json, command })),
+      ),
+    );
+
+    it.each(cases)("$state denylist, $command, json=$json", ({ state, json, command }) => {
+      const args =
+        command === "sync-pack"
+          ? ["sync-pack", "--repo-dir", packDir]
+          : ["package", "--tag", TAG, "--out", releaseDir];
       const sourceBefore = walkFiles(source);
-      const outputs: string[] = [];
-      for (const json of [true, false]) {
-        for (const command of [
-          ["sync-pack", "--repo-dir", packDir],
-          ["package", "--tag", TAG, "--out", releaseDir],
-        ]) {
-          const result = runDistribution(source, home, json ? [...command, "--json"] : command);
-          expect(result.status).toBe(1);
-          outputs.push(result.stdout, result.stderr);
-        }
-      }
+      const result = runDistribution(source, homes[state], json ? [...args, "--json"] : args);
+      expect(result.status).toBe(1);
+      const outputs = [result.stdout, result.stderr];
       const written = [...walkFiles(packDir).values(), ...walkFiles(releaseDir).values()];
       const sourceChanged = changedFiles(sourceBefore, walkFiles(source));
       for (const value of forbidden.slice(1)) {
@@ -311,12 +325,9 @@ describe("privacy scan candidate oracles (distribution)", () => {
       for (const path of [...walkFiles(source).keys(), ...walkFiles(packDir).keys()]) {
         expect(path.endsWith("privacy-denylist.txt"), path).toBe(false);
       }
-      return outputs;
-    };
-    const invalidOutputs = runAll();
-    expect(invalidOutputs.join("\n")).toContain("privacy-denylist-invalid");
-    writeFileSync(join(home, ...DENYLIST), `# ${commentMarker}\n${D}\n`, "utf8");
-    const hitOutputs = runAll();
-    expect(hitOutputs.join("\n")).toContain("privacy-denylist-hit");
-  }, 600_000);
+      expect(outputs.join("\n")).toContain(
+        state === "invalid" ? "privacy-denylist-invalid" : "privacy-denylist-hit",
+      );
+    }, 400_000);
+  });
 });
