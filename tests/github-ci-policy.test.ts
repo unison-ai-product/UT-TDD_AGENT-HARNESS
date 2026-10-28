@@ -1108,7 +1108,7 @@ describe("github-ci-policy lint", () => {
 
     it("U-CIPOL-019b: rejects runtime step reorder", () => {
       const checkout = `      - name: checkout\n        uses: actions/checkout@v5\n        with:\n          fetch-depth: 0\n\n`;
-      const setup = `      - name: setup node (harness 実行系の正式 runtime、PLAN-L7-462 step 2)\n        uses: actions/setup-node@v4\n        with:\n          node-version: "24.13.0"\n          cache: npm\n\n`;
+      const setup = `      - name: setup node (harness 実行系の正式 runtime、PLAN-L7-462 step 2)\n        uses: actions/setup-node@v4\n        with:\n          node-version: "24.22.1"\n          cache: npm\n\n`;
       const result = analyzeGithubCiPolicy(
         docs(SOURCE_WORKFLOW_WITH_LANE.replace(`${checkout}${setup}`, `${setup}${checkout}`)),
       );

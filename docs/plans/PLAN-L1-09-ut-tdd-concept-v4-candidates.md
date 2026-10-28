@@ -173,19 +173,19 @@ compile のみを対象にしている。
 保留 (時期尚早・対象外): CI critical-path scheduler / verification plan / shard budget、Functional Release Slice、
 post-release lifecycle authority (Pack canary #418 以降)、hosted preflight nonce / capability broker (外部実行 lane 前提)。
 
-### 2.6 社内 project の実録 (UNISON-TECHNOLOGY/AI-office-de-seo、PO 提示 2026-09-04)
+### 2.6 社内 project の実録 (社内 repo A、PO 提示 2026-09-04)
 
 並行して要求整理と画面プロト詰めを進めている社内 project を、v4 候補の機構が実運用で成立するかの実録として参照する
-(`gh api repos/UNISON-TECHNOLOGY/AI-office-de-seo/git/trees/HEAD?recursive=1`、`gh pr list / gh issue list --repo UNISON-TECHNOLOGY/AI-office-de-seo --state all`、
+(`gh api repos/社内 repo A/git/trees/HEAD?recursive=1`、`gh pr list / gh issue list --repo 社内 repo A --state all`、
 2026-09-04 実行、default branch main)。
 
 | 現物 (HEAD 2026-09-04) | v4 候補の対応 | 所見 |
 |---|---|---|
 | L1 要求を 16 分類 (`L1-requirements/categories/`) + logic 5 本に分散、README §3「1 要求 1 正本・ID 参照・UI は計算しない」、`.github/workflows/requirements-audit.yml` → `scripts/audit-requirements.mjs` が REQ / AC の重複・参照切れを検査 | FR-002 / 原則 6 (分散正本)、FR-008 | 分散正本 + 機械照合が実運用で成立している実録 |
 | `scripts/build-requirements-sheet-sync.mjs` が分類別要求 + acceptance-trace をスプレッドシート行へ生成 | FR-008 (スプシ同期 view) | 一方向生成の前例。v4 差分 = admission 経由の書き戻し、生成元 id / revision / digest 列 |
-| `ai-office-de-seo-requirement-dependency-register_v1.md` (必須 / 条件付き / 任意、未成立時の縮退状態、プロト発見の依存は暫定 → 確定) | FR-046 依存 graph、FR-047 discrepancy record | discrepancy record の原型。暫定 → 確定が人間ゲート |
+| `社内repoA-requirement-dependency-register_v1.md` (必須 / 条件付き / 任意、未成立時の縮退状態、プロト発見の依存は暫定 → 確定) | FR-046 依存 graph、FR-047 discrepancy record | discrepancy record の原型。暫定 → 確定が人間ゲート |
 | README §3.2 順序「L1 → L2 → 画面・遷移・fixture 検証 → 差分を L1/L2 へ反映 → L3 確定」、screen finding、L3 契約は暫定 baseline | FR-039 製本点 (a)、FR-016、FR-048 backflow | 「初期画面でルール固定してから分担」の実装例 |
-| `L3-ui-prototype/ai-office-de-seo-prototype-plan_v3.7.md`: 捏造禁止の fixture 契約 (§4)、異常系 fixture 必須セット PT-X、PT-* 受入チェックリスト (§6)、`ui-layout-check.yml` (Playwright) | FR-039 / AC-051、FR-017 | モック画像を正本にしない具体形。fixture が oracle |
+| `L3-ui-prototype/社内repoA-prototype-plan_v3.7.md`: 捏造禁止の fixture 契約 (§4)、異常系 fixture 必須セット PT-X、PT-* 受入チェックリスト (§6)、`ui-layout-check.yml` (Playwright) | FR-039 / AC-051、FR-017 | モック画像を正本にしない具体形。fixture が oracle |
 | Issue #24〜#29「画面ルールを抽出して既存ルールと照合」(open) | FR-047 齟齬検出 | 現状は人手 issue。v4 では compiler が discrepancy record として発行する対象 |
 
 不足 (v4 で埋める側): typed record が無く markdown + 正規表現抽出 (スプシ同期も同様)、screen finding が prose、チケット / lease /
@@ -210,10 +210,10 @@ admission が無く PR 単位の人手、依存台帳の暫定 → 確定が手�
 所見: この型は v4 の **移行元プロファイル** (standalone = 人間 orchestrator) であり、v4 が機械化する対象はここで人間が手で回している
 チケット切り出し・テスト仕様書・シート齟齬取り・再生成の 4 作業に一致する。概念 §Provider topology に standalone の実態として追記。
 
-### 2.8 社内 project の実録 3: 途中からハーネス概念を入れた実稼働システム (UNISON-TECHNOLOGY/seo-agent、PO 提示 2026-09-04)
+### 2.8 社内 project の実録 3: 途中からハーネス概念を入れた実稼働システム (社内 repo B、PO 提示 2026-09-04)
 
-社内 VPS で実稼働中の SEO 自動運用システム (AI-office-de-seo の前身)。2026-02 起点で、ハーネス (旧 HELIX) の Reverse / system-map を
-途中 (2026-06〜07) から導入した (`gh api repos/UNISON-TECHNOLOGY/seo-agent/git/trees/HEAD?recursive=1` の blob 数 = tracked 5,636 file (2026-09-04 再計測、truncated なし)、
+社内 VPS で実稼働中の SEO 自動運用システム (社内 repo A の前身)。2026-02 起点で、ハーネス (旧 HELIX) の Reverse / system-map を
+途中 (2026-06〜07) から導入した (`gh api repos/社内 repo B/git/trees/HEAD?recursive=1` の blob 数 = tracked 5,636 file (2026-09-04 再計測、truncated なし)、
 `gh pr list --state all` = 135 件 (merged 132)、`gh api .../commits` 直近 800 commit の type 分布、2026-09-04 実行)。
 PO の狙い: 「設計書の製本の重要性と、変更時の更新の重要性が解ける」実例。
 
@@ -230,11 +230,11 @@ PO の狙い: 「設計書の製本の重要性と、変更時の更新の重要
 drift fail-close・backflow record・退役 record を **最初から** 持つ理由がここにある。後付けで Reverse を回すコスト (80 file、全 draft) は、
 初期に record と製本点を置くコストより大きい、という実録として §3 の設計判断の根拠に使う。
 
-### 2.9 社内 project の実録 4: PoC 先行が行き過ぎて再設計 (UNISON-TECHNOLOGY/career-sheet-assistant、PO 提示 2026-09-04)
+### 2.9 社内 project の実録 4: PoC 先行が行き過ぎて再設計 (社内 repo C、PO 提示 2026-09-04)
 
 PoC 前提で作った実装が製品規模へ育ち、2026-08-18〜19 に Reverse R0〜R4 (PR #4〜#13) を 2 日で回して `e4723e4` で凍結、
 `reference/poc/` (598 file: backend 120 / frontend 70 / tests 151 / docs 176) へ収容し、L0 企画書 v1.0 → v1.1 から再設計を開始した
-(`gh api repos/UNISON-TECHNOLOGY/career-sheet-assistant/git/trees/HEAD?recursive=1` = 652 file、`gh pr list --state all` = 24 件
+(`gh api repos/社内 repo C/git/trees/HEAD?recursive=1` = 652 file、`gh pr list --state all` = 24 件
 (merged 22)、2026-09-04 実行)。
 
 | 現物 (HEAD 2026-09-04) | 観測 | v4 候補の対応 |

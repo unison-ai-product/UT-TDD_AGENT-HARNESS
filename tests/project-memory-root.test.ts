@@ -6,7 +6,6 @@ import {
   readdirSync,
   readFileSync,
   realpathSync,
-  rmSync,
   symlinkSync,
   writeFileSync,
 } from "node:fs";
@@ -30,6 +29,7 @@ import {
   resolveProjectMemoryRootWithPorts,
 } from "../src/runtime/project-memory-root.ts";
 import { gitTextTrimmed as git } from "./support/git.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 
 const cliPath = resolve("src/cli.ts");
 const fixtures: Array<{ root: string; primary: string; linked: string }> = [];
@@ -83,7 +83,7 @@ afterEach(() => {
         // The enclosing temporary repository is removed below.
       }
     }
-    rmSync(fixture.root, { recursive: true, force: true });
+    removeTestTree(fixture.root);
   }
 });
 
@@ -361,8 +361,8 @@ describe("project-scoped canonical Memory root (PLAN-L7-512)", () => {
         reason: "runtime_root_escape",
       });
     } finally {
-      rmSync(root, { recursive: true, force: true });
-      rmSync(outside, { recursive: true, force: true });
+      removeTestTree(root);
+      removeTestTree(outside);
     }
   });
 });

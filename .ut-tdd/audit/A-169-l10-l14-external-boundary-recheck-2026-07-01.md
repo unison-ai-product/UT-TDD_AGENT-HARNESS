@@ -9,7 +9,7 @@
 
 ```powershell
 git status --short --branch
-git -C C:\Users\micro\OneDrive\Desktop\UT-TDD_AGENT-HARNESS-Pack-work status --short --branch
+git -C C:\Users\<user>\OneDrive\Desktop\UT-TDD_AGENT-HARNESS-Pack-work status --short --branch
 bun src\cli.ts status --json
 bun src\cli.ts distribution release-plan --tag v0.1.3 --repo unison-ai-product/UT-TDD_AGENT-HARNESS-Pack --json
 Get-Command gpg, cosign, openssl -ErrorAction SilentlyContinue | Select-Object Name,Source,Version

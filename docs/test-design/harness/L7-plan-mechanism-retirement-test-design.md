@@ -71,7 +71,7 @@ issue: 1364
 
 ### 6.1 実測 (2026-10-28、`origin/main` `36482acad`)
 
-`docs/plans` を index と作業ツリーの両方から外した tree で `rebuildHarnessDb` (`:memory:`) と relation graph の loader を流し、PLAN のある tree と比べた (vitest と doctor は流していない)。
+`docs/plans` を index と作業ツリーの両方から外した tree で `rebuildHarnessDb` (`:memory:`) と relation graph の loader を node から直接流し、PLAN のある tree と比べた。**この節の数値は内部関数 (rebuild / loader) の出力の件数計測であり、テストを実行した結果でも、テストの assertion に到達した証拠でもない** (vitest と doctor は流していない)。テストの赤・空振りの証拠は §6.4 のとおり付け替えの PR が別に取る。
 
 - rebuild は `ok=true` で終わる。PLAN 由来の表 (`plan_registry`、`schedule_entries`、`execution_readiness_projection`、`review_evidence_registry`、`roadmap_gate_progress`、`drive_runs`、`model_runs`、`skill_recommendations`、`skill_invocations`、`test_runs`) は 0 件になる。`roadmap_rollups` の `program` は `total_gates=0`、`covered_bands=0` になる。
 - PLAN に依らず残る: `test_cases` 4033 件、`graph_nodes` 1573 件、design-quality の coverage 8 行 (全て `value=0`、`passed`)、`descent_obligations`、`automation_assets`、`document_catalog_entries`、`spec_rag_closure_entries` (VMS-004 は `green`・`closed`)、issue queue と承認 guardrail と improvement log の行。2 回目の rebuild の行数は 1 回目と一致する (hook と feedback の 4 表を除く)。
@@ -104,6 +104,18 @@ issue: 1364
 ### 6.4 昇格と引用の方針
 
 - 3 件 (1、3a、4) は候補 ID を持たない。1 は退役で、テストと選択の集合からファイルを消す。3a は既存の `U-DBPROJ-ATOMIC-01` を改訂する (共有の `L7-unit-test-design.md` の 1 行を置き換え、行は増やさない)。4 は既存の citation `U-DMP-003` のまま、早期 return を外してテスト名の「PLAN」を「設計文書」に替える。
-- 021〜024 と 3a・4 は振る舞いを足さない (テストの入力と assertion の付け替えで、`src/` の振る舞いは変えない)。現行の main では通るので `it.fails` の Red を持たない。Red の代わりに、付け替え前のテストが PLAN を除いた tree で赤か空振りになる実測 (§6.1) を実装 PR の本文に引用し、付け替え後のテストを同じ条件で流して通ることを示す。
+- 021〜024 と 3a・4 は振る舞いを足さない (テストの入力と assertion の付け替えで、`src/` の振る舞いは変えない)。現行の main では通るので `it.fails` の Red を持たない。Red の代わりの証拠は、付け替えの PR が次の 2 種類を区別して本文に記録する。§6.1 の件数計測はどちらの代わりにもならない。
+  - (i) 旧テストの実行: PLAN を除いた tree で旧テストを vitest で実行し、assertion の失敗で赤になるか、早期 return で assertion に 1 件も到達しない (空振り) ことを、実行ログと assertion の到達件数で示す。続けて、付け替え後のテストを同じ tree で実行し、assertion に到達して通ることを示す。
+  - (ii) mutation: 旧テストが PLAN を除いても通るケースでは (i) を作れない。投影の入力を 1 か所だけ壊した mutation で、旧 assertion は通り、新しい assertion は落ちることを示す。
+
+| # | 証拠 | 内容 |
+| --- | --- | --- |
+| 1 | (i) | 旧テストが `test_runs` の行数の assertion で赤になる。退役後はファイルと選択の集合に無いことを示す |
+| 2 (021) | (i) | 旧テストが planned edge か PLAN の行の assertion で赤になる |
+| 3a | (i) | 旧テストが早期 return で空振りになる |
+| 3b (022) | (i) | 同上 |
+| 3c (023) | (i) | 同上 |
+| 4 | (i) | 同上 |
+| 5 (024) | (ii) | 旧テストは PLAN を除いても実行されて通る (§6.1 の件数からの推定。実行して確かめる)。`requirement` node を残したまま `pairs` か `covered-by` の edge を投影から全て除いた mutation で、旧 assertion (stale-edge 0 件、`requirement` node 1 件以上) は通り、新しい非空条件が落ちる |
 - 候補 ID は、付け替えの PR がテスト名に引用し、src を含まない昇格 PR で `U-PLANRET-021`〜`024` へ 1:1 で昇格する。
 - `src/doctor/test-repository-isolation.ts` の登録 (`process.cwd()` の呼び出し数) は、早期 return の helper を消す分だけ同じ PR で合わせる。

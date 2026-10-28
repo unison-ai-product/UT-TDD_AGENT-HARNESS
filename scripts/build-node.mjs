@@ -8,8 +8,8 @@ const root = resolve(process.env.UT_TDD_REPO_ROOT ?? process.cwd());
 const output = resolve(process.argv[2] ?? resolve(root, "dist/node-generations/manual/ut-tdd.mjs"));
 const metafile = resolve(process.argv[3] ?? `${output}.metafile.json`);
 
-if (process.version !== "v24.13.0") {
-  throw new Error(`reviewed Node required: v24.13.0 (got ${process.version})`);
+if (process.version !== "v24.22.1") {
+  throw new Error(`reviewed Node required: v24.22.1 (got ${process.version})`);
 }
 const trackedSkillPaths = execFileSync("git", ["ls-files", "--", "skills"], {
   cwd: root,

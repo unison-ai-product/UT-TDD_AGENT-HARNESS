@@ -33,6 +33,7 @@ import {
   registerDelegationCommands,
 } from "./cli/delegation.ts";
 import { registerDistributionCommands } from "./cli/distribution.ts";
+import { registerDocSplitCommands } from "./cli/doc-split.ts";
 import { registerFeedbackCommands } from "./cli/feedback.ts";
 import { registerGuardrailCommands } from "./cli/guardrail.ts";
 import { registerPlanAdmissionCommands } from "./cli/plan-admission.ts";
@@ -100,7 +101,6 @@ import {
   runNodeBanAudit,
 } from "./lint/bun-permanent-ban.ts";
 import { loadChangedFiles, loadStagedFiles } from "./lint/change-impact.ts";
-import { checkDocSplit } from "./lint/doc-split-inputs.ts";
 import {
   applyDigestAnchorCandidatesToContent,
   nodeHistoryScanDeps,
@@ -2374,16 +2374,7 @@ automation
   });
 
 registerGuardrailCommands(program);
-const docSplit = program.command("doc-split").description("design document split gate (#1032)");
-docSplit
-  .command("check")
-  .description("measure design / test-design documents against the doc-split limits and baseline")
-  .action(() => {
-    const result = checkDocSplit(process.cwd());
-    for (const message of result.messages) process.stdout.write(`${message}\n`);
-    process.exitCode = result.ok ? 0 : 1;
-  });
-
+registerDocSplitCommands(program);
 const issue = program.command("issue").description("external issue dry-run queue");
 issue
   .command("queue")

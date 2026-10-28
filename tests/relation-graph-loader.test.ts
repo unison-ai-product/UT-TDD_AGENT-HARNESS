@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -8,6 +8,7 @@ import {
   collectRelationGraphProjection,
   exportRelationDiagram,
 } from "../src/lint/relation-graph.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 
 // PLAN-L7-32 §9 discharge: repo→RelationGraphSourceSet loader の結合テスト。
 // tmp repo に PLAN(generates)+src+test(import)+design(pair_artifact)+test-design を置き、
@@ -228,7 +229,7 @@ describe("loadRelationGraphSourceSet", () => {
       const result = analyzeRelationImpact({ changedPaths: [], projection });
       expect(result.findings.filter((finding) => finding.code === "stale-edge")).toEqual([]);
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -313,7 +314,7 @@ describe("loadRelationGraphSourceSet", () => {
         }),
       );
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -615,7 +616,7 @@ describe("loadRelationGraphSourceSet", () => {
       expect(diagram.ok).toBe(true);
       expect(diagram.content).toContain("flowchart TD");
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -626,7 +627,7 @@ describe("loadRelationGraphSourceSet", () => {
       expect(sourceSet.sourceFiles ?? []).toEqual([]);
       expect(sourceSet.plans ?? []).toEqual([]);
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -642,7 +643,7 @@ describe("loadRelationGraphSourceSet", () => {
       const staleEdges = result.findings.filter((f) => f.code === "stale-edge");
       expect(staleEdges.map((f) => f.message)).toEqual([]);
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 });

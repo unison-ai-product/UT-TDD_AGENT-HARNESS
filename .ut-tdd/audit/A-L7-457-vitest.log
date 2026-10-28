@@ -1,21 +1,21 @@
 
-[1m[7m[36m RUN [39m[27m[22m [36mv2.1.9 [39m[90mC:/Users/micro/AppData/Local/Temp/claude/wt-issue-118[39m
+[1m[7m[36m RUN [39m[27m[22m [36mv2.1.9 [39m[90mC:/Users/<user>/AppData/Local/Temp/claude/wt-issue-118[39m
 
  [32mâœ“[39m tests/git-workspace-fingerprint.test.ts [2m([22m[2m17 tests[22m[2m)[22m[90m 203[2mms[22m[39m
 (node:21232) ExperimentalWarning: SQLite is an experimental feature and might change at any time
 (Use `node --trace-warnings ...` to show where the warning was created)
  [32mâœ“[39m tests/db-maintenance.test.ts [2m([22m[2m4 tests[22m[2m)[22m[33m 391[2mms[22m[39m
-2 ŒÂ‚Ìƒtƒ@ƒCƒ‹‚ª³í‚Éˆ—‚³‚ê‚Ü‚µ‚½B0 ŒÂ‚Ìƒtƒ@ƒCƒ‹‚ğˆ—‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½
-2 ŒÂ‚Ìƒtƒ@ƒCƒ‹‚ª³í‚Éˆ—‚³‚ê‚Ü‚µ‚½B0 ŒÂ‚Ìƒtƒ@ƒCƒ‹‚ğˆ—‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½
-Cloning into 'C:\Users\micro\AppData\Local\Temp\ut-tdd-git-source-RIPllg-execution'...
+2 ï¿½Â‚Ìƒtï¿½@ï¿½Cï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Éï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ü‚ï¿½ï¿½ï¿½ï¿½B0 ï¿½Â‚Ìƒtï¿½@ï¿½Cï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Å‚ï¿½ï¿½Ü‚ï¿½ï¿½ï¿½Å‚ï¿½ï¿½ï¿½
+2 ï¿½Â‚Ìƒtï¿½@ï¿½Cï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Éï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ü‚ï¿½ï¿½ï¿½ï¿½B0 ï¿½Â‚Ìƒtï¿½@ï¿½Cï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Å‚ï¿½ï¿½Ü‚ï¿½ï¿½ï¿½Å‚ï¿½ï¿½ï¿½
+Cloning into 'C:\Users\<user>\AppData\Local\Temp\ut-tdd-git-source-RIPllg-execution'...
 done.
 HEAD is now at cb42822 initial
-Cloning into 'C:\Users\micro\AppData\Local\Temp\ut-tdd-git-source-RIPllg-reference'...
+Cloning into 'C:\Users\<user>\AppData\Local\Temp\ut-tdd-git-source-RIPllg-reference'...
 done.
 HEAD is now at cb42822 initial
-3 ŒÂ‚Ìƒtƒ@ƒCƒ‹‚ª³í‚Éˆ—‚³‚ê‚Ü‚µ‚½B0 ŒÂ‚Ìƒtƒ@ƒCƒ‹‚ğˆ—‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½
-3 ŒÂ‚Ìƒtƒ@ƒCƒ‹‚ª³í‚Éˆ—‚³‚ê‚Ü‚µ‚½B0 ŒÂ‚Ìƒtƒ@ƒCƒ‹‚ğˆ—‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½
-3 ŒÂ‚Ìƒtƒ@ƒCƒ‹‚ª³í‚Éˆ—‚³‚ê‚Ü‚µ‚½B0 ŒÂ‚Ìƒtƒ@ƒCƒ‹‚ğˆ—‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½
+3 ï¿½Â‚Ìƒtï¿½@ï¿½Cï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Éï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ü‚ï¿½ï¿½ï¿½ï¿½B0 ï¿½Â‚Ìƒtï¿½@ï¿½Cï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Å‚ï¿½ï¿½Ü‚ï¿½ï¿½ï¿½Å‚ï¿½ï¿½ï¿½
+3 ï¿½Â‚Ìƒtï¿½@ï¿½Cï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Éï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ü‚ï¿½ï¿½ï¿½ï¿½B0 ï¿½Â‚Ìƒtï¿½@ï¿½Cï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Å‚ï¿½ï¿½Ü‚ï¿½ï¿½ï¿½Å‚ï¿½ï¿½ï¿½
+3 ï¿½Â‚Ìƒtï¿½@ï¿½Cï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Éï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ü‚ï¿½ï¿½ï¿½ï¿½B0 ï¿½Â‚Ìƒtï¿½@ï¿½Cï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Å‚ï¿½ï¿½Ü‚ï¿½ï¿½ï¿½Å‚ï¿½ï¿½ï¿½
  [32mâœ“[39m tests/vitest-snapshot-runner.test.ts [2m([22m[2m13 tests[22m[2m)[22m[33m 2730[2mms[22m[39m
    [33m[2mâœ“[22m[39m vitest snapshot runner[2m > [22mU-TESTHYGIENE-039: uses one captured Git revision for execution and reference [33m1547[2mms[22m[39m
 (node:12884) ExperimentalWarning: SQLite is an experimental feature and might change at any time

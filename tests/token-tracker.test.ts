@@ -426,7 +426,7 @@ describe("claudeProjectSlug (repo -> Claude Code project-slug directory name)", 
     expect(claudeProjectSlug("C:\\Users\\example\\OneDrive\\Desktop\\UT-TDD-agent-harness")).toBe(
       "C--Users-example-OneDrive-Desktop-UT-TDD-agent-harness",
     );
-    expect(claudeProjectSlug("c:\\dev\\seo-agent")).toBe("c--dev-seo-agent");
+    expect(claudeProjectSlug("c:\\dev\\example-project")).toBe("c--dev-example-project");
   });
 });
 

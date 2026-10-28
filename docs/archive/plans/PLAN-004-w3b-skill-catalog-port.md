@@ -66,7 +66,7 @@ UT-TDD `ut-tdd skill suggest` (§7.2) の母集団を作る rule-based catalog e
 - vendor `skill_catalog.py` (PyYAML 不使用の bespoke parser 590 行) は W1 で確立した `yaml.safe_load` 路線と drift。bespoke parser は port せず置き換える
 - vendor `skills_root/<category>/<name>/SKILL.md` という 3 階層構造を前提とするが、§7.2 は `docs/skills/*.md` flat 構造を仕様化。port 時に rewrite が必要
 - vendor `command_mapper.derive_commands` は HELIX command 名 (`helix-codex` / `helix-claude` 等) に直結。UT-TDD は `ut-tdd` 名前空間で別物 → port 時に rewrite or skip 判定要
-- UT-TDD では HELIX skill 体系 (`~/ai-dev-kit-vscode/skills/`) を直接参照しない (CLAUDE.md `vendor/helix-source/` は read-only source material)。skill canonical は `docs/skills/*.md`
+- UT-TDD では HELIX skill 体系 (`~/<旧ソース repo>/skills/`) を直接参照しない (CLAUDE.md `vendor/helix-source/` は read-only source material)。skill canonical は `docs/skills/*.md`
 
 ## §3 実装計画 (Sprint 標準 8 ステップ)
 

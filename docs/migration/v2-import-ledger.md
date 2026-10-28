@@ -1,7 +1,7 @@
 # HELIX v2 Import Ledger — 採択 / 保留 / 見送り の軌跡
 
 > 目的: HELIX v2 (helix-workflows を L0→L1 で dogfooding した更新分) から UT-TDD へ**何を取り込み / 後段に回し / 見送ったか**を 1 本で追跡する採択台帳。
-> 由来: `RetryYN/ai-dev-kit-vscode` `origin/main` (2026-05-28 時点)。v2 docs = `docs/v2/L0-helix-workflows/concept.md` / `docs/v2/L1-REQUIREMENTS.md` / `docs/v2/L1-requirements/*` / `docs/plans/L0,L1/*`。
+> 由来: `社内の別 repo` `origin/main` (2026-05-28 時点)。v2 docs = `docs/v2/L0-helix-workflows/concept.md` / `docs/v2/L1-REQUIREMENTS.md` / `docs/v2/L1-requirements/*` / `docs/plans/L0,L1/*`。
 > 起票: 2026-05-28 (session 28a)。本台帳自体が v2 の「移行 PLAN = 採択軌跡を残す」パターンの dogfood。
 > 注: HELIX は PLAN を**日本語ファイル名**で管理するが、UT-TDD は Windows 文字化け回避で**英語ファイル名のみ** ([[memory: filename-english-only]])。取り込み時に翻訳する。
 
@@ -87,7 +87,7 @@ PO 指示「V モデルとモデル駆動を全部同じにしろ」を受け、
 
 ## §6 HELIX-workflows 正本由来 FR-L1 候補リスト (2026-05-28 確定、L1 機能要求 sub-doc 起票時の正本ネタ)
 
-> 出典: `c:\Users\micro\Downloads\HELIX-workflows\helix-process\` 配下 47 doc (Group A 19 横断・配線 / Group B 11 mode workflow + 工程専門 2 / Group C 15 L0-L14 工程定義)。Agent (pmo-sonnet, model:sonnet) で全件 Read + 構造抽出 (`agentId: af1dfb471e21882c8`)。
+> 出典: `c:\Users\<user>\Downloads\HELIX-workflows\helix-process\` 配下 47 doc (Group A 19 横断・配線 / Group B 11 mode workflow + 工程専門 2 / Group C 15 L0-L14 工程定義)。Agent (pmo-sonnet, model:sonnet) で全件 Read + 構造抽出 (`agentId: af1dfb471e21882c8`)。
 > 重要度: **P0** = UT-TDD core 必須 (18 件) / **P1** = 推奨採用 (12 件) / **P2** = 参考のみ (5 件)。
 > Step B-1 で `docs/design/harness/L1-requirements/functional-requirements.md` に転写、§1 機能一覧の正本となる。
 
