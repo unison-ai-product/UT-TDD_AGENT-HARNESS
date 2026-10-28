@@ -403,9 +403,10 @@ config・registry 不在→既定 fail-close / 未知キー→fail-close)。
 
 1. **`engines.node` = 範囲**: consumer が使ってよい Node の版の範囲を表す。consumer 側の判定は `package.json` の `engines.node` を
    npm semver として評価する既存の経路（`src/setup/distribution.ts` の `satisfiesRequiredNode`）が正本であり、ここで別の pin を持たない。
-2. **完全固定 = pin 面だけ**: 審査済みの 1 点（reviewed single binary）への完全固定は、`.node-version`、harness 自身の CI pin
-   （`.github/workflows/harness-check.yml` の `node-version`）、build（`scripts/build-node.mjs`）、`NODE_TOOLCHAIN_POLICY.nodeVersion`
-   にだけ掛ける。executable receipt と provenance registry の検証対象もこの審査済みの 1 点であり、範囲ではない。
+2. **完全固定 = pin 面だけ**: 審査済みの 1 点（reviewed single binary）への完全固定は、`.node-version`、source workflow pin
+   （`.github/workflows/harness-check.yml` と `.github/workflows/review-attestation.yml` の `node-version`）、build（`scripts/build-node.mjs`）、
+   `NODE_TOOLCHAIN_POLICY.nodeVersion` に掛ける。review-attestation は required check でなくても trusted custody receipt を扱うため対象とする。
+   Pack policy fixture（`tests/github-ci-policy.test.ts`）は実行時 authority ではなく、Pack template の正例として同じ pin を表し、template との drift をテストで拒否する。executable receipt と provenance registry も同じ 1 点を検証し、範囲は検証しない。
 3. **`toolchain-pin` の変更**: `analyzeToolchainPin` の `node-version-mismatch` は、現在 `.node-version` / `engines.node` /
    `NODE_TOOLCHAIN_POLICY.nodeVersion` の三者の完全一致を要求している。このうち `engines` の脚だけを外し、`.node-version` と
    `NODE_TOOLCHAIN_POLICY.nodeVersion` の完全一致は残す。`engines.node` は「有効な semver 範囲であり、`.node-version` の版を
@@ -443,20 +444,7 @@ config・registry 不在→既定 fail-close / 未知キー→fail-close)。
    - `package_json_identity` の意味を「`engines` を含む `package.json` 全体」から変えるかは、registry を実効 authority にする判断
      （項目 6）と同時に決める。この PR の範囲では、値の再計算だけを必須とする。
    - registry の status を `pair_frozen_pending_review` から進めるのは、非著者 family の review 完了後に限る。この改訂では進めない。
-8. **範囲外**: `.github/workflows/harness-check.yml` / `scripts/build-node.mjs` / `NODE_TOOLCHAIN_POLICY` の固定先を 24.22.1 へ
-   上げる作業は #1254 であり、この契約は扱わない。Pack への反映は `ut-tdd distribution sync-pack` の正規の手順で別に行う。
-
-9. **#1411 の対象範囲拡張**: #1254 の Green merge 後、L5 の審査済み Node pin は
-   `.github/workflows/harness-check.yml` に加えて `.github/workflows/review-attestation.yml` にも適用する。
-   後者は required check ではないが、trusted review custody receipt の発行・検証を行う source workflow であり、
-   source repo が管理する実行 workflow として同じ審査済み Node `24.22.1` を固定する。required-check でないことは、
-   toolchain pin の対象外である理由にはならない。
-   `tests/github-ci-policy.test.ts` の Pack workflow fixture は実行 workflow や pin authority ではないが、
-   Pack CI policy の正例として実 Pack template を表すため、Node pin は Pack template と同じ審査済み Node `24.22.1`
-   に保つ。fixture の pin drift は fixture と Pack template の不一致としてテストで検出し、fixture を古い版の
-   独立した期待値として扱わない。これにより fixture に `24.13.0` を残しても成功する状態を許さない。
-   この拡張は対象 workflow / policy fixture の pin 整合を定めるものに限り、workflow の trigger、権限、job 構造、
-   required-check の判定や、Node toolchain authority の他の規則は変更しない。
+8. **範囲外**: `.github/workflows/harness-check.yml` / `scripts/build-node.mjs` / `NODE_TOOLCHAIN_POLICY` の固定先を 24.22.1 へ上げる作業は #1254、`review-attestation.yml` の pin と Pack policy fixture の同期は #1411 で扱う。#1411 は pin の整合だけを定め、workflow の trigger・権限・job 構造・required-check 判定は変更しない。Pack への反映は `ut-tdd distribution sync-pack` の正規の手順で別に行う。
 
 ## Node build generation内部処理（Issue #152 D0-N）
 
