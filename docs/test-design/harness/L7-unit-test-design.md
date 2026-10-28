@@ -1831,7 +1831,6 @@ Issue #926 の custody oracle 行は契約上の候補宣言であり、実装�
 | `CANDIDATE-U-RVMG-049` | (#1423) 競合 fixture の実行と、`git fetch` / `git diff` の失敗・mb 解決不能の fixture | 競合は exit 1、出力に gate 名・競合 path・main を取り込んで CI を取り直す案内を含み、`--json` の reason は `baseline_conflict`。git 失敗・mb 解決不能は `baseline_conflict_unknown` で deny し、緑にならない |
 
 ## Claude HARNESS memory async wake oracle (2026-08-03)
-
 対象 = `src/runtime/claude-memory-wake.ts`、`src/cli.ts`、Claude Stop hook、consumer setup
 template。永続memoryと即時配送runtime stateを分離し、通知をreview/署名の権威へ昇格させない。
 
@@ -1846,7 +1845,6 @@ template。永続memoryと即時配送runtime stateを分離し、通知をrevie
 | `U-MEMWAKE-007` | 同一git common dir上のtarget一致・不一致workspace、およびCLI publish→Stop hook配送 | 不一致watcherはclaim 0でentryを保持。一致workspaceだけが本文をstderrへ返しexit 2 |
 
 ## Claude inbox 明示 ACK candidate oracle (PLAN-L6-935)
-
 設計正本は docs/design/harness/L6-function-design/claude-inbox-explicit-ack.md。個別の詳細 pair は
 docs/test-design/harness/L7-claude-inbox-explicit-ack-test-design.md を参照する。本節の ID は未実装 candidate であり、正式 U-* oracle ではない。
 
