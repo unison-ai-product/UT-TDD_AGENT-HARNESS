@@ -132,19 +132,23 @@ different runtime / model family when feasible. In single-runtime modes, record
 
 ### あなたが○○なら (Codex 指揮モデル別の振る舞い、PO ルール 2026-10-09)
 
-Codex 側で使うモデルは GPT-6 の Astra / Sol / Luna の 3 つだけである (ID の正本は
+Codex 側で使うモデルは GPT-6 の Astra / Sol / Terra / Luna の 4 つだけである (委譲経路の ID の正本は
 `src/team/model-policy.ts` の `MODEL_IDS`)。自分の行に従い、解けない判断は **1 段上へ相談する**。
 
 | あなたが | 解けない判断・難所 | やること | 仲間 (下に回す先) |
 |---|---|---|---|
 | Astra (`gpt-6-astra`) | ― | 常用しない。Sol から、超局所の難所の相談だけを受ける | ― |
 | Sol (`gpt-6.1-sol`) | どうしても解けないときだけ Astra に相談する | 常用。自分で判断し、control lane (Claude) と相談しながら Luna に振り、上がってきた成果を検収する | Luna |
+| Terra (`gpt-6.1-terra`) | フロントエンド・UI と設計の判断だけ Sol に相談する | 指揮。Claude 側の Sonnet と同じ位置づけで、チケットを分けて Luna に振り、上がってきた成果を検収し、Issue / PR に返事する。実装は自分でせず Luna に任せる | Luna |
 | Luna (`gpt-6-luna`) | Sol に相談する | worker。control lane の指示を受けて実装・テスト実装・文書修正・探索を行う | Luna の subagent (仲間を増やして並列に戦う) |
 
 - Sol の「検収」は PR を出す前の族内チェックであり、closing review の代わりにしない。Codex 著の成果物の
   closing review は従来どおり Claude Opus が行う (§Blind review role、`CLAUDE.md` §FLAG 後の限定是正と merge)。
 - Luna の仲間 (subagent) は closing の権限を持たない。
 - Astra は `MODEL_IDS` に未登録であり、相談するときは明示の `--model gpt-6-astra` で呼ぶ。
+- Terra は GUI lane の指揮でだけ使い、`MODEL_IDS` には登録しない (委譲経路の role には割り当てない)。
+  Terra が指揮しても、Codex 著の成果物の closing review は Claude Opus が行い、指揮の検収はその代わりにならない。
+  worker は Luna のまま変えない (PO 2026-10-27)。
 - PO へ上げてよい条件は `CLAUDE.md` §PO 判断への反射的エスカレーション禁止 のまま。
 - Claude 側の同じ表は `.claude/CLAUDE.md` §委譲と判断層 にある。
 
@@ -184,8 +188,9 @@ read-only のまま。契約改訂へ戻すのは上位契約の齟齬だけ。
 
 Model / effort routing defaults (task-kind ベース、PO rule 2026-07-14):
 
-- Codex (GPT-6 の 3 モデルだけ、PO 2026-10-09): 実装/テスト実装/ドキュメント修正/軽量探索 =
+- Codex (GPT-6 の 4 モデルだけ、PO 2026-10-09 / 2026-10-27): 実装/テスト実装/ドキュメント修正/軽量探索 =
   Luna (`gpt-6-luna`、effort `high`); 検証/設計/判断 = Sol (`gpt-6.1-sol`、effort `low`);
+  GUI lane の指揮 = Terra (`gpt-6.1-terra`。フロントエンド・UI と設計の判断だけ Sol に相談する);
   超局所の難所の相談だけ = Astra (`gpt-6-astra`、常用しない)。指揮モデル別の振る舞いは
   `AGENTS.md` §Codex / Claude Code Harness の「あなたが○○なら」の表。
 - Claude: フロントデザイン/UI デザインの判断・レビュー/設計ドキュメント作成 = Opus (`claude-opus-5-5`);

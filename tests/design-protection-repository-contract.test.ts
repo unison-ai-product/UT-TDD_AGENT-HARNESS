@@ -1,11 +1,13 @@
-import { execFileSync, spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 import * as designProtection from "../src/github/design-protection.ts";
 import { analyzeGithubCiPolicy, loadGithubCiPolicyDocs } from "../src/lint/github-ci-policy.ts";
+import { gitTextRaw as git } from "./support/git.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 
 /*
  * Contract-first Red: the subject module is intentionally absent in this slice.
@@ -39,13 +41,6 @@ function initRepo(files: Record<string, string>): { root: string; base: string }
   return { root, base: git(root, "rev-parse", "HEAD").trim() };
 }
 
-function git(root: string, ...args: string[]): string {
-  return execFileSync("git", ["-C", root, ...args], {
-    encoding: "utf8",
-    stdio: ["ignore", "pipe", "pipe"],
-  });
-}
-
 function writeRepoFile(root: string, path: string, content: string): void {
   const absolute = join(root, path);
   mkdirSync(dirname(absolute), { recursive: true });
@@ -60,7 +55,7 @@ function commit(root: string, message: string): string {
 
 function removeRepo(root: string): void {
   // `root` is always the unique mkdtempSync path created by initRepo or the test.
-  rmSync(root, { recursive: true, force: true });
+  removeTestTree(root);
 }
 
 function designStep(): Record<string, unknown> {

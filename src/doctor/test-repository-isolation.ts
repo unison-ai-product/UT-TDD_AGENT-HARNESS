@@ -13,7 +13,7 @@ export interface RepositoryReadContract {
 
 const CONTRACT_ROWS = `
 agent-guard-delegation-boundary:1
-asset-catalog:3 asset-drift:1 backfill-pairing:2 cited-command-existence:1 cli-surface:1 cli:1
+asset-catalog:3 asset-drift:1 backfill-pairing:1 cited-command-existence:1 cli-surface:1 cli:1
 advisory-strict-gate-aging:4
 codex-hook-adapter:5 coding-rules:1 context-doc-router:2 cycle-p4-verification:3 db-currency:1 db-projection-coverage:1 db-projection-ingestion:3
 dependency-drift:4 descent-obligation:3 distribution-acceptance:1 distribution-scratch-ignore:1 doctor-runtime-surface:2 doctor:25
@@ -77,6 +77,12 @@ repositoryReadContracts["tests/doc-split-integration.test.ts"] = {
   mode_calls: { head_snapshot: 1, isolated_fixture: 4 },
   reason:
     "doc-split candidate 020/021 inspect the execution snapshot baseline and use temporary repositories for append and CLI state checks",
+};
+
+repositoryReadContracts["tests/code-size-integration.test.ts"] = {
+  mode_calls: { head_snapshot: 1, isolated_fixture: 5 },
+  reason:
+    "code-size candidate 016/017 inspect the execution snapshot baseline and use temporary repositories for append and CLI state checks",
 };
 
 repositoryReadContracts["tests/design-root.test.ts"] = {

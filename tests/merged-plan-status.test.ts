@@ -10,6 +10,7 @@ import {
   mergedPlanStatusMessages,
 } from "../src/lint/merged-plan-status.ts";
 import { classifyTargetArtifacts } from "../src/lint/merged-plan-target-evidence.ts";
+import { gitChecked as git } from "./support/git.ts";
 
 describe("merged-plan-status diagnostics (Issue #390 / PLAN-L7-506)", () => {
   it("U-MPSTATUS-506-001: landing violation separates preflight confirm from exact-head close evidence", () => {
@@ -689,7 +690,3 @@ describe("pre-merge landing detection (issue #162)", () => {
     }
   });
 });
-
-function git(root: string, args: string[]): void {
-  execFileSync("git", ["-C", root, ...args], { stdio: "pipe" });
-}

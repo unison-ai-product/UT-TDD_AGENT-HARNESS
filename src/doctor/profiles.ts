@@ -61,9 +61,6 @@ export interface DoctorRunProfileResolutionOptions {
 }
 
 export const FULL_DOCTOR_OUTPUT_IDS = [
-  "backfill",
-  "scrum-reverse",
-  "plan-supersession",
   "plan-body-substance",
   "plan-completion-drift",
   "propagation",
@@ -118,6 +115,7 @@ export const FULL_DOCTOR_OUTPUT_IDS = [
   "secret-scan",
   "feedback-log",
   "l6-completion",
+  "doc-split",
   "l7-completion",
   "review-evidence",
   "guardrail-invariants",
@@ -160,8 +158,6 @@ export const FULL_DOCTOR_OUTPUT_IDS = [
   "handover-prose",
   "green-command-digest",
   "advisory-strict-gate-aging",
-  "forward-convergence",
-  "forward-convergence-audit",
 ] as const;
 
 export const TOOLCHAIN_DOCTOR_OUTPUT_IDS = ["toolchain-pin"] as const;

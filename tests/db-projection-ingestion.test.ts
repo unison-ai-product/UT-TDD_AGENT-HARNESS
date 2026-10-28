@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -11,6 +11,7 @@ import {
 } from "../src/lint/db-projection-ingestion.ts";
 import { openHarnessDb } from "../src/state-db/index.ts";
 import { rebuildHarnessDb } from "../src/state-db/projection-writer.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 
 const populatedAutomaticProjectionCounts = {
   graph_nodes: 1,
@@ -69,7 +70,7 @@ describe("db projection ingestion detector", () => {
     }
   });
 
-  it("CANDIDATE-U-DBPROJ-ING-003: explicit PLAN input generates schedule/readiness rows", () => {
+  it("U-DBPROJ-ING-003: explicit PLAN input generates schedule/readiness rows", () => {
     const repoRoot = mkdtempSync(join(tmpdir(), "ut-tdd-db-projection-ingestion-plan-"));
     let db: ReturnType<typeof openHarnessDb> | undefined;
 
@@ -102,7 +103,7 @@ describe("db projection ingestion detector", () => {
       expect(rebuilt.rowCounts.execution_readiness_projection).toBeGreaterThan(0);
     } finally {
       db?.close();
-      rmSync(repoRoot, { recursive: true, force: true });
+      removeTestTree(repoRoot);
     }
   });
 
@@ -155,7 +156,7 @@ describe("db projection ingestion detector", () => {
       } else {
         process.env.UT_TDD_CODEX_SESSIONS_DIR = previousCodex;
       }
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -172,7 +173,7 @@ describe("db projection ingestion detector", () => {
     );
   });
 
-  it.fails("CANDIDATE-U-DBPROJ-ING-001: permits both PLAN-derived tables to be empty", () => {
+  it("U-DBPROJ-ING-001: permits both PLAN-derived tables to be empty", () => {
     const result = analyzeDbProjectionIngestion({
       ...populatedAutomaticProjectionCounts,
       schedule_entries: 0,
@@ -196,7 +197,7 @@ describe("db projection ingestion detector", () => {
     );
   });
 
-  it.fails("CANDIDATE-U-DBPROJ-ING-002: rejects another empty automatic table", () => {
+  it("U-DBPROJ-ING-002: rejects another empty automatic table", () => {
     const result = analyzeDbProjectionIngestion({
       ...populatedAutomaticProjectionCounts,
       schedule_entries: 0,
@@ -214,7 +215,6 @@ describe("db projection ingestion detector", () => {
       expect.arrayContaining([
         "spec_defs",
         "spec_relations",
-        "schedule_entries",
         "activation_entries",
         "document_catalog_entries",
         "document_scale_profile_entries",

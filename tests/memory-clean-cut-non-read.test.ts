@@ -21,6 +21,7 @@ import { loadMemoryEntries, type MemoryEntry, parseMemoryFile } from "../src/mem
 import { LEGACY_MEMORY_ARCHIVE_ROOT, sha256Hex } from "../src/memory/legacy-archive-manifest.ts";
 import { loadMemoryCorpus, readMemory } from "../src/memory/service.ts";
 import { defaultHarnessDbPath, openHarnessDb } from "../src/state-db/index.ts";
+import { gitTextTrimmedDefaultStdio as git } from "./support/git.ts";
 import { removeTestTree } from "./support/temp-tree.ts";
 
 // PLAN-L6-104 §3.1 判断 5 / PLAN-L7-566 §3: canonical root, tracked archive and linked-worktree
@@ -49,10 +50,6 @@ const fixtures: Fixture[] = [];
 afterAll(() => {
   for (const fixture of fixtures) removeTestTree(fixture.root);
 });
-
-function git(cwd: string, args: readonly string[]): string {
-  return execFileSync("git", ["-C", cwd, ...args], { encoding: "utf8" }).trim();
-}
 
 function entry(id: string, title: string, body: string): string {
   return [

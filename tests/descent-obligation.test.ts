@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -17,6 +17,7 @@ import {
   type DeferEntry,
   type TraceKeyedArtifact,
 } from "../src/lint/descent-obligation-types.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 
 const a = (
   over: Partial<TraceKeyedArtifact> & Pick<TraceKeyedArtifact, "traceKey" | "layer" | "role">,
@@ -360,7 +361,7 @@ describe("descent-obligation ledger (PLAN-L6-35 / FR-L1-03)", () => {
       expect(artifacts.some((artifact) => artifact.traceKey === "FR-L1-02")).toBe(false);
       expect(artifacts.some((artifact) => artifact.traceKey.startsWith("U-"))).toBe(false);
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -389,7 +390,7 @@ describe("descent-obligation ledger (PLAN-L6-35 / FR-L1-03)", () => {
         expect.objectContaining({ traceKey: "FR-L1-46", waitingLayer: "L6" }),
       );
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -409,7 +410,7 @@ describe("descent-obligation ledger (PLAN-L6-35 / FR-L1-03)", () => {
 
       expect(artifacts).toHaveLength(0);
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -439,7 +440,7 @@ describe("descent-obligation ledger (PLAN-L6-35 / FR-L1-03)", () => {
         "docs/design/harness/L1-requirements/functional-requirements.md",
       );
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 });

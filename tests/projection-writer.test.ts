@@ -18,6 +18,7 @@ import {
   projectIssueApprovalGuardrails,
   projectIssueQueue,
   projectRefactorCandidateSignals,
+  projectRetryEvents,
 } from "../src/state-db/feedback-projections.ts";
 import { type HarnessDb, isSecretLike, openHarnessDb } from "../src/state-db/index.ts";
 import { migrate, rowCounts } from "../src/state-db/migration.ts";
@@ -42,23 +43,6 @@ import {
 import { projectRuntimeTestRunFromSessionEvent as projectRuntimeTestRunFromSessionEventCore } from "../src/state-db/runtime-projections.ts";
 import { projectSkillMetrics as projectSkillMetricsCore } from "../src/state-db/skill-projections.ts";
 import { claudeProjectSlug } from "../src/state-db/token-tracker.ts";
-
-interface VerificationWorkflowRow {
-  phase: string;
-  ready_status: string;
-  human_required: number;
-}
-
-interface VerificationGateRow {
-  status: string;
-  evidence_path: string;
-}
-
-interface DriveRunRow {
-  plan_id: string;
-  mode: string;
-  status: string;
-}
 
 const hasSourcePlanDocs = () => existsSync(join(process.cwd(), "docs", "plans"));
 
@@ -844,7 +828,7 @@ export function evaluateAgentGuard(input: { stage: string; route: string; model:
     }
   });
 
-  it("U-DBPROJ-GATE-01 projects persisted gate run evidence into gate/workflow/retry rows", () => {
+  it.fails("U-DBPROJ-GATE-01 projects each persisted gate run without treating repeated routine gates as retries", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-gate-run-projection-"));
     const planId = "PLAN-L7-363-routine-gate-run-projection";
     try {
@@ -919,24 +903,234 @@ export function evaluateAgentGuard(input: { stage: string; route: string; model:
         ]);
         const workflows = db
           .prepare(
-            "SELECT workflow, phase, ready_status FROM workflow_runs WHERE plan_id = ? ORDER BY checked_at",
+            "SELECT workflow_run_id, plan_id, workflow, phase, ready_status FROM workflow_runs WHERE plan_id = ? ORDER BY checked_at",
           )
           .all(planId);
         expect(workflows).toEqual([
-          { workflow: "routine-gate", phase: "G4", ready_status: "blocked" },
-          { workflow: "routine-gate", phase: "G4", ready_status: "passed" },
+          {
+            workflow_run_id: stableId("gate-workflow", "gate-run:G4:attempt-1"),
+            plan_id: planId,
+            workflow: "routine-gate",
+            phase: "G4",
+            ready_status: "blocked",
+          },
+          {
+            workflow_run_id: stableId("gate-workflow", "gate-run:G4:attempt-2"),
+            plan_id: planId,
+            workflow: "routine-gate",
+            phase: "G4",
+            ready_status: "passed",
+          },
         ]);
-        const retry = db
+        const retries = db
           .prepare(
             "SELECT plan_id, workflow, phase, attempt_count FROM retry_events WHERE plan_id = ?",
           )
-          .get(planId);
-        expect(retry).toMatchObject({
-          plan_id: planId,
-          workflow: "routine-gate",
-          phase: "G4",
-          attempt_count: 2,
-        });
+          .all(planId);
+        expect(retries).toEqual([]);
+        const retryMetric = db
+          .prepare("SELECT value, status FROM quality_signals WHERE metric = ? AND subject_id = ?")
+          .get("workflow_retry_groups", "workflow");
+        expect(retryMetric).toMatchObject({ value: 0, status: "pass" });
+      } finally {
+        db.close();
+      }
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it.fails("U-DBPROJ-GATE-01 projects planless gate runs to workflow rows and excludes retry groups", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-planless-gate-run-projection-"));
+    const runs = [
+      { gate_run_id: "gate-run:G7:planless-attempt-1", status: "failed" },
+      { gate_run_id: "gate-run:G7:planless-attempt-2", status: "passed" },
+    ];
+    try {
+      const gateRunsDir = join(root, ".ut-tdd", "gate_runs");
+      mkdirSync(gateRunsDir, { recursive: true });
+      for (const [index, run] of runs.entries()) {
+        writeFileSync(
+          join(gateRunsDir, `G7-planless-attempt-${index + 1}.json`),
+          `${JSON.stringify(
+            {
+              schema_version: 1,
+              gate_run_id: run.gate_run_id,
+              gate_id: "G7",
+              plan_id: "",
+              status: run.status,
+              checked_at: `2026-07-09T00:0${index}:00.000Z`,
+              session_id: "session-planless-gate-projection",
+              mode: "hybrid",
+              tier: "cross_agent",
+              review_kind: "cross_agent",
+              static_applicable: true,
+              source: "ut-tdd gate",
+              messages: [],
+            },
+            null,
+            2,
+          )}\n`,
+          "utf8",
+        );
+      }
+
+      const db = openHarnessDb(":memory:", { repoRoot: root });
+      try {
+        rebuildHarnessDb({ repoRoot: root, db });
+        const gateRows = db
+          .prepare(
+            "SELECT gate_run_id, gate_id, plan_id, status FROM gate_runs WHERE gate_id = ? ORDER BY checked_at",
+          )
+          .all("G7");
+        expect(gateRows).toEqual(
+          runs.map((run) => ({
+            gate_run_id: run.gate_run_id,
+            gate_id: "G7",
+            plan_id: "",
+            status: run.status,
+          })),
+        );
+
+        const workflowRows = db
+          .prepare(
+            "SELECT workflow_run_id, plan_id, drive_run_id, workflow, phase, ready_status FROM workflow_runs WHERE workflow = ? AND phase = ? ORDER BY checked_at",
+          )
+          .all("routine-gate", "G7");
+        expect(workflowRows).toEqual([
+          {
+            workflow_run_id: stableId("gate-workflow", runs[0].gate_run_id),
+            plan_id: "",
+            drive_run_id: "",
+            workflow: "routine-gate",
+            phase: "G7",
+            ready_status: "blocked",
+          },
+          {
+            workflow_run_id: stableId("gate-workflow", runs[1].gate_run_id),
+            plan_id: "",
+            drive_run_id: "",
+            workflow: "routine-gate",
+            phase: "G7",
+            ready_status: "passed",
+          },
+        ]);
+        expect(
+          db
+            .prepare("SELECT * FROM retry_events WHERE workflow = ? AND phase = ?")
+            .all("routine-gate", "G7"),
+        ).toEqual([]);
+        const retryMetric = db
+          .prepare("SELECT value, status FROM quality_signals WHERE metric = ? AND subject_id = ?")
+          .get("workflow_retry_groups", "workflow");
+        expect(retryMetric).toMatchObject({ value: 0, status: "pass" });
+      } finally {
+        db.close();
+      }
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("U-DBPROJ-GATE-01 keeps retry grouping for repeated non-routine workflows", () => {
+    const db = openHarnessDb(":memory:");
+    try {
+      migrate(db);
+      const workflow = db.prepare(
+        `INSERT INTO workflow_runs
+           (workflow_run_id, plan_id, workflow, phase, ready_status, human_required)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+      );
+      workflow.run("forward-impl-1", "PLAN-RETRY-CONTROL", "forward", "implement", "blocked", 0);
+      workflow.run("forward-impl-2", "PLAN-RETRY-CONTROL", "forward", "implement", "passed", 0);
+      projectRetryEvents(db, {
+        nowIso: () => "2026-07-09T00:02:00.000Z",
+        stableId,
+        recordProjectionEvent,
+      });
+
+      expect(
+        db
+          .prepare("SELECT workflow, phase, attempt_count FROM retry_events WHERE plan_id = ?")
+          .get("PLAN-RETRY-CONTROL"),
+      ).toEqual({ workflow: "forward", phase: "implement", attempt_count: 2 });
+    } finally {
+      db.close();
+    }
+  });
+
+  it.fails.each([
+    false,
+    true,
+  ])("U-DBPROJ-GATE-01 keeps A-132 seeds historical and ownerless with PLAN present=%s", (planPresent) => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-verification-band-seed-"));
+    const layers = ["L8", "L9", "L10", "L11", "L12", "L13", "L14"] as const;
+    const auditPath = ".ut-tdd/audit/A-132-l8-l14-verification-band-execution.md";
+    try {
+      mkdirSync(join(root, ".ut-tdd", "audit"), { recursive: true });
+      writeFileSync(join(root, auditPath), "# A-132 verification-band execution\n", "utf8");
+      if (planPresent) {
+        mkdirSync(join(root, "docs", "plans"), { recursive: true });
+        writeFileSync(
+          join(root, "docs", "plans", "PLAN-M-00-verify-cutover.md"),
+          [
+            "---",
+            "plan_id: PLAN-M-00-verify-cutover",
+            'title: "verification band seed fixture"',
+            "kind: impl",
+            "layer: L7",
+            "drive: db",
+            "status: confirmed",
+            "route_signal: feature_addition",
+            "route_mode: add-feature",
+            "created: 2026-07-09",
+            "updated: 2026-07-09",
+            "---",
+            "",
+            "# verification band seed fixture",
+            "",
+          ].join("\n"),
+          "utf8",
+        );
+      }
+
+      const db = openHarnessDb(":memory:", { repoRoot: root });
+      try {
+        rebuildHarnessDb({ repoRoot: root, db });
+        const seedGates = layers.map((layer) =>
+          db
+            .prepare(
+              "SELECT gate_run_id, gate_id, plan_id, status, evidence_path FROM gate_runs WHERE gate_run_id = ?",
+            )
+            .get(stableId("verification-band-gate", layer)),
+        );
+        expect(seedGates).toEqual(
+          layers.map((layer) => ({
+            gate_run_id: stableId("verification-band-gate", layer),
+            gate_id: `G-VERIFY.${layer}`,
+            plan_id: "",
+            status: "historical",
+            evidence_path: auditPath,
+          })),
+        );
+
+        const workflowIds = layers.map((layer) => stableId("verification-band-workflow", layer));
+        const workflowRows = db
+          .prepare(
+            `SELECT workflow_run_id FROM workflow_runs WHERE workflow_run_id IN (${workflowIds.map(() => "?").join(",")})`,
+          )
+          .all(...workflowIds);
+        expect(workflowRows).toEqual([]);
+
+        const coverageIds = layers.map((layer) =>
+          stableId("verification-band-coverage", `${layer}:local_check_passed`),
+        );
+        const coverageRows = db
+          .prepare(
+            `SELECT coverage_id FROM coverage WHERE coverage_id IN (${coverageIds.map(() => "?").join(",")})`,
+          )
+          .all(...coverageIds);
+        expect(coverageRows).toEqual([]);
       } finally {
         db.close();
       }
@@ -2538,56 +2732,6 @@ Fixture.
         verdict: "pass",
       });
 
-      const verificationRuns = db
-        .prepare(
-          `SELECT phase, ready_status, human_required
-           FROM workflow_runs
-           WHERE plan_id = ? AND workflow = ?
-           ORDER BY CASE phase
-             WHEN 'L8' THEN 8
-             WHEN 'L9' THEN 9
-             WHEN 'L10' THEN 10
-             WHEN 'L11' THEN 11
-             WHEN 'L12' THEN 12
-             WHEN 'L13' THEN 13
-             WHEN 'L14' THEN 14
-             ELSE 99
-           END`,
-        )
-        .all(
-          "PLAN-M-00-verify-cutover",
-          "L8-L14-verification-band",
-        ) as unknown as VerificationWorkflowRow[];
-      expect(verificationRuns).toHaveLength(7);
-      expect(verificationRuns.map((row) => row.phase)).toEqual([
-        "L8",
-        "L9",
-        "L10",
-        "L11",
-        "L12",
-        "L13",
-        "L14",
-      ]);
-      expect(verificationRuns.every((row) => row.ready_status === "passed_local")).toBe(true);
-      expect(
-        verificationRuns
-          .filter((row) => row.phase === "L12" || row.phase === "L13")
-          .every((row) => row.human_required === 1),
-      ).toBe(true);
-
-      const verificationDriveJoin = db
-        .prepare(
-          `SELECT d.plan_id, d.mode, d.status
-           FROM workflow_runs w
-           JOIN drive_runs d ON d.drive_run_id = w.drive_run_id
-           WHERE w.plan_id = ? AND w.phase = ?`,
-        )
-        .get("PLAN-M-00-verify-cutover", "L8") as DriveRunRow | undefined;
-      expect(verificationDriveJoin).toMatchObject({
-        plan_id: "PLAN-M-00-verify-cutover",
-        mode: "Verification",
-      });
-
       const hookJoin = db
         .prepare(
           `SELECT COUNT(*) AS value
@@ -2605,19 +2749,6 @@ Fixture.
         )
         .get() as { value: number };
       expect(modelJoin.value).toBeGreaterThan(0);
-
-      const verificationGates = db
-        .prepare(
-          "SELECT gate_id, status, evidence_path FROM gate_runs WHERE plan_id = ? AND gate_id LIKE ? ORDER BY gate_id",
-        )
-        .all("PLAN-M-00-verify-cutover", "G-VERIFY.L%") as unknown as VerificationGateRow[];
-      expect(verificationGates).toHaveLength(7);
-      expect(verificationGates.every((row) => row.status === "passed")).toBe(true);
-      expect(
-        verificationGates.every((row) =>
-          String(row.evidence_path).includes("A-132-l8-l14-verification-band-execution.md"),
-        ),
-      ).toBe(true);
 
       const coverage = db
         .prepare(

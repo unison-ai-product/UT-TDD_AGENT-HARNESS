@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -10,6 +10,7 @@ import {
   loadAssetDriftInput,
 } from "../src/lint/asset-drift.ts";
 import { LEGACY_SOURCE_REPO } from "../src/lint/personal-path.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 
 const agent = (id: string, text = "---\nmodel: claude-sonnet-4-6\n---\nbody"): AssetDoc => ({
   path: `.claude/agents/${id}.md`,
@@ -168,7 +169,7 @@ describe("asset-drift lint (U-FR-L1-49)", () => {
         detail: "legacy runtime name residue",
       });
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 });

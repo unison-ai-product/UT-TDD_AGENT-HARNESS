@@ -429,17 +429,17 @@ config・registry 不在→既定 fail-close / 未知キー→fail-close)。
    `packageManager` と `NODE_TOOLCHAIN_POLICY.npmVersion` の一致だけを残す。
 6. **provenance registry の扱い**: `node-toolchain-provenance-registry-v1.json` は、審査済みの 1 点（Node/npm の archive digest、
    `.node-version`、lock、`packageManager`）の同一性を結ぶものとして位置づけ、`engines` の範囲は結ばない。
-   registry の `toolchain.engines`（完全一致の `24.13.0` / `11.6.2`）と `engine_authority` は、この契約と食い違うため Green の PR で
-   改訂が必要である（項目 7）。status は `pair_frozen_pending_review` のままであり、`package_json_identity.content_sha256` は
+   改訂前の registry の `toolchain.engines`（完全一致の `24.13.0` / `11.6.2`）と `engine_authority` は、この契約と食い違っていたため
+   契約 PR で改訂する（項目 7）。status は `pair_frozen_pending_review` のままであり、`package_json_identity.content_sha256` は
    現 HEAD の `package.json` と一致しない。さらに `src/` に `package_json_identity` を読む箇所はない。このため registry の sealed は
    文書の記述より実効範囲が狭い。この契約は、registry を実効的な authority へ引き上げることを要求しない（引き上げは別の判断）。
-7. **Green の PR が行う registry 改訂**（この設計文書の PR では JSON を編集しない）。
+7. **#1254 / #1255 の契約 PR が行う registry 改訂**。実装 PR では保護された registry を変更しない。
    - 審査済みの 1 点が #1254 で 24.22.1 へ動くため、`toolchain.node_version` / `npm_version` / `package_manager` / archive・member の digest を
      再取得して更新する。`source_authority` の URL と `observed_on` も更新する。
    - `toolchain.engines` を範囲（項目 4・5）へ改め、`engine_authority` の説明を「`engines` は範囲であり、完全固定の authority ではない」へ
      書き換える。
-   - `package_json_identity.content_sha256` は、Green の `package.json` の raw bytes から再計算した値に更新する。再計算の前提は、
-     `package.json` の変更が全て済んでいること（#1247 → #1254 → #1255 の順）である。
+   - `package_json_identity.content_sha256` は、版更新と #1255 の範囲化を含む入力 commit の `package.json` の raw bytes から
+     再計算した値に更新する。入力 commit は実在する Git object として契約 PR より先に用意し、実装 PR はその履歴を取り込む。
    - `package_json_identity` の意味を「`engines` を含む `package.json` 全体」から変えるかは、registry を実効 authority にする判断
      （項目 6）と同時に決める。この PR の範囲では、値の再計算だけを必須とする。
    - registry の status を `pair_frozen_pending_review` から進めるのは、非著者 family の review 完了後に限る。この改訂では進めない。
@@ -451,7 +451,7 @@ config・registry 不在→既定 fail-close / 未知キー→fail-close)。
 1. Node build generation receiptの`subject_revision`は当該sliceのcandidate HEADへ固定する。pair-freezeした provenance は
    `NODE-TOOLCHAIN-PROVENANCE-REGISTRY-v1`（`docs/design/harness/L5-detailed-design/node-toolchain-provenance-registry-v1.json`）
    を唯一の正本とする。registry は Node公式distribution archive filename/SHA-256（観測済み `linux-x64` /
-   `windows-x64`）、同梱npm `11.6.2`の archive-root-relative CLI path・expected file SHA-256、
+   `windows-x64`）、registry の supported rows に記録された同梱npmの archive-root-relative CLI path・expected file SHA-256、
    `packageManager`/`engines`/lockfile identity、source revision/Git blob custody を結ぶ。非著者レビュー完了前の
    status は `pair_frozen_pending_review` とし、`darwin-*` は typed `unsupported_os` とする。公式 archive が存在しても
    macOS を supported と推論しない。実Node/npm executableを絶対pathで解決し、version文字列だけでなく expected

@@ -10,7 +10,7 @@ next_pair_freeze: L7
 issue: 1310
 ---
 
-> **L6 contract marker**: `analyzeCodeSize(input: CodeSizeInput) => CodeSizeResult` は unit-test-granularity contract である (未実装の目標契約。実装は本書の凍結後)。DbC pre/post/invariant は §11 にまとめる。oracle の詳細 (CANDIDATE-U-CODESIZE-001〜) は専用の `docs/test-design/harness/L7-code-size-gate-test-design.md` が固定する。閾値 (§4.2) は **PO 確定値 (2026-10-26)** である。値を変えるときは本書と L7 を同時に改訂する。
+> **L6 contract marker**: `analyzeCodeSize(input: CodeSizeInput) => CodeSizeResult` は unit-test-granularity contract である (未実装の目標契約。実装は本書の凍結後)。DbC pre/post/invariant は §11 にまとめる。oracle の詳細 (U-CODESIZE-001〜) は専用の `docs/test-design/harness/L7-code-size-gate-test-design.md` が固定する。閾値 (§4.2) は **PO 確定値 (2026-10-26)** である。値を変えるときは本書と L7 を同時に改訂する。
 
 # コードとテストの量の検査 (code-size gate) — 関数設計 (issue #1310)
 
@@ -128,15 +128,17 @@ git ls-files src tests | grep -E '\.(ts|tsx|mts|cts)$' | grep -v '\.d\.ts$' | xa
 
 | Function | Signature | pre | post | invariant | oracle |
 |---|---|---|---|---|---|
-| `classifyCodeFile` | `classifyCodeFile(path: string) => CodeClass \| null` | path は repo 相対 | `"src"` / `"tests"` / `null` (§2) | path だけで決まる | `CANDIDATE-U-CODESIZE-002` |
-| `measureCodeFile` | `measureCodeFile(source: CodeSizeSource) => CodeMeasure` | `source.path` が対象 | `{ path, codeClass, lines, functionExcess, overFunctions, topLevel }` | 同じ文字列から同じ値 | `CANDIDATE-U-CODESIZE-001`, `CANDIDATE-U-CODESIZE-003` |
-| `analyzeCodeSize` | `analyzeCodeSize(input: CodeSizeInput) => CodeSizeResult` | 入力は §11 の Pre | `{ ok, findings, summary }` (§6) | 純粋。入力順に依存しない | `CANDIDATE-U-CODESIZE-004`〜`013` |
-| `parseCodeSizeBaseline` | `parseCodeSizeBaseline(sourceText: string) => CodeSizeBaseline \| null` | 文字列 | 解釈できなければ `null` | 壊れた入力を空とみなさない | `CANDIDATE-U-CODESIZE-014` |
-| `loadCodeSizeSources` | `loadCodeSizeSources(repoRoot: string) => { sources: CodeSizeSource[]; unreadable: string[] }` | repo root | 対象ファイルの内容と読めない path | 書き込まない | `CANDIDATE-U-CODESIZE-015` |
-| `loadPreviousCodeSizeBaseline` | `loadPreviousCodeSizeBaseline(repoRoot: string) => { kind: "found"; baseline: CodeSizeBaseline } \| { kind: "absent" } \| { kind: "unreadable" }` | repo root | §5 の比較元 | 読めない比較元を `absent` にしない | `CANDIDATE-U-CODESIZE-015` |
-| `loadCodeSizeMergeBaseMeasures` | `loadCodeSizeMergeBaseMeasures(repoRoot: string, paths: readonly string[]) => { kind: "found"; measures: CodeSizeBaseline } \| { kind: "unreadable" }` | repo root と baseline の path | merge-base の内容を §3 で測った記録形 | 作業木を読まない | `CANDIDATE-U-CODESIZE-015` |
-| `loadRenamedCodeFiles` | `loadRenamedCodeFiles(repoRoot: string) => { kind: "found"; renames: CodeRename[] } \| { kind: "unreadable" }` | repo root | 対象に関係する rename の列 | 読めない git を rename なしにしない | `CANDIDATE-U-CODESIZE-015` |
-| `checkCodeSize` | `checkCodeSize(repoRoot: string) => { messages: string[]; ok: boolean }` | repo root | adapter を合成し `analyzeCodeSize` を呼ぶ | 例外を握りつぶさない | `CANDIDATE-U-CODESIZE-016`, `CANDIDATE-U-CODESIZE-017` |
+| `classifyCodeFile` | `classifyCodeFile(path: string) => CodeClass \| null` | path は repo 相対 | `"src"` / `"tests"` / `null` (§2) | path だけで決まる | `U-CODESIZE-002` |
+| `measureCodeFile` | `measureCodeFile(source: CodeSizeSource) => CodeMeasure` | `source.path` が対象 | `{ path, codeClass, lines, functionExcess, functions, overFunctions, topLevel }` | 同じ文字列から同じ値 | `U-CODESIZE-001`, `U-CODESIZE-003`, `U-CODESIZE-019` |
+| `analyzeCodeSize` | `analyzeCodeSize(input: CodeSizeInput) => CodeSizeResult` | 入力は §11 の Pre | `{ ok, findings, summary }` (§6) | 純粋。入力順に依存しない | `U-CODESIZE-004`〜`013` |
+| `parseCodeSizeBaseline` | `parseCodeSizeBaseline(sourceText: string) => CodeSizeBaseline \| null` | 文字列 | 解釈できなければ `null` | 壊れた入力を空とみなさない | `U-CODESIZE-014` |
+| `loadCodeSizeSources` | `loadCodeSizeSources(repoRoot: string) => { sources: CodeSizeSource[]; unreadable: string[] }` | repo root | 対象ファイルの内容と読めない path | 書き込まない | `U-CODESIZE-015` |
+| `loadPreviousCodeSizeBaseline` | `loadPreviousCodeSizeBaseline(repoRoot: string) => { kind: "found"; baseline: CodeSizeBaseline } \| { kind: "absent" } \| { kind: "unreadable" }` | repo root | §5 の比較元 | 読めない比較元を `absent` にしない | `U-CODESIZE-015` |
+| `loadCodeSizeMergeBaseMeasures` | `loadCodeSizeMergeBaseMeasures(repoRoot: string, paths: readonly string[]) => { kind: "found"; measures: CodeSizeBaseline } \| { kind: "unreadable" }` | repo root と baseline の path | merge-base の内容を §3 で測った記録形 | 作業木を読まない | `U-CODESIZE-015` |
+| `loadRenamedCodeFiles` | `loadRenamedCodeFiles(repoRoot: string) => { kind: "found"; renames: CodeRename[] } \| { kind: "unreadable" }` | repo root | 対象に関係する rename の列 | 読めない git を rename なしにしない | `U-CODESIZE-015` |
+| `checkCodeSize` | `checkCodeSize(repoRoot: string) => { messages: string[]; ok: boolean }` | repo root | adapter を合成し `analyzeCodeSize` を呼ぶ | 例外を握りつぶさない | `U-CODESIZE-016`, `U-CODESIZE-017` |
+
+`CodeMeasure` の `functions` は `{ name: string; line: number; lines: number }[]` で、§3 の測り方で測った**全関数**(上限以下も含む)を出現順に持つ。名前の無い関数は `<anon@行番号>`、`tests` では空配列、`functionExcess` が `null`。`overFunctions` は `functions` から行数が上限(120)を超える要素を抜き出した導出値で、行数の降順(同数は出現順)に並べる(field は残す)。`functionExcess` は `functions` から導ける。
 
 `CodeSizeInput` は `{ sources: readonly CodeSizeSource[]; baseline: CodeSizeBaseline; previousBaseline: CodeSizeBaseline | null; mergeBaseMeasures: CodeSizeBaseline | null; renames: readonly CodeRename[] }` (`max-source-params` に合わせて 1 つの object にまとめる)。`CodeSizeSource` は `{ path: string; text: string }`、`CodeRename` は `{ from: string; to: string }`、`CodeSizeBaseline` は `Readonly<Record<string, { lines: number | null; functionExcess: number | null }>>`。
 
@@ -144,12 +146,12 @@ git ls-files src tests | grep -E '\.(ts|tsx|mts|cts)$' | grep -v '\.d\.ts$' | xa
 
 - doctor: check 名 `code-size`、CI の doctor (governance hard gates) で fail-close する。`checkCodeSize` の `{ messages, ok }` を返す。
 - PR 前に流す軽い CLI: `ut-tdd code-size check`。`ok` なら exit 0、そうでなければ exit 1。読み取りだけで、harness.db にも `.ut-tdd/` にも書かない。doctor の singleton には入らない。
-- PR の順序は doc-split gate §8.2 と同じ (設計書保護 gate §10.3 の三段階): (0) 本書と L7 の契約 PR、(1) 登録 + Red PR (実 repo を読む 016 と 017 は `src/doctor/test-repository-isolation.ts` の `repositoryReadContracts` へ登録行を足す。テスト名は候補 ID を引用する)、(2) src を含まない昇格 PR (`CANDIDATE-U-CODESIZE-*` を `U-CODESIZE-*` へ 1:1 で昇格)、(3) 実装 PR (Green。`src/lint/code-size*.ts`、doctor と CLI の配線、`docs/governance/code-size-baseline.json` の初期値、`refactor-candidate-policy.ts` の `splitModuleLines` を 400 へ下げる変更と、`refactor-candidates.ts` の関数の拾い方と行数の数え方を §3 に揃える変更 (§10))。分割 PR は src と tests と baseline を同じ PR で変える (設計文書に触れないので設計書保護 gate に当たらない)。
+- PR の順序は doc-split gate §8.2 と同じ (設計書保護 gate §10.3 の三段階): (0) 本書と L7 の契約 PR、(1) 登録 + Red PR (実 repo を読む 016 と 017 は `src/doctor/test-repository-isolation.ts` の `repositoryReadContracts` へ登録行を足す。テスト名は候補 ID を引用する。`src/lint/code-size*.ts` は設計書保護 gate §10.3 の 1' に従い、契約形 stub (fail-close の値だけを返す) と `DEFERRED_LINTS` 登録に限って足す)、(2) src を含まない昇格 PR (`CANDIDATE-U-CODESIZE-*` を `U-CODESIZE-*` へ 1:1 で昇格)、(3) 実装 PR (Green。`src/lint/code-size*.ts` の stub を実装に置き換えて `DEFERRED_LINTS` の行を撤去し、doctor と CLI の配線、`docs/governance/code-size-baseline.json` の初期値、`refactor-candidate-policy.ts` の `splitModuleLines` を 400 へ下げる変更と、`refactor-candidates.ts` の関数の拾い方と行数の数え方を §3 に揃える変更 (§10))。分割 PR は src と tests と baseline を同じ PR で変える (設計文書に触れないので設計書保護 gate に当たらない)。
 
 ## 10. 既存の値との整合
 
-- `src/state-db/refactor-candidate-policy.ts` の値は、Refactor の候補を出す値として残す (超えても違反ではない)。gate と同じ単位 (空行を除く行数) なので、大小関係を「候補 ≤ 上限」と定める。確定値では `src` の上限 500 が現行の `splitModuleLines` 700 を下回り「候補 ≤ 上限」が崩れるので、**`splitModuleLines` を 400 に下げる** (実装 PR の Green で `refactor-candidate-policy.ts` を変える)。理由: 上限 500 に届く前の 100 行の幅で分割候補を出し、gate で止まる前に分割を計画できるようにするため。`splitModuleLines` は `src` だけを走査する (`REFACTOR_SCAN_ROOTS`) ので、`tests` には候補の段を置かない。`extractHelperLines` 120 = 関数の行数の上限 120 で、候補と上限が一致する (候補は 120 以上、上限は 120 を超えたら違反)。`splitModuleExports` 24 と `dedupeFunctionMinLines` 10 は gate にしない。候補は値**以上**で出し、gate は上限を**超えた**ら止める (module の行数は 400 行から候補、501 行から違反)。値と境界は L7 の `CANDIDATE-U-CODESIZE-018` が固定する。
-- **候補側の測り方を gate に揃える**: 値の大小だけでは「候補が gate より先に出る」ことは保証されない。現行の `refactor-candidates.ts` は、コメントを正規表現で除くとき改行ごと消すので行数が gate より少なく出る (`x++; /* c` と `*/ x++;` の 2 行が 1 行になる)。また、method・constructor・getter・setter・式本体の arrow を拾わない。そこで Green で、候補側の関数の拾い方と関数の行数を §3 の構文木の方式 (gate の `measureCodeFile` と同じ処理) に置き換える。module の行数は、すでに gate と同じ定義 (空白以外を含む行の数) なので変えない。重複の候補 (`dedupeFunctionMinLines`) も同じ関数の抽出を使うので、候補の集合は変わりうる。同じ入力を両側に渡して行数と拾った関数が一致することは L7 の `CANDIDATE-U-CODESIZE-019` が固定する。
+- `src/state-db/refactor-candidate-policy.ts` の値は、Refactor の候補を出す値として残す (超えても違反ではない)。gate と同じ単位 (空行を除く行数) なので、大小関係を「候補 ≤ 上限」と定める。確定値では `src` の上限 500 が現行の `splitModuleLines` 700 を下回り「候補 ≤ 上限」が崩れるので、**`splitModuleLines` を 400 に下げる** (実装 PR の Green で `refactor-candidate-policy.ts` を変える)。理由: 上限 500 に届く前の 100 行の幅で分割候補を出し、gate で止まる前に分割を計画できるようにするため。`splitModuleLines` は `src` だけを走査する (`REFACTOR_SCAN_ROOTS`) ので、`tests` には候補の段を置かない。`extractHelperLines` 120 = 関数の行数の上限 120 で、候補と上限が一致する (候補は 120 以上、上限は 120 を超えたら違反)。`splitModuleExports` 24 と `dedupeFunctionMinLines` 10 は gate にしない。候補は値**以上**で出し、gate は上限を**超えた**ら止める (module の行数は 400 行から候補、501 行から違反)。値と境界は L7 の `U-CODESIZE-018` が固定する。
+- **候補側の測り方を gate に揃える**: 値の大小だけでは「候補が gate より先に出る」ことは保証されない。現行の `refactor-candidates.ts` は、コメントを正規表現で除くとき改行ごと消すので行数が gate より少なく出る (`x++; /* c` と `*/ x++;` の 2 行が 1 行になる)。また、method・constructor・getter・setter・式本体の arrow を拾わない。そこで Green で、候補側の関数の拾い方と関数の行数を §3 の構文木の方式 (gate の `measureCodeFile` と同じ処理) に置き換える。module の行数は、すでに gate と同じ定義 (空白以外を含む行の数) なので変えない。重複の候補 (`dedupeFunctionMinLines`) も同じ関数の抽出を使うので、候補の集合は変わりうる。同じ入力を両側に渡して行数と拾った関数が一致することは L7 の `U-CODESIZE-019` が固定する。
 - 今後上限を下げるときも、候補の値を上限以下へ下げる変更を同じ実装 PR に含める (候補が上限より遅く出ると、候補の意味が無くなるため)。
 - **module の責務の数え方**: `coding-rules.md` は「1 module の責務の数え方とファイル単位の上限は #1310 で決める」としている。本書はファイル単位の上限を行数だけで決め、module の責務の数 (export の数など) は gate にしない。export の数は宣言の粒度 (型の export、catalog module) で大きく揺れ、責務の数を表さないためである。`splitModuleExports` は候補のまま残す。
 - `coding-rules.md` の 80 / 12 / 3 は目安のまま残す (案 1、PO 確定)。

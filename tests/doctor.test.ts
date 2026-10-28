@@ -24,7 +24,6 @@ import {
   checkAgentContractDetection,
   checkAgentSlots,
   checkAssetDrift,
-  checkBackfillResult,
   checkBranchKind,
   checkChangeImpact,
   checkChangeSetIntegrity,
@@ -40,8 +39,6 @@ import {
   checkDesignDocCrossIntegrity,
   checkDriveDbRegistration,
   checkDriveModelPassage,
-  checkForwardConvergence,
-  checkForwardConvergenceAudit,
   checkFrRoadmapCoverage,
   checkGateConfirm,
   checkGateIdFormat,
@@ -72,7 +69,6 @@ import {
   checkRuleDrift,
   checkRuntimePortability,
   checkRuntimeReadability,
-  checkScrumReverse,
   checkSkillAssignment,
   checkTelemetryClosure,
   checkTrackedCanonical,
@@ -86,17 +82,21 @@ import {
   nodeDoctorDeps,
   runDoctor,
 } from "../src/doctor/index.ts";
+import { checkGateRunCoverage } from "../src/doctor/process-quality.ts";
 import { buildDoctorResult } from "../src/doctor/result.ts";
 import { analyzeGateRunCoverage, gateRunCoverageMessages } from "../src/lint/gate-run-coverage.ts";
 import { CODEX_GIT_ROOT_PREFIX } from "../src/lint/hook-invocation.ts";
 import type { AgentSlotsDeps, Slot } from "../src/runtime/agent-slots.ts";
+import { stableId } from "../src/stable-id.ts";
 import {
   analyzeDesignDetectionStats,
   DESIGN_QUALITY_CHECK_IDS,
   type DesignDetectionStats,
   designDetectionMessages,
 } from "../src/state-db/design-detection.ts";
+import { defaultHarnessDbPath, openHarnessDb } from "../src/state-db/index.ts";
 import { consumeDoctorResultEnvelope } from "./support/doctor-envelope.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 import { headSnapshotRoot } from "./support/workspace-roots.ts";
 
 const NOW = "2026-06-04T00:00:00.000Z";
@@ -197,8 +197,97 @@ describe("design-detection doctor aggregate", () => {
   });
 });
 
-describe("gate-run-coverage doctor aggregate", () => {
-  it("U-DOCTOR-GATE-01 fails closed on workflow rows without gate evidence and orphan gate runs", () => {
+const GATE_RUN_EVIDENCE_PATH = ".ut-tdd/gate_runs/gate-run.json";
+const VERIFICATION_BAND_AUDIT_PATH = ".ut-tdd/audit/A-132-l8-l14-verification-band-execution.md";
+const VERIFICATION_BAND_LAYERS = ["L8", "L9", "L10", "L11", "L12", "L13", "L14"] as const;
+const GATE_RUN_CHECKED_AT = "2026-10-26T00:00:00.000Z";
+
+function writeGateRunEvidence(
+  repoRoot: string,
+  input: { gateRunId?: string; gateId?: string; planId?: string | null; status?: string } = {},
+): void {
+  mkdirSync(join(repoRoot, ".ut-tdd", "gate_runs"), { recursive: true });
+  writeFileSync(
+    join(repoRoot, ...GATE_RUN_EVIDENCE_PATH.split("/")),
+    `${JSON.stringify({
+      schema_version: 1,
+      gate_run_id: input.gateRunId ?? "gate-run:planless-1",
+      gate_id: input.gateId ?? "G4",
+      plan_id: input.planId ?? null,
+      status: input.status ?? "passed",
+      checked_at: GATE_RUN_CHECKED_AT,
+      session_id: "session-gate-run-coverage",
+      mode: "hybrid",
+      tier: "cross_agent",
+      review_kind: "cross_agent",
+      static_applicable: true,
+      source: "ut-tdd gate",
+      messages: [],
+    })}\n`,
+    "utf8",
+  );
+}
+
+function gateRunProjection(repoRoot: string): {
+  gateRuns: Record<string, unknown>[];
+  routineGateWorkflows: Record<string, unknown>[];
+  verificationBandCoverageCount: number;
+} {
+  const db = openHarnessDb(defaultHarnessDbPath(repoRoot), { repoRoot });
+  try {
+    return {
+      gateRuns: db
+        .prepare(
+          "SELECT gate_run_id, gate_id, plan_id, status, evidence_path FROM gate_runs ORDER BY gate_id, gate_run_id",
+        )
+        .all(),
+      routineGateWorkflows: db
+        .prepare(
+          "SELECT workflow_run_id, plan_id, drive_run_id, workflow, phase, ready_status FROM workflow_runs WHERE workflow = 'routine-gate' ORDER BY phase, workflow_run_id",
+        )
+        .all(),
+      verificationBandCoverageCount: Number(
+        db.prepare("SELECT COUNT(*) AS value FROM coverage WHERE scope = 'verification-band'").get()
+          ?.value ?? 0,
+      ),
+    };
+  } finally {
+    db.close();
+  }
+}
+
+function writeVerificationBandAudit(repoRoot: string): void {
+  mkdirSync(join(repoRoot, ".ut-tdd", "audit"), { recursive: true });
+  writeFileSync(join(repoRoot, ...VERIFICATION_BAND_AUDIT_PATH.split("/")), "fixture\n", "utf8");
+}
+
+function writePlanFixture(repoRoot: string, planId: string): void {
+  mkdirSync(join(repoRoot, "docs", "plans"), { recursive: true });
+  writeFileSync(
+    join(repoRoot, "docs", "plans", `${planId}.md`),
+    [
+      "---",
+      `plan_id: ${planId}`,
+      'title: "gate run coverage fixture"',
+      "kind: impl",
+      "layer: L7",
+      "drive: db",
+      "status: confirmed",
+      "route_signal: feature_addition",
+      "route_mode: add-feature",
+      "created: 2026-10-26",
+      "updated: 2026-10-26",
+      "---",
+      "",
+      "# gate run coverage fixture",
+      "",
+    ].join("\n"),
+    "utf8",
+  );
+}
+
+describe("gate-run-coverage doctor", () => {
+  it("analyzer reports both reciprocal projection omissions", () => {
     const result = analyzeGateRunCoverage({
       gateRuns: 1,
       workflowRuns: 2,
@@ -216,7 +305,24 @@ describe("gate-run-coverage doctor aggregate", () => {
     expect(gateRunCoverageMessages(result).join("\n")).toContain("gate-run-coverage - violation");
   });
 
-  it("passes when gate and workflow projections are joined", () => {
+  it("analyzer does not let another projected run mask a missing reciprocal row", () => {
+    const result = analyzeGateRunCoverage({
+      gateRuns: 8,
+      workflowRuns: 2,
+      workflowPlansWithoutGateRun: 1,
+      orphanGateRuns: 1,
+      blankPlanGateRuns: 0,
+      invalidEvidenceFindings: 0,
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.violations.map((v) => v.reason)).toEqual([
+      "workflow_without_gate_run",
+      "orphan_gate_run",
+    ]);
+  });
+
+  it("analyzer passes when projection summary reports a complete join", () => {
     const result = analyzeGateRunCoverage({
       gateRuns: 2,
       workflowRuns: 2,
@@ -228,6 +334,462 @@ describe("gate-run-coverage doctor aggregate", () => {
 
     expect(result.ok).toBe(true);
     expect(gateRunCoverageMessages(result).join("\n")).toContain("gate-run-coverage - OK");
+  });
+
+  it.fails("analyzer accepts one blank-plan gate when the reciprocal projection is complete", () => {
+    const result = analyzeGateRunCoverage({
+      gateRuns: 1,
+      workflowRuns: 1,
+      workflowPlansWithoutGateRun: 0,
+      orphanGateRuns: 0,
+      blankPlanGateRuns: 1,
+      invalidEvidenceFindings: 0,
+    });
+
+    expect(result.ok).toBe(true);
+  });
+
+  it("fails closed when neither current gate evidence nor the historical seed exists", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-doctor-gate-run-empty-"));
+    try {
+      const result = checkGateRunCoverage(root);
+
+      expect(result.ok).toBe(false);
+      expect(result.messages.join("\n")).toContain("missing_gate_runs");
+    } finally {
+      removeTestTree(root);
+    }
+  });
+
+  it.each([
+    ["malformed JSON", "{not json", undefined],
+    ["empty gate_id", undefined, ""],
+  ])("fails closed on %s evidence", (_case, rawJson, gateId) => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-doctor-gate-run-invalid-"));
+    try {
+      if (rawJson !== undefined) {
+        mkdirSync(join(root, ".ut-tdd", "gate_runs"), { recursive: true });
+        writeFileSync(join(root, ...GATE_RUN_EVIDENCE_PATH.split("/")), rawJson, "utf8");
+      } else {
+        writeGateRunEvidence(root, { gateId });
+      }
+
+      const result = checkGateRunCoverage(root);
+
+      expect(result.ok).toBe(false);
+      expect(result.messages.join("\n")).toContain("invalid_gate_run_evidence");
+    } finally {
+      removeTestTree(root);
+    }
+  });
+
+  it.fails("U-DOCTOR-GATE-01 accepts a planless run only with its matching workflow projection", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-doctor-gate-run-planless-"));
+    const gateRunId = "gate-run:planless-1";
+    try {
+      writeGateRunEvidence(root, { gateRunId, gateId: "G4", planId: null });
+
+      const result = checkGateRunCoverage(root);
+      const projection = gateRunProjection(root);
+
+      expect(result.ok).toBe(true);
+      expect(projection.gateRuns).toEqual([
+        {
+          gate_run_id: gateRunId,
+          gate_id: "G4",
+          plan_id: "",
+          status: "passed",
+          evidence_path: GATE_RUN_EVIDENCE_PATH,
+        },
+      ]);
+      expect(projection.routineGateWorkflows).toEqual([
+        {
+          workflow_run_id: stableId("gate-workflow", gateRunId),
+          plan_id: "",
+          drive_run_id: "",
+          workflow: "routine-gate",
+          phase: "G4",
+          ready_status: "passed",
+        },
+      ]);
+    } finally {
+      removeTestTree(root);
+    }
+  });
+
+  it.fails("U-DOCTOR-GATE-01 accepts a valid gate/workflow pair whose plan is not registered", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-doctor-gate-run-unregistered-plan-"));
+    const planId = "PLAN-NOT-REGISTERED-GATE-COVERAGE";
+    try {
+      writeGateRunEvidence(root, { gateRunId: "gate-run:unregistered-plan-1", planId });
+
+      const result = checkGateRunCoverage(root);
+      const projection = gateRunProjection(root);
+      const db = openHarnessDb(defaultHarnessDbPath(root), { repoRoot: root });
+      let registeredPlanCount = 0;
+      try {
+        registeredPlanCount = Number(
+          db.prepare("SELECT COUNT(*) AS value FROM plan_registry WHERE plan_id = ?").get(planId)
+            ?.value ?? 0,
+        );
+      } finally {
+        db.close();
+      }
+
+      expect(result.ok).toBe(true);
+      expect(registeredPlanCount).toBe(0);
+      expect(projection.gateRuns).toHaveLength(1);
+      expect(projection.routineGateWorkflows).toHaveLength(1);
+    } finally {
+      removeTestTree(root);
+    }
+  });
+
+  it.fails("U-DOCTOR-GATE-01 detects a same-plan workflow that has no gate-run counterpart", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-doctor-gate-run-workflow-extra-"));
+    const planId = "PLAN-GATE-COVERAGE-RECIPROCAL";
+    try {
+      writePlanFixture(root, planId);
+      writeGateRunEvidence(root, { gateRunId: "gate-run:reciprocal-1", gateId: "G1", planId });
+      expect(checkGateRunCoverage(root).ok).toBe(true);
+      const before = gateRunProjection(root);
+      expect(before.gateRuns).toHaveLength(1);
+      expect(before.routineGateWorkflows).toHaveLength(1);
+
+      const db = openHarnessDb(defaultHarnessDbPath(root), { repoRoot: root });
+      try {
+        db.prepare(
+          "INSERT INTO workflow_runs (workflow_run_id, plan_id, drive_run_id, workflow, phase, ready_status, blocked_reason, human_required, checked_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        ).run(
+          stableId("gate-workflow", "gate-run:absent-1"),
+          planId,
+          "",
+          "routine-gate",
+          "G1",
+          "passed",
+          "",
+          0,
+          GATE_RUN_CHECKED_AT,
+        );
+      } finally {
+        db.close();
+      }
+
+      expect(gateRunProjection(root).gateRuns).toEqual(before.gateRuns);
+      expect(checkGateRunCoverage(root).ok).toBe(false);
+    } finally {
+      removeTestTree(root);
+    }
+  });
+
+  it.fails("U-DOCTOR-GATE-01 detects a gate run whose reciprocal workflow row is missing", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-doctor-gate-run-workflow-missing-"));
+    const planId = "PLAN-GATE-COVERAGE-MISSING-WORKFLOW";
+    try {
+      writePlanFixture(root, planId);
+      writeGateRunEvidence(root, { gateRunId: "gate-run:missing-workflow-1", planId });
+      expect(checkGateRunCoverage(root).ok).toBe(true);
+      const before = gateRunProjection(root);
+      expect(before.gateRuns).toHaveLength(1);
+      expect(before.routineGateWorkflows).toHaveLength(1);
+
+      const db = openHarnessDb(defaultHarnessDbPath(root), { repoRoot: root });
+      try {
+        db.prepare("DELETE FROM workflow_runs WHERE workflow_run_id = ?").run(
+          stableId("gate-workflow", "gate-run:missing-workflow-1"),
+        );
+      } finally {
+        db.close();
+      }
+
+      expect(gateRunProjection(root).gateRuns).toEqual(before.gateRuns);
+      expect(checkGateRunCoverage(root).ok).toBe(false);
+    } finally {
+      removeTestTree(root);
+    }
+  });
+
+  it.fails.each([
+    ["phase drift", "UPDATE workflow_runs SET phase = ? WHERE workflow_run_id = ?", "G2"],
+    [
+      "derived id drift",
+      "UPDATE workflow_runs SET workflow_run_id = ? WHERE workflow_run_id = ?",
+      stableId("gate-workflow", "gate-run:unrelated-run"),
+    ],
+  ])("U-DOCTOR-GATE-01 detects workflow %s for a projected gate run", (_case, sql, value) => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-doctor-gate-run-workflow-drift-"));
+    const planId = "PLAN-GATE-COVERAGE-WORKFLOW-DRIFT";
+    const gateRunId = "gate-run:workflow-drift-1";
+    try {
+      writePlanFixture(root, planId);
+      writeGateRunEvidence(root, { gateRunId, planId });
+      expect(checkGateRunCoverage(root).ok).toBe(true);
+      const before = gateRunProjection(root);
+      expect(before.gateRuns).toHaveLength(1);
+      expect(before.routineGateWorkflows).toHaveLength(1);
+
+      const db = openHarnessDb(defaultHarnessDbPath(root), { repoRoot: root });
+      try {
+        db.prepare(sql).run(value, stableId("gate-workflow", gateRunId));
+      } finally {
+        db.close();
+      }
+
+      expect(gateRunProjection(root).gateRuns).toEqual(before.gateRuns);
+      expect(checkGateRunCoverage(root).ok).toBe(false);
+    } finally {
+      removeTestTree(root);
+    }
+  });
+
+  it.fails.each([
+    [
+      "gate_run_id",
+      "UPDATE gate_runs SET gate_run_id = ? WHERE gate_run_id = ?",
+      "gate-run:evidence-id-mismatch:projection",
+      "UPDATE workflow_runs SET workflow_run_id = ? WHERE workflow_run_id = ?",
+      stableId("gate-workflow", "gate-run:evidence-id-mismatch:projection"),
+    ],
+    [
+      "gate_id",
+      "UPDATE gate_runs SET gate_id = ? WHERE gate_run_id = ?",
+      "G2",
+      "UPDATE workflow_runs SET phase = ? WHERE workflow_run_id = ?",
+      "G2",
+    ],
+  ])("U-DOCTOR-GATE-01 rejects evidence %s mismatch", (_field, gateSql, gateValue, workflowSql, workflowValue) => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-doctor-gate-run-evidence-identity-mismatch-"));
+    const gateRunId = "gate-run:evidence-id-mismatch";
+    const planId = "PLAN-GATE-COVERAGE-EVIDENCE-IDENTITY-MISMATCH";
+    try {
+      writePlanFixture(root, planId);
+      writeGateRunEvidence(root, { gateRunId, gateId: "G1", planId });
+      expect(checkGateRunCoverage(root).ok).toBe(true);
+
+      const before = gateRunProjection(root);
+      expect(before.gateRuns).toHaveLength(1);
+      expect(before.routineGateWorkflows).toHaveLength(1);
+
+      const db = openHarnessDb(defaultHarnessDbPath(root), { repoRoot: root });
+      try {
+        db.prepare(gateSql).run(gateValue, gateRunId);
+        db.prepare(workflowSql).run(workflowValue, stableId("gate-workflow", gateRunId));
+      } finally {
+        db.close();
+      }
+
+      const projection = gateRunProjection(root);
+      const [gateRun] = projection.gateRuns;
+      const [workflow] = projection.routineGateWorkflows;
+      expect(workflow.workflow_run_id).toBe(
+        stableId("gate-workflow", gateRun.gate_run_id as string),
+      );
+      expect(workflow.phase).toBe(gateRun.gate_id);
+      expect(checkGateRunCoverage(root).ok).toBe(false);
+    } finally {
+      removeTestTree(root);
+    }
+  });
+
+  it.fails("U-DOCTOR-GATE-01 reprojects when evidence changes after a persistent projection", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-doctor-gate-run-stale-"));
+    const gateRunId = "gate-run:planless-1";
+    const planId = "PLAN-GATE-COVERAGE-STALE";
+    try {
+      writePlanFixture(root, planId);
+      writeGateRunEvidence(root, { gateRunId, gateId: "G4", planId });
+      expect(checkGateRunCoverage(root).ok).toBe(true);
+
+      writeGateRunEvidence(root, { gateRunId, gateId: "G5", planId });
+      const result = checkGateRunCoverage(root);
+      const projection = gateRunProjection(root);
+
+      expect(result.ok).toBe(true);
+      expect(projection.gateRuns[0]).toMatchObject({ gate_run_id: gateRunId, gate_id: "G5" });
+      expect(projection.routineGateWorkflows[0]).toMatchObject({
+        workflow_run_id: stableId("gate-workflow", gateRunId),
+        phase: "G5",
+      });
+    } finally {
+      removeTestTree(root);
+    }
+  });
+
+  it.fails("U-DOCTOR-GATE-01 does not accept a stale gate row after its evidence disappears", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-doctor-gate-run-missing-evidence-"));
+    const planId = "PLAN-GATE-COVERAGE-MISSING-EVIDENCE";
+    try {
+      writePlanFixture(root, planId);
+      writeGateRunEvidence(root, { planId });
+      expect(checkGateRunCoverage(root).ok).toBe(true);
+      rmSync(join(root, ...GATE_RUN_EVIDENCE_PATH.split("/")));
+
+      const result = checkGateRunCoverage(root);
+
+      expect(result.ok).toBe(false);
+      expect(result.messages.join("\n")).toContain("missing_gate_runs");
+    } finally {
+      removeTestTree(root);
+    }
+  });
+
+  it.fails("U-DOCTOR-GATE-01 projects only the seven canonical A-132 rows as historical", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-doctor-gate-run-seed-"));
+    try {
+      writeVerificationBandAudit(root);
+
+      const result = checkGateRunCoverage(root);
+      const projection = gateRunProjection(root);
+
+      expect(result.ok).toBe(true);
+      expect(projection.gateRuns).toEqual(
+        VERIFICATION_BAND_LAYERS.map((layer) => ({
+          gate_run_id: stableId("verification-band-gate", layer),
+          gate_id: `G-VERIFY.${layer}`,
+          plan_id: "",
+          status: "historical",
+          evidence_path: VERIFICATION_BAND_AUDIT_PATH,
+        })),
+      );
+      expect(projection.routineGateWorkflows).toEqual([]);
+      expect(projection.verificationBandCoverageCount).toBe(0);
+    } finally {
+      removeTestTree(root);
+    }
+  });
+
+  it.fails("U-DOCTOR-GATE-01 does not let canonical seeds mask an unmatched planless workflow", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-doctor-gate-run-seed-workflow-gap-"));
+    try {
+      writeVerificationBandAudit(root);
+      checkGateRunCoverage(root);
+      const db = openHarnessDb(defaultHarnessDbPath(root), { repoRoot: root });
+      try {
+        const insertSeed = db.prepare(
+          "INSERT OR IGNORE INTO gate_runs (gate_run_id, gate_id, plan_id, status, checked_at, evidence_path) VALUES (?, ?, ?, ?, ?, ?)",
+        );
+        for (const layer of VERIFICATION_BAND_LAYERS) {
+          insertSeed.run(
+            stableId("verification-band-gate", layer),
+            `G-VERIFY.${layer}`,
+            "",
+            "historical",
+            GATE_RUN_CHECKED_AT,
+            VERIFICATION_BAND_AUDIT_PATH,
+          );
+        }
+        db.prepare(
+          "INSERT INTO workflow_runs (workflow_run_id, plan_id, drive_run_id, workflow, phase, ready_status, blocked_reason, human_required, checked_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        ).run(
+          stableId("gate-workflow", "gate-run:absent-seed-1"),
+          "",
+          "",
+          "routine-gate",
+          "G-VERIFY.L8",
+          "passed",
+          "",
+          0,
+          GATE_RUN_CHECKED_AT,
+        );
+      } finally {
+        db.close();
+      }
+
+      const result = checkGateRunCoverage(root);
+
+      expect(result.messages.join("\n")).toContain("workflow_without_gate_run");
+      expect(result.messages.join("\n")).not.toContain("blank_plan_gate_run");
+    } finally {
+      removeTestTree(root);
+    }
+  });
+
+  it.fails.each([
+    {
+      label: "gate outside L8-L14 with its matching derived id",
+      sql: "UPDATE gate_runs SET gate_id = ?, gate_run_id = ? WHERE gate_run_id = ?",
+      values: ["G-VERIFY.L15", stableId("verification-band-gate", "L15")],
+    },
+    {
+      label: "non-derived run id",
+      sql: "UPDATE gate_runs SET gate_run_id = ? WHERE gate_run_id = ?",
+      values: ["verification-band-gate:not-derived"],
+    },
+    {
+      label: "wrong fixed evidence path",
+      sql: "UPDATE gate_runs SET evidence_path = ? WHERE gate_run_id = ?",
+      values: [".ut-tdd/audit/other.md"],
+    },
+    {
+      label: "non-historical status using a valid ordinary status",
+      sql: "UPDATE gate_runs SET status = ? WHERE gate_run_id = ?",
+      values: ["passed"],
+    },
+    {
+      label: "non-empty plan id",
+      sql: "UPDATE gate_runs SET plan_id = ? WHERE gate_run_id = ?",
+      values: ["PLAN-FAKE"],
+    },
+  ])("U-DOCTOR-GATE-01 rejects a fake seed row: $label", ({ sql, values }) => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-doctor-gate-run-fake-seed-"));
+    try {
+      writeVerificationBandAudit(root);
+      const result = checkGateRunCoverage(root);
+      expect(result.ok).toBe(true);
+      const [seed] = gateRunProjection(root).gateRuns;
+      const db = openHarnessDb(defaultHarnessDbPath(root), { repoRoot: root });
+      try {
+        db.prepare(sql).run(...values, seed.gate_run_id);
+      } finally {
+        db.close();
+      }
+
+      expect(checkGateRunCoverage(root).ok).toBe(false);
+    } finally {
+      removeTestTree(root);
+    }
+  });
+
+  it.fails("U-DOCTOR-GATE-01 rejects duplicate canonical seed rows for one gate", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-doctor-gate-run-duplicate-seed-"));
+    try {
+      writeVerificationBandAudit(root);
+      const result = checkGateRunCoverage(root);
+      expect(result.ok).toBe(true);
+      const db = openHarnessDb(defaultHarnessDbPath(root), { repoRoot: root });
+      try {
+        db.prepare(
+          "INSERT INTO gate_runs (gate_run_id, gate_id, plan_id, status, checked_at, evidence_path) VALUES (?, ?, ?, ?, ?, ?)",
+        ).run(
+          "verification-band-gate:duplicate-L8",
+          "G-VERIFY.L8",
+          "",
+          "historical",
+          GATE_RUN_CHECKED_AT,
+          VERIFICATION_BAND_AUDIT_PATH,
+        );
+      } finally {
+        db.close();
+      }
+
+      expect(checkGateRunCoverage(root).ok).toBe(false);
+    } finally {
+      removeTestTree(root);
+    }
+  });
+
+  it.fails("U-DOCTOR-GATE-01 requires the A-132 artifact to remain present for historical rows", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-doctor-gate-run-seed-missing-audit-"));
+    try {
+      writeVerificationBandAudit(root);
+      expect(checkGateRunCoverage(root).ok).toBe(true);
+      expect(gateRunProjection(root).gateRuns).toHaveLength(VERIFICATION_BAND_LAYERS.length);
+      rmSync(join(root, ...VERIFICATION_BAND_AUDIT_PATH.split("/")));
+
+      expect(checkGateRunCoverage(root).ok).toBe(false);
+    } finally {
+      removeTestTree(root);
+    }
   });
 });
 
@@ -446,7 +1008,7 @@ describe("checkHandoverDisciplineMessages", () => {
         true,
       );
     } finally {
-      rmSync(fixtureParent, { recursive: true, force: true });
+      removeTestTree(fixtureParent);
     }
   });
 });
@@ -533,12 +1095,11 @@ describe("runDoctor", () => {
       expect(r.messages.some((m) => m.includes("verification group lint could not run"))).toBe(
         true,
       );
-      // Keep warning-only surfaces from masking hard-fail lint coverage.
-      expect(r.messages.some((m) => m.includes("scrum-reverse"))).toBe(true);
+      // Keep surviving hard-fail lint surfaces visible alongside warning-only checks.
       expect(r.messages.some((m) => m.includes("propagation"))).toBe(true);
       expect(r.messages.some((m) => m.includes("coding-rules"))).toBe(true);
     } finally {
-      rmSync(fixtureParent, { recursive: true, force: true });
+      removeTestTree(fixtureParent);
     }
   });
 
@@ -879,7 +1440,7 @@ describe("runDoctor", () => {
       expect(result.ok).toBe(false);
       expect(result.messages.join("\n")).toContain("design-doc-duplicate-definition");
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -915,7 +1476,7 @@ describe("runDoctor", () => {
       expect(result.messages.join("\n")).toContain("typed-spec-test-backlink-missing");
       expect(result.messages.join("\n")).toContain("typed-spec-test-missing");
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -979,7 +1540,7 @@ describe("runDoctor", () => {
       expect(result.messages.join("\n")).toContain("typed-spec-ledger-unknown-id");
       expect(result.messages.join("\n")).toContain("typed-spec-phase-direction-invalid");
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -1024,7 +1585,7 @@ describe("runDoctor", () => {
       expect(result.ok).toBe(false);
       expect(result.messages.join("\n")).toContain("typed-spec-owned-source-mismatch");
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -1075,7 +1636,7 @@ describe("runDoctor", () => {
       expect(result.ok).toBe(false);
       expect(result.messages.join("\n")).toContain("typed-spec-phase-layer-mismatch");
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -1124,7 +1685,7 @@ describe("runDoctor", () => {
       expect(result.messages.join("\n")).toContain("agent-contract-doctor-gate-unknown");
       expect(result.messages.join("\n")).toContain("VAGENT-301:no-such-gate");
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -1146,8 +1707,6 @@ describe("runDoctor", () => {
     expect(checkPlanSchedule).toBeTypeOf("function");
     expect(checkPlanGovernance).toBeTypeOf("function");
     expect(checkPlanReferenceFreshnessAdvisory).toBeTypeOf("function");
-    expect(checkForwardConvergence).toBeTypeOf("function");
-    expect(checkForwardConvergenceAudit).toBeTypeOf("function");
   });
 
   it("keeps doctor lint gate re-exports stable after extraction", () => {
@@ -1208,7 +1767,7 @@ describe("runDoctor", () => {
       ).toBe(true);
       expect(messages.every((message) => message.startsWith("doctor: "))).toBe(true);
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -1253,7 +1812,7 @@ describe("runDoctor", () => {
       expect(result.messages.join("\n")).toContain("descent-obligation - unmet");
       expect(result.messages.join("\n")).toContain("FR-L1-99");
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -1300,7 +1859,7 @@ describe("runDoctor", () => {
       expect(result.ok).toBe(true);
       expect(result.messages.join("\n")).toContain("guardrail-invariants");
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -1327,7 +1886,7 @@ describe("runDoctor", () => {
       expect(result.messages.join("\n")).toContain("same-model-self-review");
       expect(result.messages.join("\n")).toContain("PLAN-TEST-02-selfreview");
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -1346,7 +1905,7 @@ describe("runDoctor", () => {
 
       expect(result.ok).toBe(true);
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -1380,7 +1939,7 @@ describe("runDoctor", () => {
 
       expect(result.ok).toBe(true);
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -1420,7 +1979,7 @@ describe("runDoctor", () => {
       expect(result.messages.join("\n")).toContain("plan-dod - violation");
       expect(result.messages.join("\n")).toContain("PLAN-L7-99-unchecked:9");
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -1449,7 +2008,7 @@ describe("runDoctor", () => {
       expect(result.messages.join("\n")).toContain("placeholder-deps - violation");
       expect(result.messages.join("\n")).toContain("physical-data.md:6");
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -1478,7 +2037,7 @@ describe("runDoctor", () => {
       expect(result.messages.join("\n")).toContain("l7-completion - violation");
       expect(result.messages.join("\n")).toContain("function.md:6");
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -1493,7 +2052,7 @@ describe("runDoctor", () => {
       expect(result.messages.join("\n")).toContain("codex-wrapper-parity - OK");
       expect(result.messages.join("\n")).toContain("codex=ut-tdd-wrapper-lifecycle");
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -1512,15 +2071,13 @@ describe("runDoctor", () => {
       expect(result.ok).toBe(false);
       expect(result.messages.join("\n")).toContain("Codex wrapper lifecycle test missing");
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
   it("fails closed when hard-gate checker inputs cannot be read", () => {
     const missingRoot = join(tmpdir(), `ut-tdd-doctor-missing-${Date.now()}-nope`);
     const checks = [
-      ["backfill", checkBackfillResult(missingRoot)],
-      ["scrum-reverse", checkScrumReverse(missingRoot)],
       ["propagation", checkPropagation(missingRoot)],
       ["pair-freeze", checkPairFreeze(missingRoot)],
       ["module-drift", checkModuleDrift(missingRoot)],
@@ -1605,7 +2162,7 @@ describe("runDoctor", () => {
       expect(integrity.ok).toBe(true);
       expect(integrity.messages.join("\n")).toMatch(/skipped \(not a git repository\)/);
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -1673,8 +2230,6 @@ describe("runDoctor", () => {
       "workflow-and-final",
     ]);
     const expectedHardGates = [
-      "backfill",
-      "scrum-reverse",
       "propagation",
       "pair-freeze",
       "module-drift",

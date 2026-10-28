@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Command } from "commander";
@@ -10,6 +10,7 @@ import {
   safeLoadUntrackedAddedFiles,
 } from "../src/cli/delegation.ts";
 import { buildAdapterPlan } from "../src/runtime/adapter.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 
 // issue #721 finding 2: the untracked-added loader (used by the review-guard exemption at the
 // delegation call site) must fail-close to "no exemption" when it throws, not silently exempt.
@@ -157,7 +158,7 @@ describe("CLI delegation command registration", () => {
       expect(spawnOptions?.windowsHide).toBe(true);
     } finally {
       cwd.mockRestore();
-      rmSync(fixtureRoot, { recursive: true, force: true });
+      removeTestTree(fixtureRoot);
     }
   });
 });
@@ -243,7 +244,7 @@ describe("CLI delegation review-guard untracked-added exemption (issue #721 find
       untrackedLoader.changed = null;
       stderrSpy.mockRestore();
       cwd.mockRestore();
-      rmSync(fixtureRoot, { recursive: true, force: true });
+      removeTestTree(fixtureRoot);
     }
   });
 });

@@ -99,7 +99,7 @@ describe("doc split gate filesystem and git adapter candidate oracles", () => {
     expect(Array.isArray(checked.messages)).toBe(true);
   });
 
-  it.fails("CANDIDATE-U-DOCSPLIT-014(a): loads a parseable previous baseline at origin/main", () => {
+  it("U-DOCSPLIT-014(a): loads a parseable previous baseline at origin/main", () => {
     const entryPath = `${L6}big.md`;
     const root = initRepo({
       [entryPath]: docText(500, 20),
@@ -115,7 +115,7 @@ describe("doc split gate filesystem and git adapter candidate oracles", () => {
     }
   });
 
-  it.fails("CANDIDATE-U-DOCSPLIT-014(b): reports absent when the merge-base has no baseline file", () => {
+  it("U-DOCSPLIT-014(b): reports absent when the merge-base has no baseline file", () => {
     const root = initRepo({ [`${L6}small.md`]: "## Small" });
     try {
       expect(loadPreviousDocSplitBaseline(root)).toEqual({ kind: "absent" });
@@ -124,7 +124,7 @@ describe("doc split gate filesystem and git adapter candidate oracles", () => {
     }
   });
 
-  it("CANDIDATE-U-DOCSPLIT-014(c): reports unreadable when origin/main cannot resolve", () => {
+  it("U-DOCSPLIT-014(c): reports unreadable when origin/main cannot resolve", () => {
     const root = initRepo(
       { [`${L6}small.md`]: "## Small", [BASELINE]: baselineEntry(`${L6}small.md`, 1, 1) },
       false,
@@ -136,7 +136,7 @@ describe("doc split gate filesystem and git adapter candidate oracles", () => {
     }
   });
 
-  it.fails("CANDIDATE-U-DOCSPLIT-014(c): fails closed when the merge-base cannot resolve", () => {
+  it("U-DOCSPLIT-014(c): fails closed when the merge-base cannot resolve", () => {
     const root = initRepo(
       { [`${L6}small.md`]: "## Small", [BASELINE]: baselineEntry(`${L6}small.md`, 1, 1) },
       false,
@@ -150,7 +150,7 @@ describe("doc split gate filesystem and git adapter candidate oracles", () => {
     }
   });
 
-  it("CANDIDATE-U-DOCSPLIT-014(d): reports unreadable for malformed baseline JSON", () => {
+  it("U-DOCSPLIT-014(d): reports unreadable for malformed baseline JSON", () => {
     const root = initRepo({ [`${L6}small.md`]: "## Small", [BASELINE]: "{" });
     try {
       expect(loadPreviousDocSplitBaseline(root)).toEqual({ kind: "unreadable" });
@@ -159,7 +159,7 @@ describe("doc split gate filesystem and git adapter candidate oracles", () => {
     }
   });
 
-  it.fails("CANDIDATE-U-DOCSPLIT-014(d): fails closed for malformed baseline JSON", () => {
+  it("U-DOCSPLIT-014(d): fails closed for malformed baseline JSON", () => {
     const root = initRepo({ [`${L6}small.md`]: "## Small", [BASELINE]: "{" });
     try {
       const result = checkDocSplit(root);
@@ -170,7 +170,7 @@ describe("doc split gate filesystem and git adapter candidate oracles", () => {
     }
   });
 
-  it.fails("CANDIDATE-U-DOCSPLIT-014(e): measures the base document and rejects initial self-growth", () => {
+  it("U-DOCSPLIT-014(e): measures the base document and rejects initial self-growth", () => {
     const path = `${L6}big.md`;
     const root = initRepo({ [path]: docText(500, 20) });
     try {
@@ -178,19 +178,19 @@ describe("doc split gate filesystem and git adapter candidate oracles", () => {
       writeRepoFile(root, BASELINE, baselineEntry(path, 600, 20));
       commit(root, "grow the document and record the grown value");
 
-      expect.soft(loadMergeBaseMeasures(root, [path])).toEqual({
+      expect(loadMergeBaseMeasures(root, [path])).toEqual({
         kind: "found",
         measures: { [path]: { lines: 500, responsibilities: 20 } },
       });
       const result = checkDocSplit(root);
-      expect.soft(result.ok).toBe(false);
-      expect.soft(hasMessage(result, "doc-split-initial-baseline-grown")).toBe(true);
+      expect(result.ok).toBe(false);
+      expect(hasMessage(result, "doc-split-initial-baseline-grown")).toBe(true);
     } finally {
       removeRepo(root);
     }
   });
 
-  it.fails("CANDIDATE-U-DOCSPLIT-014(f): omits a document absent from the merge-base and rejects its initial entry", () => {
+  it("U-DOCSPLIT-014(f): omits a document absent from the merge-base and rejects its initial entry", () => {
     const path = `${L6}new.md`;
     const root = initRepo({ [`${L6}small.md`]: "## Small" });
     try {
@@ -198,55 +198,55 @@ describe("doc split gate filesystem and git adapter candidate oracles", () => {
       writeRepoFile(root, BASELINE, baselineEntry(path, 600, 20));
       commit(root, "add and initially baseline a new document");
 
-      expect.soft(loadMergeBaseMeasures(root, [path])).toEqual({ kind: "found", measures: {} });
+      expect(loadMergeBaseMeasures(root, [path])).toEqual({ kind: "found", measures: {} });
       const result = checkDocSplit(root);
-      expect.soft(result.ok).toBe(false);
-      expect.soft(hasMessage(result, "doc-split-initial-baseline-new-entry")).toBe(true);
+      expect(result.ok).toBe(false);
+      expect(hasMessage(result, "doc-split-initial-baseline-new-entry")).toBe(true);
     } finally {
       removeRepo(root);
     }
   });
 
-  it.fails("CANDIDATE-U-DOCSPLIT-014(g): rejects an initial baseline entry whose merge-base value is under the limit", () => {
+  it("U-DOCSPLIT-014(g): rejects an initial baseline entry whose merge-base value is under the limit", () => {
     const path = `${L6}small.md`;
     const root = initRepo({ [path]: docText(300, 5) });
     try {
       writeRepoFile(root, BASELINE, baselineEntry(path, 300, 5));
       commit(root, "record a below-limit initial baseline entry");
 
-      expect.soft(loadMergeBaseMeasures(root, [path])).toEqual({
+      expect(loadMergeBaseMeasures(root, [path])).toEqual({
         kind: "found",
         measures: { [path]: { lines: 300, responsibilities: 5 } },
       });
       const result = checkDocSplit(root);
-      expect.soft(result.ok).toBe(false);
-      expect.soft(hasMessage(result, "doc-split-initial-baseline-new-entry")).toBe(true);
+      expect(result.ok).toBe(false);
+      expect(hasMessage(result, "doc-split-initial-baseline-new-entry")).toBe(true);
     } finally {
       removeRepo(root);
     }
   });
 
-  it.fails("CANDIDATE-U-DOCSPLIT-014(h): accepts an initial baseline matching an over-limit merge-base document", () => {
+  it("U-DOCSPLIT-014(h): accepts an initial baseline matching an over-limit merge-base document", () => {
     const path = `${L6}big.md`;
     const root = initRepo({ [path]: docText(500, 20) });
     try {
       writeRepoFile(root, BASELINE, baselineEntry(path, 500, 20));
       commit(root, "record the unchanged over-limit initial value");
 
-      expect.soft(loadMergeBaseMeasures(root, [path])).toEqual({
+      expect(loadMergeBaseMeasures(root, [path])).toEqual({
         kind: "found",
         measures: { [path]: { lines: 500, responsibilities: 20 } },
       });
       const result = checkDocSplit(root);
-      expect.soft(result.ok).toBe(true);
-      expect.soft(hasFindingMessage(result)).toBe(false);
-      expect.soft(hasMessage(result, "checked=1 over=0 stale=0 baseline=1")).toBe(true);
+      expect(result.ok).toBe(true);
+      expect(hasFindingMessage(result)).toBe(false);
+      expect(hasMessage(result, "checked=1 over=0 stale=0 baseline=1")).toBe(true);
     } finally {
       removeRepo(root);
     }
   });
 
-  it("CANDIDATE-U-DOCSPLIT-014(i): reports unreadable when merge-base measurement cannot resolve origin/main", () => {
+  it("U-DOCSPLIT-014(i): reports unreadable when merge-base measurement cannot resolve origin/main", () => {
     const path = `${L6}big.md`;
     const root = initRepo({ [path]: docText(500, 20) }, false);
     try {
@@ -256,7 +256,7 @@ describe("doc split gate filesystem and git adapter candidate oracles", () => {
     }
   });
 
-  it.fails("CANDIDATE-U-DOCSPLIT-014(i): fails closed when merge-base measurement is unreadable", () => {
+  it("U-DOCSPLIT-014(i): fails closed when merge-base measurement is unreadable", () => {
     const path = `${L6}big.md`;
     const root = initRepo(
       { [path]: docText(500, 20), [BASELINE]: baselineEntry(path, 500, 20) },
@@ -271,22 +271,22 @@ describe("doc split gate filesystem and git adapter candidate oracles", () => {
     }
   });
 
-  it.fails("CANDIDATE-U-DOCSPLIT-015(b): reports unreadable sources and fails closed instead of treating them as empty", () => {
+  it("U-DOCSPLIT-015(b): reports unreadable sources and fails closed instead of treating them as empty", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-doc-split-unreadable-"));
     rmSync(root, { recursive: true, force: true });
     try {
       const loaded = loadDocSplitSources(root);
-      expect.soft(loaded.sources).toEqual([]);
-      expect.soft(loaded.unreadable.length).toBeGreaterThan(0);
+      expect(loaded.sources).toEqual([]);
+      expect(loaded.unreadable.length).toBeGreaterThan(0);
       const result = checkDocSplit(root);
-      expect.soft(result.ok).toBe(false);
-      expect.soft(hasMessage(result, "doc-split-input-unreadable")).toBe(true);
+      expect(result.ok).toBe(false);
+      expect(hasMessage(result, "doc-split-input-unreadable")).toBe(true);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
   });
 
-  it.fails("CANDIDATE-U-DOCSPLIT-024(a): recognizes and safely carries a same-class nested rename", () => {
+  it("U-DOCSPLIT-024(a): recognizes and safely carries a same-class nested rename", () => {
     const oldPath = `${L6}big.md`;
     const newPath = `${L6}sub/big.md`;
     const root = initRepo({
@@ -299,19 +299,20 @@ describe("doc split gate filesystem and git adapter candidate oracles", () => {
       writeRepoFile(root, BASELINE, baselineEntry(newPath, 500, 20));
       commit(root, "move the topic without changing its class or size");
 
-      expect
-        .soft(loadRenamedDocs(root))
-        .toEqual({ kind: "found", renames: [{ from: oldPath, to: newPath }] });
+      expect(loadRenamedDocs(root)).toEqual({
+        kind: "found",
+        renames: [{ from: oldPath, to: newPath }],
+      });
       const result = checkDocSplit(root);
-      expect.soft(result.ok).toBe(true);
-      expect.soft(hasFindingMessage(result)).toBe(false);
-      expect.soft(hasMessage(result, "checked=1 over=0 stale=0 baseline=1")).toBe(true);
+      expect(result.ok).toBe(true);
+      expect(hasFindingMessage(result)).toBe(false);
+      expect(hasMessage(result, "checked=1 over=0 stale=0 baseline=1")).toBe(true);
     } finally {
       removeRepo(root);
     }
   });
 
-  it.fails("CANDIDATE-U-DOCSPLIT-024(a): reports a missing-file finding when the baseline is not transferred", () => {
+  it("U-DOCSPLIT-024(a): reports a missing-file finding when the baseline is not transferred", () => {
     const oldPath = `${L6}big.md`;
     const newPath = `${L6}sub/big.md`;
     const root = initRepo({
@@ -331,7 +332,7 @@ describe("doc split gate filesystem and git adapter candidate oracles", () => {
     }
   });
 
-  it.fails("CANDIDATE-U-DOCSPLIT-024(a): reports a new-doc-over-limit finding for an empty baseline", () => {
+  it("U-DOCSPLIT-024(a): reports a new-doc-over-limit finding for an empty baseline", () => {
     const oldPath = `${L6}big.md`;
     const newPath = `${L6}sub/big.md`;
     const root = initRepo({
@@ -352,7 +353,7 @@ describe("doc split gate filesystem and git adapter candidate oracles", () => {
     }
   });
 
-  it.fails("CANDIDATE-U-DOCSPLIT-024(b): detects a rename that changes the document class", () => {
+  it("U-DOCSPLIT-024(b): detects a rename that changes the document class", () => {
     const oldPath = `${L7}L7-x-test-design.md`;
     const newPath = `${L7}x-test-design.md`;
     const root = initRepo({
@@ -363,18 +364,19 @@ describe("doc split gate filesystem and git adapter candidate oracles", () => {
       git(root, "mv", oldPath, newPath);
       commit(root, "remove the L7 topic prefix");
 
-      expect
-        .soft(loadRenamedDocs(root))
-        .toEqual({ kind: "found", renames: [{ from: oldPath, to: newPath }] });
+      expect(loadRenamedDocs(root)).toEqual({
+        kind: "found",
+        renames: [{ from: oldPath, to: newPath }],
+      });
       const result = checkDocSplit(root);
-      expect.soft(result.ok).toBe(false);
-      expect.soft(hasMessage(result, "doc-split-class-changed")).toBe(true);
+      expect(result.ok).toBe(false);
+      expect(hasMessage(result, "doc-split-class-changed")).toBe(true);
     } finally {
       removeRepo(root);
     }
   });
 
-  it("CANDIDATE-U-DOCSPLIT-024(c): returns an empty rename list when the worktree has no renames", () => {
+  it("U-DOCSPLIT-024(c): returns an empty rename list when the worktree has no renames", () => {
     const root = initRepo({ [`${L6}small.md`]: "## Small" });
     try {
       expect(loadRenamedDocs(root)).toEqual({ kind: "found", renames: [] });
@@ -383,7 +385,7 @@ describe("doc split gate filesystem and git adapter candidate oracles", () => {
     }
   });
 
-  it.fails("CANDIDATE-U-DOCSPLIT-024(c): composes an unchanged small document without findings", () => {
+  it("U-DOCSPLIT-024(c): composes an unchanged small document without findings", () => {
     const root = initRepo({ [`${L6}small.md`]: "## Small" });
     try {
       const result = checkDocSplit(root);
@@ -395,13 +397,13 @@ describe("doc split gate filesystem and git adapter candidate oracles", () => {
     }
   });
 
-  it.fails("CANDIDATE-U-DOCSPLIT-024(d): fails closed when git rename input is unreadable", () => {
+  it("U-DOCSPLIT-024(d): fails closed when git rename input is unreadable", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-doc-split-no-git-"));
     try {
-      expect.soft(loadRenamedDocs(root)).toEqual({ kind: "unreadable" });
+      expect(loadRenamedDocs(root)).toEqual({ kind: "unreadable" });
       const result = checkDocSplit(root);
-      expect.soft(result.ok).toBe(false);
-      expect.soft(hasMessage(result, "doc-split-baseline-base-unreadable")).toBe(true);
+      expect(result.ok).toBe(false);
+      expect(hasMessage(result, "doc-split-baseline-base-unreadable")).toBe(true);
     } finally {
       removeRepo(root);
     }

@@ -296,6 +296,9 @@ export function checkForUpdate(deps: UpdateCheckDeps): UpdateCheckResult {
       );
     }
 
+    // option injection 防止 (#1280): git に渡す前、cache 参照より前に拒否する。
+    if (remote.startsWith("-")) return failOpen(localVersion, 'remote rejected: starts with "-"');
+
     const cache = readCache(deps);
     let latestVersion: string | null;
     let source: "remote" | "cache";

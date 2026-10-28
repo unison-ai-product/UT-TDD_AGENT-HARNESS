@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -9,6 +9,7 @@ import {
   openPlanLedger,
 } from "../../src/plan-asset/ledger/schema.ts";
 import { openHarnessDb } from "../../src/state-db/index.ts";
+import { removeTestTree } from "../support/temp-tree.ts";
 
 const digest = "a".repeat(64);
 const now = "2026-07-13T00:00:00Z";
@@ -41,7 +42,7 @@ describe("PLAN ledger reservation application", () => {
       expect(after).toEqual(before);
       reopened.close();
     } finally {
-      rmSync(repoRoot, { recursive: true, force: true });
+      removeTestTree(repoRoot);
     }
   });
 

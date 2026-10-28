@@ -1,10 +1,11 @@
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { CODEX_GIT_ROOT_PREFIX } from "../src/lint/hook-invocation.ts";
 import { BUILTIN_GITHUB_TEMPLATES } from "../src/setup/templates.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 
 const repoRoot = process.cwd();
 // PLAN-L7-522 S1-b: common/run-bun.ts is retired. The generated wrapper is
@@ -19,7 +20,7 @@ function temporaryDirectory(): string {
 
 afterEach(() => {
   for (const directory of temporaryDirectories.splice(0)) {
-    rmSync(directory, { recursive: true, force: true });
+    removeTestTree(directory);
   }
 });
 

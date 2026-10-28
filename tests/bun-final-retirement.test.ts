@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -24,6 +24,7 @@ import {
   NodeOnlyProcessObserver,
 } from "../src/runtime/runtime-image-observer.ts";
 import { gitObjectIdSchema } from "../src/schema/node-slice-admission.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 
 const BUN_RUNTIME = ["b", "un"].join("");
 const subject = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
@@ -349,7 +350,7 @@ describe("CAND-NODEBOOT-023/027/028/208 final Bun retirement", () => {
         new BunRetirementError("reachable_bun_surface"),
       );
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -371,7 +372,7 @@ describe("CAND-NODEBOOT-023/027/028/208 final Bun retirement", () => {
         new BunRetirementError("indeterminate_bun_surface"),
       );
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 

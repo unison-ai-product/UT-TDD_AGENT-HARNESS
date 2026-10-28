@@ -29,16 +29,10 @@ import {
   resolveProjectMemoryRoot,
   resolveProjectMemoryRootWithPorts,
 } from "../src/runtime/project-memory-root.ts";
+import { gitTextTrimmed as git } from "./support/git.ts";
 
 const cliPath = resolve("src/cli.ts");
 const fixtures: Array<{ root: string; primary: string; linked: string }> = [];
-
-function git(cwd: string, args: readonly string[]): string {
-  return execFileSync("git", ["-C", cwd, ...args], {
-    encoding: "utf8",
-    stdio: ["ignore", "pipe", "pipe"],
-  }).trim();
-}
 
 function createLinkedProject(projectId = "example/project-memory-routing"): {
   root: string;

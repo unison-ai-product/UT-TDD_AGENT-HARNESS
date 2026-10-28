@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -6,6 +6,7 @@ import { renderElicitationContext, selectElicitationContext } from "../src/elici
 import { appendDesignDecision, DESIGN_DECISION_LOG_PATH } from "../src/elicitation/record.ts";
 import { type HarnessDb, openHarnessDb, upsertRow } from "../src/state-db/index.ts";
 import { migrate } from "../src/state-db/migration.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 
 const opened: HarnessDb[] = [];
 const tempDirs: string[] = [];
@@ -111,7 +112,7 @@ function seedSpec(database: HarnessDb, specId: string, planId: string, layer: st
 
 afterEach(() => {
   for (const database of opened.splice(0)) database.close();
-  for (const dir of tempDirs.splice(0)) rmSync(dir, { recursive: true, force: true });
+  for (const dir of tempDirs.splice(0)) removeTestTree(dir);
 });
 
 describe("elicitation stage-bound context (U-ELICIT)", () => {

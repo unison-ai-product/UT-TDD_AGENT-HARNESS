@@ -167,7 +167,7 @@ describe("delegation routing (PLAN-L7-255)", () => {
     }
   });
 
-  it.fails("U-CMDINPUT-001: reviewer routing rejects an invalid model override", () => {
+  it("U-CMDINPUT-001: reviewer routing rejects an invalid model override", () => {
     const result = resolveDelegationRouting({
       provider: "codex",
       role: "blind-reviewer",
@@ -177,7 +177,7 @@ describe("delegation routing (PLAN-L7-255)", () => {
     expect(result).toEqual({ ok: false, message: "provider_model_invalid" });
   });
 
-  it.fails("U-CMDINPUT-001: worker routing rejects an invalid model override", () => {
+  it("U-CMDINPUT-001: worker routing rejects an invalid model override", () => {
     const result = resolveDelegationRouting({
       provider: "codex",
       role: "se",
@@ -187,7 +187,7 @@ describe("delegation routing (PLAN-L7-255)", () => {
     expect(result).toEqual({ ok: false, message: "provider_model_invalid" });
   });
 
-  it.fails("U-CMDINPUT-001: reviewer routing reports invalid model before invalid effort", () => {
+  it("U-CMDINPUT-001: reviewer routing reports invalid model before invalid effort", () => {
     const result = resolveDelegationRouting({
       provider: "codex",
       role: "blind-reviewer",
@@ -198,7 +198,7 @@ describe("delegation routing (PLAN-L7-255)", () => {
     expect(result).toEqual({ ok: false, message: "provider_model_invalid" });
   });
 
-  it.fails("U-CMDINPUT-001: worker routing reports invalid model before invalid effort", () => {
+  it("U-CMDINPUT-001: worker routing reports invalid model before invalid effort", () => {
     const result = resolveDelegationRouting({
       provider: "codex",
       role: "se",
@@ -211,7 +211,7 @@ describe("delegation routing (PLAN-L7-255)", () => {
 
   for (const [index, effort] of ["ultra", ""].entries()) {
     describe(`M1 reviewer effort fixture ${index}`, () => {
-      it.fails("U-CMDINPUT-002: reviewer invalid effort", () => {
+      it("U-CMDINPUT-002: reviewer invalid effort", () => {
         const result = resolveDelegationRouting({
           provider: "claude",
           role: "code-reviewer",
@@ -225,7 +225,7 @@ describe("delegation routing (PLAN-L7-255)", () => {
 
   for (const [index, effort] of ["ultra", ""].entries()) {
     describe(`M1 worker effort fixture ${index}`, () => {
-      it.fails("U-CMDINPUT-002: worker invalid effort", () => {
+      it("U-CMDINPUT-002: worker invalid effort", () => {
         const result = resolveDelegationRouting({
           provider: "codex",
           role: "se",
@@ -297,7 +297,7 @@ describe("delegation routing (PLAN-L7-255)", () => {
     "claude-opus-5-5[1m]",
   ].entries()) {
     describe(`M1 reviewer model fixture ${index}`, () => {
-      it.fails("U-CMDINPUT-003: reviewer invalid model syntax", () => {
+      it("U-CMDINPUT-003: reviewer invalid model syntax", () => {
         const result = resolveDelegationRouting({
           provider: "claude",
           role: "code-reviewer",
@@ -317,7 +317,7 @@ describe("delegation routing (PLAN-L7-255)", () => {
     "claude-opus-5-5[1m]",
   ].entries()) {
     describe(`M1 worker model fixture ${index}`, () => {
-      it.fails("U-CMDINPUT-003: worker invalid model syntax", () => {
+      it("U-CMDINPUT-003: worker invalid model syntax", () => {
         const result = resolveDelegationRouting({
           provider: "codex",
           role: "se",

@@ -13,6 +13,7 @@ import {
   resolveMergedPlanTargetEvidence,
   selectCanonicalMergedTarget,
 } from "../src/lint/merged-plan-target-evidence.ts";
+import { gitChecked as git, gitTextTrimmedDefaultStdio as gitText } from "./support/git.ts";
 
 describe("merged-plan canonical target evidence", () => {
   it("selects the remote default branch instead of the immediate stacked PR base", () => {
@@ -205,10 +206,6 @@ describe("merged-plan canonical target evidence", () => {
   });
 });
 
-function git(root: string, args: string[]): void {
-  execFileSync("git", ["-C", root, ...args], { stdio: "pipe" });
-}
-
 function gitStatus(root: string, args: string[]): number | null {
   try {
     execFileSync("git", ["-C", root, ...args], { stdio: "pipe" });
@@ -216,10 +213,6 @@ function gitStatus(root: string, args: string[]): number | null {
   } catch {
     return 1;
   }
-}
-
-function gitText(root: string, args: string[]): string {
-  return execFileSync("git", ["-C", root, ...args], { encoding: "utf8" }).trim();
 }
 
 function writePlan(root: string, name: string, artifactPath: string): void {

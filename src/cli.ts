@@ -5,7 +5,7 @@
  * status / doctor / plan lint / vmodel lint / gate / runtime adapter を集約する。
  */
 import "./runtime/windows-hide.ts";
-import { execFileSync, spawn } from "node:child_process";
+import { execFileSync, spawn, spawnSync } from "node:child_process";
 import {
   appendFileSync,
   existsSync,
@@ -34,6 +34,7 @@ import {
 } from "./cli/delegation.ts";
 import { registerDistributionCommands } from "./cli/distribution.ts";
 import { registerFeedbackCommands } from "./cli/feedback.ts";
+import { registerGuardrailCommands } from "./cli/guardrail.ts";
 import { registerPlanAdmissionCommands } from "./cli/plan-admission.ts";
 import { registerPlanAssetCommands } from "./cli/plan-asset.ts";
 import { registerPlanDraftCommand } from "./cli/plan-draft.ts";
@@ -94,10 +95,12 @@ import {
 } from "./lint/bun-final-retirement.ts";
 import {
   type NodeBanF0cAggregateBinding,
+  type NodeBanTestProbeOutcome,
   nodeBanAuditMessages,
   runNodeBanAudit,
 } from "./lint/bun-permanent-ban.ts";
 import { loadChangedFiles, loadStagedFiles } from "./lint/change-impact.ts";
+import { checkDocSplit } from "./lint/doc-split-inputs.ts";
 import {
   applyDigestAnchorCandidatesToContent,
   nodeHistoryScanDeps,
@@ -182,7 +185,11 @@ import {
 } from "./runtime/claude-memory-wake.ts";
 import { detectMode, nextActionForMode, type RuntimeDetection } from "./runtime/detect.ts";
 import { scanDanglingStops } from "./runtime/forced-stop.ts";
-import { createNodeInvocation, verifyNodeGeneration } from "./runtime/node-bootstrap.ts";
+import {
+  createNodeInvocation,
+  runNodeInvocationProbe,
+  verifyNodeGeneration,
+} from "./runtime/node-bootstrap.ts";
 import {
   isLinkedWorktreeCheckout,
   requireProjectMemoryRoot,
@@ -2366,26 +2373,15 @@ automation
     }
   });
 
-const guardrail = program.command("guardrail").description("guardrail decision ledger");
-guardrail
-  .command("status")
-  .description("list guardrail decisions from harness.db")
-  .option("--json", "JSON output")
-  .action((opts: { json?: boolean }) => {
-    const db = openHarnessDb(defaultHarnessDbPath(process.cwd()), { repoRoot: process.cwd() });
-    try {
-      const rows = db.prepare("SELECT * FROM guardrail_decisions ORDER BY decided_at").all();
-      if (opts.json) process.stdout.write(`${JSON.stringify(rows, null, 2)}\n`);
-      else {
-        for (const row of rows) {
-          process.stdout.write(
-            `${row.plan_id ?? ""} ${row.guardrail ?? ""}: ${row.decision ?? ""} evidence=${row.evidence_path ?? ""}\n`,
-          );
-        }
-      }
-    } finally {
-      db.close();
-    }
+registerGuardrailCommands(program);
+const docSplit = program.command("doc-split").description("design document split gate (#1032)");
+docSplit
+  .command("check")
+  .description("measure design / test-design documents against the doc-split limits and baseline")
+  .action(() => {
+    const result = checkDocSplit(process.cwd());
+    for (const message of result.messages) process.stdout.write(`${message}\n`);
+    process.exitCode = result.ok ? 0 : 1;
   });
 
 const issue = program.command("issue").description("external issue dry-run queue");
@@ -3522,6 +3518,54 @@ team
 
 const audit = program.command("audit").description("read-only repository audits");
 
+function spawnNodeTestProbe(
+  invocation: ReturnType<typeof createNodeInvocation>,
+  repoRoot: string,
+  input?: string,
+): NodeBanTestProbeOutcome {
+  const child = spawnSync(invocation.command, invocation.args, {
+    cwd: repoRoot,
+    ...invocation.options,
+    ...(input ? { input } : {}),
+    encoding: "utf8",
+    stdio: "pipe",
+    timeout: 30_000,
+  });
+  return {
+    stdout: child.stdout ?? "",
+    stderr: child.stderr ?? "",
+    status: child.status,
+    spawnError: child.error?.message ?? null,
+    timedOut: (child.error as NodeJS.ErrnoException | undefined)?.code === "ETIMEDOUT",
+  };
+}
+
+audit
+  .command("node-invocation-probe")
+  .description("audit the production Node child-invocation contract")
+  .requiredOption("--generation <path>", "verified Node generation directory")
+  .option("--json", "emit the successful probe result as JSON")
+  .action((opts: { generation: string; json?: boolean }) => {
+    try {
+      const repoRoot = process.cwd();
+      const subjectRevision = execFileSync("git", ["rev-parse", "HEAD"], {
+        cwd: repoRoot,
+        encoding: "utf8",
+      }).trim();
+      const generation = verifyNodeGeneration(
+        repoRoot,
+        resolve(repoRoot, opts.generation),
+        subjectRevision,
+      );
+      const result = runNodeInvocationProbe(generation);
+      process.stdout.write(`${JSON.stringify(result)}\n`);
+      process.exitCode = 0;
+    } catch (error) {
+      process.stderr.write(`node-invocation-probe failed: ${String(error)}\n`);
+      process.exitCode = 1;
+    }
+  });
+
 audit
   .command("node-ban")
   .description("Q0 Node-only Bun permanent-ban qualification audit")
@@ -3550,6 +3594,7 @@ audit
           subjectRevision,
         );
         const observer = new NodeOnlyProcessObserver();
+        let testProbeOutcome: NodeBanTestProbeOutcome | undefined;
         const runNodeScope = (
           scope: "status" | "doctor" | "test" | "hook",
           args: readonly string[],
@@ -3559,6 +3604,10 @@ audit
           observer.invoke(
             invocation,
             () => {
+              if (scope === "test") {
+                testProbeOutcome = spawnNodeTestProbe(invocation, repoRoot, input);
+                return;
+              }
               try {
                 execFileSync(invocation.command, invocation.args, {
                   cwd: repoRoot,
@@ -3579,9 +3628,11 @@ audit
         runNodeScope("status", ["status", "--json"]);
         runNodeScope("doctor", ["doctor", "--profile", "consumer-toolchain"]);
         runNodeScope("test", [
-          "plan",
-          "lint",
-          "docs/plans/PLAN-L7-458-node-self-hosted-bun-ban-foundation.md",
+          "audit",
+          "node-invocation-probe",
+          "--generation",
+          generation.generationPath,
+          "--json",
         ]);
         runNodeScope("hook", ["hook", "work-guard"], "{}\n");
         observer.proveNoFallback(
@@ -3604,6 +3655,7 @@ audit
             receipt_digest: generation.receipt.receipt_digest,
             runtime: "node",
           },
+          testProbeOutcome,
           f0cLanes: opts.f0cLane.map((path) => {
             const evidence = parseNodeGenerationCiEvidence(
               JSON.parse(readFileSync(resolve(repoRoot, path), "utf8")),
