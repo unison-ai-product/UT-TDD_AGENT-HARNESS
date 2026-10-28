@@ -741,23 +741,18 @@ describe("gate-run-coverage doctor", () => {
 
     const [gateRun] = fixture.value.projection.gateRuns;
     const [workflow] = fixture.value.projection.routineGateWorkflows;
-    expect(workflow.workflow_run_id).toBe(
-      stableId("gate-workflow", gateRun.gate_run_id as string),
-    );
+    expect(workflow.workflow_run_id).toBe(stableId("gate-workflow", gateRun.gate_run_id as string));
     expect(workflow.phase).toBe(gateRun.gate_id);
     expect(fixture.value.result.ok).toBe(false);
   });
 
   it.fails("CANDIDATE-U-DOCTOR-GATE-02 treats null evidence plan_id and empty DB plan_id as equal", () => {
-    const fixture = observeIsolatedFixture(
-      "ut-tdd-doctor-gate-run-empty-plan-equal-",
-      (root) => {
-        writeGateRunEvidence(root, { gateRunId: "gate-run:empty-plan-equal", planId: null });
-        const result = checkGateRunCoverage(root);
-        const projection = gateRunProjection(root);
-        return { result, projection };
-      },
-    );
+    const fixture = observeIsolatedFixture("ut-tdd-doctor-gate-run-empty-plan-equal-", (root) => {
+      writeGateRunEvidence(root, { gateRunId: "gate-run:empty-plan-equal", planId: null });
+      const result = checkGateRunCoverage(root);
+      const projection = gateRunProjection(root);
+      return { result, projection };
+    });
     if (!fixture.ok) return;
 
     expect(fixture.value.result.ok).toBe(true);
@@ -786,7 +781,10 @@ describe("gate-run-coverage doctor", () => {
       const baseline = checkGateRunCoverage(root);
       if (!baseline.ok) return { ready: false as const };
       const firstProjection = gateRunProjection(root);
-      if (firstProjection.gateRuns.length !== 1 || firstProjection.routineGateWorkflows.length !== 1) {
+      if (
+        firstProjection.gateRuns.length !== 1 ||
+        firstProjection.routineGateWorkflows.length !== 1
+      ) {
         return { ready: false as const };
       }
 
@@ -814,7 +812,11 @@ describe("gate-run-coverage doctor", () => {
 
     expect(fixture.value.result.ok).toBe(false);
     expect(fixture.value.projection.gateRuns).toEqual([
-      expect.objectContaining({ gate_run_id: "gate-run:append-first", gate_id: "G4", status: "failed" }),
+      expect.objectContaining({
+        gate_run_id: "gate-run:append-first",
+        gate_id: "G4",
+        status: "failed",
+      }),
     ]);
     expect(fixture.value.projection.gateRuns).not.toEqual(
       expect.arrayContaining([expect.objectContaining({ gate_run_id: "gate-run:append-second" })]),
@@ -827,27 +829,24 @@ describe("gate-run-coverage doctor", () => {
   });
 
   it.fails("CANDIDATE-U-DOCTOR-GATE-03 removes the DB-only gate/workflow pair after evidence disappears", () => {
-    const fixture = observeIsolatedFixture(
-      "ut-tdd-doctor-gate-run-missing-evidence-",
-      (root) => {
-        const planId = "PLAN-GATE-COVERAGE-MISSING-EVIDENCE";
-        writePlanFixture(root, planId);
-        writeGateRunEvidence(root, { planId });
-        const baseline = checkGateRunCoverage(root);
-        if (!baseline.ok) return { ready: false as const };
-        const before = gateRunProjection(root);
-        if (before.gateRuns.length !== 1 || before.routineGateWorkflows.length !== 1) {
-          return { ready: false as const };
-        }
-        rmSync(join(root, ...GATE_RUN_EVIDENCE_PATH.split("/")));
+    const fixture = observeIsolatedFixture("ut-tdd-doctor-gate-run-missing-evidence-", (root) => {
+      const planId = "PLAN-GATE-COVERAGE-MISSING-EVIDENCE";
+      writePlanFixture(root, planId);
+      writeGateRunEvidence(root, { planId });
+      const baseline = checkGateRunCoverage(root);
+      if (!baseline.ok) return { ready: false as const };
+      const before = gateRunProjection(root);
+      if (before.gateRuns.length !== 1 || before.routineGateWorkflows.length !== 1) {
+        return { ready: false as const };
+      }
+      rmSync(join(root, ...GATE_RUN_EVIDENCE_PATH.split("/")));
 
-        const result = checkGateRunCoverage(root);
-        const afterFirstCheck = gateRunProjection(root);
-        const secondResult = checkGateRunCoverage(root);
-        const afterSecondCheck = gateRunProjection(root);
-        return { ready: true as const, result, afterFirstCheck, secondResult, afterSecondCheck };
-      },
-    );
+      const result = checkGateRunCoverage(root);
+      const afterFirstCheck = gateRunProjection(root);
+      const secondResult = checkGateRunCoverage(root);
+      const afterSecondCheck = gateRunProjection(root);
+      return { ready: true as const, result, afterFirstCheck, secondResult, afterSecondCheck };
+    });
     if (!fixture.ok || !fixture.value.ready) return;
 
     expect(fixture.value.result.ok).toBe(false);
