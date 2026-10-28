@@ -262,7 +262,10 @@ describe("PLAN-L7-520 append-only receipt supersession", () => {
           repoRoot: root,
           request,
           provider: testCase.reason === "same_family_reviewer_denied" ? expectedProvider : "claude",
-          model: "claude-opus-5-5",
+          model:
+            testCase.reason === "same_family_reviewer_denied" && expectedProvider === "codex"
+              ? "gpt-6.1-sol"
+              : "claude-opus-5-5",
         });
         if (!first.ok) throw new Error(first.reason);
         if (testCase.name === "missing custody envelope") {
@@ -657,7 +660,12 @@ describe("PLAN-L7-520 append-only receipt supersession", () => {
         ),
       ).toHaveLength(1);
       expect(
-        beginReviewAttempt({ repoRoot: root, request, provider: "claude", model: "claude-opus-5-5" }),
+        beginReviewAttempt({
+          repoRoot: root,
+          request,
+          provider: "claude",
+          model: "claude-opus-5-5",
+        }),
       ).toEqual({ ok: false, reason: "attempt_outcome_indeterminate" });
     } finally {
       cleanup(root);
