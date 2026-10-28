@@ -7,7 +7,7 @@
  * G3 subagent_type outside GENERIC_SUBAGENT_TYPES -> BLOCK.
  * G4 missing model -> BLOCK.  G5 un-normalizable / ambiguous model -> BLOCK.
  * G6 fable -> BLOCK (apex tier stays with the judgement layer, i.e. the delegation path).
- * There is no model floor here: the floor lives in REVIEW_GATE_ROLES (src/team/delegation-routing.ts).
+ * There is no model floor here: the floor lives in the delegation routing (src/team/delegation-routing.ts).
  * A subagent has no closing authority; its output is never a verdict or a merge basis.
  *
  * This module is pure: no filesystem, no environment. The hook shim owns stdin and exit codes.

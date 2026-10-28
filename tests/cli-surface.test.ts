@@ -556,7 +556,7 @@ describe("L7 CLI surface closure", () => {
     expect(help.stdout).toContain("pending");
     expect(classify.status).toBe(0);
     expect(payload).toMatchObject({
-      role: "pmo-haiku",
+      role: "docs",
       text: "please review this regression",
     });
     expect(payload.output_schema.category).toContain("feedback");
@@ -591,7 +591,7 @@ describe("L7 CLI surface closure", () => {
         [
           "codex",
           "--role",
-          "reviewer",
+          "docs",
           "--task",
           "mechanical ledger check",
           "--model",
@@ -628,7 +628,7 @@ describe("L7 CLI surface closure", () => {
           "--task",
           "mechanical ledger check",
           "--model",
-          "claude-opus-5",
+          MODEL_IDS.claude.opus,
           "--effort",
           "xhigh",
         ],
@@ -638,7 +638,7 @@ describe("L7 CLI surface closure", () => {
       expect(payload).toMatchObject({
         provider: "claude",
         dry_run: true,
-        model: "claude-opus-5",
+        model: MODEL_IDS.claude.opus,
         effort: "high",
       });
       expect(payload.args).toEqual([
@@ -646,7 +646,7 @@ describe("L7 CLI surface closure", () => {
         "--input-format",
         "text",
         "--model",
-        "claude-opus-5",
+        MODEL_IDS.claude.opus,
         "--effort",
         "high",
       ]);

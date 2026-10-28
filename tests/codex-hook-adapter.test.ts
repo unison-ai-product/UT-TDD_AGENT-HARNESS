@@ -578,7 +578,7 @@ describe("codex-hook-adapter — Codex hooks.json parity (PLAN-L7-139, PLAN-L7-6
       expect(sessionLogLines(unrootedSessionId).length - unrootedBefore).toBe(0);
     }, 420_000);
 
-    it("U-CXHOOKCMD-004: work-guard/agent-guard は foreign 編集を block し、自 session のファイルと allowlist 内 spawn は pass する", () => {
+    it("U-CXHOOKCMD-004: work-guard/agent-guard は foreign 編集を block し、自 session のファイルと汎用の型の spawn は pass する", () => {
       const subdirectory = join(consumer, "subdir");
       const workGuardCommand = commandFor("PreToolUse", "apply_patch|write_file");
       const agentGuardCommand = commandFor("PreToolUse", "spawn_agent|spawn_agents_on_csv");
@@ -670,13 +670,13 @@ describe("codex-hook-adapter — Codex hooks.json parity (PLAN-L7-139, PLAN-L7-6
       });
       expect(disallowedSpawn.status).toBe(2);
 
-      // model を指定しない spawn は、汎用の型でも block する (#1002)。allowlist 内 (pmo-haiku, model floor haiku) の spawn は pass する。
+      // model を指定しない spawn は、汎用の型でも block する (#1002)。許可された汎用の型 + 明示 model の spawn は pass する。
       const allowlistedSpawn = spawnCodexHookCommand(agentGuardCommand, {
         cwd: consumer,
         input: JSON.stringify({
           session_id: "cxhookcmd-004-agent-ok",
           tool_name: "spawn_agent",
-          tool_input: { subagent_type: "pmo-haiku", model: "haiku" },
+          tool_input: { subagent_type: "general-purpose", model: "haiku" },
         }),
         env: { CLAUDE_PROJECT_DIR: consumer, UT_TDD_PROJECT_DIR: consumer },
       });
