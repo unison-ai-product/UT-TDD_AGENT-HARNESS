@@ -33,7 +33,6 @@ import {
   type ReviewCustodyRequest,
 } from "../src/feedback/review-verdict-custody.ts";
 import { type AssetDriftInput, analyzeAssetDrift } from "../src/lint/asset-drift.ts";
-import { LEGACY_SOURCE_REPO } from "../src/lint/personal-path.ts";
 import {
   analyzeHookParity,
   analyzeRuleDrift,
@@ -57,6 +56,9 @@ import {
   resolveDelegationRouting,
 } from "../src/team/delegation-routing.ts";
 import * as modelPolicy from "../src/team/model-policy.ts";
+
+// production 定数から独立させるため、旧ソース repo 名はテスト側で実行時に連結する (リテラル禁止)。
+const legacySourceName = ["ai", "dev", "kit", "vscode"].join("-");
 
 const root = process.cwd();
 
@@ -448,7 +450,7 @@ describe("issue #1002 agent-guard と委譲の境界 (Red)", () => {
     expect(inert.ok).toBe(true);
     const residue = analyzeAssetDrift(
       noAllowlist([
-        { path: "skills/b.md", type: "skill", id: "b", text: `see ${LEGACY_SOURCE_REPO}` },
+        { path: "skills/b.md", type: "skill", id: "b", text: `see ${legacySourceName}` },
       ]),
     );
     expect(residue.ok).toBe(false);
