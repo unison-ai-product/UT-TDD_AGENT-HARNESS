@@ -36,6 +36,7 @@ import {
   resolveReleaseArtifacts,
 } from "../../src/setup/release-artifact-resolver.ts";
 import { materializeReleaseArtifacts } from "../../src/setup/release-materializer.ts";
+import { writeSyntheticPrivacyDenylist } from "./privacy-denylist-home.ts";
 import { removeTestTree } from "./temp-tree.ts";
 
 export const CANARY_FIXTURE_TAG = "v0.0.0-canary.0";
@@ -468,6 +469,7 @@ export async function createCanaryFixture(): Promise<CanaryFixture> {
     git(producerRoot, ["tag", CANARY_FIXTURE_TAG]);
 
     runNpmCi(producerRoot);
+    const producerHome = writeSyntheticPrivacyDenylist(join(root, "producer-home"));
     const producer = runNode(
       producerRoot,
       [
@@ -480,7 +482,8 @@ export async function createCanaryFixture(): Promise<CanaryFixture> {
         releaseDir,
         "--json",
       ],
-      isolatedCanaryEnv(root),
+      // Issue #1391: package requires a denylist; a synthetic one in a home outside producerRoot.
+      { ...isolatedCanaryEnv(root), HOME: producerHome, USERPROFILE: producerHome },
       undefined,
       // The real producer performs a second isolated npm ci from the tagged Git tree.
       // Keep a finite bound, but do not apply the short CLI bound to that nested build.

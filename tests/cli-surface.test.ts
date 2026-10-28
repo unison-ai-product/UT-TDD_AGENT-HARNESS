@@ -30,6 +30,7 @@ import { digestMaterializedReleaseEntries } from "../src/setup/release-materiali
 import { defaultHarnessDbPath, openHarnessDb, upsertRow } from "../src/state-db/index.ts";
 import { migrate } from "../src/state-db/migration.ts";
 import { MODEL_IDS } from "../src/team/model-policy.ts";
+import { createSyntheticPrivacyHome } from "./support/privacy-denylist-home.ts";
 import { removeTestTree } from "./support/temp-tree.ts";
 
 const repoRoot = process.cwd();
@@ -1128,21 +1129,20 @@ describe("L7 CLI surface closure", () => {
 
   it("U-DOCSECRET-006: updates a local Pack checkout and prunes non-Pack files only when requested", () => {
     const packDir = mkdtempSync(join(tmpdir(), "ut-tdd-pack-repo-"));
+    // Issue #1391: sync-pack requires a denylist; use a synthetic one outside the repo.
+    const privacyHome = createSyntheticPrivacyHome();
+    const privacyEnv = { ...process.env, HOME: privacyHome, USERPROFILE: privacyHome };
     let manifest: string | null = null;
     try {
       const stalePlan = join(packDir, "docs", "plans", "PLAN-L7-157-distribution-clean-pull.md");
       mkdirSync(join(packDir, "docs", "plans"), { recursive: true });
       writeFileSync(stalePlan, "dogfood plan should not ship\n", "utf8");
 
-      const blocked = runCliIn(repoRoot, [
-        "distribution",
-        "sync-pack",
-        "--tag",
-        "v0.1.0",
-        "--repo-dir",
-        packDir,
-        "--json",
-      ]);
+      const blocked = runCliIn(
+        repoRoot,
+        ["distribution", "sync-pack", "--tag", "v0.1.0", "--repo-dir", packDir, "--json"],
+        privacyEnv,
+      );
       const blockedPayload = JSON.parse(blocked.stdout);
       manifest = blockedPayload.pack.manifest;
 
@@ -1164,16 +1164,20 @@ describe("L7 CLI surface closure", () => {
       });
       expect(existsSync(stalePlan)).toBe(true);
 
-      const pruned = runCliIn(repoRoot, [
-        "distribution",
-        "sync-pack",
-        "--tag",
-        "v0.1.0",
-        "--repo-dir",
-        packDir,
-        "--prune-local",
-        "--json",
-      ]);
+      const pruned = runCliIn(
+        repoRoot,
+        [
+          "distribution",
+          "sync-pack",
+          "--tag",
+          "v0.1.0",
+          "--repo-dir",
+          packDir,
+          "--prune-local",
+          "--json",
+        ],
+        privacyEnv,
+      );
       const prunedPayload = JSON.parse(pruned.stdout);
       manifest = prunedPayload.pack.manifest;
 
@@ -1209,6 +1213,7 @@ describe("L7 CLI surface closure", () => {
       expect(prunedPayload.pack.nextCommands.join("\n")).not.toContain(" add --all");
     } finally {
       removeTestTree(packDir);
+      removeTestTree(privacyHome);
       if (manifest) rmSync(manifest, { force: true });
     }
   }, 40_000);

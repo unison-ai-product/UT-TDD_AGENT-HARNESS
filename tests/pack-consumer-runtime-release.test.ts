@@ -65,6 +65,17 @@ import {
   resolveReleaseArtifacts,
 } from "../src/setup/release-artifact-resolver.ts";
 import { materializeReleaseArtifacts } from "../src/setup/release-materializer.ts";
+import { createSyntheticPrivacyHome } from "./support/privacy-denylist-home.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
+
+// Issue #1391: package requires a denylist in a home outside the fixture repositories.
+let privacyHome = "";
+beforeAll(() => {
+  privacyHome = createSyntheticPrivacyHome();
+});
+afterAll(() => {
+  if (privacyHome) removeTestTree(privacyHome);
+});
 
 const revision = "a".repeat(40);
 const digest = digestMaterializedReleaseEntries([
@@ -1104,7 +1115,7 @@ describe("Pack consumer runtime release producer contract", () => {
             repoRoot: fixture.root,
             tag: fixture.tag,
             outDir,
-            homeDirectory: join(fixture.root, "synthetic-home"),
+            homeDirectory: privacyHome,
             installDependencies: () => {
               throw new Error("must fail before dependency installation");
             },
@@ -1164,7 +1175,7 @@ describe("Pack consumer runtime release producer contract", () => {
           repoRoot: sharedFixture.root,
           tag: expected.tag,
           outDir,
-          homeDirectory: join(sharedFixture.root, "synthetic-home"),
+          homeDirectory: privacyHome,
           installDependencies: () => undefined,
           buildGeneration: fakeGenerationBuilder(),
         });
@@ -1211,7 +1222,7 @@ describe("Pack consumer runtime release producer contract", () => {
             repoRoot: v1Fixture.root,
             tag: v1Fixture.tags[0],
             outDir,
-            homeDirectory: join(v1Fixture.root, "synthetic-home"),
+            homeDirectory: privacyHome,
             installDependencies: () => {
               dependencyInstallCalls += 1;
             },
@@ -1355,7 +1366,7 @@ describe("Pack consumer runtime release producer byte and fail-close oracles", (
       repoRoot: fixture.root,
       tag: fixture.tag,
       outDir,
-      homeDirectory: join(fixture.root, "synthetic-home"),
+      homeDirectory: privacyHome,
       installDependencies: () => undefined,
       buildGeneration: options.buildGeneration ?? fakeGenerationBuilder(),
       ...(options.moveStagedAssets ? { moveStagedAssets: options.moveStagedAssets } : {}),
@@ -1411,7 +1422,7 @@ describe("Pack consumer runtime release producer byte and fail-close oracles", (
           repoRoot: packrt013.root,
           tag: packrt013.tag,
           outDir,
-          homeDirectory: join(packrt013.root, "synthetic-home"),
+          homeDirectory: privacyHome,
           installDependencies: () => undefined,
           buildGeneration: async (input) => {
             if (typeof input === "string")
@@ -1631,7 +1642,7 @@ describe("Pack consumer runtime release installer", () => {
           repoRoot: producer.root,
           tag: producer.tag,
           outDir: testCase.releaseDir,
-          homeDirectory: join(producer.root, "synthetic-home"),
+          homeDirectory: privacyHome,
           installDependencies: () => undefined,
           buildGeneration: fakeGenerationBuilder({ compiledBytes: fixture.compiledBytes }),
         });
