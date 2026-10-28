@@ -1,11 +1,11 @@
 {
-  "src/cli.ts": { "lines": 4593, "functionExcess": 129 },
+  "src/cli.ts": { "lines": 4532, "functionExcess": 129 },
   "src/cli/delegation.ts": { "lines": 567, "functionExcess": 224 },
   "src/cli/distribution.ts": { "lines": 1268, "functionExcess": 393 },
   "src/cli/review-live.ts": { "lines": null, "functionExcess": 25 },
   "src/disposition/adapters/tracked-vmodel-loader.ts": { "lines": null, "functionExcess": 9 },
   "src/disposition/domain/document-disposition-catalog.ts": { "lines": 526, "functionExcess": 159 },
-  "src/doctor/check-definition-groups.ts": { "lines": null, "functionExcess": 40 },
+  "src/doctor/check-definition-groups.ts": { "lines": null, "functionExcess": 34 },
   "src/doctor/db-projection.ts": { "lines": 506, "functionExcess": null },
   "src/doctor/test-repository-isolation.ts": { "lines": 711, "functionExcess": 111 },
   "src/document-disposition/domain/replay-document-deltas.ts": { "lines": null, "functionExcess": 76 },

@@ -141,6 +141,14 @@ function fullAndToolchain(id: string, run: () => LintResult): DoctorCheckDefinit
   return { id, profiles: fullAndToolchainProfiles, run };
 }
 
+function greenCommandDigestCheck(repoRoot: string, options: DoctorOptions) {
+  const result = checkGreenCommandDigests(repoRoot);
+  return {
+    ...result,
+    ok: options.strictGreenCommandDigest === true ? result.mismatches.length === 0 : true,
+  };
+}
+
 export function buildDoctorCheckDefinitionGroups(
   deps: DoctorDeps,
   options: DoctorOptions = {},
@@ -293,13 +301,7 @@ export function buildDoctorCheckDefinitionGroups(
         full("proposal-document-coverage", () => checkProposalDocumentCoverage(deps.repoRoot)),
         full("frontend-design-coverage", () => checkFrontendDesignCoverage(deps.repoRoot)),
         full("handover-prose", () => checkHandoverProse(deps)),
-        full("green-command-digest", () => {
-          const result = checkGreenCommandDigests(deps.repoRoot);
-          return {
-            ...result,
-            ok: options.strictGreenCommandDigest === true ? result.mismatches.length === 0 : true,
-          };
-        }),
+        full("green-command-digest", () => greenCommandDigestCheck(deps.repoRoot, options)),
         full("advisory-strict-gate-aging", () =>
           checkAdvisoryGateAging({ repoRoot: deps.repoRoot }),
         ),
