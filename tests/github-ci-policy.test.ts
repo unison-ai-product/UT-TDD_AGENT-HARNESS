@@ -268,11 +268,11 @@ describe("Issue #1411 Node pin Red oracles", () => {
   if (!reviewAttestation || !packTemplate)
     throw new Error("Issue #1411 requires the source attestation workflow and Pack template");
 
-  it.fails("CANDIDATE-U-TOOLPIN-1411-001: review-attestation pins the reviewed Node version", () => {
+  it.fails("U-CIPOL-040: review-attestation pins the reviewed Node version", () => {
     expect(nodeVersionFromWorkflow(reviewAttestation.content)).toBe("24.22.1");
   });
 
-  it.fails("CANDIDATE-U-TOOLPIN-1411-002: Pack policy fixture mirrors the template's reviewed Node pin", () => {
+  it.fails("U-CIPOL-041: Pack policy fixture mirrors the template's reviewed Node pin", () => {
     const reviewedNodeVersion = "24.22.1";
     const fixtureVersion = nodeVersionFromWorkflow(PACK_WORKFLOW);
     const templateVersion = nodeVersionFromWorkflow(packTemplate.content);
