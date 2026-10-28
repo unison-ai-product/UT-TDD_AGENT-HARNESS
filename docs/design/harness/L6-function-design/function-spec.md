@@ -428,13 +428,11 @@ function runGate(gId):
   exit status == "passed" ? 0 : 1
 ```
 
-PLAN-L7-363 以降、`appendGateRun` は `writeGateRunEvidence` として CLI 判定後に必ず呼び出される。
-判定結果そのものは `evaluateGateReview` + `evaluateStaticGate` の合成であり、証跡書込の失敗は gate
-exit code を変えない。証跡 JSON は `.ut-tdd/gate_runs/<gate>-<timestamp>-<hash>.json` に append され、
-`schema_version`、`gate_run_id`、`gate_id`、`timestamp/checked_at`、`plan_id`、`session_id`、
-`mode`、`review_kind`、`worker_model`、`reviewer_model`、`checklist_path`、`coverage_summary_path`、
-`command`、`checks[]`、`messages[]` を持つ。`plan_id` は `--plan`、`UT_TDD_PLAN_ID`、current-plan/branch
-推定の順で解決し、解決できなければ `null` のまま書く (PLAN が無いことは証跡の欠陥ではない)。新規実行の `gate_run_id` は `gate-run:${compactSlug(gateId)}:${sha256(runSeed).slice(0, 12)}` (`runSeed = [gateId, checkedAt, sessionId ?? "", process.pid].join(":")`) とし、PLAN の値を含めない。既存証跡の ID は移行・再計算しない。hash 長で一意性は保証されないため、証跡ファイルは排他作成し、同じ ID / path は上書き・別名保存せず fail-close する (CANDIDATE-U-GATE-009)。
+PLAN-L7-363 以降、`appendGateRun` は `writeGateRunEvidence` として CLI 判定後に必ず呼ぶ。gate verdict は `evaluateGateReview` + `evaluateStaticGate` の合成であり、証跡書込の失敗も verdict / exit を変えず stderr 警告にする。
+新規 final は `.ut-tdd/gate_runs/<sha256(UTF-8 gate_run_id の小文字 hex)>.json` とし、完成 JSON を一意な temp に書き、hard link で no-clobber publish する。ID 以外の hash 入力・別名救済はなく、hash collision も拒否する。
+同じ ID の並行実行は一方だけ publish し、EEXIST / link 非対応・失敗を含む全書込失敗は警告に留める。crash した temp は次の実行で削除せず、retry は新しい ID を使う。
+旧 `<gate>-<timestamp>-<hash>.json` も読み、全形式を内容の ID で照合して同じ ID の重複を拒否する。schema は `schema_version`、`gate_run_id`、`gate_id`、`timestamp/checked_at`、`plan_id`、`session_id`、`mode`、`review_kind`、`worker_model`、`reviewer_model`、`checklist_path`、`coverage_summary_path`、`command`、`checks[]`、`messages[]` を持つ。
+`plan_id` は `--plan`、`UT_TDD_PLAN_ID`、current-plan/branch 推定の順で解決し、無ければ `null` (欠陥ではない)。新規 ID は `gate-run:${compactSlug(gateId)}:${sha256(runSeed).slice(0, 12)}` (`runSeed = [gateId, checkedAt, sessionId ?? "", process.pid].join(":")`) とし PLAN を含めず、既存 ID を移行・再計算しない。ID 重複で書けなかった証跡の欠落は、下流の `gate-run-coverage` が fail-close で検出する (CANDIDATE-U-GATE-009/010)。
 
 `rebuildHarnessDb` は `.ut-tdd/gate_runs/*.json` を読み、既存 `gate_runs` 列
 (`gate_run_id/gate_id/plan_id/status/checked_at/evidence_path`) と `workflow_runs`
@@ -703,6 +701,8 @@ interface DriveDbRegistrationResult {
 (a) 退役する検査: 入力が PLAN 由来のものは、`docs/plans/` が無い・空のときに違反にしてはならない。`stats.planCount` が 0 の入力に対して、上の「退役」の行は違反を返さない。
 
 (b) 変更しない検査: `missing_db` と `mode_catalog_unmapped`。どちらも PLAN の有無に関係しない。`planCount` が 0 のときに残る違反はこの 2 つだけである。`planCount` が 1 以上のときの全検査も、現行の振る舞いを変えない。
+
+routine-gate の `workflow_runs` 行は §2.2 の gate 証跡と実行単位の照合で守るため、`workflow_orphans` の drive JOIN 検査から PLAN の有無にかかわらず常に除外する。上記の「現行どおり」は routine-gate 以外の行に限り、`planCount >= 1` での既存 JOIN 評価を維持する。
 
 (c) 入力が混在する検査の変更:
 
