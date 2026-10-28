@@ -74,7 +74,7 @@ OneDrive 上の primary clone + 共通 `.git` + worktree ごとの `.ut-tdd` と
 
 | 指標 | 2026-07-23 (issue #141 起票時) | 2026-08-05 (本 PLAN 起票時) | 変化 |
 |---|---|---|---|
-| 登録 worktree 数 | 38 本 | 118 本 (Temp 70 / `C:/Users/micro/ut-*` 36 / OneDrive 7 / その他 5) | 約 3.1 倍 / 13 日 |
+| 登録 worktree 数 | 38 本 | 118 本 (Temp 70 / `C:/Users/<user>/ut-*` 36 / OneDrive 7 / その他 5) | 約 3.1 倍 / 13 日 |
 | `.ut-tdd/harness.db` サイズ | 約 3.86 GB (3,859,845,120 bytes) | 約 4.4 GB | さらに増加 (issue #169 の正常値 62MB に対し**71 倍**) |
 | worktree 個別 `harness.db` 数 | 22 本 (38 worktree 中) | Temp 配下だけで 67 本 | 増加継続 |
 | stale worktree (`git worktree prune --dry-run`) | 未計測 | **0 件** — 全 118 ディレクトリが実在し生きた参照 | 「古いから消せる」判別が機械的にできない |

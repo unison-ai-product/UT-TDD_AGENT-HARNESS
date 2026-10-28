@@ -101,7 +101,7 @@ v2_import: docs/migration/v2-import-ledger.md
 
 - **FR-AST-4 (drift lint)**: 内部資産の前提抜けを機械検出する lint を追加 (rule engine IMP-033 のインスタンス):
   - `docs/skills/` が空のまま放置されていないか (curate 未着手検出)
-  - `.claude/agents/*.md` に HELIX 絶対パス (`~/社内の別 repo/` / `C:\Users\micro`) や `helix codex` 直叩きが残存していないか
+  - `.claude/agents/*.md` に HELIX 絶対パス (`~/<旧ソース repo>/` / `C:\Users\<user>`) や `helix codex` 直叩きが残存していないか
   - subagent roster と guard allowlist (15) の整合 (frontmatter model family ↔ agent-guard.ts)
 - **lint 逆方向ガード注記** (review 軸2): FR-L1-46〜49 の L1↔L3 整合は **g3-trace R1 (orphanFrL1)** が唯一の逆方向ガード (L1 にあるが L3 carry 不在を検出)。fr-registry-audit は missingInL1 (L3→L1 方向) のみ。carry 記載を消すと g3-trace のみが検出するため、§3 carry 削除時は注意。
 - **設計工程チェックリスト**: V-model 着手時に「対象システムの内部資産 (agent/skill/command) を設計スコープに含めたか」を必須確認項目化 (gate-design の 4 軸に「資産次元」を追加検討)。

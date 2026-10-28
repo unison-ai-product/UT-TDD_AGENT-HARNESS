@@ -23,7 +23,7 @@
 | # | 項目 | vendor | UT-TDD §7.2 | 影響 | 対応 |
 |---|---|---|---|---|---|
 | **D1** | YAML parser | bespoke `_parse_mapping` / `_parse_list` / `_parse_scalar` (PyYAML 不使用、~150 行) | W1 で PyYAML 採用済 (`yaml.safe_load`) | **大** | bespoke parser を全置換、PyYAML 使用 |
-| **D2** | skill 配置構造 | `skills_root/<category>/<name>/SKILL.md` (3 階層、`~/社内の別 repo/skills/` 前提) | `docs/skills/*.md` flat (§7.2 spec) | **大** | flat 構造前提に rewrite。`category` field は frontmatter から取得 |
+| **D2** | skill 配置構造 | `skills_root/<category>/<name>/SKILL.md` (3 階層、`~/<旧ソース repo>/skills/` 前提) | `docs/skills/*.md` flat (§7.2 spec) | **大** | flat 構造前提に rewrite。`category` field は frontmatter から取得 |
 | **D3** | command_mapper 依存 | `derive_commands()` で HELIX command (`helix-codex` / `helix-claude` / `helix-skill`) を catalog に embed | UT-TDD は `ut-tdd` 名前空間で別物 | 中 | W3b-A では command embed を skip (entry に `commands` field を含めない)、W6 CLI binding と同期して PLAN-004-b で追加 |
 | **D4** | references walk | `skill_md.parent / "references" / *.md` を walk して title + intro 抽出 | UT-TDD spec で references 構造は未明示 | 中 | W3b-A scope 外 (PLAN-004-c carry)、flat 構造のみ対応 |
 | **D5** | JSONL catalog (classification 連携) | `_build_jsonl_entry` で classification status (pending/approved/manual) と source_hash を export、`skill_classifier` がこの skeleton を更新 | UT-TDD は LLM 分類経路を W3b-B (PLAN-005) で実装、本 W3b-A は不要 | 中 | W3b-A は **JSON catalog のみ** port (`save_catalog`/`load_catalog`)、JSONL は PLAN-004-d carry |

@@ -3,14 +3,14 @@
 - **date**: 2026-07-01
 - **scope**: Prove that source-only audit / governance updates can be replayed through the Pack sync command without leaking development-only artifacts into the clean Pack repository.
 - **source commit**: `8a9965c docs: record pack source-only guard sync`
-- **pack repository**: `C:\Users\micro\OneDrive\Desktop\UT-TDD_AGENT-HARNESS-Pack-work`
+- **pack repository**: `C:\Users\<user>\OneDrive\Desktop\UT-TDD_AGENT-HARNESS-Pack-work`
 - **pack baseline**: `847d3b4 test: lock source-only pack exclusions`
 
 ## Command
 
 ```powershell
-bun src\cli.ts distribution sync-pack --tag 8a9965c --repo-dir C:\Users\micro\OneDrive\Desktop\UT-TDD_AGENT-HARNESS-Pack-work --json
-git -C C:\Users\micro\OneDrive\Desktop\UT-TDD_AGENT-HARNESS-Pack-work status --short --branch
+bun src\cli.ts distribution sync-pack --tag 8a9965c --repo-dir C:\Users\<user>\OneDrive\Desktop\UT-TDD_AGENT-HARNESS-Pack-work --json
+git -C C:\Users\<user>\OneDrive\Desktop\UT-TDD_AGENT-HARNESS-Pack-work status --short --branch
 ```
 
 ## Result

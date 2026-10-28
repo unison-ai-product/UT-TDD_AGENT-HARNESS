@@ -105,7 +105,7 @@ case-sensitive 比較では大半が一致せず漏洩継続 = **false-green** (
    render なら既存データも一掃。`scaffoldFromDigests` が deliverables.files の唯一生成点で、
    唯一の production caller `runHandover` が `deps.repoRoot` を持つため plumbing は局所。
 
-実データで再生成 handover の個人パス **0件** を確認 (`c:/Users/micro` も `Users/micro` も 0)。
+実データで再生成 handover の個人パス **0件** を確認 (`c:/Users/<user>` も `Users/<user>` も 0)。
 
 ### 1.4 既存 tracked 漏洩の除去
 

@@ -60,7 +60,7 @@ remediation 選択肢: (a) tracked 維持 → repository-structure.md に配置�
 
 ### F-7 [env / out-of-repo] Claude Code env 注入の PATH 破壊が spawn 系テストを環境誘発 fail させる
 
-- user-global `~/.claude/settings.json` の `env.PATH = "/c/Program Files/nodejs:/c/Users/micro/AppData/Roaming/npm:${PATH}"` は **`${PATH}` が展開されず literal のまま**注入され、Windows の System PATH (System32 等) が消える。
+- user-global `~/.claude/settings.json` の `env.PATH = "/c/Program Files/nodejs:/c/Users/<user>/AppData/Roaming/npm:${PATH}"` は **`${PATH}` が展開されず literal のまま**注入され、Windows の System PATH (System32 等) が消える。
 - 結果: PowerShell tool で `git`/`cmd` が not found、vitest の `tests/runtime-hook-entrypoints.test.ts` 5 件が `spawnSync("cmd.exe")` ENOENT (status null) で fail。**PATH に System32 を戻すと 6/6 pass、全回帰 329/329 green** — repo の退行ではない (本 audit で実証)。
 - F-5 (spawnSync child.error 沈黙) の実害インスタンスでもある (ENOENT が無言で exit 1 になる)。
 - remediation: user settings の env.PATH エントリを除去 or Windows 形式へ修正 (Claude Code は env 値の変数展開をしない)。repo 側は IMP-130(d) の child.error surface で診断性を上げる。

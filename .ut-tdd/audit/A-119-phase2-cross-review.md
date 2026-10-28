@@ -20,7 +20,7 @@ Reviewer: Claude Opus (PM、別 runtime/別 model = cross-agent、review 前置)
 
 ## HELIX cutover の substance 確認
 
-- pmo-helix-scout/explorer を `~/社内の別 repo/`(個人 HELIX) → `vendor/helix-source/`(repo 内 snapshot) へ re-scope (A-116 主張と一致)。personal path 依存除去かつ機能維持。
+- pmo-helix-scout/explorer を `~/<旧ソース repo>/`(個人 HELIX) → `vendor/helix-source/`(repo 内 snapshot) へ re-scope (A-116 主張と一致)。personal path 依存除去かつ機能維持。
 - **agent-guard を壊していない**: 全 `.claude/agents/*.md` が `model:` frontmatter 保持、`tests/agent-guard.test.ts` 14 tests green。guard allowlist missing 0。
 - ADR-001 (HELIX = 設計概念のみ、vendor snapshot に隔離) に整合。
 

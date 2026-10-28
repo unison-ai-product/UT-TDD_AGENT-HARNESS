@@ -87,7 +87,7 @@ PO 指示「V モデルとモデル駆動を全部同じにしろ」を受け、
 
 ## §6 HELIX-workflows 正本由来 FR-L1 候補リスト (2026-05-28 確定、L1 機能要求 sub-doc 起票時の正本ネタ)
 
-> 出典: `c:\Users\micro\Downloads\HELIX-workflows\helix-process\` 配下 47 doc (Group A 19 横断・配線 / Group B 11 mode workflow + 工程専門 2 / Group C 15 L0-L14 工程定義)。Agent (pmo-sonnet, model:sonnet) で全件 Read + 構造抽出 (`agentId: af1dfb471e21882c8`)。
+> 出典: `c:\Users\<user>\Downloads\HELIX-workflows\helix-process\` 配下 47 doc (Group A 19 横断・配線 / Group B 11 mode workflow + 工程専門 2 / Group C 15 L0-L14 工程定義)。Agent (pmo-sonnet, model:sonnet) で全件 Read + 構造抽出 (`agentId: af1dfb471e21882c8`)。
 > 重要度: **P0** = UT-TDD core 必須 (18 件) / **P1** = 推奨採用 (12 件) / **P2** = 参考のみ (5 件)。
 > Step B-1 で `docs/design/harness/L1-requirements/functional-requirements.md` に転写、§1 機能一覧の正本となる。
 

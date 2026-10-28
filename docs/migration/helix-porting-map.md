@@ -109,7 +109,7 @@ The source snapshot remains in `vendor/helix-source/` as read-only material. UT-
 - [ ] `helix` command names are changed to `ut-tdd`.
 - [ ] `.helix/` state paths are changed to `.ut-tdd/`.
 - [ ] `HELIX` product naming is changed to `UT-TDD Agent Harness` except in migration/history docs.
-- [ ] Absolute local paths such as `C:\Users\micro` are removed from runtime files.
+- [ ] Absolute local paths such as `C:\Users\<user>` are removed from runtime files.
 - [ ] Linux-only shell calls have PowerShell or Python equivalents.
 - [ ] Runtime-generated files are ignored (`.ut-tdd/state/*`, `.ut-tdd/cache/*`, `.ut-tdd/audit/*`, `.ut-tdd/teams/local*.yaml`).
 - [ ] Vendor candidate references are not used as canonical runtime inputs.
