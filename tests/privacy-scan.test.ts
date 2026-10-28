@@ -72,8 +72,9 @@ describe("privacy scan candidate oracles (pure functions)", () => {
   it.fails("U-PRIVSCAN-001: reports 1-based email hit lines once per line", () => {
     expect(findEmailHitLines(lineUnit(["", P, `${P} and ${P}`]))).toEqual([2, 3]);
     expect(findEmailHitLines(lineUnit(["a\r", "b\r", `${P}\r`]))).toEqual([3]);
-    expect(findEmailHitLines(lineUnit([`x.${P}`]))).toEqual([]);
-    expect(findEmailHitLines(lineUnit([`b${P}`]))).toEqual([]);
+    // L6 §3: the local part may hold `.` and letters, so `x.` + P and `b` + P are whole addresses.
+    expect(findEmailHitLines(lineUnit([`x.${P}`]))).toEqual([1]);
+    expect(findEmailHitLines(lineUnit([`b${P}`]))).toEqual([1]);
     expect(findEmailHitLines(lineUnit([`${P}-x`]))).toEqual([]);
     expect(findEmailHitLines(lineUnit([`<${P}>`]))).toEqual([1]);
     expect(findEmailHitLines(lineUnit(["@types/node", "react@18.3.1", "@"]))).toEqual([]);
@@ -156,7 +157,13 @@ describe("privacy scan candidate oracles (pure functions)", () => {
     ];
     const results = [
       analyzePrivacyScan(packInput(units)),
-      analyzePrivacyScan(packInput(units, { kind: "invalid", entryLines: [2] })),
+      // Without a provided denylist the scanner cannot judge path hits, so this run uses safe paths.
+      analyzePrivacyScan(
+        packInput(packFile("docs/a.md", [P, `${D} line`, `Co-Authored-By: X <${P}>`]), {
+          kind: "invalid",
+          entryLines: [2],
+        }),
+      ),
       analyzePrivacyScan(
         input({
           mode: "diff",
