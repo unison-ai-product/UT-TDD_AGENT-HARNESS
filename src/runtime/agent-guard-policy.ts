@@ -11,30 +11,6 @@ export const GENERIC_SUBAGENT_TYPES: ReadonlySet<string> = new Set([
   "claude",
 ]);
 
-/** Legacy allowlist; removed together with the definition files (PR 4 of the contract). */
-export const SUBAGENT_ALLOWLIST: ReadonlySet<string> = new Set([
-  "be-api",
-  "be-logic",
-  "db-schema",
-  "devops-deploy",
-  "pmo-sonnet",
-  "pmo-haiku",
-  "pmo-project-explorer",
-  "pmo-project-scout",
-  "pmo-tech-docs",
-  "pmo-tech-fork",
-  "pmo-tech-news",
-  "refactor-scout",
-  "pdm-tech-innovation",
-  "pdm-marketing-innovation",
-  "pdm-innovation-manager",
-  "code-reviewer",
-  "blind-reviewer",
-  "security-audit",
-  "qa-test",
-  "ut-tdd-tl",
-]);
-
 /**
  * Role names (not definition files) that get the Codex workspace-write sandbox (Issue #676).
  * Unrelated to Claude subagent definitions.

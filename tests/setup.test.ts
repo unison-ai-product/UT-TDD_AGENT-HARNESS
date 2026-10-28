@@ -137,7 +137,6 @@ const baseTemplates: TemplateSet = {
     "<!-- UT-TDD:managed:end -->",
     "",
   ].join("\n"),
-  "adapter/.claude/agents/ut-tdd-tl.md": "---\nname: ut-tdd-tl\n---\n",
   "adapter/.claude/commands/ut-tdd-status.md": "---\ndescription: Status\n---\n",
   "adapter/.claude/commands/ut-tdd-test.md": "---\ndescription: Test\n---\n",
   "adapter/.claude/settings.json": '{"hooks":{"SessionStart":[]}}\n',
