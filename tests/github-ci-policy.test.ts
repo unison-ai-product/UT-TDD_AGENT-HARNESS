@@ -126,7 +126,7 @@ jobs:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v4
         with:
-          node-version: "24.13.0"
+          node-version: "24.22.1"
           cache: npm
       - run: npm ci --no-audit --no-fund
       - run: npm run typecheck
@@ -268,11 +268,11 @@ describe("Issue #1411 Node pin Red oracles", () => {
   if (!reviewAttestation || !packTemplate)
     throw new Error("Issue #1411 requires the source attestation workflow and Pack template");
 
-  it.fails("U-CIPOL-040: review-attestation pins the reviewed Node version", () => {
+  it("U-CIPOL-040: review-attestation pins the reviewed Node version", () => {
     expect(nodeVersionFromWorkflow(reviewAttestation.content)).toBe("24.22.1");
   });
 
-  it.fails("U-CIPOL-041: Pack policy fixture mirrors the template's reviewed Node pin", () => {
+  it("U-CIPOL-041: Pack policy fixture mirrors the template's reviewed Node pin", () => {
     const reviewedNodeVersion = "24.22.1";
     const fixtureVersion = nodeVersionFromWorkflow(PACK_WORKFLOW);
     const templateVersion = nodeVersionFromWorkflow(packTemplate.content);
