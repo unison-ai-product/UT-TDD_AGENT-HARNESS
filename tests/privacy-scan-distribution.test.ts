@@ -12,11 +12,21 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { stringify } from "yaml";
+import {
+  deriveArtifactInventoryDigest,
+  deriveReleaseId,
+  deriveReleaseRecordDigest,
+} from "../src/schema/release-manifest.ts";
 import {
   buildCleanDistributionPlan,
   cleanDistributionSourcePath,
   transformCleanDistributionArtifact,
 } from "../src/setup/distribution.ts";
+import {
+  digestConsumerRuntimeBytes,
+  digestMaterializedReleaseEntries,
+} from "../src/setup/index.ts";
 
 // L7 §2: no source line may match the email shape, so addresses are joined at runtime.
 const at = "@";
@@ -25,6 +35,7 @@ const P = mail("alice", "mail-provider.jp");
 const D = "example-private-repo";
 const BASELINE_PATH = "docs/governance/privacy-scan-baseline.json";
 const DENYLIST = [".ut-tdd", "privacy-denylist.txt"];
+const TAG = "v0.0.0-test";
 
 let authorRoot = "";
 let scratchRoot = "";
@@ -68,11 +79,47 @@ function changedFiles(
   return new Map([...after].filter(([path, text]) => before.get(path) !== text));
 }
 
-/** Copies the clean Pack artifact set of the execution snapshot into a non-git source root. */
+/** A v2 release manifest whose only release points at `artifactSourceCommit` (both channels). */
+function releaseManifest(artifactSourceCommit: string): Record<string, unknown> {
+  const content = Buffer.from("export const fixture = true;\n", "utf8");
+  const artifacts = [
+    {
+      sourcePath: "src/artifact.ts",
+      destinationPath: "src/artifact.ts",
+      mode: "100644" as const,
+      size: content.length,
+      contentDigest: digestConsumerRuntimeBytes(content),
+    },
+  ];
+  const artifactSetDigest = digestMaterializedReleaseEntries([
+    { path: "src/artifact.ts", mode: "100644", content },
+  ]);
+  const base = {
+    materializerVersion: "1",
+    artifactSourceCommit,
+    artifactSetDigest,
+    artifactInventoryDigest: deriveArtifactInventoryDigest(artifacts),
+    releaseAssetInventoryDigest: `sha256:${"c".repeat(64)}`,
+    artifacts,
+  };
+  const releaseId = deriveReleaseId("1", artifactSourceCommit, artifactSetDigest);
+  return {
+    schema_version: "v2",
+    releases: { [releaseId]: { ...base, releaseRecordDigest: deriveReleaseRecordDigest(base) } },
+    channels: { canary: releaseId, stable: releaseId },
+    channelOrder: ["canary", "stable"],
+  };
+}
+
+/**
+ * Copies the clean Pack artifact set of the execution snapshot into a temp git repository.
+ * The artifacts are commit c1; c2 adds a release manifest bound to c1 and carries TAG, so
+ * `package` scans the tag snapshot (L6 §2 / §11) and `sync-pack` scans the HEAD tree.
+ */
 function cleanSource(label: string, readmeSuffix: string): string {
   const root = join(scratchRoot, label);
   const sourcePaths = git(authorRoot, ["ls-files"]).split(/\r?\n/).filter(Boolean);
-  const plan = buildCleanDistributionPlan({ paths: sourcePaths, sourceTag: "v0.0.0-test" });
+  const plan = buildCleanDistributionPlan({ paths: sourcePaths, sourceTag: TAG });
   for (const rel of plan.artifactPaths) {
     const from = join(authorRoot, cleanDistributionSourcePath(rel, sourcePaths));
     const to = join(root, rel);
@@ -85,6 +132,18 @@ function cleanSource(label: string, readmeSuffix: string): string {
   }
   const readme = join(root, "README.md");
   writeFileSync(readme, `${readFileSync(readme, "utf8")}\n${readmeSuffix}\n`, "utf8");
+  git(root, ["init", "-q", "-b", "main"]);
+  git(root, ["config", "core.autocrlf", "false"]);
+  git(root, ["config", "user.email", mail("test", "example.invalid")]);
+  git(root, ["config", "user.name", "Privacy Scan Test"]);
+  git(root, ["config", "commit.gpgsign", "false"]);
+  git(root, ["add", "-A"]);
+  git(root, ["commit", "-q", "-m", "clean artifacts"]);
+  const artifactSource = git(root, ["rev-parse", "HEAD"]);
+  write(root, "release/manifest.yaml", stringify(releaseManifest(artifactSource)));
+  git(root, ["add", "--", "release/manifest.yaml"]);
+  git(root, ["commit", "-q", "-m", "release manifest"]);
+  git(root, ["tag", TAG]);
   return root;
 }
 
@@ -145,20 +204,20 @@ describe("privacy scan candidate oracles (distribution)", () => {
     const pkg = runDistribution(emailSource, denyHome, [
       "package",
       "--tag",
-      "v0.0.0-test",
+      TAG,
       "--out",
       releaseDir,
       "--json",
     ]);
     expect(pkg.status).toBe(1);
-    expect(existsSync(join(releaseDir, "v0.0.0-test.tar.gz"))).toBe(false);
+    expect(existsSync(join(releaseDir, `${TAG}.tar.gz`))).toBe(false);
     expect(privacyJson(pkg.stdout)?.ok).toBe(false);
 
     const plainSource = cleanSource("d-plain", "plain line");
     const absentHome = makeHome("d-absent", null);
     for (const command of [
       ["sync-pack", "--repo-dir", packDir],
-      ["package", "--tag", "v0.0.0-test", "--out", releaseDir],
+      ["package", "--tag", TAG, "--out", releaseDir],
     ]) {
       const absent = runDistribution(plainSource, absentHome, [...command, "--json"]);
       expect(absent.status).toBe(1);
@@ -197,13 +256,15 @@ describe("privacy scan candidate oracles (distribution)", () => {
     const stage = runDistribution(plainSource, absentHome, [
       "sync-stage",
       "--tag",
-      "v0.0.0-test",
+      TAG,
       "--out",
       join(scratchRoot, "d-stage"),
       "--json",
     ]);
     expect(stage.status).toBe(0);
     write(emailSource, BASELINE_PATH, '["README.md"]\n');
+    git(emailSource, ["add", "--", BASELINE_PATH]);
+    git(emailSource, ["commit", "-q", "-m", "baseline"]);
     const baselined = runDistribution(emailSource, denyHome, [
       "sync-pack",
       "--repo-dir",
@@ -229,7 +290,7 @@ describe("privacy scan candidate oracles (distribution)", () => {
       for (const json of [true, false]) {
         for (const command of [
           ["sync-pack", "--repo-dir", packDir],
-          ["package", "--tag", "v0.0.0-test", "--out", releaseDir],
+          ["package", "--tag", TAG, "--out", releaseDir],
         ]) {
           const result = runDistribution(source, home, json ? [...command, "--json"] : command);
           expect(result.status).toBe(1);
