@@ -360,14 +360,8 @@ describe("gate-run-coverage doctor", () => {
       sessionId: "session-gate-run-id",
     };
 
-    let withPlan: ReturnType<typeof buildGateRunEvidence>;
-    let withoutPlan: ReturnType<typeof buildGateRunEvidence>;
-    try {
-      withPlan = buildGateRunEvidence({ ...input, planId: "PLAN-GATE-RUN-ID" });
-      withoutPlan = buildGateRunEvidence({ ...input, planId: null });
-    } catch {
-      return;
-    }
+    const withPlan = buildGateRunEvidence({ ...input, planId: "PLAN-GATE-RUN-ID" });
+    const withoutPlan = buildGateRunEvidence({ ...input, planId: null });
 
     expect(withPlan.gate_run_id).toBe(withoutPlan.gate_run_id);
   });
@@ -413,6 +407,7 @@ describe("gate-run-coverage doctor", () => {
         finalFiles,
       };
     });
+    expect(fixture.ok && fixture.value.ready).toBe(true);
     if (!fixture.ok || !fixture.value.ready) return;
 
     expect(fixture.value.secondCallReturned).toBe(false);
@@ -764,6 +759,7 @@ describe("gate-run-coverage doctor", () => {
         return { ready: true as const, projection, result };
       },
     );
+    expect(fixture.ok && fixture.value.ready).toBe(true);
     if (!fixture.ok || !fixture.value.ready) return;
 
     const [gateRun] = fixture.value.projection.gateRuns;
@@ -780,6 +776,7 @@ describe("gate-run-coverage doctor", () => {
       const projection = gateRunProjection(root);
       return { result, projection };
     });
+    expect(fixture.ok).toBe(true);
     if (!fixture.ok) return;
 
     expect(fixture.value.result.ok).toBe(true);
@@ -845,6 +842,7 @@ describe("gate-run-coverage doctor", () => {
       const afterCheck = gateRunTransactionPreimage(root);
       return { ready: true as const, result, beforeCheck, afterCheck };
     });
+    expect(fixture.ok && fixture.value.ready).toBe(true);
     if (!fixture.ok || !fixture.value.ready) return;
 
     expect(fixture.value.result.ok).toBe(false);
@@ -893,6 +891,7 @@ describe("gate-run-coverage doctor", () => {
       const afterSecondCheck = gateRunProjection(root);
       return { ready: true as const, result, afterFirstCheck, secondResult, afterSecondCheck };
     });
+    expect(fixture.ok && fixture.value.ready).toBe(true);
     if (!fixture.ok || !fixture.value.ready) return;
 
     expect(fixture.value.result.ok).toBe(false);
