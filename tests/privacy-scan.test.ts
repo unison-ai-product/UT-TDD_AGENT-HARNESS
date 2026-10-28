@@ -325,7 +325,11 @@ describe("privacy scan candidate oracles (pure functions)", () => {
     const emptyPack = analyzePrivacyScan(packInput([]));
     expect(emptyPack.findings.map((finding) => finding.kind)).toContain("privacy-input-unreadable");
     expect(emptyPack.ok).toBe(false);
-    const skipped = analyzePrivacyScan({ ...treeInput(treeFile("docs/t.md", ["x"])), skipped: 1 });
+    const skipped = analyzePrivacyScan({
+      ...treeInput(treeFile("docs/t.bin", [`${P}\u0000`])),
+      skipped: 1,
+    });
+    expect(skipped.findings).toEqual([]);
     expect(privacyScanMessages(skipped).at(-1)).toContain("skipped=1");
     const units = [
       ...treeFile("docs/b.md", [P, "x", P]),
