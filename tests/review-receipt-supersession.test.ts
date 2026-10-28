@@ -295,20 +295,17 @@ describe("PLAN-L7-520 append-only receipt supersession", () => {
           ]),
         );
 
+        const secondModel = expectedProvider === "codex" ? "gpt-6.1-sol" : "claude-fable-5-1";
         const second = beginReviewAttempt({
           repoRoot: root,
           request,
           provider: expectedProvider,
-          model: "claude-fable-5-1",
+          model: secondModel,
         });
         expect(second).toMatchObject({ ok: true, attempt: 2 });
         if (!second.ok) return;
-        writeFileSync(
-          second.path,
-          verdictText(request, 2, "claude-fable-5-1", expectedProvider),
-          "utf8",
-        );
-        const secondAttestation = attestation(request, 2, 0, "claude-fable-5-1");
+        writeFileSync(second.path, verdictText(request, 2, secondModel, expectedProvider), "utf8");
+        const secondAttestation = attestation(request, 2, 0, secondModel);
         secondAttestation.provider = expectedProvider;
         expect(
           projectReviewVerdict({
