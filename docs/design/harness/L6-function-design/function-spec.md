@@ -434,7 +434,7 @@ exit code を変えない。証跡 JSON は `.ut-tdd/gate_runs/<gate>-<timestamp
 `schema_version`、`gate_run_id`、`gate_id`、`timestamp/checked_at`、`plan_id`、`session_id`、
 `mode`、`review_kind`、`worker_model`、`reviewer_model`、`checklist_path`、`coverage_summary_path`、
 `command`、`checks[]`、`messages[]` を持つ。`plan_id` は `--plan`、`UT_TDD_PLAN_ID`、current-plan/branch
-推定の順で解決し、解決できなければ `null` のまま書く (PLAN が無いことは証跡の欠陥ではない)。
+推定の順で解決し、解決できなければ `null` のまま書く (PLAN が無いことは証跡の欠陥ではない)。新規実行の `gate_run_id` は `gate-run:${compactSlug(gateId)}:${sha256(runSeed).slice(0, 12)}` (`runSeed = [gateId, checkedAt, sessionId ?? "", process.pid].join(":")`) とし、PLAN の値を含めない。既存証跡の ID は移行・再計算しない。hash 長で一意性は保証されないため、証跡ファイルは排他作成し、同じ ID / path は上書き・別名保存せず fail-close する (CANDIDATE-U-GATE-009)。
 
 `rebuildHarnessDb` は `.ut-tdd/gate_runs/*.json` を読み、既存 `gate_runs` 列
 (`gate_run_id/gate_id/plan_id/status/checked_at/evidence_path`) と `workflow_runs`
@@ -473,11 +473,11 @@ exit code を変えない。証跡 JSON は `.ut-tdd/gate_runs/<gate>-<timestamp
   それ以外の workflow は従来どおり同一 `(plan_id, workflow, phase)` の複数 row を retry とする。
 
 `writeGateRunEvidence` は証跡を排他作成し衝突時は上書き・別名救済をせず拒否する (gate verdict / exit は従来どおり)。
-`gate-run-coverage` は現在の `.ut-tdd/gate_runs/*.json` で判定し、新規 `gate_run_id` を投影、証跡の無い DB-only 行を正規 seed 以外削除する。
+`gate-run-coverage` は現在の `.ut-tdd/gate_runs/*.json` を正本として、新規証跡を投影し、証跡の無い DB-only gate row と、同じ実行に対応する `routine-gate` workflow row を正規 seed 以外除外する。新規追加・DB-only 行の除外・実在証跡と DB row の比較は、投影全体の単一 transaction (`BEGIN IMMEDIATE`) 内で行う。
 実在証跡と対応 DB 行の `gate_run_id` / `gate_id` / `plan_id` / `status` / `checked_at` / `evidence_path` は全て比較し、不一致は fail-close、両方空の `plan_id` は一致とする。
-新規追加と既存行の不一致が同時でも独立に処理し、追加を投影しても不一致行を上書きしない。次も fail-close で検出する:
-`gate_runs` の 0 件、seed を名乗るのに正規でない row、`routine-gate` workflow row と正規 seed 以外の gate row の対応欠落、
-空の `gate_id`、証跡欠落による対応欠落、不正 JSON・識別の不一致 (`gate_run_id` / `gate_id`)。
+全証跡を独立に評価して不一致を見落とさないが、1 件でも不一致があれば追加・削除を含む投影全体を rollback し、旧 DB 状態を保つ。証跡が無い実行の gate row と、`stableId("gate-workflow", gate_run_id)` で導出される対応 workflow row は両方とも除外するため、証跡欠落による対応欠落 violation にはしない。正常に再投影した後の再実行は同じ結果を返し、DB 状態も変えない (冪等)。次も fail-close で検出する:
+`gate_runs` の 0 件、seed を名乗るのに正規でない row、実在証跡に対応する `routine-gate` workflow row と gate row の片側欠落、
+空の `gate_id`、不正 JSON・識別の不一致 (`gate_run_id` / `gate_id`)。
 `plan_id` が空の gate row と、`plan_registry` に無い `plan_id` を持つ gate row は、それだけでは違反にしない。
 A-132 だけがあり JSON 証跡が無い clean tree では、`gate_runs` は正規の seed row 7 件で、violation は 0 となる。
 
