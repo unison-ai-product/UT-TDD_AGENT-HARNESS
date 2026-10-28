@@ -58,8 +58,8 @@ function orchestrationFor(drive: Drive, layer: Layer): OrchestrationMode {
 }
 
 function mandatoryAgentsFor(drive: Drive, layer: Layer): string[] {
-  const agents = new Set<string>(["code-reviewer"]);
-  if (layer === "L1" || layer === "L3") agents.add("pmo-sonnet");
+  const agents = new Set<string>(["reviewer"]);
+  if (layer === "L1" || layer === "L3") agents.add("docs");
   if (drive === "fe") agents.add("uiux");
   if (drive === "db") agents.add("dba-reviewer");
   if (drive === "agent") agents.add("frontier-reviewer");

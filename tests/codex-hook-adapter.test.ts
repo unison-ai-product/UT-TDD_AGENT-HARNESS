@@ -300,12 +300,12 @@ describe("codex-hook-adapter — Codex hooks.json parity (PLAN-L7-139, PLAN-L7-6
         bypass: false,
       }).decision,
     ).toBe("block");
-    // agent-guard allowlist ロジックは共有。Codex は spawn_agent 面を実際に持つので、agent-guard 相当を
+    // agent-guard の判定ロジックは共有。Codex は spawn_agent 面を実際に持つので、agent-guard 相当を
     // 配線すれば同 entrypoint・同判定になる (配線自体は deferred follow-up)。
     expect(
       evaluateAgentGuard(
-        { tool_name: "Agent", tool_input: { subagent_type: "be-logic", model: "sonnet" } },
-        { allowRaw: false, resolveAgentFamily: () => "missing" },
+        { tool_name: "Agent", tool_input: { subagent_type: "general-purpose" } },
+        { allowRaw: false },
       ).code,
     ).toBe(2);
   });

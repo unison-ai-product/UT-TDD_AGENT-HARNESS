@@ -35,7 +35,7 @@ describe("delegation routing (PLAN-L7-255)", () => {
     });
     const claude = resolveDelegationRouting({
       provider: "claude",
-      role: "code-reviewer",
+      role: "reviewer",
       task: "review the diff",
     });
     expect(claude).toMatchObject({
@@ -159,11 +159,15 @@ describe("delegation routing (PLAN-L7-255)", () => {
       "tl-advisor",
       "se",
       "reviewer",
-      "code-reviewer",
-      "pmo-haiku",
-      "pmo-tech-docs",
+      "ut-tdd-tl",
+      "qa-test",
+      "security-audit",
+      "be-api",
     ]) {
       expect(DELEGATION_ROLE_ALLOWLIST.has(role)).toBe(true);
+    }
+    for (const role of ["code-reviewer", "pmo-haiku", "pmo-tech-docs", "refactor-scout"]) {
+      expect(DELEGATION_ROLE_ALLOWLIST.has(role)).toBe(false);
     }
   });
 
@@ -214,7 +218,7 @@ describe("delegation routing (PLAN-L7-255)", () => {
       it("U-CMDINPUT-002: reviewer invalid effort", () => {
         const result = resolveDelegationRouting({
           provider: "claude",
-          role: "code-reviewer",
+          role: "reviewer",
           task: "review the diff",
           effort,
         });
@@ -251,7 +255,7 @@ describe("delegation routing (PLAN-L7-255)", () => {
 
     const reviewerModel = resolveDelegationRouting({
       provider: "claude",
-      role: "code-reviewer",
+      role: "reviewer",
       task: "review the diff",
       model: MODEL_IDS.claude.opus,
     });
@@ -300,7 +304,7 @@ describe("delegation routing (PLAN-L7-255)", () => {
       it("U-CMDINPUT-003: reviewer invalid model syntax", () => {
         const result = resolveDelegationRouting({
           provider: "claude",
-          role: "code-reviewer",
+          role: "reviewer",
           task: "review the diff",
           model,
         });

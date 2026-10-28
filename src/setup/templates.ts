@@ -18,104 +18,6 @@ const GPT_FRONTIER = MODEL_IDS.codex.frontier;
 const GPT_WORKER = MODEL_IDS.codex.worker;
 const GPT_SPARK = MODEL_IDS.codex.spark;
 
-const CLAUDE_AGENT_TEMPLATES = [
-  ["be-api", "Backend API reviewer for route, contract, and integration concerns.", CLAUDE_SONNET],
-  [
-    "be-logic",
-    "Backend domain logic reviewer for invariants, boundaries, and TDD fit.",
-    CLAUDE_SONNET,
-  ],
-  // quality-check / gate reviewer (code-reviewer / qa-test / security-audit / ut-tdd-tl) は
-  // opus floor (PLAN-L7-399: review は orchestrator より下位にしない)。ソース repo の
-  // .claude/agents/*.md と配布テンプレのポリシー drift は tests/setup-agent-floor.test.ts で固定。
-  [
-    "blind-reviewer",
-    "Blind reviewer that judges the artifact against spec and self-run tests only, with author claims and intent withheld.",
-    CLAUDE_OPUS,
-  ],
-  [
-    "code-reviewer",
-    "Read-only senior engineering reviewer for correctness, security, and maintainability.",
-    CLAUDE_OPUS,
-  ],
-  [
-    "db-schema",
-    "Database schema reviewer for migrations, indexes, and data contracts.",
-    CLAUDE_SONNET,
-  ],
-  ["devops-deploy", "CI, deployment, rollback, and release-readiness reviewer.", CLAUDE_SONNET],
-  [
-    "pdm-innovation-manager",
-    "Product management reviewer for opportunity, scope, and portfolio fit.",
-    CLAUDE_OPUS,
-  ],
-  [
-    "pdm-marketing-innovation",
-    "Market and user-value reviewer for product framing and adoption.",
-    CLAUDE_OPUS,
-  ],
-  [
-    "pdm-tech-innovation",
-    "Technical product reviewer for feasibility, platform leverage, and risk.",
-    CLAUDE_OPUS,
-  ],
-  [
-    "pmo-haiku",
-    "Lightweight PMO reviewer for concise status, blockers, and next action.",
-    CLAUDE_HAIKU,
-  ],
-  [
-    "pmo-project-explorer",
-    "Project discovery reviewer for goals, constraints, and evidence gaps.",
-    CLAUDE_SONNET,
-  ],
-  [
-    "pmo-project-scout",
-    "Project triage reviewer for backlog, ownership, and workflow routing.",
-    CLAUDE_HAIKU,
-  ],
-  [
-    "pmo-sonnet",
-    "PMO reviewer for plan structure, handover quality, and cross-document consistency.",
-    CLAUDE_SONNET,
-  ],
-  [
-    "pmo-tech-docs",
-    "Technical documentation reviewer for ADR, process, and governance quality.",
-    CLAUDE_SONNET,
-  ],
-  [
-    "pmo-tech-fork",
-    "Fork, extraction, and distribution reviewer for clean-room boundaries.",
-    CLAUDE_SONNET,
-  ],
-  [
-    "pmo-tech-news",
-    "Technical research reviewer for external signals and dated source checks.",
-    CLAUDE_SONNET,
-  ],
-  [
-    "qa-test",
-    "Quality reviewer for test strategy, oracle strength, and regression scope.",
-    CLAUDE_OPUS,
-  ],
-  [
-    "refactor-scout",
-    "Refactoring reviewer for complexity, duplication, and low-risk extraction candidates.",
-    CLAUDE_HAIKU,
-  ],
-  [
-    "security-audit",
-    "Security reviewer for auth, secrets, PII, and threat-model concerns.",
-    CLAUDE_OPUS,
-  ],
-  [
-    "ut-tdd-tl",
-    "Technical-lead reviewer for UT-TDD workflow, gates, tests, and release readiness.",
-    CLAUDE_OPUS,
-  ],
-] as const;
-
 const CLAUDE_COMMAND_TEMPLATES = [
   ["build", "Implement against a frozen UT-TDD spec/test design."],
   ["code-simplify", "Identify the smallest safe simplification for the selected code."],
@@ -125,27 +27,6 @@ const CLAUDE_COMMAND_TEMPLATES = [
   ["spec", "Author a spec-first design before any implementation."],
   ["test", "Run targeted UT-TDD verification for the current change."],
 ] as const;
-
-function agentTemplate(name: string, description: string, model: string): string {
-  return [
-    "---",
-    `name: ${name}`,
-    `description: ${description}`,
-    "tools: Read, Grep, Glob, Bash",
-    `model: ${model}`,
-    "---",
-    "",
-    "Act as a consumer-safe UT-TDD subagent for the current repository.",
-    "",
-    "Required baseline:",
-    "- Read `AGENTS.md`, `CLAUDE.md`, and `.claude/CLAUDE.md` when present.",
-    "- Use `ut-tdd status`, `ut-tdd doctor --profile consumer-setup-smoke`, and `ut-tdd doctor --profile consumer-toolchain` as consumer-safe local state evidence.",
-    "- Report findings before summaries, with file and command evidence.",
-    "- Do not write secrets, credentials, PII, or machine-local absolute paths.",
-    "- Prefer read-only review unless the user explicitly asks for implementation.",
-    "",
-  ].join("\n");
-}
 
 function commandTemplate(name: string, description: string): string {
   return [
@@ -163,29 +44,11 @@ function commandTemplate(name: string, description: string): string {
   ].join("\n");
 }
 
-const CLAUDE_AGENT_TEMPLATE_SET: TemplateSet = Object.fromEntries(
-  CLAUDE_AGENT_TEMPLATES.map(([name, description, model]) => [
-    `adapter/.claude/agents/${name}.md`,
-    agentTemplate(name, description, model),
-  ]),
-);
-
 const CLAUDE_COMMAND_TEMPLATE_SET: TemplateSet = Object.fromEntries(
   CLAUDE_COMMAND_TEMPLATES.map(([name, description]) => [
     `adapter/.claude/commands/${name}.md`,
     commandTemplate(name, description),
   ]),
-);
-
-const CLAUDE_AGENT_FILES: { template: string; file: GeneratedFile }[] = CLAUDE_AGENT_TEMPLATES.map(
-  ([name]) => ({
-    template: `adapter/.claude/agents/${name}.md`,
-    file: {
-      path: join(".claude", "agents", `${name}.md`),
-      category: "A",
-      purpose: `Claude subagent template: ${name}`,
-    },
-  }),
 );
 
 const CLAUDE_COMMAND_FILES: { template: string; file: GeneratedFile }[] =
@@ -199,7 +62,6 @@ const CLAUDE_COMMAND_FILES: { template: string; file: GeneratedFile }[] =
   }));
 
 export const BUILTIN_GITHUB_TEMPLATES: TemplateSet = {
-  ...CLAUDE_AGENT_TEMPLATE_SET,
   ...CLAUDE_COMMAND_TEMPLATE_SET,
   // UTF-8/LF 正規化ペア (CLAUDE.md mojibake 対策前提の setup 導入保証、PLAN-L7-425)。
   // disk template (docs/templates/github/common/) と同内容の builtin fallback。
@@ -342,7 +204,7 @@ export const BUILTIN_GITHUB_TEMPLATES: TemplateSet = {
     `            "args": ${JSON.stringify([...wrapperHookArgs("agent-guard")])},`,
     '            "timeout": 5,',
     '            "blockOnFailure": true,',
-    '            "statusMessage": "agent-guard: subagent allowlist/model enforcement"',
+    '            "statusMessage": "agent-guard: generic subagent type and model check"',
     "          }",
     "        ]",
     "      },",
@@ -442,7 +304,7 @@ export const BUILTIN_GITHUB_TEMPLATES: TemplateSet = {
     '            "type": "command",',
     `            "command": ${JSON.stringify(codexCommandString(wrapperHookArgs("agent-guard")))},`,
     '            "timeout": 5,',
-    '            "statusMessage": "agent-guard: Codex subagent allowlist/model enforcement"',
+    '            "statusMessage": "agent-guard: Codex generic subagent type and model check"',
     "          }",
     "        ]",
     "      },",
@@ -699,7 +561,6 @@ export const COMMON_FILES: { template: string; file: GeneratedFile }[] = [
       purpose: "Claude hook settings for UT-TDD CLI entrypoints",
     },
   },
-  ...CLAUDE_AGENT_FILES,
   ...CLAUDE_COMMAND_FILES,
   {
     template: "adapter/.claude/commands/ut-tdd-status.md",
