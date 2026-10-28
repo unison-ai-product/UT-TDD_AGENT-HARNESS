@@ -197,7 +197,7 @@ describe("code-size live repository and CLI integration candidates", () => {
     const result = checkCodeSize(authorRoot);
     const checked =
       countTargetFiles(join(authorRoot, "src")) + countTargetFiles(join(authorRoot, "tests"), true);
-    expect.soft(result.ok).toBe(true);
+    expect(result.ok).toBe(true);
     expect
       .soft(result.messages)
       .toContain(
@@ -222,8 +222,8 @@ describe("code-size live repository and CLI integration candidates", () => {
 
   it("U-CODESIZE-016: rejects a new src file with a function over the limit", () => {
     const result = checkCodeSize(newFunctionFixture);
-    expect.soft(result.ok).toBe(false);
-    expect.soft(result.messages.join("\n")).toContain("code-size-required:new-file-over-limit");
+    expect(result.ok).toBe(false);
+    expect(result.messages.join("\n")).toContain("code-size-required:new-file-over-limit");
   });
 
   it("U-CODESIZE-017: registers code-size in the full doctor hard-gate definitions and fails it on a violation", () => {
@@ -241,15 +241,15 @@ describe("code-size live repository and CLI integration candidates", () => {
 
   it("U-CODESIZE-017: the green CLI worktree exits successfully with the summary", () => {
     const result = runCli(cliGreenRoot);
-    expect.soft(result.status).toBe(0);
-    expect.soft(result.stdout).toContain("checked=");
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("checked=");
   });
 
   it("U-CODESIZE-017: the violating CLI worktree exits 1, prints the finding and writes no state", () => {
     const before = stateMtimes(cliViolationRoot);
     const result = runCli(cliViolationRoot);
-    expect.soft(result.status).toBe(1);
-    expect.soft(result.stdout).toContain("code-size-required:new-file-over-limit");
-    expect.soft(stateMtimes(cliViolationRoot)).toEqual(before);
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("code-size-required:new-file-over-limit");
+    expect(stateMtimes(cliViolationRoot)).toEqual(before);
   });
 });

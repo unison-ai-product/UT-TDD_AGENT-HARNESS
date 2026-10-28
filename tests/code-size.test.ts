@@ -47,7 +47,7 @@ describe("code size gate candidate oracles", () => {
       ["// c\n/* d */\na;\n", 3],
     ] as const;
     for (const [text, expected] of cases) {
-      expect.soft(measureCodeFile(source("src/x.ts", text)).lines).toBe(expected);
+      expect(measureCodeFile(source("src/x.ts", text)).lines).toBe(expected);
     }
   });
 
@@ -67,7 +67,7 @@ describe("code size gate candidate oracles", () => {
       ["src/dist/d.ts", null],
     ];
     for (const [path, codeClass] of expected) {
-      expect.soft(classifyCodeFile(path), path).toBe(codeClass);
+      expect(classifyCodeFile(path), path).toBe(codeClass);
     }
   });
 
@@ -89,33 +89,33 @@ describe("code size gate candidate oracles", () => {
     ];
     for (const [text, functionLines, excess, overLines] of cases) {
       const measured = measureCodeFile(source("src/x.ts", text));
-      expect.soft(measured.functions.map((item) => item.lines)).toEqual(functionLines);
-      expect.soft(measured.functionExcess).toBe(excess);
-      expect.soft(measured.overFunctions.map((item) => item.lines)).toEqual(overLines);
+      expect(measured.functions.map((item) => item.lines)).toEqual(functionLines);
+      expect(measured.functionExcess).toBe(excess);
+      expect(measured.overFunctions.map((item) => item.lines)).toEqual(overLines);
     }
     const inTests = measureCodeFile(source("tests/x.test.ts", blockWithNoise));
-    expect.soft(inTests.functionExcess).toBeNull();
-    expect.soft(inTests.functions).toEqual([]);
-    expect.soft(inTests.overFunctions).toEqual([]);
+    expect(inTests.functionExcess).toBeNull();
+    expect(inTests.functions).toEqual([]);
+    expect(inTests.overFunctions).toEqual([]);
   });
 
   it("U-CODESIZE-004: enforces file line limits at the boundary", () => {
     for (const path of ["src/x.ts", "tests/x.test.ts"]) {
-      expect.soft(analyze([source(path, lines(500))]).findings, `${path} 500`).toHaveLength(0);
+      expect(analyze([source(path, lines(500))]).findings, `${path} 500`).toHaveLength(0);
       const over = analyze([source(path, lines(501))]);
       expect
         .soft(reasons(over, "code-size-required"), `${path} 501`)
         .toContain("new-file-over-limit");
-      expect.soft(over.ok).toBe(false);
+      expect(over.ok).toBe(false);
     }
   });
 
   it("U-CODESIZE-005: applies the function limit to src only", () => {
-    expect.soft(analyze([source("src/x.ts", fn("f", 120))]).findings).toHaveLength(0);
+    expect(analyze([source("src/x.ts", fn("f", 120))]).findings).toHaveLength(0);
     const over = analyze([source("src/x.ts", fn("f", 121))]);
-    expect.soft(reasons(over, "code-size-required")).toContain("new-file-over-limit");
+    expect(reasons(over, "code-size-required")).toContain("new-file-over-limit");
     const callback = `it("x", () => {\n${body(300)}});\n`;
-    expect.soft(analyze([source("tests/x.test.ts", callback)]).findings).toHaveLength(0);
+    expect(analyze([source("tests/x.test.ts", callback)]).findings).toHaveLength(0);
   });
 
   it("U-CODESIZE-006: lets baseline rows cap growth and requires shrink updates", () => {
@@ -157,9 +157,9 @@ describe("code size gate candidate oracles", () => {
 
   it("U-CODESIZE-008: rejects a baseline row whose file is gone and keeps evaluating", () => {
     const result = analyze([codeFile("src/other.ts", 501)], { "src/gone.ts": row(900) });
-    expect.soft(reasons(result, "code-size-stale-baseline")).toContain("missing-file");
-    expect.soft(reasons(result, "code-size-required")).toContain("new-file-over-limit");
-    expect.soft(result.ok).toBe(false);
+    expect(reasons(result, "code-size-stale-baseline")).toContain("missing-file");
+    expect(reasons(result, "code-size-required")).toContain("new-file-over-limit");
+    expect(result.ok).toBe(false);
   });
 
   it("U-CODESIZE-009: forbids baseline growth but allows function excess moves", () => {
@@ -329,8 +329,8 @@ describe("code size gate candidate oracles", () => {
 
   it("U-CODESIZE-013: treats unreadable input as a failure and stays pure", () => {
     const empty = analyze([]);
-    expect.soft(kindsOf(empty)).toContain("code-size-input-unreadable");
-    expect.soft(empty.ok).toBe(false);
+    expect(kindsOf(empty)).toContain("code-size-input-unreadable");
+    expect(empty.ok).toBe(false);
     const sources = [
       codeFile("src/b.ts", 501),
       codeFile("src/a.ts", 501),
@@ -342,21 +342,21 @@ describe("code size gate candidate oracles", () => {
       [...sources].reverse(),
       Object.fromEntries(Object.entries(baseline).reverse()),
     );
-    expect.soft(first.findings.length).toBeGreaterThan(0);
-    expect.soft(second.findings).toEqual(first.findings);
-    expect.soft(second.summary).toEqual(first.summary);
+    expect(first.findings.length).toBeGreaterThan(0);
+    expect(second.findings).toEqual(first.findings);
+    expect(second.summary).toEqual(first.summary);
     const order = first.findings.map((f) => `${f.path}\u0000${f.kind}\u0000${f.reason}`);
-    expect.soft(order).toEqual([...order].sort());
+    expect(order).toEqual([...order].sort());
     const snapshot = structuredClone({ sources, baseline });
     analyze(sources, baseline);
-    expect.soft({ sources, baseline }).toEqual(snapshot);
+    expect({ sources, baseline }).toEqual(snapshot);
     const mixed = analyze([
       source("docs/x.md", lines(5000)),
       source("scripts/x.ts", lines(5000)),
       source("src/ok.ts", lines(3)),
     ]);
-    expect.soft(mixed.findings).toHaveLength(0);
-    expect.soft(mixed.summary).toEqual({ checked: 1, over: 0, stale: 0, baseline: 0 });
+    expect(mixed.findings).toHaveLength(0);
+    expect(mixed.summary).toEqual({ checked: 1, over: 0, stale: 0, baseline: 0 });
   });
 
   it("U-CODESIZE-014: parses valid baselines and rejects broken ones", () => {
@@ -364,17 +364,17 @@ describe("code size gate candidate oracles", () => {
       "src/a.ts": { lines: 900, functionExcess: null },
       "src/b.ts": { lines: null, functionExcess: 30 },
     });
-    expect.soft(parseCodeSizeBaseline(valid)).toEqual({
+    expect(parseCodeSizeBaseline(valid)).toEqual({
       "src/a.ts": { lines: 900, functionExcess: null },
       "src/b.ts": { lines: null, functionExcess: 30 },
     });
-    expect.soft(parseCodeSizeBaseline("{}")).toEqual({});
+    expect(parseCodeSizeBaseline("{}")).toEqual({});
     const invalid = [
       '{"src/a.ts":{"lines":"x","functionExcess":null}}',
       '{"src/a.ts":{"lines":null,"functionExcess":"x"}}',
       '{"src/a.ts":{"lines":-1,"functionExcess":null}}',
       '{"src/a.ts":{"lines":900',
     ];
-    for (const text of invalid) expect.soft(parseCodeSizeBaseline(text), text).toBeNull();
+    for (const text of invalid) expect(parseCodeSizeBaseline(text), text).toBeNull();
   });
 });
