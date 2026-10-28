@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { invocationEquals, parseHookInvocation } from "./hook-invocation.ts";
-import { LEGACY_SOURCE_REPO, PERSONAL_ABSOLUTE_PATH_PATTERN } from "./personal-path.ts";
+import { PERSONAL_ABSOLUTE_PATH_PATTERN } from "./personal-path.ts";
 
 export interface ProjectHookDoc {
   file: string;
@@ -156,7 +156,7 @@ const LEGACY_RUNTIME_NAME = ["he", "lix"].join("");
 const LEGACY_ENV_PREFIX = ["HE", "LIX_"].join("");
 export const FORBIDDEN_PATH_RE = new RegExp(
   [
-    LEGACY_SOURCE_REPO,
+    "ai-dev-kit-vscode",
     `vendor/${LEGACY_RUNTIME_NAME}-source`,
     String.raw`\.${LEGACY_RUNTIME_NAME}`,
     PERSONAL_ABSOLUTE_PATH_PATTERN,

@@ -1,6 +1,6 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { basename, join, relative } from "node:path";
-import { hasPersonalAbsolutePath, LEGACY_SOURCE_REPO } from "./personal-path.ts";
+import { hasPersonalAbsolutePath } from "./personal-path.ts";
 
 export type AssetType = "agent" | "skill" | "prompt";
 
@@ -37,10 +37,7 @@ export interface AssetDriftResult {
   violations: AssetDriftViolation[];
 }
 
-const LEGACY_SOURCE_PATH_PATTERNS = [
-  new RegExp(`~/${LEGACY_SOURCE_REPO}`),
-  new RegExp(LEGACY_SOURCE_REPO),
-];
+const LEGACY_SOURCE_PATH_PATTERNS = [/~\/ai-dev-kit-vscode/, /ai-dev-kit-vscode/];
 
 const LEGACY_RUNTIME_NAME = ["he", "lix"].join("");
 const LEGACY_RUNTIME_ENV_PREFIX = LEGACY_RUNTIME_NAME.toUpperCase();
