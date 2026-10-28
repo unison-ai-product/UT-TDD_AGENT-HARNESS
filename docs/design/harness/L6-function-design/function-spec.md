@@ -434,7 +434,7 @@ exit code を変えない。証跡 JSON は `.ut-tdd/gate_runs/<gate>-<timestamp
 `schema_version`、`gate_run_id`、`gate_id`、`timestamp/checked_at`、`plan_id`、`session_id`、
 `mode`、`review_kind`、`worker_model`、`reviewer_model`、`checklist_path`、`coverage_summary_path`、
 `command`、`checks[]`、`messages[]` を持つ。`plan_id` は `--plan`、`UT_TDD_PLAN_ID`、current-plan/branch
-推定の順で解決し、解決できなければ `null` のまま書く (PLAN が無いことは証跡の欠陥ではない)。
+推定の順で解決し、解決できなければ `null` のまま書く (PLAN が無いことは証跡の欠陥ではない)。新規実行の `gate_run_id` は `gate-run:${compactSlug(gateId)}:${sha256(runSeed).slice(0, 12)}` (`runSeed = [gateId, checkedAt, sessionId ?? "", process.pid].join(":")`) とし、PLAN の値を含めない。既存証跡の ID は移行・再計算しない。hash 長で一意性は保証されないため、証跡ファイルは排他作成し、同じ ID / path は上書き・別名保存せず fail-close する (CANDIDATE-U-GATE-009)。
 
 `rebuildHarnessDb` は `.ut-tdd/gate_runs/*.json` を読み、既存 `gate_runs` 列
 (`gate_run_id/gate_id/plan_id/status/checked_at/evidence_path`) と `workflow_runs`
@@ -472,12 +472,12 @@ exit code を変えない。証跡 JSON は `.ut-tdd/gate_runs/<gate>-<timestamp
   PLAN の無い無関係な実行を 1 群にまとめないため)。代わりの作業単位ができたら、その単位で retry を定め直す。
   それ以外の workflow は従来どおり同一 `(plan_id, workflow, phase)` の複数 row を retry とする。
 
-`gate-run-coverage` doctor check は、現在の `.ut-tdd/gate_runs/*.json` から投影した行で判定する (永続 DB の
-gate row の集合 (正規の seed row を除く) が証跡の `gate_run_id` と内容に一致しなければ投影し直してから判定し、
-古い投影で OK を出さない)。次を fail-close で検出する: `gate_runs` の 0 件、seed を名乗るのに正規の seed row で
-ない row (`status=historical` か `G-VERIFY.*` の row で条件を満たさないもの)、`routine-gate` の workflow row
-に対応する gate row の欠落とその逆 (正規の seed row 以外の gate row に対応する workflow row の欠落)、空の
-`gate_id`、正規の seed row 以外の証跡の欠落・不正 JSON・識別の不一致 (`gate_run_id` / `gate_id`)。
+`writeGateRunEvidence` は証跡を排他作成し衝突時は上書き・別名救済をせず拒否する (gate verdict / exit は従来どおり)。
+`gate-run-coverage` は現在の `.ut-tdd/gate_runs/*.json` を正本として、新規証跡を投影し、証跡の無い DB-only gate row と、同じ実行に対応する `routine-gate` workflow row を正規 seed 以外除外する。新規追加・DB-only 行の除外・実在証跡と DB row の比較は、投影全体の単一 transaction (`BEGIN IMMEDIATE`) 内で行う。
+実在証跡と対応 DB 行の `gate_run_id` / `gate_id` / `plan_id` / `status` / `checked_at` / `evidence_path` は全て比較し、不一致は fail-close、両方空の `plan_id` は一致とする。
+全証跡を独立に評価して不一致を見落とさないが、1 件でも不一致があれば追加・削除を含む投影全体を rollback し、旧 DB 状態を保つ。証跡が無い実行の gate row と、`stableId("gate-workflow", gate_run_id)` で導出される対応 workflow row は両方とも除外するため、証跡欠落による対応欠落 violation にはしない。正常に再投影した後の再実行は同じ結果を返し、DB 状態も変えない (冪等)。次も fail-close で検出する:
+`gate_runs` の 0 件、seed を名乗るのに正規でない row、実在証跡に対応する `routine-gate` workflow row と gate row の片側欠落、
+空の `gate_id`、不正 JSON・識別の不一致 (`gate_run_id` / `gate_id`)。
 `plan_id` が空の gate row と、`plan_registry` に無い `plan_id` を持つ gate row は、それだけでは違反にしない。
 A-132 だけがあり JSON 証跡が無い clean tree では、`gate_runs` は正規の seed row 7 件で、violation は 0 となる。
 
@@ -895,7 +895,7 @@ oracle: `tests/change-impact.test.ts` の describe `change-impact lint` 内の 4
 | | `bun-runtime-spawn` | `src/` / `.claude/hooks/` / `scripts/` / `tests/` で bun の child-process 起動 (`spawn*` / `exec*` への `"bun"`、`findBun(`、`?? "bun"`、`"/c", "bun"`、`["bun", [`、`exec bun`) |
 | | `bun-module-import` | 同範囲で `"bun:<英小文字>"` 形の import 文字列 |
 | | `bun-global-reference` | 同範囲で `Bun.` / `Bun[` / `Bun?.` / `Bun?.[` (optional chaining を含む) / `typeof Bun` / `).Bun` / `globalThis.Bun` / `process.versions.bun` |
-| | `local-absolute-path` | `tests/` 以外で利用者ローカルの絶対 path (`<ドライブ>:\Users\`、`/home/`、`/Users/`、`~/ai-dev-kit-vscode`) を含む |
+| | `local-absolute-path` | `tests/` 以外で利用者ローカルの絶対 path (`<ドライブ>:\Users\`、`/home/`、`/Users/`、`~/<旧ソース repo>`) を含む (`<旧ソース repo>` は旧ソース repo の名前を表すプレースホルダー。公開 repo のため名前を書かない。実装は `src/lint/personal-path.ts` の `LEGACY_SOURCE_REPO` から組み立てる) |
 | | `legacy-runtime-marker` | `src/` / `.claude/hooks/` / `scripts/` が旧 runtime の env / 状態ディレクトリ / コマンド / agent 接頭辞の marker を含む |
 | `src/state-db/index.ts` | `sqlite-driver-fallback-missing` | `node:sqlite` の文字列を含まない (`bun:sqlite` は任意の残存) |
 

@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -12,6 +12,7 @@ import {
   parseFixtureManifest,
   parseL8FixtureRows,
 } from "../src/lint/resource-kernel-fixture-manifest.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 import { headSnapshotRoot, workspaceRead } from "./support/workspace-roots.ts";
 
 const L8 = "docs/test-design/harness/L8-integration-test-design.md";
@@ -97,7 +98,7 @@ function planlessManifestFixture(manifestMutation?: (text: string) => string) {
     l5Text: actualL5Text,
     input,
     sourceManifest: parseFixtureManifest(sourceManifestText),
-    cleanup: () => rmSync(root, { recursive: true, force: true }),
+    cleanup: () => removeTestTree(root),
   };
 }
 

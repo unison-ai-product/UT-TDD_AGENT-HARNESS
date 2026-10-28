@@ -11,7 +11,7 @@ source commit `d9c34cb` は、source-only の監査・PLAN・設計・test-desig
 
 ## 同期結果
 
-- `bun src\cli.ts distribution sync-pack --tag d9c34cb --repo-dir C:\Users\micro\OneDrive\Desktop\UT-TDD_AGENT-HARNESS-Pack-work --json`: `ok=true`
+- `bun src\cli.ts distribution sync-pack --tag d9c34cb --repo-dir C:\Users\<user>\OneDrive\Desktop\UT-TDD_AGENT-HARNESS-Pack-work --json`: `ok=true`
 - copied artifacts: `428`
 - unmanaged existing paths: `0`
 - Pack changed path: `tests/setup.test.ts`

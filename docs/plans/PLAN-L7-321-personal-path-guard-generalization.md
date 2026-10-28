@@ -78,13 +78,13 @@ review_evidence:
 
 ## 背景
 
-`asset-drift` と `project-hook` は個人絶対パスを検出する意図を持つが、一部の正規表現が `C:\Users\micro` 固定になっていた。これは自己開発環境には効くが、外部利用者の `C:\Users\<name>` / `/Users/<name>` / `/home/<name>` を検出できず、Pack の汎用性を落とす。
+`asset-drift` と `project-hook` は個人絶対パスを検出する意図を持つが、一部の正規表現が `C:\Users\<user>` 固定になっていた。これは自己開発環境には効くが、外部利用者の `C:\Users\<name>` / `/Users/<name>` / `/home/<name>` を検出できず、Pack の汎用性を落とす。
 
 ## 変更
 
 - `src/lint/personal-path.ts` を追加し、Windows / macOS / Linux の個人ホーム絶対パス判定を共有する。
 - `asset-drift` の legacy source path residue 検出を任意ユーザー名の個人絶対パスへ広げる。
-- `project-hook` の forbidden path 検出を `C:\Users\micro` 固定から共有パターンへ置き換える。
+- `project-hook` の forbidden path 検出を `C:\Users\<user>` 固定から共有パターンへ置き換える。
 - 任意ユーザー名の Windows / POSIX パスを検出する単体テストを追加する。
 
 ## 非対象

@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -23,6 +23,7 @@ import {
   type ImplementedCutoverEdgeId,
   type SliceEvidenceReceipt,
 } from "../src/schema/cutover-transition.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 
 const roots: string[] = [];
 const nodeRequire = createRequire(resolve("package.json"));
@@ -33,7 +34,7 @@ const l6Digest = "4".repeat(64);
 const q0Digest = "5".repeat(64);
 
 afterEach(() => {
-  for (const root of roots.splice(0)) rmSync(root, { force: true, recursive: true });
+  for (const root of roots.splice(0)) removeTestTree(root);
 });
 
 function root(): string {

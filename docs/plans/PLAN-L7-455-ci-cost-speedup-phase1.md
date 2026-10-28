@@ -152,7 +152,7 @@ GitHub issue: https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/1
   ことを新規 violation reason `forbidden_job_level_lane_skip` /
   `forbidden_lane_skip_step` で fail-close 検査する。既存の dual-leg topology 検査
   (aggregate needs / always() / result guard 等) は無変更。
-- Step 4: 下記コマンドで実測 (すべて `C:/Users/micro/AppData/Local/Temp/claude/wt-issue-109`
+- Step 4: 下記コマンドで実測 (すべて `C:/Users/<user>/AppData/Local/Temp/claude/wt-issue-109`
   worktree、未コミット差分込み)。
 
   | # | コマンド | 結果 |
