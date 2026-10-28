@@ -2,12 +2,20 @@ import { spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
+import { gte, minVersion, validRange } from "semver";
 import { afterEach, describe, expect, it } from "vitest";
 import { CODEX_GIT_ROOT_PREFIX } from "../src/lint/hook-invocation.ts";
 import { BUILTIN_GITHUB_TEMPLATES } from "../src/setup/templates.ts";
 import { removeTestTree } from "./support/temp-tree.ts";
 
 const repoRoot = process.cwd();
+
+function meetsUnflaggedTypeScriptFloor(range: string): boolean {
+  const valid = validRange(range);
+  if (valid === null) return false;
+  const minimum = minVersion(valid);
+  return minimum !== null && gte(minimum, "22.18.0");
+}
 // PLAN-L7-522 S1-b: common/run-bun.ts is retired. The generated wrapper is
 // launched directly by Node, so the execution contract is tested on it.
 const temporaryDirectories: string[] = [];
@@ -91,14 +99,16 @@ describe("Claude hook wrapper execution contract (issue #123 / PLAN-L7-522 S1-b)
     const manifest = JSON.parse(readFileSync(join(repoRoot, "package.json"), "utf8")) as {
       engines?: { node?: string };
     };
-    // F0a pins engines.node to an exact version (toolchain-pin lint); the
-    // unflagged-TS floor stays 22.18, so ranges and pins below it must fail.
+    // Every version admitted by the range must meet the unflagged-TS floor.
     const pinned = manifest.engines?.node ?? "";
-    const exact = /^(\d+)\.(\d+)\.\d+$/.exec(pinned);
-    expect(exact).not.toBeNull();
-    const major = Number(exact?.[1]);
-    const minor = Number(exact?.[2]);
-    expect(major > 22 || (major === 22 && minor >= 18)).toBe(true);
+    expect(meetsUnflaggedTypeScriptFloor(pinned)).toBe(true);
+  });
+
+  it("U-HOOKEXEC-009: rejects below-floor alternatives and invalid ranges", () => {
+    expect(meetsUnflaggedTypeScriptFloor(">=22.18.0 <25")).toBe(true);
+    expect(meetsUnflaggedTypeScriptFloor(">=22.18.0 || <22.18.0")).toBe(false);
+    expect(meetsUnflaggedTypeScriptFloor("22.x")).toBe(false);
+    expect(meetsUnflaggedTypeScriptFloor("not-a-range")).toBe(false);
   });
 
   it("U-HOOKEXEC-002/U-HOOKEXEC-003/U-HOOKEXEC-004/U-HOOKEXEC-007: routes all Claude hooks as exact argv and preserves policy", () => {

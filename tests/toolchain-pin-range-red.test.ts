@@ -57,7 +57,7 @@ describe("toolchain pin engines range raw Red candidates", () => {
     expect(result.violations.map((violation) => violation.rule)).toContain("node-version-mismatch");
   });
 
-  it.fails("U-TOOLPIN-002 accepts a valid Node range containing the reviewed pin", () => {
+  it("U-TOOLPIN-002 accepts a valid Node range containing the reviewed pin", () => {
     const baseline = analyzeToolchainPin(fixture());
     expect(baseline.ok).toBe(true);
 
@@ -91,7 +91,7 @@ describe("toolchain pin engines range raw Red candidates", () => {
     expect(result.violations.map((violation) => violation.rule)).toContain("npm-version-mismatch");
   });
 
-  it.fails("U-TOOLPIN-006 accepts a valid npm range containing the packageManager pin", () => {
+  it("U-TOOLPIN-006 accepts a valid npm range containing the packageManager pin", () => {
     const baseline = analyzeToolchainPin(fixture());
     expect(baseline.ok).toBe(true);
 

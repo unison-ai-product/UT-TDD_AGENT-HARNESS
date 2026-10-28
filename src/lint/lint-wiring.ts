@@ -41,6 +41,8 @@ export const DEFERRED_LINTS: Record<string, string> = {
     "#1358でruntime guard退役。凍結済み合成oracleとL14 evidenceのためlibraryとして残す。完全退役は#1379",
   "plan-supersession":
     "#1358でruntime guard退役。凍結済み合成oracleとL14 evidenceのためlibraryとして残す。完全退役は#1379",
+  "privacy-scan": "#1391 Red の stub。runtime 配線とこの保留登録の撤去は Green で行う。",
+  "privacy-scan-inputs": "#1391 Red の stub。runtime 配線とこの保留登録の撤去は Green で行う。",
   "scrum-reverse":
     "#1358でruntime guard退役。凍結済み合成oracleとL14 evidenceのためlibraryとして残す。完全退役は#1379",
   "tool-adapter":
