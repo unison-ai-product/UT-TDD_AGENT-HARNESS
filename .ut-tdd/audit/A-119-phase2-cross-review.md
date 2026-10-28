@@ -15,12 +15,12 @@ Reviewer: Claude Opus (PM、別 runtime/別 model = cross-agent、review 前置)
 | verification L0-L3 / L4-L6 / L0-L6 freeze 完了→発火可 | ✅ 一致 (L4-L6 26/26 confirmed) |
 | asset-drift hard gate 実装 + doctor 配線 + U-ASSETDRIFT-001..006 | ✅ src/lint/asset-drift.ts 実在、doctor 配線6箇所、`asset-drift — OK (20 docs, residue 0)` |
 | asset-drift negative-test | ✅ helix-path-residue / legacy-command-residue / empty-docs-skills / missing-allowlisted-agent を `ok:false` で検出 (happy-path only でない) |
-| HELIX personal path / legacy helix delegation residue 0 | ✅ 独立 grep で `.claude/agents` + `docs/templates/prompts` に `ai-dev-kit-vscode` / `helix codex|claude|plan|gate` 残渣 0 |
+| HELIX personal path / legacy helix delegation residue 0 | ✅ 独立 grep で `.claude/agents` + `docs/templates/prompts` に `社内の別 repo` / `helix codex|claude|plan|gate` 残渣 0 |
 | PLAN 51/51 confirmed + review_evidence + tests_green_at | ✅ L4-6 PLAN confirmed 数 = 51 |
 
 ## HELIX cutover の substance 確認
 
-- pmo-helix-scout/explorer を `~/ai-dev-kit-vscode/`(個人 HELIX) → `vendor/helix-source/`(repo 内 snapshot) へ re-scope (A-116 主張と一致)。personal path 依存除去かつ機能維持。
+- pmo-helix-scout/explorer を `~/<旧ソース repo>/`(個人 HELIX) → `vendor/helix-source/`(repo 内 snapshot) へ re-scope (A-116 主張と一致)。personal path 依存除去かつ機能維持。
 - **agent-guard を壊していない**: 全 `.claude/agents/*.md` が `model:` frontmatter 保持、`tests/agent-guard.test.ts` 14 tests green。guard allowlist missing 0。
 - ADR-001 (HELIX = 設計概念のみ、vendor snapshot に隔離) に整合。
 
