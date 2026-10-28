@@ -44,13 +44,6 @@ import { projectRuntimeTestRunFromSessionEvent as projectRuntimeTestRunFromSessi
 import { projectSkillMetrics as projectSkillMetricsCore } from "../src/state-db/skill-projections.ts";
 import { claudeProjectSlug } from "../src/state-db/token-tracker.ts";
 
-const hasSourcePlanDocs = () => existsSync(join(process.cwd(), "docs", "plans"));
-
-const hasSourceProjectionPlanDocs = () =>
-  existsSync(join(process.cwd(), "docs", "plans", "PLAN-L7-46-projection-writer.md")) &&
-  existsSync(join(process.cwd(), "docs", "plans", "PLAN-M-00-verify-cutover.md")) &&
-  existsSync(join(process.cwd(), "docs", "plans", "PLAN-M-01-cutover-backfill.md"));
-
 const hasSourceScreenDocs = () =>
   existsSync(join(process.cwd(), "docs", "design", "harness", "L2-screen", "screen-list.md")) &&
   existsSync(
@@ -152,7 +145,6 @@ describe("IT-DB-01/02: harness.db projection writer", () => {
   });
 
   it("projects design-quality coverage rows from the real repo rebuild", () => {
-    if (!hasSourceProjectionPlanDocs()) return;
     const db = openHarnessDb(":memory:");
     try {
       migrate(db);
@@ -2168,26 +2160,24 @@ export function evaluateAgentGuard(input: { stage: string; route: string; model:
   });
 
   it("rebuildHarnessDb is atomic: a mid-rebuild failure rolls back, leaving the prior projection intact", () => {
-    if (!hasSourcePlanDocs()) return;
-
     const real = openHarnessDb(":memory:");
     try {
-      // Baseline: a successful rebuild populates plan_registry.
+      // Baseline: a successful rebuild populates test_cases (input independent of docs/plans).
       const baseline = rebuildHarnessDb({ repoRoot: process.cwd(), db: real });
       expect(baseline.ok).toBe(true);
-      const before = rowCounts(real).plan_registry;
+      const before = rowCounts(real).test_cases;
       expect(before).toBeGreaterThan(0);
 
-      // Inject a failure once the projection starts writing plan_registry — this is
+      // Inject a failure once the projection starts writing test_cases — this is
       // *after* truncateProjectionTables has emptied the tables. Without a transaction
-      // boundary the rebuild would leave plan_registry truncated (0 rows).
+      // boundary the rebuild would leave test_cases truncated (0 rows).
       let injected = false;
       const flaky: HarnessDb = {
         path: real.path,
         driver: real.driver,
         exec: (sql) => real.exec(sql),
         prepare: (sql) => {
-          if (!injected && /INSERT INTO plan_registry\b/i.test(sql)) {
+          if (!injected && /INSERT INTO test_cases\b/i.test(sql)) {
             injected = true;
             throw new Error("injected mid-rebuild failure");
           }
@@ -2203,7 +2193,7 @@ export function evaluateAgentGuard(input: { stage: string; route: string; model:
       expect(injected).toBe(true);
 
       // The prior projection must survive: the truncate is rolled back, not committed.
-      expect(rowCounts(real).plan_registry).toBe(before);
+      expect(rowCounts(real).test_cases).toBe(before);
     } finally {
       real.close();
     }
@@ -2217,16 +2207,6 @@ export function evaluateAgentGuard(input: { stage: string; route: string; model:
       expect(result.ok).toBe(true);
       expect(rowCounts(db).graph_nodes).toBeGreaterThan(0);
       expect(rowCounts(db).dependency_edges).toBeGreaterThan(0);
-      const plannedEdge = db
-        .prepare(
-          "SELECT is_actual FROM dependency_edges WHERE from_node_id = ? AND edge_kind = ? AND to_node_id = ?",
-        )
-        .get(
-          "plan:PLAN-L7-441-plan-draft-recovery-v4",
-          "generates",
-          "source:src/plan-admission/draft-recovery.ts",
-        ) as { is_actual: number } | undefined;
-      expect(plannedEdge?.is_actual).toBe(0);
       expect(rowCounts(db).graph_snapshots).toBeGreaterThan(0);
       expect(rowCounts(db).impact_rules).toBeGreaterThan(0);
       expect(rowCounts(db).verification_profiles).toBeGreaterThan(0);
@@ -2241,9 +2221,6 @@ export function evaluateAgentGuard(input: { stage: string; route: string; model:
       expect(rowCounts(db).artifact_progress).toBeGreaterThan(0);
       expect(rowCounts(db).spec_defs).toBeGreaterThan(0);
       expect(rowCounts(db).spec_relations).toBeGreaterThan(0);
-      expect(rowCounts(db).schedule_entries).toBeGreaterThan(0);
-      expect(rowCounts(db).activation_entries).toBeGreaterThan(0);
-      expect(rowCounts(db).activation_schedule_reviews).toBeGreaterThan(0);
       expect(rowCounts(db).document_catalog_entries).toBeGreaterThan(0);
       expect(rowCounts(db).document_scale_profile_entries).toBeGreaterThan(0);
       expect(rowCounts(db).document_scale_profile_reviews).toBeGreaterThan(0);
@@ -2252,52 +2229,6 @@ export function evaluateAgentGuard(input: { stage: string; route: string; model:
         .prepare("SELECT COUNT(*) AS count FROM test_cases WHERE test_file = ? AND oracle_id = ?")
         .get("tests/handover.test.ts", "U-HOVER-001") as { count: number } | undefined;
       expect(inheritedOracle?.count ?? 0).toBeGreaterThan(0);
-      const specPlan = db
-        .prepare("SELECT layer, sub_doc, lifecycle_status FROM spec_defs WHERE plan_id = ?")
-        .get("PLAN-L6-39-vmodel-spec-ir-function-contracts") as
-        | { layer: string; sub_doc: string; lifecycle_status: string }
-        | undefined;
-      expect(specPlan).toMatchObject({
-        layer: "L6",
-        sub_doc: "function-spec",
-        lifecycle_status: "confirmed",
-      });
-      const specRelation = db
-        .prepare("SELECT relation_kind FROM spec_relations WHERE plan_id = ? AND evidence_path = ?")
-        .get(
-          "PLAN-L6-39-vmodel-spec-ir-function-contracts",
-          "PLAN-L5-13-vmodel-spec-ir-physical-data",
-        ) as { relation_kind: string } | undefined;
-      expect(specRelation).toMatchObject({ relation_kind: "requires" });
-      const schedule = db
-        .prepare("SELECT v_pair, rag FROM schedule_entries WHERE plan_id = ?")
-        .get("PLAN-L6-39-vmodel-spec-ir-function-contracts") as
-        | { v_pair: string; rag: string }
-        | undefined;
-      expect(schedule).toMatchObject({ v_pair: "L7", rag: "green" });
-      const activation = db
-        .prepare("SELECT profile_id, enabled FROM activation_entries WHERE plan_id = ?")
-        .get("PLAN-L6-39-vmodel-spec-ir-function-contracts") as
-        | { profile_id: string; enabled: number }
-        | undefined;
-      expect(activation).toMatchObject({ profile_id: "vmodel-clean-core", enabled: 1 });
-      const activationReview = db
-        .prepare(
-          "SELECT profile_id, current_location, scope_status, rag FROM activation_schedule_reviews WHERE plan_id = ?",
-        )
-        .get("PLAN-L7-385-vmodel-activation-profile-join") as
-        | { profile_id: string; current_location: string; scope_status: string; rag: string }
-        | undefined;
-      expect(activationReview).toMatchObject({
-        profile_id: "vmodel-clean-core",
-        current_location:
-          "U7b: activation profile と工程表をjoinしてversion-up対象/除外/延期理由を検索可能化済",
-        scope_status: "in_scope",
-        rag: "green",
-      });
-      expect(findReference(db, "vmodel-clean-core PLAN-L7-385").at(0)).toMatchObject({
-        subject_type: "activation_schedule_review",
-      });
       const documentCatalog = db
         .prepare(
           "SELECT layer, sub_doc, default_status FROM document_catalog_entries WHERE doc_type_id = ?",
@@ -2585,9 +2516,7 @@ Fixture.
     }
   });
 
-  it("rebuildHarnessDb deterministically projects plans and Phase3 outputs without source mutation", () => {
-    if (!hasSourceProjectionPlanDocs()) return;
-
+  it("rebuildHarnessDb deterministically projects Phase3 outputs without source mutation", () => {
     const db = openHarnessDb(":memory:");
     try {
       const result = rebuildHarnessDb({
@@ -2596,9 +2525,9 @@ Fixture.
         relationGraph: {
           nodes: [
             {
-              id: "plan:PLAN-L7-46-projection-writer",
-              kind: "plan",
-              path: "docs/plans/PLAN-L7-46-projection-writer.md",
+              id: "source:src/state-db/projection-writer.ts",
+              kind: "source",
+              path: "src/state-db/projection-writer.ts",
             },
           ],
           edges: [],
@@ -2662,124 +2591,16 @@ Fixture.
         ...secondStableCounts
       } = second.rowCounts;
       expect(secondStableCounts).toEqual(firstStableCounts);
-      expect(rowCounts(db).plan_registry).toBeGreaterThan(0);
-      const projectedPlan = db
-        .prepare("SELECT source_hash FROM plan_registry WHERE source_hash <> '' LIMIT 1")
-        .get() as { source_hash?: string } | undefined;
-      expect(projectedPlan?.source_hash).toMatch(/^sha256:[a-f0-9]{64}$/);
       expect(rowCounts(db).graph_nodes).toBe(1);
       expect(rowCounts(db).document_export_runs).toBe(1);
-      expect(rowCounts(db).roadmap_rollups).toBe(1);
-      expect(rowCounts(db).roadmap_band_coverage).toBeGreaterThan(0);
-      expect(rowCounts(db).roadmap_gate_progress).toBeGreaterThan(0);
-      expect(rowCounts(db).review_evidence_registry).toBeGreaterThan(0);
       expect(rowCounts(db).descent_obligations).toBeGreaterThan(0);
-      expect(rowCounts(db).drive_runs).toBeGreaterThan(0);
       expect(rowCounts(db).hook_events).toBeGreaterThan(0);
-      expect(rowCounts(db).model_runs).toBeGreaterThan(0);
       expect(rowCounts(db).automation_assets).toBeGreaterThan(0);
-      expect(rowCounts(db).skill_recommendations).toBeGreaterThan(0);
-      expect(rowCounts(db).skill_invocations).toBeGreaterThan(0);
       expect(rowCounts(db).quality_signals).toBeGreaterThan(0);
       expect(rowCounts(db).feedback_events).toBeGreaterThan(0);
       expect(rowCounts(db).issue_queue).toBeGreaterThan(0);
       expect(rowCounts(db).trouble_events).toBeGreaterThanOrEqual(0);
       expect(rowCounts(db).improvement_log).toBeGreaterThan(0);
-
-      const program = db
-        .prepare("SELECT * FROM roadmap_rollups WHERE rollup_id = ?")
-        .get("program");
-      expect(program).toMatchObject({
-        total_bands: 5,
-        covered_bands: 5,
-        parked_bands: 0,
-        uncovered_bands: 0,
-        total_gates: 20,
-        reached_gates: 20,
-      });
-
-      const verificationBand = db
-        .prepare("SELECT status, roadmap_ids FROM roadmap_band_coverage WHERE band_id = ?")
-        .get("verification");
-      expect(verificationBand).toMatchObject({ status: "covered" });
-      expect(String(verificationBand?.roadmap_ids)).toContain("PLAN-M-00-verify-cutover");
-
-      const cutoverBand = db
-        .prepare("SELECT status, roadmap_ids FROM roadmap_band_coverage WHERE band_id = ?")
-        .get("cutover");
-      expect(cutoverBand).toMatchObject({ status: "covered" });
-      expect(String(cutoverBand?.roadmap_ids)).toContain("PLAN-M-01-cutover-backfill");
-
-      const cutoverGate = db
-        .prepare(
-          "SELECT reached, confirmed_spans, total_spans FROM roadmap_gate_progress WHERE plan_id = ? AND gate_id = ?",
-        )
-        .get("PLAN-M-01-cutover-backfill", "G-CUTOVER.B");
-      expect(cutoverGate).toMatchObject({
-        reached: 1,
-        confirmed_spans: 1,
-        total_spans: 1,
-      });
-
-      const reviewEvidence = db
-        .prepare(
-          "SELECT has_evidence, review_kind, verdict FROM review_evidence_registry WHERE plan_id = ?",
-        )
-        .get("PLAN-M-01-cutover-backfill");
-      expect(reviewEvidence).toMatchObject({
-        has_evidence: 1,
-        review_kind: "intra_runtime_subagent",
-        verdict: "pass",
-      });
-
-      const hookJoin = db
-        .prepare(
-          `SELECT COUNT(*) AS value
-           FROM hook_events h
-           JOIN plan_registry p ON p.plan_id = h.plan_id`,
-        )
-        .get() as { value: number };
-      expect(hookJoin.value).toBeGreaterThan(0);
-
-      const modelJoin = db
-        .prepare(
-          `SELECT COUNT(*) AS value
-           FROM model_runs m
-           JOIN plan_registry p ON p.plan_id = m.plan_id`,
-        )
-        .get() as { value: number };
-      expect(modelJoin.value).toBeGreaterThan(0);
-
-      const coverage = db
-        .prepare(
-          "SELECT value, threshold, status FROM coverage WHERE scope = ? AND subject_id = ? AND metric = ?",
-        )
-        .get("verification-band", "program", "covered_program_bands");
-      expect(coverage).toMatchObject({
-        value: 5,
-        threshold: 5,
-        status: "passed",
-      });
-
-      const skillRecommendation = db
-        .prepare(
-          "SELECT skill_id, reason FROM skill_recommendations WHERE plan_id = ? ORDER BY rank LIMIT 1",
-        )
-        .get("PLAN-M-01-cutover-backfill");
-      expect(skillRecommendation).toBeDefined();
-      expect(String(skillRecommendation?.skill_id ?? "")).not.toBe("skill:review-checklist");
-      expect(String(skillRecommendation?.reason)).toContain("layer=");
-
-      const skillInvocation = db
-        .prepare(
-          "SELECT skill_id, source, accepted FROM skill_invocations WHERE plan_id = ? AND skill_id = ?",
-        )
-        .get("PLAN-M-01-cutover-backfill", String(skillRecommendation?.skill_id ?? ""));
-      expect(skillInvocation).toMatchObject({
-        skill_id: skillRecommendation?.skill_id,
-        source: "auto-projection:review-evidence",
-        accepted: 1,
-      });
 
       const driveMetric = db
         .prepare("SELECT metric, status FROM quality_signals WHERE metric = ? LIMIT 1")

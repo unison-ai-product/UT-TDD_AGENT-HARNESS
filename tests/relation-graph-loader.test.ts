@@ -662,6 +662,10 @@ describe("relation graph real-repo loader (PLAN-L7-142 stale-edge fence)", () =>
     expect(staleEdges.map((f) => f.message)).toEqual([]);
     const requirementNodes = projection.nodes.filter((n) => n.kind === "requirement");
     expect(requirementNodes.length).toBeGreaterThan(0);
+    // docs/plans の有無に依らず空振りしない: PLAN に依らない edge が 1 件以上ある (#1430)。
+    for (const kind of ["pairs", "covered-by"]) {
+      expect(projection.edges.filter((e) => e.kind === kind).length).toBeGreaterThan(0);
+    }
     const agentImpact = analyzeRelationImpact({
       changedPaths: [".claude/agents/refactor-scout.md"],
       projection,

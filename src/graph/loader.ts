@@ -297,8 +297,8 @@ export function loadRelationGraphSourceSet(repoRoot: string): RelationGraphSourc
   const tests: TestFileInput[] = testPaths.map((path) => ({ path }));
 
   // 6. plans: loadReviewPlans → frontmatter parse で generates + FR refs を取得。
-  // loadReviewPlans は docs/plans 不在で throw する (fail-close) ため、loader の fail-open
-  // 原則を保つために全体を try/catch で包む (docs/plans 不在 repo = 空 plans)。
+  // loadReviewPlans は docs/plans 不在でも throw せず [] を返す (docs/plans 不在 repo = 空 plans)。
+  // 読み込み中の想定外の失敗に対しても loader の fail-open 原則を保つため、全体を try/catch で包む。
   const plans: PlanInput[] = [];
   // plan が derives-from する全 requirement id を集約 (requirement node 供給用、stale-edge 是正)。
   const referencedReqs = new Set<string>();
