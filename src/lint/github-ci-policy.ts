@@ -355,7 +355,7 @@ const commonRuntimeSteps = [
   // Issue #472 (S1-c, PLAN-L7-522): node が harness 実行系の正式 runtime。setup-bun は撤去済み。
   step("setup node (harness 実行系の正式 runtime、PLAN-L7-462 step 2)", {
     uses: "actions/setup-node@v4",
-    with: { "node-version": "24.13.0", cache: "npm" },
+    with: { "node-version": "24.22.1", cache: "npm" },
   }),
   run("install deps (frozen)", "npm ci --no-audit --no-fund"),
 ] as const;
@@ -363,7 +363,7 @@ const commonNodeGenerationSteps = [
   step("checkout", { uses: "actions/checkout@v5", with: { "fetch-depth": 0 } }),
   step("setup node (sealed generation runtime)", {
     uses: "actions/setup-node@v4",
-    with: { "node-version": "24.13.0", cache: "npm" },
+    with: { "node-version": "24.22.1", cache: "npm" },
   }),
   run("install deps (frozen)", "npm ci --no-audit --no-fund"),
 ] as const;
