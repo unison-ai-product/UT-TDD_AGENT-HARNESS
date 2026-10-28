@@ -47,9 +47,10 @@ subagent (または親 shell) が終わった後も、その配下で起動さ�
 ### 2.1 snapshot source と検証対象の出力 (issue #1415)
 
 - Git の作業 tree では、runner は commit 済み `HEAD` を snapshot の入力にする。未コミットの差分は snapshot に取り込まない。差分がある場合も実行を止めず、警告にとどめる。
-- この警告には、snapshot に取り込まれなかった差分の path 一覧と、「検証したのは作業 tree ではなく commit `<SHA>` である」ことを明示する。
+- 未コミットの差分は `git status --porcelain` で得る staged / unstaged の tracked 変更と、ignored ではない untracked path を含み、ignored path は除外する。この差分があれば stderr に警告し、snapshot に取り込まれなかった path 一覧と「検証したのは作業 tree ではなく commit `<SHA>` である」ことを明示する。警告は終了コードを変えない。
 - 検証対象の出力には、Git から取得できた場合は対象 commit の SHA を含める。Git の無い Pack 等で copy に fallback する場合は、`source: copy (commit なし)` とコピー元の path を明示する。
 - これは検証対象の可視化だけを加える。copy の fallback を含む既存の Pack 動作は変えず、digest 等の新たな provenance は要求しない。
+- §2.1 の oracle は後続の Red PR で `docs/test-design/harness/L7-snapshot-runner-lifecycle-test-design.md` に `CANDIDATE-U-SNAPLC-0xx` として固定し、その Red の後に実装する (本契約 PR では L7 の変更・oracle の昇格を行わない)。
 
 ## 3. 生きている runner の寿命規則 (B)
 
