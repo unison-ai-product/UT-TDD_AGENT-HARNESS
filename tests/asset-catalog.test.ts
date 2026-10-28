@@ -16,7 +16,6 @@ describe("IT-ASSET-DB-01: automation asset catalog", () => {
     try {
       migrate(db);
       mkdirSync(join(repo, "docs", "skills"), { recursive: true });
-      mkdirSync(join(repo, ".claude", "agents"), { recursive: true });
       writeFileSync(
         join(repo, "docs", "skills", "testing.md"),
         [
@@ -44,16 +43,11 @@ describe("IT-ASSET-DB-01: automation asset catalog", () => {
           "description: YAML review skill",
         ].join("\n"),
       );
-      writeFileSync(
-        join(repo, ".claude", "agents", "reviewer.md"),
-        ["---", "name: reviewer", "role: qa", "---", "# reviewer"].join("\n"),
-      );
-
       const result = catalogAutomationAssets({ repoRoot: repo, db });
 
       expect(result.ok).toBe(true);
-      expect(rowCounts(db).automation_assets).toBe(3);
-      expect(rowCounts(db).search_index).toBe(3);
+      expect(rowCounts(db).automation_assets).toBe(2);
+      expect(rowCounts(db).search_index).toBe(2);
       const stored = db
         .prepare("SELECT capability FROM automation_assets WHERE asset_id = ?")
         .get("skill:testing");

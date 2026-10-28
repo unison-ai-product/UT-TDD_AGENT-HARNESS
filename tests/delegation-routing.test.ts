@@ -103,12 +103,12 @@ describe("delegation routing (PLAN-L7-255)", () => {
       provider: "codex",
       role: "blind-reviewer",
       task: "review",
-      model: "gpt-5.3-codex-spark",
+      model: MODEL_IDS.codex.frontier,
       effort: "xhigh",
     });
     expect(r).toMatchObject({
       ok: true,
-      model: "gpt-5.3-codex-spark",
+      model: MODEL_IDS.codex.frontier,
       effort: "xhigh",
       model_source: "explicit",
       effort_source: "explicit",
