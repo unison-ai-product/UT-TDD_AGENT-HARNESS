@@ -432,7 +432,7 @@ PLAN-L7-363 以降、`appendGateRun` は `writeGateRunEvidence` として CLI �
 新規 final は `.ut-tdd/gate_runs/<sha256(UTF-8 gate_run_id の小文字 hex)>.json` とし、完成 JSON を一意な temp に書き、hard link で no-clobber publish する。ID 以外の hash 入力・別名救済はなく、hash collision も拒否する。
 同じ ID の並行実行は一方だけ publish し、EEXIST / link 非対応・失敗を含む全書込失敗は警告に留める。crash した temp は次の実行で削除せず、retry は新しい ID を使う。
 旧 `<gate>-<timestamp>-<hash>.json` も読み、全形式を内容の ID で照合して同じ ID の重複を拒否する。schema は `schema_version`、`gate_run_id`、`gate_id`、`timestamp/checked_at`、`plan_id`、`session_id`、`mode`、`review_kind`、`worker_model`、`reviewer_model`、`checklist_path`、`coverage_summary_path`、`command`、`checks[]`、`messages[]` を持つ。
-`plan_id` は `--plan`、`UT_TDD_PLAN_ID`、current-plan/branch 推定の順で解決し、無ければ `null` (欠陥ではない)。新規 ID は `gate-run:${compactSlug(gateId)}:${sha256(runSeed).slice(0, 12)}` (`runSeed = [gateId, checkedAt, sessionId ?? "", process.pid].join(":")`) とし PLAN を含めず、既存 ID を移行・再計算しない。ID 重複で書けなかった証跡の欠落は、下流の `gate-run-coverage` が fail-close で検出する (CANDIDATE-U-GATE-009/010)。
+`plan_id` は `--plan`、`UT_TDD_PLAN_ID`、current-plan/branch 推定の順で解決し、無ければ `null` (欠陥ではない)。新規 ID は `gate-run:${compactSlug(gateId)}:${sha256(runSeed).slice(0, 12)}` (`runSeed = [gateId, checkedAt, sessionId ?? "", process.pid].join(":")`) とし PLAN を含めず、既存 ID を移行・再計算しない。coverage は既存証跡の不整合 (6 列の不一致・同じ ID の重複など) と、証跡全体が 0 件の場合を fail-close で検出するが、新規 publish に失敗した実行を個別に検出する保証はない (CANDIDATE-U-GATE-009/010)。
 
 `rebuildHarnessDb` は `.ut-tdd/gate_runs/*.json` を読み、既存 `gate_runs` 列
 (`gate_run_id/gate_id/plan_id/status/checked_at/evidence_path`) と `workflow_runs`
