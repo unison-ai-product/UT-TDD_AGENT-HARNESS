@@ -446,6 +446,18 @@ config・registry 不在→既定 fail-close / 未知キー→fail-close)。
 8. **範囲外**: `.github/workflows/harness-check.yml` / `scripts/build-node.mjs` / `NODE_TOOLCHAIN_POLICY` の固定先を 24.22.1 へ
    上げる作業は #1254 であり、この契約は扱わない。Pack への反映は `ut-tdd distribution sync-pack` の正規の手順で別に行う。
 
+9. **#1411 の対象範囲拡張**: #1254 の Green merge 後、L5 の審査済み Node pin は
+   `.github/workflows/harness-check.yml` に加えて `.github/workflows/review-attestation.yml` にも適用する。
+   後者は required check ではないが、trusted review custody receipt の発行・検証を行う source workflow であり、
+   source repo が管理する実行 workflow として同じ審査済み Node `24.22.1` を固定する。required-check でないことは、
+   toolchain pin の対象外である理由にはならない。
+   `tests/github-ci-policy.test.ts` の Pack workflow fixture は実行 workflow や pin authority ではないが、
+   Pack CI policy の正例として実 Pack template を表すため、Node pin は Pack template と同じ審査済み Node `24.22.1`
+   に保つ。fixture の pin drift は fixture と Pack template の不一致としてテストで検出し、fixture を古い版の
+   独立した期待値として扱わない。これにより fixture に `24.13.0` を残しても成功する状態を許さない。
+   この拡張は対象 workflow / policy fixture の pin 整合を定めるものに限り、workflow の trigger、権限、job 構造、
+   required-check の判定や、Node toolchain authority の他の規則は変更しない。
+
 ## Node build generation内部処理（Issue #152 D0-N）
 
 1. Node build generation receiptの`subject_revision`は当該sliceのcandidate HEADへ固定する。pair-freezeした provenance は
