@@ -21,7 +21,7 @@ pair_artifact: docs/design/harness/L6-function-design/snapshot-runner-lifecycle.
 1. **契約 PR (本 PR)**: 候補 oracle の宣言と、純関数の候補 Red (`it.fails`、001〜012・018・019・021) を `tests/snapshot-runner-lifecycle.test.ts` に入れる。実プロセスの oracle (013〜017・020) は**候補のまま**で、テストも昇格もここでは行わない (`src/` と `scripts/` を変えない契約 PR では、実プロセス fixture を要する検証を Red にできない)。
 2. **実プロセスの Red 追加 (src/ を含まない)**: 013〜017・020 の `it.fails` を `CANDIDATE-U-SNAPLC-*` の引用で追加する。開発 repo を読む場合は `test-repository-isolation` の登録行をこの PR の `src/` 変更として入れる。
 3. **昇格 (src/ を含まない)**: 引用の揃った候補 (全件) の正式 ID `U-SNAPLC-*` への昇格と、テスト名の引用の書き換えを同じ PR で入れる。正式宣言を citation より先に作らない (`oracle-test-trace`、設計保護 gate §10.2 / §10.3)。
-4. **実装 PR (L6 §9 の 4〜6)**: `it.fails` を `it` に戻して Green にする。実装 PR は `docs/test-design/` を変えない。
+4. **実装 PR (L6 §9 の 4〜6)**: `it.fails` を `it` に戻して Green にする。#1415 の `022`〜`024` を通常の `it` に戻す前に、`verifySnapshotCandidate` が precondition の不成立、assertion 未到達 (例外を含む)、cleanup 失敗を必ず throw し、通常のテスト失敗にする。これら各失敗経路を直接誘発して失敗を確認する oracle を、Green 実装 PR までに必ず用意する。実装 PR は `docs/test-design/` を変えない。
 
 **issue #1415 の独立順序**: §2.1 source provenance は上の寿命候補一括昇格とは独立させる。候補 oracle `CANDIDATE-U-SNAPLC-022` / `023` / `024` の固定と `it.fails` からの引用は同じ Red PR で行う。本 Red は `runSnapshotTests` の実経路を temp Git / Pack fixture に対して呼び、Git 以外の child process stage は stub して重い処理を実行しない。Red の後に候補を正式 ID へ昇格し、Green は別 PR で実装する。上の寿命候補全件昇格は依存条件にしない。
 
@@ -30,7 +30,7 @@ pair_artifact: docs/design/harness/L6-function-design/snapshot-runner-lifecycle.
 ## 2. fixture
 
 - 001〜012・018・019・021 は純関数 (`classifyLiveness` / `decideParentWatch` / `planSweep`) と、port を stub した `killTree` 呼び出し規則のテストで、ファイルシステム・環境変数・時刻・実プロセスを使わない。入力は L6 §4.2 の型 (`ProcessEntry` / `SnapshotLease`) を手で組み、最小の完備 fixture を基準に 1 点だけ壊す。
-- 022〜024 は `runSnapshotTests` を temp Git / Pack fixture に対して呼び、Git は小さな一時 repo 上で実行し、npm / DB rebuild / Vitest の child process は成功 stub とする。出力先 (`stdout` / `stderr`)、終了コード、npm stage 時点の snapshot 内容を観測する。fixture / runner の setup 失敗は assertion に到達せず `it.fails` の unexpected pass になるよう扱い、環境エラーを期待 Red と誤認しない。test repo は一時領域内だけで作るため、開発 repo の読み取りも `repositoryReadContracts` の登録も要しない。
+- 022〜024 は `runSnapshotTests` を temp Git / Pack fixture に対して呼び、Git は小さな一時 repo 上で実行し、npm / DB rebuild / Vitest の child process は成功 stub とする。出力先 (`stdout` / `stderr`)、終了コード、npm stage 時点の snapshot 内容を観測する。Red 期間は現状どおり、fixture / runner の setup 失敗が assertion に到達せず `it.fails` の unexpected pass になるよう扱い、環境エラーを期待 Red と誤認しない。Green で `it.fails` を `it` に戻すときは、`verifySnapshotCandidate` が precondition の不成立、assertion 未到達 (例外を含む)、cleanup 失敗を必ず throw し、通常のテスト失敗として扱うこと。各失敗経路を直接誘発し、失敗になることを確認する oracle を Green 実装 PR までに必ず用意する。test repo は一時領域内だけで作るため、開発 repo の読み取りも `repositoryReadContracts` の登録も要しない。
 - 013〜017・020 は実プロセスの oracle で、`detached: true` で起動した `親 → 子 → 孫` の fixture を使う (L6 §1 実測 6: `detached` を付けない子は実行環境の job で親と一緒に消えるので、生存の oracle にならない)。Windows と POSIX の両方で実行し、OS に無い面は skip ではなく OS 別の期待値を持つ。判定は `Get-CimInstance Win32_Process` / `ps` の再観測で行い、コマンド出力の文面は読まない。
 - 実プロセスの oracle は自分が起動した fixture の pid だけを kill する。終了時に必ず後始末する (残した fixture は本 issue が扱う事故そのものである)。
 
