@@ -23,16 +23,15 @@ docs-only pair-freezeであり、実装PRがRed testを追加してGreen化す�
 
 ## Canonical set model
 
-`F`は現行`test:fast`のrunner argv（8 exclude）、`C`は現行`test:cli`の明示3 path、期待集合は
+`F`は現行`test:fast`のrunner argv（#1430 の後は 7 exclude）、`C`は現行`test:cli`の明示3 path、期待集合は
 `W = F ∪ C`である。`test:fast`と`test:cli`の両方を入力として残し、pathはstable normalized
-repo-relative formへしてdeduplicateする。現在の`W`は次の5 excludeを持つ1 runner argvへ正規化される。
+repo-relative formへしてdeduplicateする。`W`は次の4 excludeを持つ1 runner argvへ正規化される。#1430 で`tests/review-green-command-projection.test.ts`をテストごと退役させるので、それまでの5 excludeから外す (退役の PR で`test:fast`・`test:db`・`test:windows`と同時に外す)。
 
 ```text
 tests/db-projection-ingestion.test.ts
 tests/doctor.test.ts
 tests/drive-db-registration.test.ts
 tests/projection-writer.test.ts
-tests/review-green-command-projection.test.ts
 ```
 
 CLI/hook実発火 (`cli-surface`、`distribution-acceptance`、`runtime-hook-entrypoints`)を除外へ
@@ -43,7 +42,7 @@ CLI/hook実発火 (`cli-surface`、`distribution-acceptance`、`runtime-hook-ent
 | Candidate | Stimulus / mutation | 独立oracle |
 | --- | --- | --- |
 | `CANDIDATE-CI490-001` | `package.json`から`test:fast`を削除・空化・別runnerへ変更。別caseで`test:cli`を同様に変更 | 両scriptが存在し、各scriptから独立に`F`/`C`を再構成できること。片方の欠落・縮退はfail-closeでRed。 |
-| `CANDIDATE-CI490-002` | `test:windows`の5 excludeから1つ削除、未知pathを1つ追加、またはCLI 3 pathのうち1つをexcludeへ戻す | 新scriptの選択集合が独立算出した`F ∪ C`とbyte-stable normalized setで一致すること。各1軸mutationをRed。 |
+| `CANDIDATE-CI490-002` | `test:windows`の4 excludeから1つ削除、未知pathを1つ追加、またはCLI 3 pathのうち1つをexcludeへ戻す | 新scriptの選択集合が独立算出した`F ∪ C`とbyte-stable normalized setで一致すること。各1軸mutationをRed。 |
 | `CANDIDATE-CI490-003` | Windows full laneを`npm run test:fast` + `npm run test:cli`の2 stepへ戻す、統合scriptを2回呼ぶ、または2本のrunner argvをworkflowへ戻す | Windows runtime step manifestのsnapshot runner invocation countが正常系でexactly 1。`test:fast`/`test:cli`の直接呼出し、2本目、raw `vitest`はRed。 |
 | `CANDIDATE-CI490-004` | `test:windows`をraw `vitest`、detachedでないrunner、linked/shared clone、junction、hardlink、cache経路へ置換 | invocationは`node scripts/run-vitest-snapshot.ts`を通り、sealed execution/reference/fingerprint lifecycleを保持する。既存snapshot custody oracleと結合し、bypassを受理しない。 |
 | `CANDIDATE-CI490-005` | Windows stepからtypecheckまたはtoolchain doctorを削除・lane条件を変更。Linux legを削除・full testをskip | `src/lint/github-ci-policy.ts`のordered manifest、full/doc条件、doctor/typecheck presenceが違反を返す。Windows classify不能はfullへ倒れる。 |
