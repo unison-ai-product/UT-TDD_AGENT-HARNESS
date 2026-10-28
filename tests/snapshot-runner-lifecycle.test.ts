@@ -1,5 +1,12 @@
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  writeFileSync,
+  writeSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
@@ -82,13 +89,65 @@ interface SnapshotStageObservation {
 }
 
 interface SnapshotRunnerCapture {
-  threw: boolean;
+  runnerError: string | null;
   stdout: string;
   stderr: string;
-  exitCodeBefore: string | number | undefined;
-  exitCodeAfter: string | number | undefined;
+  exitCodeBefore: number | string | null | undefined;
+  exitCodeAfter: number | string | null | undefined;
   stageCalls: string[];
   snapshotStages: SnapshotStageObservation[];
+}
+
+class CandidatePreconditionFailure extends Error {}
+
+function rejectCandidatePrecondition(reason: string): never {
+  throw new CandidatePreconditionFailure(reason);
+}
+
+function candidateDiagnostic(candidate: string, outcome: string, details?: unknown): void {
+  try {
+    const suffix = details === undefined ? "" : ` ${JSON.stringify(details)}`;
+    writeSync(2, `[snapshot-lifecycle ${candidate}] ${outcome}${suffix}\n`);
+  } catch {
+    // Diagnostic I/O must not affect whether the contract assertions run.
+  }
+}
+
+async function verifySnapshotCandidate(
+  candidate: string,
+  cleanup: () => void,
+  action: (assertionsReached: () => void) => Promise<void>,
+): Promise<void> {
+  let reachedAssertions = false;
+  let assertionFailure: unknown;
+  try {
+    await action(() => {
+      reachedAssertions = true;
+      candidateDiagnostic(candidate, "contract-assertions-reached");
+    });
+    if (reachedAssertions) candidateDiagnostic(candidate, "contract-assertions-completed");
+  } catch (error) {
+    if (error instanceof CandidatePreconditionFailure) {
+      candidateDiagnostic(candidate, "precondition-not-met", error.message);
+    } else if (reachedAssertions) {
+      assertionFailure = error;
+    } else {
+      candidateDiagnostic(candidate, "pre-assertion-exception", String(error));
+    }
+  }
+
+  try {
+    cleanup();
+  } catch (error) {
+    candidateDiagnostic(candidate, "cleanup-failed", String(error));
+    return;
+  }
+
+  if (assertionFailure !== undefined) {
+    candidateDiagnostic(candidate, "contract-assertions-failed", String(assertionFailure));
+    throw assertionFailure;
+  }
+  if (!reachedAssertions) candidateDiagnostic(candidate, "completed-without-contract-assertions");
 }
 
 function gitOk(cwd: string, args: string[]): boolean {
@@ -102,6 +161,7 @@ function createGitSourceFixture(): GitSourceFixture | null {
   try {
     root = mkdtempSync(join(tmpdir(), "ut-tdd-snapshot-source-red-"));
     if (!gitOk(root, ["init"])) return null;
+    writeFileSync(join(root, ".gitattributes"), "staged.txt -text\nunstaged.txt -text\n");
     writeFileSync(join(root, ".gitignore"), "ignored.txt\n");
     writeFileSync(join(root, "staged.txt"), "base staged\n");
     writeFileSync(join(root, "unstaged.txt"), "base unstaged\n");
@@ -160,14 +220,14 @@ async function runSnapshotRunnerWithStageStubs(
   const stageCalls: string[] = [];
   const snapshotStages: SnapshotStageObservation[] = [];
   const exitCodeBefore = process.exitCode;
-  const childProcess = await vi.importActual<typeof import("node:child_process")>("node:child_process");
+  const childProcess =
+    await vi.importActual<typeof import("node:child_process")>("node:child_process");
   const mockSpawnSync = ((
     command: string,
     commandArgs: string[] = [],
     options?: { cwd?: string },
   ) => {
-    if (command === "git")
-      return childProcess.spawnSync(command, commandArgs, options as never);
+    if (command === "git") return childProcess.spawnSync(command, commandArgs, options as never);
     const rendered = commandArgs.join(" ");
     stageCalls.push(rendered);
     if (commandArgs[0]?.endsWith("npm-cli.js"))
@@ -194,12 +254,12 @@ async function runSnapshotRunnerWithStageStubs(
     stderr.push(String(chunk));
     return true;
   }) as never);
-  let threw = false;
+  let runnerError: string | null = null;
   try {
     const { runSnapshotTests } = await import("../scripts/run-vitest-snapshot.ts");
-    runSnapshotTests(args, repoRoot, () => null);
-  } catch {
-    threw = true;
+    runSnapshotTests(args, repoRoot, () => 1);
+  } catch (error) {
+    runnerError = String(error);
   } finally {
     stdoutWrite.mockRestore();
     stderrWrite.mockRestore();
@@ -207,7 +267,7 @@ async function runSnapshotRunnerWithStageStubs(
     vi.resetModules();
   }
   return {
-    threw,
+    runnerError,
     stdout: stdout.join(""),
     stderr: stderr.join(""),
     exitCodeBefore,
@@ -217,26 +277,16 @@ async function runSnapshotRunnerWithStageStubs(
   };
 }
 
-async function tryRunSnapshotRunnerWithStageStubs(
-  args: string[],
-  repoRoot: string,
-): Promise<SnapshotRunnerCapture | null> {
-  try {
-    return await runSnapshotRunnerWithStageStubs(args, repoRoot);
-  } catch {
-    return null;
-  }
-}
-
-function snapshotRunnerCompleted(capture: SnapshotRunnerCapture): boolean {
-  return (
-    !capture.threw &&
-    capture.exitCodeAfter === capture.exitCodeBefore &&
-    capture.snapshotStages.length > 0 &&
-    capture.stageCalls.some((call) => call.includes("npm-cli.js ci")) &&
-    capture.stageCalls.some((call) => call.includes("src/cli.ts db rebuild")) &&
-    capture.stageCalls.some((call) => call.includes("vitest.mjs run"))
+function snapshotRunnerCompletionFailure(capture: SnapshotRunnerCapture): string | null {
+  if (capture.runnerError) return `runner threw: ${capture.runnerError}`;
+  if (capture.exitCodeAfter !== capture.exitCodeBefore)
+    return `process.exitCode changed from ${String(capture.exitCodeBefore)} to ${String(capture.exitCodeAfter)}`;
+  if (capture.snapshotStages.length === 0) return "npm stage did not observe an execution snapshot";
+  const requiredStages = ["npm-cli.js ci", "src/cli.ts db rebuild", "vitest.mjs run"];
+  const missingStages = requiredStages.filter(
+    (required) => !capture.stageCalls.some((call) => call.includes(required)),
   );
+  return missingStages.length > 0 ? `stub stages not reached: ${missingStages.join(", ")}` : null;
 }
 
 async function loadSubject(): Promise<LeaseApi> {
@@ -471,97 +521,147 @@ describe("snapshot runner lifecycle L7 candidate Red (issue #1129 / #1415)", () 
   });
 
   it.fails("CANDIDATE-U-SNAPLC-022: dirty Git runner warns and continues on the committed snapshot", async () => {
-    let fixture: GitSourceFixture | null;
-    try {
-      fixture = createGitSourceFixture();
-    } catch {
-      return;
-    }
-    if (!fixture) return;
+    let fixture: GitSourceFixture | null = null;
+    await verifySnapshotCandidate(
+      "022",
+      () => {
+        if (fixture) removeTestTree(fixture.root);
+      },
+      async (assertionsReached) => {
+        try {
+          fixture = createGitSourceFixture();
+        } catch (error) {
+          rejectCandidatePrecondition(`Git fixture creation threw: ${String(error)}`);
+        }
+        if (!fixture) rejectCandidatePrecondition("Git fixture creation returned no fixture");
 
-    try {
-      let setupOkay = true;
-      try {
-        writeFileSync(join(fixture.root, "staged.txt"), "staged edit\n");
-        setupOkay = gitOk(fixture.root, ["add", "staged.txt"]);
-        writeFileSync(join(fixture.root, "unstaged.txt"), "unstaged edit\n");
-        writeFileSync(join(fixture.root, "untracked.txt"), "untracked edit\n");
-        writeFileSync(join(fixture.root, "ignored.txt"), "ignored edit\n");
-      } catch {
-        setupOkay = false;
-      }
-      if (!setupOkay) return;
+        let setupOkay = true;
+        let setupFailure: string | null = null;
+        try {
+          writeFileSync(join(fixture.root, "staged.txt"), "staged edit\n");
+          setupOkay = gitOk(fixture.root, ["add", "staged.txt"]);
+          writeFileSync(join(fixture.root, "unstaged.txt"), "unstaged edit\n");
+          writeFileSync(join(fixture.root, "untracked.txt"), "untracked edit\n");
+          writeFileSync(join(fixture.root, "ignored.txt"), "ignored edit\n");
+          if (!setupOkay) setupFailure = "git add staged.txt returned nonzero";
+        } catch (error) {
+          setupOkay = false;
+          setupFailure = String(error);
+        }
+        if (!setupOkay) rejectCandidatePrecondition(`dirty fixture setup failed: ${setupFailure}`);
 
-      const captured = await tryRunSnapshotRunnerWithStageStubs([], fixture.root);
-      if (!captured || !snapshotRunnerCompleted(captured)) return;
-      const executionSnapshot = captured.snapshotStages[0];
-      if (!executionSnapshot) return;
+        let captured: SnapshotRunnerCapture;
+        try {
+          captured = await runSnapshotRunnerWithStageStubs([], fixture.root);
+        } catch (error) {
+          rejectCandidatePrecondition(`runner harness setup threw: ${String(error)}`);
+        }
+        const completionFailure = snapshotRunnerCompletionFailure(captured);
+        if (completionFailure) rejectCandidatePrecondition(completionFailure);
+        const executionSnapshot = captured.snapshotStages[0];
+        if (!executionSnapshot)
+          rejectCandidatePrecondition("npm stage has no snapshot observation");
+        if (
+          executionSnapshot.staged !== "base staged\n" ||
+          executionSnapshot.unstaged !== "base unstaged\n" ||
+          executionSnapshot.untracked ||
+          executionSnapshot.ignored
+        )
+          rejectCandidatePrecondition(
+            `execution snapshot does not match committed fixture: ${JSON.stringify(executionSnapshot)}`,
+          );
 
-      expect(executionSnapshot.staged).toBe("base staged\n");
-      expect(executionSnapshot.unstaged).toBe("base unstaged\n");
-      expect(executionSnapshot.untracked).toBe(false);
-      expect(executionSnapshot.ignored).toBe(false);
-      expect(captured.stderr).toContain(fixture.head);
-      expect(captured.stderr).toMatch(/(?:作業\s*(?:tree|ツリー)|working tree)/i);
-      expect(captured.stderr).toMatch(/(?:ではなく|でなく|ではない|対象外|not|rather than|instead of)/i);
-      expect(captured.stderr).toContain("staged.txt");
-      expect(captured.stderr).toContain("unstaged.txt");
-      expect(captured.stderr).toContain("untracked.txt");
-      expect(captured.stderr).not.toContain("ignored.txt");
-    } finally {
-      removeTestTree(fixture.root);
-    }
+        assertionsReached();
+        expect(captured.stderr).toContain(fixture.head);
+        expect(captured.stderr).toMatch(/(?:作業\s*(?:tree|ツリー)|working tree)/i);
+        expect(captured.stderr).toMatch(
+          /(?:ではなく|でなく|ではない|対象外|not|rather than|instead of)/i,
+        );
+        expect(captured.stderr).toContain("staged.txt");
+        expect(captured.stderr).toContain("unstaged.txt");
+        expect(captured.stderr).toContain("untracked.txt");
+        expect(captured.stderr).not.toContain("ignored.txt");
+      },
+    );
   });
 
   it.fails("CANDIDATE-U-SNAPLC-023: non-Git Pack runner names copy source and path", async () => {
-    let parent: string;
-    try {
-      parent = mkdtempSync(join(tmpdir(), "ut-tdd-snapshot-copy-red-"));
-    } catch {
-      return;
-    }
-
-    try {
-      let pack: string;
-      try {
-        if (!gitOk(parent, ["init"])) return;
+    let parent: string | null = null;
+    let pack: string | null = null;
+    await verifySnapshotCandidate(
+      "023",
+      () => {
+        if (parent) removeTestTree(parent);
+      },
+      async (assertionsReached) => {
+        try {
+          parent = mkdtempSync(join(tmpdir(), "ut-tdd-snapshot-copy-red-"));
+        } catch (error) {
+          rejectCandidatePrecondition(`Pack fixture parent creation threw: ${String(error)}`);
+        }
+        const gitInitSucceeded = gitOk(parent, ["init"]);
+        if (!gitInitSucceeded)
+          rejectCandidatePrecondition("fixture Git root initialization returned nonzero");
         pack = join(parent, "pack");
-        mkdirSync(pack);
-        writeFileSync(join(pack, "package.json"), "{}\n");
-      } catch {
-        return;
-      }
+        try {
+          mkdirSync(pack);
+          writeFileSync(join(pack, "package.json"), "{}\n");
+        } catch (error) {
+          rejectCandidatePrecondition(`Pack fixture setup threw: ${String(error)}`);
+        }
 
-      const captured = await tryRunSnapshotRunnerWithStageStubs([], pack);
-      if (!captured || !snapshotRunnerCompleted(captured)) return;
-      if (!captured.snapshotStages[0]?.packManifest) return;
-
-      const output = `${captured.stdout}${captured.stderr}`.replaceAll("\\", "/");
-      expect(output).toContain("source: copy (commit なし)");
-      expect(output).toContain(pack.replaceAll("\\", "/"));
-    } finally {
-      removeTestTree(parent);
-    }
+        let captured: SnapshotRunnerCapture;
+        try {
+          captured = await runSnapshotRunnerWithStageStubs([], pack);
+        } catch (error) {
+          rejectCandidatePrecondition(`runner harness setup threw: ${String(error)}`);
+        }
+        const completionFailure = snapshotRunnerCompletionFailure(captured);
+        if (completionFailure) rejectCandidatePrecondition(completionFailure);
+        if (!captured.snapshotStages[0]?.packManifest)
+          rejectCandidatePrecondition(
+            `Pack manifest absent at npm stage: ${JSON.stringify(captured.snapshotStages[0])}`,
+          );
+        const output = `${captured.stdout}${captured.stderr}`.replaceAll("\\", "/");
+        assertionsReached();
+        expect(output).toContain("source: copy (commit なし)");
+        expect(output).toContain(pack.replaceAll("\\", "/"));
+      },
+    );
   });
 
   it.fails("CANDIDATE-U-SNAPLC-024: clean Git runner output identifies the commit SHA", async () => {
-    let fixture: GitSourceFixture | null;
-    try {
-      fixture = createGitSourceFixture();
-    } catch {
-      return;
-    }
-    if (!fixture) return;
+    let fixture: GitSourceFixture | null = null;
+    await verifySnapshotCandidate(
+      "024",
+      () => {
+        if (fixture) removeTestTree(fixture.root);
+      },
+      async (assertionsReached) => {
+        try {
+          fixture = createGitSourceFixture();
+        } catch (error) {
+          rejectCandidatePrecondition(`Git fixture creation threw: ${String(error)}`);
+        }
+        if (!fixture) rejectCandidatePrecondition("Git fixture creation returned no fixture");
 
-    try {
-      const captured = await tryRunSnapshotRunnerWithStageStubs([], fixture.root);
-      if (!captured || !snapshotRunnerCompleted(captured)) return;
-      const executionSnapshot = captured.snapshotStages[0];
-      if (!executionSnapshot || executionSnapshot.staged !== "base staged\n") return;
+        let captured: SnapshotRunnerCapture;
+        try {
+          captured = await runSnapshotRunnerWithStageStubs([], fixture.root);
+        } catch (error) {
+          rejectCandidatePrecondition(`runner harness setup threw: ${String(error)}`);
+        }
+        const completionFailure = snapshotRunnerCompletionFailure(captured);
+        if (completionFailure) rejectCandidatePrecondition(completionFailure);
+        const executionSnapshot = captured.snapshotStages[0];
+        if (!executionSnapshot || executionSnapshot.staged !== "base staged\n")
+          rejectCandidatePrecondition(
+            `clean execution snapshot mismatch: ${JSON.stringify(executionSnapshot)}`,
+          );
 
-      expect(`${captured.stdout}${captured.stderr}`).toContain(fixture.head);
-    } finally {
-      removeTestTree(fixture.root);
-    }
+        assertionsReached();
+        expect(`${captured.stdout}${captured.stderr}`).toContain(fixture.head);
+      },
+    );
   });
 });
