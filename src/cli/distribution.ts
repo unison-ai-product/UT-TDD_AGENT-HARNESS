@@ -18,6 +18,7 @@ import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import type { Command } from "commander";
 import { parse as parseYaml } from "yaml";
 import { buildReleasePublicationPlan } from "../github/ops-guard.ts";
+import type { PrivacyScanResult } from "../lint/privacy-scan.ts";
 import {
   analyzeSecretScan,
   loadSecretScanArtifactsForPaths,
@@ -59,6 +60,12 @@ import {
 import { attestReleaseChannel } from "../setup/release-channel-adapter.ts";
 import { materializeReleaseArtifacts } from "../setup/release-materializer.ts";
 import { ensureDir } from "../shared/fs.ts";
+import {
+  DistributionPrivacyScanError,
+  privacyScanJson,
+  privacyScanTextLines,
+  runDistributionPrivacyScan,
+} from "./distribution-privacy.ts";
 
 function gitHead(): string | null {
   // Distribution commands are intentionally valid in an unpacked clean artifact,
@@ -247,6 +254,23 @@ function readTrackedTeamBlob(repoRoot: string) {
     });
   }
   return projectTrackedTeamBlob({ blobs });
+}
+
+/** Same artifact list as the secret scan; the team yaml is read from its tracked blob. */
+function runDistributionPackPrivacyScan(input: {
+  repoRoot: string;
+  sourceRoot: string;
+  sourcePaths: readonly string[];
+  artifactPaths: readonly string[];
+  homeDirectory: string;
+}): PrivacyScanResult {
+  return runDistributionPrivacyScan({
+    ...input,
+    readTeamProjection: () => {
+      const projection = readTrackedTeamBlob(input.sourceRoot);
+      return projection.ok ? projection.bytes : null;
+    },
+  });
 }
 
 function runDistributionSecretScan(input: {
@@ -665,6 +689,14 @@ export async function packageConsumerRuntimeRelease(input: {
       throw new Error(
         `distribution package source preflight failed: ${secretScanMessages(secretScan)[0] ?? "plan"}`,
       );
+    const privacyScan = runDistributionPackPrivacyScan({
+      repoRoot: input.repoRoot,
+      sourceRoot,
+      sourcePaths,
+      artifactPaths: exportPlan.artifactPaths,
+      homeDirectory,
+    });
+    if (!privacyScan.ok) throw new DistributionPrivacyScanError(privacyScan);
     const tarRelease = resolveDistributionTarReleaseIdentity({
       repoRoot: input.repoRoot,
       releaseRevision: sourceBinding.releaseRevision,
@@ -1126,6 +1158,14 @@ export function registerDistributionCommands(program: Command): void {
           sourcePaths,
           artifactPaths: exportPlan.artifactPaths,
         });
+        const privacyScan = runDistributionPackPrivacyScan({
+          repoRoot,
+          sourceRoot: repoRoot,
+          sourcePaths,
+          artifactPaths: exportPlan.artifactPaths,
+          homeDirectory: homedir(),
+        });
+        const scansOk = secretScan.ok && privacyScan.ok;
         const sync = buildPackSyncPlan({
           exportPlan,
           sourcePaths,
@@ -1145,7 +1185,7 @@ export function registerDistributionCommands(program: Command): void {
           errors: ["not-run"],
         };
 
-        if (repoExists && opts.pruneLocal && exportPlan.ok && secretScan.ok) {
+        if (repoExists && opts.pruneLocal && exportPlan.ok && scansOk) {
           try {
             for (const rel of existingBefore) {
               rmSync(join(repoDir, ...rel.split("/")), { force: true });
@@ -1156,7 +1196,7 @@ export function registerDistributionCommands(program: Command): void {
           }
         }
 
-        if (repoExists && exportPlan.ok && secretScan.ok && pruneError === null) {
+        if (repoExists && exportPlan.ok && scansOk && pruneError === null) {
           try {
             for (const rel of exportPlan.artifactPaths) {
               const sourceRel = cleanDistributionSourcePath(rel, sourcePaths);
@@ -1187,7 +1227,7 @@ export function registerDistributionCommands(program: Command): void {
           ok:
             repoExists &&
             exportPlan.ok &&
-            secretScan.ok &&
+            scansOk &&
             pruneError === null &&
             copyError === null &&
             authoringSmoke.ok &&
@@ -1198,6 +1238,7 @@ export function registerDistributionCommands(program: Command): void {
             checked: secretScan.checked,
             violations: secretScan.violations,
           },
+          privacyScan: privacyScanJson(privacyScan),
           authoringSmoke,
           sync,
           pack: {
@@ -1205,7 +1246,7 @@ export function registerDistributionCommands(program: Command): void {
             repoExists,
             manifest,
             copiedArtifacts:
-              repoExists && exportPlan.ok && pruneError === null && copyError === null
+              repoExists && exportPlan.ok && scansOk && pruneError === null && copyError === null
                 ? exportPlan.artifactPaths.length
                 : 0,
             pruneLocal: Boolean(opts.pruneLocal),
@@ -1238,6 +1279,8 @@ export function registerDistributionCommands(program: Command): void {
         if (!secretScan.ok) {
           process.stdout.write(`  ${secretScanMessages(secretScan)[0]}\n`);
         }
+        if (!privacyScan.ok)
+          for (const line of privacyScanTextLines(privacyScan)) process.stdout.write(`  ${line}\n`);
         process.stdout.write(`  unmanaged-existing: ${unmanagedExistingPaths.length}\n`);
         process.stdout.write(`  pruned-local: ${prunedPaths.length}\n`);
         process.stdout.write(
@@ -1299,7 +1342,13 @@ export function registerDistributionCommands(program: Command): void {
           process.stdout.write(`  sha256: ${name} ${digest}\n`);
         process.stdout.write(`  consumer-anchor: ${output.consumerAnchorDigest}\n`);
       } catch (error) {
-        const output = { ok: false, error: String(error) };
+        const output = {
+          ok: false,
+          error: String(error),
+          ...(error instanceof DistributionPrivacyScanError
+            ? { privacyScan: privacyScanJson(error.privacyScan) }
+            : {}),
+        };
         if (opts.json) process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);
         else process.stdout.write(`distribution package: blocked ${output.error}\n`);
         process.exitCode = 1;

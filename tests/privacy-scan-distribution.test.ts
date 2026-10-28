@@ -179,7 +179,7 @@ afterAll(() => {
 });
 
 describe("privacy scan candidate oracles (distribution)", () => {
-  it.fails("U-PRIVSCAN-014: distribution stops before writing when the Pack scan fails", () => {
+  it("U-PRIVSCAN-014: distribution stops before writing when the Pack scan fails", () => {
     const denyHome = makeHome("d-home", `${D}\n`);
     const emailSource = cleanSource("d-email", P);
     const packDir = join(scratchRoot, "d-pack");
@@ -275,7 +275,7 @@ describe("privacy scan candidate oracles (distribution)", () => {
     expect(kinds(privacyJson(baselined.stdout))).toContain("privacy-email-hit");
   }, 600_000);
 
-  it.fails("U-PRIVSCAN-018: never leaks denylist contents into output, evidence, or source", () => {
+  it("U-PRIVSCAN-018: never leaks denylist contents into output, evidence, or source", () => {
     const commentMarker = "unique-comment-marker-1391";
     const invalidEntry = "unclosed-group-entry(";
     const home = makeHome("l-home", `# ${commentMarker}\n${D}\n${invalidEntry}\n`);

@@ -41,6 +41,7 @@ import { registerPlanAssetCommands } from "./cli/plan-asset.ts";
 import { registerPlanDraftCommand } from "./cli/plan-draft.ts";
 import { registerPlanRevisionCommand } from "./cli/plan-revise.ts";
 import { registerPrMergeCommands } from "./cli/pr-merge.ts";
+import { registerPrivacyScanCommands } from "./cli/privacy-scan.ts";
 import { registerLiveReviewCommands } from "./cli/review-live.ts";
 import { contextSuggest } from "./context/doc-router.ts";
 import {
@@ -2375,6 +2376,7 @@ automation
 
 registerGuardrailCommands(program);
 registerDocSplitCommands(program);
+registerPrivacyScanCommands(program);
 const issue = program.command("issue").description("external issue dry-run queue");
 issue
   .command("queue")

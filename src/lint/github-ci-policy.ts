@@ -501,6 +501,17 @@ node src/cli.ts github guard --head-ref "$HEAD_REF" --base-ref "$BASE_REF" --pr-
       env: { BASE_SHA: `${githubExpression("github.sha")}^1` },
       run: `node src/cli.ts github design-protection --base "$BASE_SHA" --head "${githubExpression("github.sha")}"`,
     }),
+    step("privacy scan (email の形、fail-close)", {
+      env: {
+        EVENT_NAME: githubExpression("github.event_name"),
+        BASE_SHA: githubExpression("github.event.pull_request.base.sha"),
+        HEAD_SHA: githubExpression("github.event.pull_request.head.sha"),
+      },
+      run: `node src/cli.ts privacy-scan check --mode tree --fail-close
+if [ "$EVENT_NAME" = "pull_request" ]; then
+  node src/cli.ts privacy-scan check --mode diff --base "$BASE_SHA" --head "$HEAD_SHA" --fail-close
+fi`,
+    }),
     run("typecheck (tsc --noEmit)", "npm run typecheck", LANE_FULL_ONLY_IF),
     run(
       "db rebuild (deterministic projection)",

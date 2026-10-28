@@ -190,6 +190,18 @@ jobs:
           BASE_SHA: ${{ github.sha }}^1
         run: node src/cli.ts github design-protection --base "$BASE_SHA" --head "${{ github.sha }}"
 
+      # Issue #1391: email の形だけを検査する (denylist は読まない)。lane に依らず skip しない。
+      - name: privacy scan (email の形、fail-close)
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          node src/cli.ts privacy-scan check --mode tree --fail-close
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            node src/cli.ts privacy-scan check --mode diff --base "$BASE_SHA" --head "$HEAD_SHA" --fail-close
+          fi
+
       - name: typecheck (tsc --noEmit)
         if: ${{ steps.classify.outputs.lane == 'full' }}
         run: npm run typecheck
