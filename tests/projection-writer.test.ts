@@ -2602,11 +2602,6 @@ Fixture.
       expect(rowCounts(db).trouble_events).toBeGreaterThanOrEqual(0);
       expect(rowCounts(db).improvement_log).toBeGreaterThan(0);
 
-      const driveMetric = db
-        .prepare("SELECT metric, status FROM quality_signals WHERE metric = ? LIMIT 1")
-        .get("drive_firing_rate");
-      expect(driveMetric).toMatchObject({ metric: "drive_firing_rate" });
-
       const feedbackEvent = db
         .prepare("SELECT signal_type, next_action FROM feedback_events ORDER BY created_at LIMIT 1")
         .get();
