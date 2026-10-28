@@ -591,7 +591,7 @@ describe("L7 CLI surface closure", () => {
         [
           "codex",
           "--role",
-          "docs",
+          "po",
           "--task",
           "mechanical ledger check",
           "--model",
