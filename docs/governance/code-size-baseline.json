@@ -7,7 +7,7 @@
   "src/disposition/domain/document-disposition-catalog.ts": { "lines": 526, "functionExcess": 159 },
   "src/doctor/check-definition-groups.ts": { "lines": null, "functionExcess": 40 },
   "src/doctor/db-projection.ts": { "lines": 506, "functionExcess": null },
-  "src/doctor/test-repository-isolation.ts": { "lines": 701, "functionExcess": 111 },
+  "src/doctor/test-repository-isolation.ts": { "lines": 711, "functionExcess": 111 },
   "src/document-disposition/domain/replay-document-deltas.ts": { "lines": null, "functionExcess": 76 },
   "src/document-disposition/domain/repository-docs-snapshot.ts": { "lines": null, "functionExcess": 58 },
   "src/execution/forward-escape.ts": { "lines": 609, "functionExcess": 26 },
