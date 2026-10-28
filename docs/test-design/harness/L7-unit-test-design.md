@@ -1810,7 +1810,6 @@ Issue #926 の custody oracle 行は契約上の候補宣言であり、実装�
 | `CANDIDATE-U-RVMG-034` | allowlist 外 receipt の `at` だけを cutoff より前へ backdate し、attempt terminal event を欠く fixture | 自己申告時刻だけでは grandfather せず wrapper が deny、merge 0 |
 
 #### 同じ head の古い check run (Issue #1104)
-
 設計正本は `docs/design/harness/L6-function-design/merge-gate-check-run-selection.md`。実テストは `tests/review-merge-gate.test.ts`。
 
 | ID | mutation / fixture | expected |
@@ -1827,9 +1826,11 @@ Issue #926 の custody oracle 行は契約上の候補宣言であり、実装�
 | `U-RVMG-044` | 同じ check 名・異なる run id・両方 SUCCESS で、最早 startedAt が同時刻 | 最新を決められず `checksGreen=false` |
 | `U-RVMG-045` | 同じ run id・同じ workflow の同名 job が両方 SUCCESS | 識別不能な重複として `checksGreen=false` |
 | `U-RVMG-046` | `workflowName` 欠落・異なる run id・両方 SUCCESS の同名エントリ | 識別不能な重複として `checksGreen=false` |
+| `CANDIDATE-U-RVMG-047` | (#1423 L6 §6) checks 緑・review merge_ready の PR で、mb 後に main が (a) PR と同じ baseline 対象ファイルを変更 (b) PR が baseline ファイルを変更し main が別の対象ファイルを変更 (c) main が baseline ファイルを変更し PR が対象ファイルを変更 (d) PR が対象ファイルを rename し main が旧 path を変更 | 全て `baseline_conflict` で deny、`gh pr merge` 呼び出し 0。doc-split / code-size の両 gate で成り立つ |
+| `CANDIDATE-U-RVMG-048` | (#1423) 同条件の PR で、(a) PR と main が別々の対象ファイルを変更し baseline は両者とも不変 (b) PR が対象外だけを変更 (c) main が対象外だけを変更 (d) PR が main を取り込み済みで mb が main 先端 | 全て競合なしで従来どおり merge。誤拒否しない |
+| `CANDIDATE-U-RVMG-049` | (#1423) 競合 fixture の実行と、`git fetch` / `git diff` の失敗・mb 解決不能の fixture | 競合は exit 1、出力に gate 名・競合 path・main を取り込んで CI を取り直す案内を含み、`--json` の reason は `baseline_conflict`。git 失敗・mb 解決不能は `baseline_conflict_unknown` で deny し、緑にならない |
 
 ## Claude HARNESS memory async wake oracle (2026-08-03)
-
 対象 = `src/runtime/claude-memory-wake.ts`、`src/cli.ts`、Claude Stop hook、consumer setup
 template。永続memoryと即時配送runtime stateを分離し、通知をreview/署名の権威へ昇格させない。
 
@@ -1844,7 +1845,6 @@ template。永続memoryと即時配送runtime stateを分離し、通知をrevie
 | `U-MEMWAKE-007` | 同一git common dir上のtarget一致・不一致workspace、およびCLI publish→Stop hook配送 | 不一致watcherはclaim 0でentryを保持。一致workspaceだけが本文をstderrへ返しexit 2 |
 
 ## Claude inbox 明示 ACK candidate oracle (PLAN-L6-935)
-
 設計正本は docs/design/harness/L6-function-design/claude-inbox-explicit-ack.md。個別の詳細 pair は
 docs/test-design/harness/L7-claude-inbox-explicit-ack-test-design.md を参照する。本節の ID は未実装 candidate であり、正式 U-* oracle ではない。
 
