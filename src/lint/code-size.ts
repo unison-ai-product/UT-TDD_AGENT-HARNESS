@@ -359,7 +359,9 @@ function growthAgainstPrevious(input: CodeSizeInput, previous: CodeSizeBaseline)
 /** §5 初回記録: 記録の行は merge-base の実測 (記録形) と比べて増えていないか。 */
 function initialBaselineFindings(input: CodeSizeInput) {
   if (input.mergeBaseMeasures === null) {
-    return [finding(CODE_SIZE_BASELINE_PATH, BASE_UNREADABLE, "merge-base-unresolved")];
+    return Object.keys(input.baseline).length > 0
+      ? [finding(CODE_SIZE_BASELINE_PATH, BASE_UNREADABLE, "merge-base-unresolved")]
+      : [];
   }
   const findings: CodeSizeFinding[] = [];
   for (const [path, row] of Object.entries(input.baseline)) {

@@ -165,7 +165,10 @@ export function checkCodeSize(repoRoot: string): { messages: string[]; ok: boole
   let mergeBaseMeasures: CodeSizeBaseline | null = null;
   if (previous.kind === "found") {
     previousBaseline = previous.baseline;
-  } else if (previous.kind === "absent") {
+  } else if (previous.kind === "unreadable") {
+    messages.push(`${CODE_SIZE_BASELINE_PATH}:code-size-baseline-base-unreadable:merge-base`);
+    ok = false;
+  } else {
     const measured = loadCodeSizeMergeBaseMeasures(repoRoot, Object.keys(current ?? {}));
     mergeBaseMeasures = measured.kind === "found" ? measured.measures : null;
   }
