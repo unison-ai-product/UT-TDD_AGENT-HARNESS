@@ -1,4 +1,5 @@
 import { checkAdvisoryGateAging } from "../lint/advisory-strict-gate-aging.ts";
+import { checkCodeSize } from "../lint/code-size-inputs.ts";
 import { checkDocSplit } from "../lint/doc-split-inputs.ts";
 import { checkErasableSyntax } from "../lint/erasable-syntax.ts";
 import { checkGreenCommandDigests } from "../lint/green-command-digest.ts";
@@ -221,6 +222,7 @@ export function buildDoctorCheckDefinitionGroups(
         full("feedback-log", () => checkFeedbackLog(deps.repoRoot)),
         full("l6-completion", () => checkL6Completion(deps.repoRoot)),
         full("doc-split", () => checkDocSplit(deps.repoRoot)),
+        full("code-size", () => checkCodeSize(deps.repoRoot)),
         full("l7-completion", () => checkL7Completion(deps.repoRoot)),
         full("roadmap", () => checkRoadmap(deps.repoRoot)),
       ],

@@ -27,6 +27,7 @@ import {
 } from "./assets/catalog.ts";
 import { loadBranchAudit, renderBranchAudit } from "./audit/branches.ts";
 import { renderQualityAudit, runQualityAudit } from "./audit/quality.ts";
+import { registerCodeSizeCommands } from "./cli/code-size.ts";
 import {
   adapterExecutionEnv,
   executeAdapterPlanForCli,
@@ -2375,6 +2376,7 @@ automation
 
 registerGuardrailCommands(program);
 registerDocSplitCommands(program);
+registerCodeSizeCommands(program);
 const issue = program.command("issue").description("external issue dry-run queue");
 issue
   .command("queue")

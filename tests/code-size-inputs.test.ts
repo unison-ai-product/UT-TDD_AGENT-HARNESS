@@ -90,7 +90,7 @@ describe("code size gate filesystem and git adapter candidate oracles", () => {
     expect(Array.isArray(checked.messages)).toBe(true);
   });
 
-  it.fails("U-CODESIZE-013(b): reports unreadable sources and fails closed instead of treating them as empty", () => {
+  it("U-CODESIZE-013(b): reports unreadable sources and fails closed instead of treating them as empty", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-code-size-unreadable-"));
     rmSync(root, { recursive: true, force: true });
     try {
@@ -105,7 +105,7 @@ describe("code size gate filesystem and git adapter candidate oracles", () => {
     }
   });
 
-  it.fails("U-CODESIZE-015(a): loads a parseable previous baseline at origin/main", () => {
+  it("U-CODESIZE-015(a): loads a parseable previous baseline at origin/main", () => {
     const entryPath = "src/big.ts";
     const root = initRepo({
       [entryPath]: lines(900),
@@ -121,7 +121,7 @@ describe("code size gate filesystem and git adapter candidate oracles", () => {
     }
   });
 
-  it.fails("U-CODESIZE-015(b): reports absent and skips the comparison when the merge-base has no baseline file", () => {
+  it("U-CODESIZE-015(b): reports absent and skips the comparison when the merge-base has no baseline file", () => {
     const root = initRepo({ "src/small.ts": lines(3) });
     try {
       expect.soft(loadPreviousCodeSizeBaseline(root)).toEqual({ kind: "absent" });
@@ -133,7 +133,7 @@ describe("code size gate filesystem and git adapter candidate oracles", () => {
     }
   });
 
-  it.fails("U-CODESIZE-015(c): reports unreadable and fails closed when origin/main cannot resolve", () => {
+  it("U-CODESIZE-015(c): reports unreadable and fails closed when origin/main cannot resolve", () => {
     const root = initRepo(
       { "src/small.ts": lines(3), [BASELINE]: baselineEntry("src/small.ts", 900, null) },
       false,
@@ -148,7 +148,7 @@ describe("code size gate filesystem and git adapter candidate oracles", () => {
     }
   });
 
-  it.fails("U-CODESIZE-015(d): reports unreadable and fails closed for malformed baseline JSON", () => {
+  it("U-CODESIZE-015(d): reports unreadable and fails closed for malformed baseline JSON", () => {
     const root = initRepo({ "src/small.ts": lines(3), [BASELINE]: "{" });
     try {
       expect.soft(loadPreviousCodeSizeBaseline(root)).toEqual({ kind: "unreadable" });
@@ -160,7 +160,7 @@ describe("code size gate filesystem and git adapter candidate oracles", () => {
     }
   });
 
-  it.fails("U-CODESIZE-015(e): measures the merge-base content and rejects initial self-growth", () => {
+  it("U-CODESIZE-015(e): measures the merge-base content and rejects initial self-growth", () => {
     const path = "src/big.ts";
     const root = initRepo({ [path]: lines(900) });
     try {
@@ -180,7 +180,7 @@ describe("code size gate filesystem and git adapter candidate oracles", () => {
     }
   });
 
-  it.fails("U-CODESIZE-015(f): recognizes a same-class nested rename and carries the row", () => {
+  it("U-CODESIZE-015(f): recognizes a same-class nested rename and carries the row", () => {
     const oldPath = "src/big.ts";
     const newPath = "src/sub/big.ts";
     const root = initRepo({
@@ -204,7 +204,7 @@ describe("code size gate filesystem and git adapter candidate oracles", () => {
     }
   });
 
-  it.fails("U-CODESIZE-015(g): fails closed when git rename input is unreadable", () => {
+  it("U-CODESIZE-015(g): fails closed when git rename input is unreadable", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-code-size-no-git-"));
     try {
       expect.soft(loadRenamedCodeFiles(root)).toEqual({ kind: "unreadable" });
@@ -216,18 +216,18 @@ describe("code size gate filesystem and git adapter candidate oracles", () => {
     }
   });
 
-  it.fails("U-CODESIZE-004(message): reports lines=501/500 through the check messages", () => {
+  it("U-CODESIZE-004(message): reports lines=501/500 through the check messages", () => {
     expect.soft(messagesFor("src/x.ts", lines(501))).toContain("lines=501/500");
     expect.soft(messagesFor("tests/x.test.ts", lines(501))).toContain("lines=501/500");
     expect.soft(messagesFor("src/x.ts", lines(500))).not.toContain("code-size-required");
   });
 
-  it.fails("U-CODESIZE-005(message): reports functionExcess=1/0 through the check messages", () => {
+  it("U-CODESIZE-005(message): reports functionExcess=1/0 through the check messages", () => {
     expect.soft(messagesFor("src/x.ts", fn("f", 121))).toContain("functionExcess=1/0");
     expect.soft(messagesFor("src/x.ts", fn("f", 120))).not.toContain("code-size-required");
   });
 
-  it.fails("U-CODESIZE-012: points to what to split and where through the check messages", () => {
+  it("U-CODESIZE-012: points to what to split and where through the check messages", () => {
     const limit = 500;
     // (a) over by 20: trailing statements are selected from the back
     const featureText =

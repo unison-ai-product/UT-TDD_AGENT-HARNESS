@@ -17,7 +17,7 @@ const moduleText = (nonblank: number) =>
   `export const v = 1;\n${"const a = 1;\n".repeat(nonblank - 1)}`;
 
 describe("code size gate and refactor candidate alignment candidates", () => {
-  it.fails("U-CODESIZE-018(a): keeps each candidate threshold at or below its gate limit", () => {
+  it("U-CODESIZE-018(a): keeps each candidate threshold at or below its gate limit", () => {
     expect
       .soft(CODE_SIZE_LIMITS.src.lines)
       .toBeGreaterThanOrEqual(REFACTOR_CANDIDATE_THRESHOLDS.splitModuleLines);
@@ -26,13 +26,13 @@ describe("code size gate and refactor candidate alignment candidates", () => {
       .toBeGreaterThanOrEqual(REFACTOR_CANDIDATE_THRESHOLDS.extractHelperLines);
   });
 
-  it.fails("U-CODESIZE-018(b): fixes the candidate and gate values", () => {
+  it("U-CODESIZE-018(b): fixes the candidate and gate values", () => {
     expect.soft(REFACTOR_CANDIDATE_THRESHOLDS.splitModuleLines).toBe(400);
     expect.soft(REFACTOR_CANDIDATE_THRESHOLDS.extractHelperLines).toBe(120);
     expect.soft(CODE_SIZE_LIMITS.src.lines).toBe(500);
   });
 
-  it.fails("U-CODESIZE-018(c): emits a split candidate from 400 lines while the gate waits for 501", () => {
+  it("U-CODESIZE-018(c): emits a split candidate from 400 lines while the gate waits for 501", () => {
     const outcome = [399, 400, 401].map((nonblank) => ({
       nonblank,
       candidate: candidates(moduleText(nonblank), "split-module").length,
@@ -51,35 +51,35 @@ describe("code size gate and refactor candidate alignment candidates", () => {
     ]);
   });
 
-  it.fails("U-CODESIZE-019(a): counts comment-split lines the same way at exactly 120 lines", () => {
+  it("U-CODESIZE-019(a): counts comment-split lines the same way at exactly 120 lines", () => {
     const text = `function f() {\n${"x++; /* c\n*/ x++;\n".repeat(60)}}\n`;
     expect.soft(extractScores(text)).toEqual([120]);
     expect.soft(measureCodeFile({ path: PATH, text }).functionExcess).toBe(0);
     expect.soft(gateFunctionLines(text)).toEqual([120]);
   });
 
-  it.fails("U-CODESIZE-019(b): counts comment-split lines the same way at 122 lines", () => {
+  it("U-CODESIZE-019(b): counts comment-split lines the same way at 122 lines", () => {
     const text = `function f() {\n${"x++; /* c\n*/ x++;\n".repeat(61)}}\n`;
     expect.soft(extractScores(text)).toEqual([122]);
     expect.soft(measureCodeFile({ path: PATH, text }).functionExcess).toBe(2);
     expect.soft(gateFunctionLines(text)).toEqual([122]);
   });
 
-  it.fails("U-CODESIZE-019(c): picks up method, constructor and getter bodies on both sides", () => {
+  it("U-CODESIZE-019(c): picks up method, constructor and getter bodies on both sides", () => {
     const text = `class C {\n  m() {\n${body(125)}  }\n  constructor() {\n${body(125)}  }\n  get g() {\n${body(125)}  }\n}\n`;
     expect.soft(extractScores(text)).toEqual([125, 125, 125]);
     expect.soft(measureCodeFile({ path: PATH, text }).functionExcess).toBe(15);
     expect.soft(gateFunctionLines(text)).toEqual([125, 125, 125]);
   });
 
-  it.fails("U-CODESIZE-019(d): picks up an expression-bodied arrow function on both sides", () => {
+  it("U-CODESIZE-019(d): picks up an expression-bodied arrow function on both sides", () => {
     const text = `const f = () => [\n${"1,\n".repeat(123)}];\n`;
     expect.soft(extractScores(text)).toEqual([125]);
     expect.soft(measureCodeFile({ path: PATH, text }).functionExcess).toBe(5);
     expect.soft(gateFunctionLines(text)).toEqual([125]);
   });
 
-  it.fails("U-CODESIZE-019(e): counts nested callbacks inside the outer function on both sides", () => {
+  it("U-CODESIZE-019(e): counts nested callbacks inside the outer function on both sides", () => {
     const text = `function outer() {\n${body(100)}  const cb = () => {\n${body(30)}  };\n}\n`;
     expect.soft(extractScores(text)).toEqual([132]);
     expect.soft(measureCodeFile({ path: PATH, text }).functionExcess).toBe(12);
