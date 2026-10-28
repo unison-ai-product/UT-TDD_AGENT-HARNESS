@@ -25,7 +25,13 @@ import { headSnapshotRoot } from "./support/workspace-roots.ts";
 
 function makeOwnerWritableTree(root: string): void {
   const visit = (path: string): void => {
-    const stat = lstatSync(path);
+    let stat: ReturnType<typeof lstatSync>;
+    try {
+      stat = lstatSync(path);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") return;
+      throw error;
+    }
     if (stat.isSymbolicLink()) return;
 
     const permissions = stat.mode & 0o777;
@@ -232,8 +238,7 @@ describe("Impl-Plan-Trace module ownership candidates (U-IPT-007..011)", () => {
       rmSync(root, { recursive: true, force: true });
     }
     if (mutationRoot) {
-      const copiedDesign = join(mutationRoot, "docs", "design");
-      if (existsSync(copiedDesign)) makeOwnerWritableTree(copiedDesign);
+      makeOwnerWritableTree(join(mutationRoot, "docs", "design"));
       rmSync(mutationRoot, { recursive: true, force: true });
     }
   });
