@@ -4,7 +4,7 @@
 
 | Item | Value |
 |---|---|
-| Source | `C:\Users\micro\ai-dev-kit-vscode` |
+| Source | `C:\Users\<user>\社内の別 repo` |
 | Destination | `vendor/helix-source/` |
 | Purpose | UT-TDD Agent Harness の TS 再実装に使う能力インベントリ / historical reference snapshot |
 | Snapshot policy | 素材としては原則すべて保持し、正本化は段階再実装 / curate で行う。runtime として無修正転用しない |
@@ -69,7 +69,7 @@ Checked absent after copy:
 
 ## Migration Findings
 
-- 1010 files in the snapshot still contain `HELIX`, `helix`, `ai-dev-kit-vscode`, or `C:\Users\micro` references.
+- 1010 files in the snapshot still contain `HELIX`, `helix`, `社内の別 repo`, or `C:\Users\<user>` references.
 - `vendor/helix-source/.gitignore` contains rules that ignore `.helix/**`; if this snapshot is committed and `.helix` template files must be preserved, add them with an explicit force add or move the needed templates into `docs/migration/` or a UT-TDD template path.
 - `.claude/settings.json` and hook scripts still point at the original HELIX runtime and absolute local paths. These are import sources, not ready-to-use UT-TDD configuration.
 

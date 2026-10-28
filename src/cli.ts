@@ -33,7 +33,9 @@ import {
   registerDelegationCommands,
 } from "./cli/delegation.ts";
 import { registerDistributionCommands } from "./cli/distribution.ts";
+import { registerDocSplitCommands } from "./cli/doc-split.ts";
 import { registerFeedbackCommands } from "./cli/feedback.ts";
+import { registerGuardrailCommands } from "./cli/guardrail.ts";
 import { registerPlanAdmissionCommands } from "./cli/plan-admission.ts";
 import { registerPlanAssetCommands } from "./cli/plan-asset.ts";
 import { registerPlanDraftCommand } from "./cli/plan-draft.ts";
@@ -99,7 +101,6 @@ import {
   runNodeBanAudit,
 } from "./lint/bun-permanent-ban.ts";
 import { loadChangedFiles, loadStagedFiles } from "./lint/change-impact.ts";
-import { checkDocSplit } from "./lint/doc-split-inputs.ts";
 import {
   applyDigestAnchorCandidatesToContent,
   nodeHistoryScanDeps,
@@ -2372,38 +2373,8 @@ automation
     }
   });
 
-const guardrail = program.command("guardrail").description("guardrail decision ledger");
-guardrail
-  .command("status")
-  .description("list guardrail decisions from harness.db")
-  .option("--json", "JSON output")
-  .action((opts: { json?: boolean }) => {
-    const db = openHarnessDb(defaultHarnessDbPath(process.cwd()), { repoRoot: process.cwd() });
-    try {
-      const rows = db.prepare("SELECT * FROM guardrail_decisions ORDER BY decided_at").all();
-      if (opts.json) process.stdout.write(`${JSON.stringify(rows, null, 2)}\n`);
-      else {
-        for (const row of rows) {
-          process.stdout.write(
-            `${row.plan_id ?? ""} ${row.guardrail ?? ""}: ${row.decision ?? ""} evidence=${row.evidence_path ?? ""}\n`,
-          );
-        }
-      }
-    } finally {
-      db.close();
-    }
-  });
-
-const docSplit = program.command("doc-split").description("design document split gate (#1032)");
-docSplit
-  .command("check")
-  .description("measure design / test-design documents against the doc-split limits and baseline")
-  .action(() => {
-    const result = checkDocSplit(process.cwd());
-    for (const message of result.messages) process.stdout.write(`${message}\n`);
-    process.exitCode = result.ok ? 0 : 1;
-  });
-
+registerGuardrailCommands(program);
+registerDocSplitCommands(program);
 const issue = program.command("issue").description("external issue dry-run queue");
 issue
   .command("queue")

@@ -130,7 +130,7 @@ not just name-stubbed. (Aligns with the recorded coverage-not-substance risk.)
   `pmo-project-explorer`/`pmo-haiku` have. Optional consistency upgrade; no
   HELIX path leak. (Corrects an over-stated "HELIX text" finding during survey.)
 - **Retire (2):** `pmo-helix-explorer`, `pmo-helix-scout` exist only in the
-  vendor snapshot and target `~/ai-dev-kit-vscode/`. Not transplant candidates;
+  vendor snapshot and target `~/<旧ソース repo>/`. Not transplant candidates;
   no UT-TDD route. No action (they vanish when vendor is removed).
 
 ## 4. Slash commands — net-new stream (highest leverage)

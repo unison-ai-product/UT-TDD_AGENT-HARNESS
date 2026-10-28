@@ -43,7 +43,7 @@ gh run list -R unison-ai-product/UT-TDD_AGENT-HARNESS-Pack --limit 8    # 直近
 ### Important
 
 - README.md:21 の badge が `status: internal (private)` のまま — public MIT repo と矛盾。
-- 個人パス焼き込み: 維持者の Windows ユーザーパス (`C:` 配下ユーザー名 literal) が `src/lint/project-hook.ts:79`・`src/lint/asset-drift.ts:42` (禁止パターン定数、legacy repo 名 `ai-dev-kit-vscode` 含む) と `tests/handover.test.ts:109` ほか fixture 群に残存。guard がこのユーザー名固定のため外部環境で個人パスガードとして機能しない機能欠陥を兼ねる。皮肉にも同 test (:138,175-176) が「no username leak」を仕様として assert しており自己矛盾。
+- 個人パス焼き込み: 維持者の Windows ユーザーパス (`C:` 配下ユーザー名 literal) が `src/lint/project-hook.ts:79`・`src/lint/asset-drift.ts:42` (禁止パターン定数、legacy repo 名 `社内の別 repo` 含む) と `tests/handover.test.ts:109` ほか fixture 群に残存。guard がこのユーザー名固定のため外部環境で個人パスガードとして機能しない機能欠陥を兼ねる。皮肉にも同 test (:138,175-176) が「no username leak」を仕様として assert しており自己矛盾。
 - `sync-pack` (`src/cli.ts` collectDistributionCandidatePaths) が git HEAD でなく **working tree をファイルシステム走査でコピー** (clean-tree 確認なし、manifest は gitHead() を名乗る)。hybrid 運用 (相手 runtime の未コミット編集が常在) では公開 Pack への混入リスクが構造的。今回 sync 分は全 hash 照合で非発現を確認済み。また pack `9ec7d6c` の commit message が `chore: sync clean pack <source-sha>` 規約を外れ source SHA 未記録 (provenance が全 tree 照合でしか復元できない)。
 - 公開 governance/process doc に Pack 非同梱物へのデッドリンク: `recovery-workflow.md:73`、`process/modes/recovery.md:130-132`、`document-system-map.md:80`、`concept_v3.1.md:1131` (計 6+)。`docs/governance/README.md:12` の read order が非同梱 `../adr/ADR-001` を指す。`repository-structure.md` は source repo tree を「正本」として記述。
 - Pack CI が ubuntu-latest のみ — Windows-first 主張・`.cmd` spawn の既知 CI 盲点 (A-147) と不整合。

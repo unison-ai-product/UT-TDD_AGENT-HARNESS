@@ -1,7 +1,7 @@
 $ bun src/cli.ts db rebuild --json
 {
   "ok": true,
-  "path": "C:\\Users\\micro\\AppData\\Local\\Temp\\claude\\wt-issue-80\\.ut-tdd\\harness.db",
+  "path": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude\\wt-issue-80\\.ut-tdd\\harness.db",
   "rowCounts": {
     "plan_registry": 812,
     "artifact_registry": 2774,

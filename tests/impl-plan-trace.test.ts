@@ -2,7 +2,17 @@
 // src module/CLI/lint/doctor check が PLAN generates に紐づくか。NEW orphan を fail-close。
 // design-source traceで3件をback-fillした後のknown-debtは5件。IMP-087の4件もREVERSE-40へback-fill済。
 
-import { cpSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  cpSync,
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -12,6 +22,30 @@ import {
   loadImplPlanTraceInput,
 } from "../src/lint/impl-plan-trace.ts";
 import { headSnapshotRoot } from "./support/workspace-roots.ts";
+
+function makeOwnerWritableTree(root: string): void {
+  const visit = (path: string): void => {
+    let stat: ReturnType<typeof lstatSync>;
+    try {
+      stat = lstatSync(path);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") return;
+      throw error;
+    }
+    if (stat.isSymbolicLink()) return;
+
+    const permissions = stat.mode & 0o777;
+    if (stat.isDirectory()) {
+      chmodSync(path, permissions | 0o700);
+      for (const entry of readdirSync(path)) visit(join(path, entry));
+      return;
+    }
+
+    chmodSync(path, permissions | 0o200);
+  };
+
+  visit(root);
+}
 
 function makeImplPlanTraceFixture(options: {
   sourcePaths: string[];
@@ -203,7 +237,10 @@ describe("Impl-Plan-Trace module ownership candidates (U-IPT-007..011)", () => {
     for (const root of [moduleOwnerRoot, unownedModuleRoot, planOnlyRoot, topLevelRoot]) {
       rmSync(root, { recursive: true, force: true });
     }
-    if (mutationRoot) rmSync(mutationRoot, { recursive: true, force: true });
+    if (mutationRoot) {
+      makeOwnerWritableTree(join(mutationRoot, "docs", "design"));
+      rmSync(mutationRoot, { recursive: true, force: true });
+    }
   });
 
   it("U-IPT-007: the real detached repository is owned with an empty baseline", () => {

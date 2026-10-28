@@ -33,6 +33,7 @@ import {
   type ReviewCustodyRequest,
 } from "../src/feedback/review-verdict-custody.ts";
 import { type AssetDriftInput, analyzeAssetDrift } from "../src/lint/asset-drift.ts";
+import { LEGACY_SOURCE_REPO } from "../src/lint/personal-path.ts";
 import {
   analyzeHookParity,
   analyzeRuleDrift,
@@ -446,7 +447,9 @@ describe("issue #1002 agent-guard と委譲の境界 (Red)", () => {
     expect(inert.violations).toEqual([]);
     expect(inert.ok).toBe(true);
     const residue = analyzeAssetDrift(
-      noAllowlist([{ path: "skills/b.md", type: "skill", id: "b", text: "see ai-dev-kit-vscode" }]),
+      noAllowlist([
+        { path: "skills/b.md", type: "skill", id: "b", text: `see ${LEGACY_SOURCE_REPO}` },
+      ]),
     );
     expect(residue.ok).toBe(false);
     expect(residue.violations.map((v) => v.kind)).toContain("legacy-source-path-residue");
