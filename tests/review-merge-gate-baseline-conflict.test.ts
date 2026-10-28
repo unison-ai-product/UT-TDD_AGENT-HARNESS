@@ -342,7 +342,7 @@ describe("review merge gate baseline conflict (Issue #1423)", { timeout: 120_000
   );
 
   it.fails(
-    "CANDIDATE-U-RVMG-049: git fetch の失敗は baseline_conflict_unknown で deny し緑にならない",
+    "CANDIDATE-U-RVMG-049: git fetch の失敗 (error) は baseline_conflict_unknown で deny し緑にならない",
     withFixture(untouched, (fx) => {
       git(fx.work, "remote", "set-url", "origin", join(fx.base, "missing-origin.git"));
       expectUnknownDeny(runMerge(fx));
@@ -350,7 +350,7 @@ describe("review merge gate baseline conflict (Issue #1423)", { timeout: 120_000
   );
 
   it.fails(
-    "CANDIDATE-U-RVMG-049: git diff の失敗 (PR head が repo に無い) は baseline_conflict_unknown で deny する",
+    "CANDIDATE-U-RVMG-049: git diff の失敗 (error: PR head が repo に無い) は baseline_conflict_unknown で deny する",
     withFixture(untouched, (fx) => {
       expectUnknownDeny(runMerge(fx, "c".repeat(40)));
     }),
