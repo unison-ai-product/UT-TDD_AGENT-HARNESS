@@ -270,6 +270,25 @@ function gateRunProjection(repoRoot: string): {
   }
 }
 
+function gateRunTransactionPreimage(repoRoot: string): {
+  gateRuns: Record<string, unknown>[];
+  routineGateWorkflows: Record<string, unknown>[];
+} {
+  const db = openHarnessDb(defaultHarnessDbPath(repoRoot), { repoRoot });
+  try {
+    return {
+      gateRuns: db.prepare("SELECT * FROM gate_runs ORDER BY gate_id, gate_run_id").all(),
+      routineGateWorkflows: db
+        .prepare(
+          "SELECT * FROM workflow_runs WHERE workflow = 'routine-gate' ORDER BY phase, workflow_run_id",
+        )
+        .all(),
+    };
+  } finally {
+    db.close();
+  }
+}
+
 function observeIsolatedFixture<T>(
   prefix: string,
   observe: (repoRoot: string) => T,
@@ -767,23 +786,31 @@ describe("gate-run-coverage doctor", () => {
     ]);
   });
 
-  it.fails("CANDIDATE-U-DOCTOR-GATE-04 adds new evidence while checking all existing rows", () => {
+  it.fails("CANDIDATE-U-DOCTOR-GATE-04 rolls back additions and deletions when an existing row mismatches", () => {
+    const mismatchedGateRunId = "gate-run:rollback-mismatched-existing";
+    const removedEvidenceGateRunId = "gate-run:rollback-removed-evidence";
+    const addedEvidenceGateRunId = "gate-run:rollback-added-evidence";
     const fixture = observeIsolatedFixture("ut-tdd-doctor-gate-run-stale-", (root) => {
-      const firstGateRunId = "gate-run:append-first";
-      const secondGateRunId = "gate-run:append-second";
       const planId = "PLAN-GATE-COVERAGE-STALE";
       writePlanFixture(root, planId);
       writeGateRunEvidence(root, {
-        gateRunId: firstGateRunId,
+        gateRunId: mismatchedGateRunId,
         gateId: "G4",
         planId,
+        evidenceFileName: "gate-run-existing.json",
+      });
+      writeGateRunEvidence(root, {
+        gateRunId: removedEvidenceGateRunId,
+        gateId: "G5",
+        planId,
+        evidenceFileName: "gate-run-to-remove.json",
       });
       const baseline = checkGateRunCoverage(root);
       if (!baseline.ok) return { ready: false as const };
-      const firstProjection = gateRunProjection(root);
+      const baselineProjection = gateRunProjection(root);
       if (
-        firstProjection.gateRuns.length !== 1 ||
-        firstProjection.routineGateWorkflows.length !== 1
+        baselineProjection.gateRuns.length !== 2 ||
+        baselineProjection.routineGateWorkflows.length !== 2
       ) {
         return { ready: false as const };
       }
@@ -791,41 +818,52 @@ describe("gate-run-coverage doctor", () => {
       const db = openHarnessDb(defaultHarnessDbPath(root), { repoRoot: root });
       try {
         db.prepare("UPDATE gate_runs SET status = 'failed' WHERE gate_run_id = ?").run(
-          firstGateRunId,
+          mismatchedGateRunId,
         );
       } finally {
         db.close();
       }
+      rmSync(join(root, ".ut-tdd", "gate_runs", "gate-run-to-remove.json"));
 
       writeGateRunEvidence(root, {
-        gateRunId: secondGateRunId,
-        gateId: "G5",
+        gateRunId: addedEvidenceGateRunId,
+        gateId: "G6",
         planId,
-        evidenceFileName: "gate-run-second.json",
+        evidenceFileName: "gate-run-to-add.json",
       });
 
+      const beforeCheck = gateRunTransactionPreimage(root);
       const result = checkGateRunCoverage(root);
-      const projection = gateRunProjection(root);
-      return { ready: true as const, result, projection };
+      const afterCheck = gateRunTransactionPreimage(root);
+      return { ready: true as const, result, beforeCheck, afterCheck };
     });
     if (!fixture.ok || !fixture.value.ready) return;
 
     expect(fixture.value.result.ok).toBe(false);
-    expect(fixture.value.projection.gateRuns).toEqual([
-      expect.objectContaining({
-        gate_run_id: "gate-run:append-first",
-        gate_id: "G4",
-        status: "failed",
-      }),
-    ]);
-    expect(fixture.value.projection.gateRuns).not.toEqual(
-      expect.arrayContaining([expect.objectContaining({ gate_run_id: "gate-run:append-second" })]),
+    expect(fixture.value.afterCheck).toEqual(fixture.value.beforeCheck);
+    expect(fixture.value.beforeCheck.gateRuns).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          gate_run_id: mismatchedGateRunId,
+          gate_id: "G4",
+          status: "failed",
+        }),
+        expect.objectContaining({
+          gate_run_id: removedEvidenceGateRunId,
+          gate_id: "G5",
+        }),
+      ]),
     );
-    expect(fixture.value.projection.routineGateWorkflows).toHaveLength(1);
-    expect(fixture.value.projection.routineGateWorkflows[0]).toMatchObject({
-      workflow_run_id: stableId("gate-workflow", "gate-run:append-first"),
-      phase: "G4",
-    });
+    expect(fixture.value.afterCheck.gateRuns).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ gate_run_id: addedEvidenceGateRunId })]),
+    );
+    expect(fixture.value.afterCheck.routineGateWorkflows).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          workflow_run_id: stableId("gate-workflow", addedEvidenceGateRunId),
+        }),
+      ]),
+    );
   });
 
   it.fails("CANDIDATE-U-DOCTOR-GATE-03 removes the DB-only gate/workflow pair after evidence disappears", () => {
