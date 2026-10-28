@@ -58,8 +58,7 @@ const STATIC_ENTRIES = ["src/cli.ts", ...HOOK_ENTRIES, ...SCRIPT_ENTRIES];
 const FIXTURE_ROOTS: string[] = [];
 
 afterEach(() => {
-  for (const fixtureRoot of FIXTURE_ROOTS.splice(0))
-    removeTestTree(fixtureRoot);
+  for (const fixtureRoot of FIXTURE_ROOTS.splice(0)) removeTestTree(fixtureRoot);
 });
 
 async function loadWindowsHide(): Promise<WindowsHideModule> {
