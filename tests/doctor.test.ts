@@ -752,6 +752,14 @@ describe("gate-run-coverage doctor", () => {
         }
 
         const projection = gateRunProjection(root);
+        if (
+          projection.gateRuns.length !== 1 ||
+          projection.routineGateWorkflows.length !== 1 ||
+          !projection.gateRuns[0] ||
+          !projection.routineGateWorkflows[0]
+        ) {
+          return { ready: false as const };
+        }
         const result = checkGateRunCoverage(root);
         return { ready: true as const, projection, result };
       },
