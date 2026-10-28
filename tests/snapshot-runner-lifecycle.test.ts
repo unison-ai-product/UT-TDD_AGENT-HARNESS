@@ -1,5 +1,9 @@
+import { spawnSync } from "node:child_process";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { removeTestTree } from "./support/temp-tree.ts";
 
 /*
  * Contract-first Red (issue #1129): the subject module is intentionally absent in this slice.
@@ -63,6 +67,178 @@ interface LeaseApi {
   }): "stopped" | "failed" | "survivors";
 }
 
+interface GitSourceFixture {
+  root: string;
+  head: string;
+}
+
+interface SnapshotStageObservation {
+  root: string;
+  staged: string | null;
+  unstaged: string | null;
+  untracked: boolean;
+  ignored: boolean;
+  packManifest: boolean;
+}
+
+interface SnapshotRunnerCapture {
+  threw: boolean;
+  stdout: string;
+  stderr: string;
+  exitCodeBefore: string | number | undefined;
+  exitCodeAfter: string | number | undefined;
+  stageCalls: string[];
+  snapshotStages: SnapshotStageObservation[];
+}
+
+function gitOk(cwd: string, args: string[]): boolean {
+  const result = spawnSync("git", args, { cwd, encoding: "utf8", windowsHide: true });
+  return result.status === 0 && !result.error;
+}
+
+function createGitSourceFixture(): GitSourceFixture | null {
+  let root: string | undefined;
+  let ready = false;
+  try {
+    root = mkdtempSync(join(tmpdir(), "ut-tdd-snapshot-source-red-"));
+    if (!gitOk(root, ["init"])) return null;
+    writeFileSync(join(root, ".gitignore"), "ignored.txt\n");
+    writeFileSync(join(root, "staged.txt"), "base staged\n");
+    writeFileSync(join(root, "unstaged.txt"), "base unstaged\n");
+    if (!gitOk(root, ["add", "--all"])) return null;
+    if (
+      !gitOk(root, [
+        "-c",
+        "user.name=UT-TDD fixture",
+        "-c",
+        "user.email=ut-tdd-fixture@example.invalid",
+        "commit",
+        "-m",
+        "snapshot source fixture",
+      ])
+    )
+      return null;
+    const revision = spawnSync("git", ["rev-parse", "HEAD"], {
+      cwd: root,
+      encoding: "utf8",
+      windowsHide: true,
+    });
+    if (revision.status !== 0 || revision.error) return null;
+    ready = true;
+    return { root, head: revision.stdout.trim() };
+  } catch {
+    return null;
+  } finally {
+    if (root && !ready) removeTestTree(root);
+  }
+}
+
+function snapshotStageObservation(root: string): SnapshotStageObservation {
+  const read = (name: string): string | null => {
+    try {
+      return readFileSync(join(root, name), "utf8");
+    } catch {
+      return null;
+    }
+  };
+  return {
+    root,
+    staged: read("staged.txt"),
+    unstaged: read("unstaged.txt"),
+    untracked: existsSync(join(root, "untracked.txt")),
+    ignored: existsSync(join(root, "ignored.txt")),
+    packManifest: existsSync(join(root, "package.json")),
+  };
+}
+
+async function runSnapshotRunnerWithStageStubs(
+  args: string[],
+  repoRoot: string,
+): Promise<SnapshotRunnerCapture> {
+  const stdout: string[] = [];
+  const stderr: string[] = [];
+  const stageCalls: string[] = [];
+  const snapshotStages: SnapshotStageObservation[] = [];
+  const exitCodeBefore = process.exitCode;
+  const childProcess = await vi.importActual<typeof import("node:child_process")>("node:child_process");
+  const mockSpawnSync = ((
+    command: string,
+    commandArgs: string[] = [],
+    options?: { cwd?: string },
+  ) => {
+    if (command === "git")
+      return childProcess.spawnSync(command, commandArgs, options as never);
+    const rendered = commandArgs.join(" ");
+    stageCalls.push(rendered);
+    if (commandArgs[0]?.endsWith("npm-cli.js"))
+      snapshotStages.push(snapshotStageObservation(options?.cwd ?? repoRoot));
+    return {
+      status: 0,
+      stdout: command === "whoami" ? "fixture-user\n" : "",
+      stderr: "",
+      error: undefined,
+      signal: null,
+      pid: process.pid,
+      output: ["", ""],
+    };
+  }) as never;
+  vi.doMock("node:child_process", () => ({ ...childProcess, spawnSync: mockSpawnSync }));
+  vi.resetModules();
+  const stdoutWrite = vi.spyOn(process.stdout, "write");
+  const stderrWrite = vi.spyOn(process.stderr, "write");
+  stdoutWrite.mockImplementation(((chunk: unknown) => {
+    stdout.push(String(chunk));
+    return true;
+  }) as never);
+  stderrWrite.mockImplementation(((chunk: unknown) => {
+    stderr.push(String(chunk));
+    return true;
+  }) as never);
+  let threw = false;
+  try {
+    const { runSnapshotTests } = await import("../scripts/run-vitest-snapshot.ts");
+    runSnapshotTests(args, repoRoot, () => null);
+  } catch {
+    threw = true;
+  } finally {
+    stdoutWrite.mockRestore();
+    stderrWrite.mockRestore();
+    vi.doUnmock("node:child_process");
+    vi.resetModules();
+  }
+  return {
+    threw,
+    stdout: stdout.join(""),
+    stderr: stderr.join(""),
+    exitCodeBefore,
+    exitCodeAfter: process.exitCode,
+    stageCalls,
+    snapshotStages,
+  };
+}
+
+async function tryRunSnapshotRunnerWithStageStubs(
+  args: string[],
+  repoRoot: string,
+): Promise<SnapshotRunnerCapture | null> {
+  try {
+    return await runSnapshotRunnerWithStageStubs(args, repoRoot);
+  } catch {
+    return null;
+  }
+}
+
+function snapshotRunnerCompleted(capture: SnapshotRunnerCapture): boolean {
+  return (
+    !capture.threw &&
+    capture.exitCodeAfter === capture.exitCodeBefore &&
+    capture.snapshotStages.length > 0 &&
+    capture.stageCalls.some((call) => call.includes("npm-cli.js ci")) &&
+    capture.stageCalls.some((call) => call.includes("src/cli.ts db rebuild")) &&
+    capture.stageCalls.some((call) => call.includes("vitest.mjs run"))
+  );
+}
+
 async function loadSubject(): Promise<LeaseApi> {
   // Non-literal specifier so this file transforms before the production subject exists.
   // No repository path is read here (test-repository-isolation forbids import.meta / cwd roots).
@@ -100,7 +276,7 @@ const plan = (
   platform: "win32" | "posix" = "win32",
 ) => api.planSweep({ leases, table, tmpRoot: TMP, platform });
 
-describe("snapshot runner lifecycle L7 candidate Red (issue #1129)", () => {
+describe("snapshot runner lifecycle L7 candidate Red (issue #1129 / #1415)", () => {
   it.fails("CANDIDATE-U-SNAPLC-001: liveness uses pid and startToken, unknown is not dead", async () => {
     const api = await loadSubject();
     expect(api.classifyLiveness(id(1), id(1))).toBe("alive");
@@ -292,5 +468,100 @@ describe("snapshot runner lifecycle L7 candidate Red (issue #1129)", () => {
     expect(at("query_failed", 16)).toBe("stop_parent_unobservable");
     expect(at(null, 15)).toBe("stop_parent_lost");
     expect(at(owner, 15)).toBe("continue");
+  });
+
+  it.fails("CANDIDATE-U-SNAPLC-022: dirty Git runner warns and continues on the committed snapshot", async () => {
+    let fixture: GitSourceFixture | null;
+    try {
+      fixture = createGitSourceFixture();
+    } catch {
+      return;
+    }
+    if (!fixture) return;
+
+    try {
+      let setupOkay = true;
+      try {
+        writeFileSync(join(fixture.root, "staged.txt"), "staged edit\n");
+        setupOkay = gitOk(fixture.root, ["add", "staged.txt"]);
+        writeFileSync(join(fixture.root, "unstaged.txt"), "unstaged edit\n");
+        writeFileSync(join(fixture.root, "untracked.txt"), "untracked edit\n");
+        writeFileSync(join(fixture.root, "ignored.txt"), "ignored edit\n");
+      } catch {
+        setupOkay = false;
+      }
+      if (!setupOkay) return;
+
+      const captured = await tryRunSnapshotRunnerWithStageStubs([], fixture.root);
+      if (!captured || !snapshotRunnerCompleted(captured)) return;
+      const executionSnapshot = captured.snapshotStages[0];
+      if (!executionSnapshot) return;
+
+      expect(executionSnapshot.staged).toBe("base staged\n");
+      expect(executionSnapshot.unstaged).toBe("base unstaged\n");
+      expect(executionSnapshot.untracked).toBe(false);
+      expect(executionSnapshot.ignored).toBe(false);
+      expect(captured.stderr).toContain(fixture.head);
+      expect(captured.stderr).toMatch(/(?:作業\s*(?:tree|ツリー)|working tree)/i);
+      expect(captured.stderr).toMatch(/(?:ではなく|でなく|ではない|対象外|not|rather than|instead of)/i);
+      expect(captured.stderr).toContain("staged.txt");
+      expect(captured.stderr).toContain("unstaged.txt");
+      expect(captured.stderr).toContain("untracked.txt");
+      expect(captured.stderr).not.toContain("ignored.txt");
+    } finally {
+      removeTestTree(fixture.root);
+    }
+  });
+
+  it.fails("CANDIDATE-U-SNAPLC-023: non-Git Pack runner names copy source and path", async () => {
+    let parent: string;
+    try {
+      parent = mkdtempSync(join(tmpdir(), "ut-tdd-snapshot-copy-red-"));
+    } catch {
+      return;
+    }
+
+    try {
+      let pack: string;
+      try {
+        if (!gitOk(parent, ["init"])) return;
+        pack = join(parent, "pack");
+        mkdirSync(pack);
+        writeFileSync(join(pack, "package.json"), "{}\n");
+      } catch {
+        return;
+      }
+
+      const captured = await tryRunSnapshotRunnerWithStageStubs([], pack);
+      if (!captured || !snapshotRunnerCompleted(captured)) return;
+      if (!captured.snapshotStages[0]?.packManifest) return;
+
+      const output = `${captured.stdout}${captured.stderr}`.replaceAll("\\", "/");
+      expect(output).toContain("source: copy (commit なし)");
+      expect(output).toContain(pack.replaceAll("\\", "/"));
+    } finally {
+      removeTestTree(parent);
+    }
+  });
+
+  it.fails("CANDIDATE-U-SNAPLC-024: clean Git runner output identifies the commit SHA", async () => {
+    let fixture: GitSourceFixture | null;
+    try {
+      fixture = createGitSourceFixture();
+    } catch {
+      return;
+    }
+    if (!fixture) return;
+
+    try {
+      const captured = await tryRunSnapshotRunnerWithStageStubs([], fixture.root);
+      if (!captured || !snapshotRunnerCompleted(captured)) return;
+      const executionSnapshot = captured.snapshotStages[0];
+      if (!executionSnapshot || executionSnapshot.staged !== "base staged\n") return;
+
+      expect(`${captured.stdout}${captured.stderr}`).toContain(fixture.head);
+    } finally {
+      removeTestTree(fixture.root);
+    }
   });
 });
