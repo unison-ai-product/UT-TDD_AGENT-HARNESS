@@ -576,7 +576,7 @@ D3d は custody を受理できる。
   唯一のartifact provenance verifierとしてapplication portへ隔離する境界である。
 - D3dの新規domainはmechanical envelopeのstrict decode、GitHub factsの二重照合、judgmentと
   envelopeのAND評価に限定する。GitHub取得、署名、D1判定の責務をdomainへ複製しない。
-- RetryYN/HELIX-HARNESS `main@1ee1bb5bd55078252490d5e3f3f70d7363a00f4a`は、closed
+- 社内の別 repo `main@1ee1bb5bd55078252490d5e3f3f70d7363a00f4a`は、closed
   provider enum、judgment/provenance分離、exact-subject freshness、typed failure、bounded retryの
   参考に限る。`.helix`、HELIX CLI/env/DB/runtime、local authenticity方式はUT-TDDへ導入しない。
 

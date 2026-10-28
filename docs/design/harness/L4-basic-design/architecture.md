@@ -151,7 +151,7 @@ data.md の 5 集約 (構造) を src/ building block (実行) に配置する�
 
 | 検査項目 (inventory §1 / ADR-004 由来) | fail-close 条件 |
 |---|---|
-| legacy absolute path residue | `.claude/agents/*.md` が `~/ai-dev-kit-vscode/` / `C:\Users\micro` を含む → fail |
+| legacy absolute path residue | `.claude/agents/*.md` が `~/社内の別 repo/` / `C:\Users\micro` を含む → fail |
 | legacy runtime command direct call | subagent 本文に legacy runtime command direct call が残存 → fail |
 | `docs/skills/` 空 (curate 未着手) | skill pack が `.gitkeep` のみ → fail (curate 完了を強制) |
 | roster ↔ guard allowlist 整合 | `.claude/agents/*.md` の model family と agent-guard allowlist (正本は `SUBAGENT_ALLOWLIST`、`src/runtime/agent-guard-policy.ts`。件数はそこに従う) が乖離 → fail |

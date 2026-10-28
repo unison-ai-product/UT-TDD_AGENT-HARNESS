@@ -895,7 +895,7 @@ oracle: `tests/change-impact.test.ts` の describe `change-impact lint` 内の 4
 | | `bun-runtime-spawn` | `src/` / `.claude/hooks/` / `scripts/` / `tests/` で bun の child-process 起動 (`spawn*` / `exec*` への `"bun"`、`findBun(`、`?? "bun"`、`"/c", "bun"`、`["bun", [`、`exec bun`) |
 | | `bun-module-import` | 同範囲で `"bun:<英小文字>"` 形の import 文字列 |
 | | `bun-global-reference` | 同範囲で `Bun.` / `Bun[` / `Bun?.` / `Bun?.[` (optional chaining を含む) / `typeof Bun` / `).Bun` / `globalThis.Bun` / `process.versions.bun` |
-| | `local-absolute-path` | `tests/` 以外で利用者ローカルの絶対 path (`<ドライブ>:\Users\`、`/home/`、`/Users/`、`~/ai-dev-kit-vscode`) を含む |
+| | `local-absolute-path` | `tests/` 以外で利用者ローカルの絶対 path (`<ドライブ>:\Users\`、`/home/`、`/Users/`、`~/社内の別 repo`) を含む |
 | | `legacy-runtime-marker` | `src/` / `.claude/hooks/` / `scripts/` が旧 runtime の env / 状態ディレクトリ / コマンド / agent 接頭辞の marker を含む |
 | `src/state-db/index.ts` | `sqlite-driver-fallback-missing` | `node:sqlite` の文字列を含まない (`bun:sqlite` は任意の残存) |
 
