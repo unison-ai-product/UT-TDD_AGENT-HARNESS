@@ -85,6 +85,18 @@ repositoryReadContracts["tests/code-size-integration.test.ts"] = {
     "code-size candidate 016/017 inspect the execution snapshot baseline and use temporary repositories for append and CLI state checks",
 };
 
+repositoryReadContracts["tests/privacy-scan-integration.test.ts"] = {
+  mode_calls: { isolated_fixture: 5 },
+  reason:
+    "privacy-scan candidate 015/016 inspect the execution snapshot and its workflows and use temporary repositories for CLI and distribution checks",
+};
+
+repositoryReadContracts["tests/privacy-scan-distribution.test.ts"] = {
+  mode_calls: { isolated_fixture: 1 },
+  reason:
+    "privacy-scan candidate 014/018 copy the clean Pack artifact set of the execution snapshot into temporary roots",
+};
+
 repositoryReadContracts["tests/design-root.test.ts"] = {
   mode: "head_snapshot",
   calls: 1,
