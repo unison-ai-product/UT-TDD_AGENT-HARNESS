@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -14,6 +14,7 @@ import {
   parseReviewPlan,
 } from "../src/lint/review-evidence.ts";
 import { frontmatterSchema } from "../src/schema/frontmatter.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 
 /** review-evidence lint (IMP-071 presence + IMP-076 cross-review semantic) — review 前置証跡の機械強制。 */
 
@@ -64,7 +65,7 @@ describe("green command evidence (IMP-108)", () => {
     try {
       expect(loadReviewPlans(root)).toEqual([]);
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 

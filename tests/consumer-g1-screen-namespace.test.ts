@@ -29,7 +29,7 @@ vi.mock("node:fs", async (importOriginal) => {
   };
 });
 
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { evaluateStaticGate } from "../src/gate/static.ts";
@@ -41,6 +41,7 @@ import {
   loadG1TraceDocs,
 } from "../src/lint/g1-trace.ts";
 import { lintPlanWithGate } from "../src/plan/lint.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 
 const TEMPLATE_SLOTS = [
   [
@@ -573,5 +574,5 @@ describe("consumer G1 screen namespace (issue #1273)", () => {
 });
 
 afterAll(() => {
-  for (const root of temporaryRoots.splice(0)) rmSync(root, { recursive: true, force: true });
+  for (const root of temporaryRoots.splice(0)) removeTestTree(root);
 });

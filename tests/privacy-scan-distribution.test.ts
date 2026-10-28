@@ -6,7 +6,6 @@ import {
   mkdtempSync,
   readdirSync,
   readFileSync,
-  rmSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -17,6 +16,7 @@ import {
   cleanDistributionSourcePath,
   transformCleanDistributionArtifact,
 } from "../src/setup/distribution.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 
 // L7 §2: no source line may match the email shape, so addresses are joined at runtime.
 const at = "@";
@@ -116,7 +116,7 @@ beforeAll(() => {
 });
 
 afterAll(() => {
-  if (scratchRoot) rmSync(scratchRoot, { recursive: true, force: true });
+  if (scratchRoot) removeTestTree(scratchRoot);
 });
 
 describe("privacy scan candidate oracles (distribution)", () => {
