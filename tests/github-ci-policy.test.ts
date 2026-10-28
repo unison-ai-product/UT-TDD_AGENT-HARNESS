@@ -268,25 +268,19 @@ describe("Issue #1411 Node pin Red oracles", () => {
   if (!reviewAttestation || !packTemplate)
     throw new Error("Issue #1411 requires the source attestation workflow and Pack template");
 
-  it.fails(
-    "CANDIDATE-U-TOOLPIN-1411-001: review-attestation pins the reviewed Node version",
-    () => {
-      expect(nodeVersionFromWorkflow(reviewAttestation.content)).toBe("24.22.1");
-    },
-  );
+  it.fails("CANDIDATE-U-TOOLPIN-1411-001: review-attestation pins the reviewed Node version", () => {
+    expect(nodeVersionFromWorkflow(reviewAttestation.content)).toBe("24.22.1");
+  });
 
-  it.fails(
-    "CANDIDATE-U-TOOLPIN-1411-002: Pack policy fixture mirrors the template's reviewed Node pin",
-    () => {
-      const reviewedNodeVersion = "24.22.1";
-      const fixtureVersion = nodeVersionFromWorkflow(PACK_WORKFLOW);
-      const templateVersion = nodeVersionFromWorkflow(packTemplate.content);
+  it.fails("CANDIDATE-U-TOOLPIN-1411-002: Pack policy fixture mirrors the template's reviewed Node pin", () => {
+    const reviewedNodeVersion = "24.22.1";
+    const fixtureVersion = nodeVersionFromWorkflow(PACK_WORKFLOW);
+    const templateVersion = nodeVersionFromWorkflow(packTemplate.content);
 
-      expect(templateVersion).toBe(reviewedNodeVersion);
-      expect(fixtureVersion).toBe(reviewedNodeVersion);
-      expect(fixtureVersion).toBe(templateVersion);
-    },
-  );
+    expect(templateVersion).toBe(reviewedNodeVersion);
+    expect(fixtureVersion).toBe(reviewedNodeVersion);
+    expect(fixtureVersion).toBe(templateVersion);
+  });
 });
 
 describe("github-ci-policy lint", () => {
