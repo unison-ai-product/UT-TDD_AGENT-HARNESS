@@ -97,7 +97,7 @@
   "tests/forward-escape-issue-contract.test.ts": { "lines": 816, "functionExcess": null },
   "tests/forward/fsm.test.ts": { "lines": 626, "functionExcess": null },
   "tests/frontmatter.test.ts": { "lines": 667, "functionExcess": null },
-  "tests/github-ci-policy.test.ts": { "lines": 1542, "functionExcess": null },
+  "tests/github-ci-policy.test.ts": { "lines": 1570, "functionExcess": null },
   "tests/github-forward-store.test.ts": { "lines": 1056, "functionExcess": null },
   "tests/github-repository-bindings.test.ts": { "lines": 1216, "functionExcess": null },
   "tests/l6-completion.test.ts": { "lines": 547, "functionExcess": null },
