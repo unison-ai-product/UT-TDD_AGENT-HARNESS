@@ -345,11 +345,11 @@ describe("loadRelationGraphSourceSet", () => {
         path: "docs/process/modes/refactor.md",
       });
       const agentDoc = sourceSet.designDocs?.find(
-        (d) => d.path === ".claude/agents/refactor-scout.md",
+        (d) => d.path === ".claude/commands/build.md",
       );
       expect(agentDoc).toMatchObject({
-        id: ".claude/agents/refactor-scout.md",
-        path: ".claude/agents/refactor-scout.md",
+        id: ".claude/commands/build.md",
+        path: ".claude/commands/build.md",
       });
       const skillMapDoc = sourceSet.designDocs?.find((d) => d.path === "skills/SKILL_MAP.md");
       expect(skillMapDoc).toMatchObject({
@@ -467,12 +467,12 @@ describe("loadRelationGraphSourceSet", () => {
       expect(processImpact.findings.map((f) => f.code)).not.toContain("missing-projection");
 
       const agentImpact = analyzeRelationImpact({
-        changedPaths: [".claude/agents/refactor-scout.md"],
+        changedPaths: [".claude/commands/build.md"],
         projection,
       });
       expect(agentImpact.ok).toBe(true);
       expect(agentImpact.changedNodes.map((n) => n.id)).toContain(
-        "design:.claude/agents/refactor-scout.md",
+        "design:.claude/commands/build.md",
       );
       expect(agentImpact.findings.map((f) => f.code)).not.toContain("missing-projection");
 
@@ -662,12 +662,12 @@ describe("relation graph real-repo loader (PLAN-L7-142 stale-edge fence)", () =>
     const requirementNodes = projection.nodes.filter((n) => n.kind === "requirement");
     expect(requirementNodes.length).toBeGreaterThan(0);
     const agentImpact = analyzeRelationImpact({
-      changedPaths: [".claude/agents/refactor-scout.md"],
+      changedPaths: [".claude/commands/build.md"],
       projection,
     });
     expect(agentImpact.ok).toBe(true);
     expect(agentImpact.changedNodes.map((n) => n.id)).toContain(
-      "design:.claude/agents/refactor-scout.md",
+      "design:.claude/commands/build.md",
     );
     expect(agentImpact.findings.map((f) => f.code)).not.toContain("missing-projection");
     for (const path of [".claude/commands/ut-tdd-status.md", ".claude/commands/ut-tdd-test.md"]) {
@@ -684,12 +684,12 @@ describe("relation graph real-repo loader (PLAN-L7-142 stale-edge fence)", () =>
     expect(skillMapImpact.changedNodes.map((n) => n.id)).toContain("design:skills/SKILL_MAP.md");
     expect(skillMapImpact.findings.map((f) => f.code)).not.toContain("missing-projection");
     const adapterAgentImpact = analyzeRelationImpact({
-      changedPaths: ["docs/templates/adapter/.claude/agents/ut-tdd-tl.md"],
+      changedPaths: ["docs/templates/adapter/.claude/commands/build.md"],
       projection,
     });
     expect(adapterAgentImpact.ok).toBe(true);
     expect(adapterAgentImpact.changedNodes.map((n) => n.id)).toContain(
-      "design:docs/templates/adapter/.claude/agents/ut-tdd-tl.md",
+      "design:docs/templates/adapter/.claude/commands/build.md",
     );
     expect(adapterAgentImpact.findings.map((f) => f.code)).not.toContain("missing-projection");
     const adapterCommandImpact = analyzeRelationImpact({
