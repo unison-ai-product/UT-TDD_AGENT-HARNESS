@@ -92,6 +92,8 @@ describe("loadLintWiringInput (live repo regression fence)", () => {
       "consumer-trace",
       "forward-convergence",
       "plan-supersession",
+      "privacy-scan",
+      "privacy-scan-inputs",
       "scrum-reverse",
       "tool-adapter",
     ]);
