@@ -31,7 +31,7 @@ const analyze = (
   sources: readonly CodeSizeSource[],
   baseline: CodeSizeBaseline = {},
   previousBaseline: CodeSizeBaseline | null = null,
-  mergeBaseMeasures: CodeSizeBaseline | null = null,
+  mergeBaseMeasures: CodeSizeBaseline | null = {},
   renames: readonly CodeRename[] = [],
 ) => analyzeCodeSize({ sources, baseline, previousBaseline, mergeBaseMeasures, renames });
 const reasons = (result: CodeSizeResult, kind: string) =>
@@ -325,6 +325,12 @@ describe("code size gate candidate oracles", () => {
     const unreadable = initial([codeFile("src/a.ts", 1300)], { "src/a.ts": row(1300) }, null);
     expect(kindsOf(unreadable)).toContain("code-size-baseline-base-unreadable");
     expect(unreadable.ok).toBe(false);
+  });
+
+  it("U-CODESIZE-011(f): an empty baseline with an unresolved merge-base still fails closed", () => {
+    const result = analyze([codeFile("src/small.ts", 10)], {}, null, null);
+    expect(kindsOf(result)).toContain("code-size-baseline-base-unreadable");
+    expect(result.ok).toBe(false);
   });
 
   it("U-CODESIZE-013: treats unreadable input as a failure and stays pure", () => {

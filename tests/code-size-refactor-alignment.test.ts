@@ -40,7 +40,7 @@ describe("code size gate and refactor candidate alignment candidates", () => {
         sources: [{ path: PATH, text: moduleText(nonblank) }],
         baseline: {},
         previousBaseline: null,
-        mergeBaseMeasures: null,
+        mergeBaseMeasures: {},
         renames: [],
       }).findings.length,
     }));
