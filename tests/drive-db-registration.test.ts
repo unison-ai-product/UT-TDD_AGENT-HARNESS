@@ -216,6 +216,73 @@ describe("drive DB registration lint", () => {
     }
   });
 
+  it.fails(
+    "CANDIDATE-U-DOCTOR-GATE-04 A4: excludes an empty-drive routine-gate row but keeps other workflow orphans",
+    () => {
+      const root = mkdtempSync(join(tmpdir(), "ut-tdd-ddbreg-routine-gate-orphan-"));
+      const planId = "PLAN-TEST-ddbreg-routine-gate-orphan";
+      try {
+        const planDir = join(root, "docs", "plans");
+        mkdirSync(planDir, { recursive: true });
+        writeFileSync(
+          join(planDir, `${planId}.md`),
+          [
+            "---",
+            `plan_id: ${planId}`,
+            "kind: impl",
+            "layer: L7",
+            "drive: agent",
+            "status: draft",
+            "route_mode: add-feature",
+            "updated: 2026-10-29",
+            "---",
+            "",
+            "## Body",
+            "",
+          ].join("\n"),
+          "utf8",
+        );
+
+        const db = openHarnessDb(defaultHarnessDbPath(root), { repoRoot: root });
+        try {
+          migrate(db);
+          rebuildHarnessDb({ repoRoot: root, db });
+          upsertRow(db, {
+            table: "workflow_runs",
+            primaryKey: "workflow_run_id",
+            row: {
+              workflow_run_id: "routine-gate-empty-drive-id",
+              plan_id: planId,
+              drive_run_id: "",
+              workflow: "routine-gate",
+            },
+          });
+          upsertRow(db, {
+            table: "workflow_runs",
+            primaryKey: "workflow_run_id",
+            row: {
+              workflow_run_id: "non-routine-missing-drive-run",
+              plan_id: planId,
+              drive_run_id: "DRIVE-RUN-DOES-NOT-EXIST",
+              workflow: "manual",
+            },
+          });
+
+          const stats = collectDriveDbRegistrationStats(db);
+          // Prove the PLAN fixture and both workflow rows exist before the contract assertion.
+          expect(stats.planCount).toBe(1);
+          expect(stats.workflowRuns).toBe(2);
+          // Only the non-routine row is an orphan; the routine-gate empty-ID row is intentional.
+          expect(stats.workflowOrphans).toBe(1);
+        } finally {
+          db.close();
+        }
+      } finally {
+        removeTestTree(root);
+      }
+    },
+  );
+
   it("U-DDBREG-003: persisted fixture has complete automatic registration evidence", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-ddbreg-current-"));
     const planId = "PLAN-TEST-ddbreg-current";
