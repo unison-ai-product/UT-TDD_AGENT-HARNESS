@@ -192,11 +192,13 @@ Sonnet 自身が worker tier なので、通常の作業は自分で行う (「�
 
 | あなたが | 迷った判断・難所 | レビュー・UI デザイン判断 | 通常の作業 | 軽い作業 |
 |---|---|---|---|---|
-| Fable | 自分で決めて記録する。技術判断だけ Sol に相談する (`ut-tdd advisor`) | Opus の subagent | Sonnet | Haiku |
-| Opus | `ut-tdd advisor` で相談する。設計・進行・UI は Fable、技術判断は Sol (Model / Effort Routing の振り分けどおり) | 自分、または Opus の subagent | Sonnet | Haiku |
-| Sonnet | Opus に相談する (Agent tool で Opus の subagent を呼ぶ) | Opus の subagent | 自分 | Haiku |
+| Fable | 自分で決めて記録する。技術判断だけ Sol に相談する (`ut-tdd advisor`) | 委譲経路 (`ut-tdd claude --role` / `ut-tdd codex --role`、Opus / Sol) | Sonnet | Haiku |
+| Opus | `ut-tdd advisor` で相談する。設計・進行・UI は Fable、技術判断は Sol (Model / Effort Routing の振り分けどおり) | 自分の UI デザイン判断。closing review は委譲経路 (`ut-tdd claude --role` / `ut-tdd codex --role`) | Sonnet | Haiku |
+| Sonnet | Opus に相談する (Agent tool の汎用の型に `model: opus` を渡す。相談の回答は closing の根拠にしない) | 委譲経路 (`ut-tdd claude --role <role>`、Opus) | 自分 | Haiku |
 | Haiku | 指揮をしない。判断が出たら Sonnet に相談する | ― | ― | 自分 |
 
+- Agent tool の subagent は手を動かす層 (草稿・調査・並列作業) であり、closing の権限を持たない。レビューの verdict・merge の根拠は
+  委譲経路 (`ut-tdd claude|codex --role <role>`) と review custody だけが持つ (`../CLAUDE.md` §Model / Effort Routing の 2 層)。
 - 「通常の作業」は文書作成・決まった型での issue / PR 返信・決まった UI デザインの実装、「軽い作業」は
   gh の状態確認・grep・CI の見張り・ログの要約。
 - どの行でも変えないもの: モデル割当は Model / Effort Routing (`../CLAUDE.md`) と
@@ -274,8 +276,8 @@ author family が同 PR 内で行い、同じ非著者 reviewer が新 exact hea
 ## Parallel Task Limit
 
 Tasks that do not depend on each other may be submitted in parallel, default
-upper limit **8** concurrent subagent slots (in-lane parallelism through the Agent tool) (`DEFAULT_MAX_PARALLEL` in
-`src/runtime/agent-slots.ts`, IMP-050). `agent-slots` records fire/release and
+upper limit **8** concurrent subagent slots for in-lane parallelism through the Agent tool
+(`DEFAULT_MAX_PARALLEL` in `src/runtime/agent-slots.ts`, IMP-050). `agent-slots` records fire/release and
 warns when active slots reach this limit; it does not hard-block above it
 (fail-open advisory, not a fail-close gate). This restores the reference that
 `src/runtime/agent-slots.ts` and `docs/design/harness/L6-function-design/agent-slots.md`
