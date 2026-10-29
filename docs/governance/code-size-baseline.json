@@ -93,7 +93,7 @@
   "tests/design-protection.test.ts": { "lines": 830, "functionExcess": null },
   "tests/disposition/projection.test.ts": { "lines": 996, "functionExcess": null },
   "tests/distribution-acceptance.test.ts": { "lines": 957, "functionExcess": null },
-  "tests/doctor.test.ts": { "lines": 2360, "functionExcess": null },
+  "tests/doctor.test.ts": { "lines": 2353, "functionExcess": null },
   "tests/forward-escape-issue-contract.test.ts": { "lines": 816, "functionExcess": null },
   "tests/forward/fsm.test.ts": { "lines": 626, "functionExcess": null },
   "tests/frontmatter.test.ts": { "lines": 667, "functionExcess": null },
