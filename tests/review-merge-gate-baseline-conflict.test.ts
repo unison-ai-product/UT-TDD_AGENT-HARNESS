@@ -107,6 +107,8 @@ interface Fixture {
   work: string;
   prHead: string;
   mainTip: string;
+  /** PR が取り込んだ main の先端 (mergeMain でなければ mainTip と同じ)。 */
+  mergedTip: string;
 }
 
 /** bare origin + work (PR branch) + other (main を進める側)。work の origin/main は取り込むまで古いまま。 */
@@ -136,6 +138,7 @@ function buildFixture(plan: Plan): Fixture {
   applyEdit(other, plan.main, "main");
   git(other, "push", "-q", "origin", "main");
   let mainTip = git(other, "rev-parse", "HEAD");
+  const mergedTip = mainTip;
   if (plan.mergeMain) {
     // work の origin/main (remote-tracking ref) を動かさずに main の先端だけを取り込む。
     git(work, "fetch", "-q", "origin", "main:refs/tmp/main");
@@ -147,7 +150,7 @@ function buildFixture(plan: Plan): Fixture {
       mainTip = git(other, "rev-parse", "HEAD");
     }
   }
-  return { base, work, prHead: git(work, "rev-parse", "HEAD"), mainTip };
+  return { base, work, prHead: git(work, "rev-parse", "HEAD"), mainTip, mergedTip };
 }
 
 function seedPassReview(root: string, headSha: string): void {
@@ -327,10 +330,9 @@ describe("review merge gate baseline conflict (Issue #1423)", { timeout: 120_000
         `CANDIDATE-U-RVMG-048: ${gate.name} ${label} は競合なしで merge し、判定のため origin/main を取得し直す`,
         withFixture(plan, (fx) => {
           if (plan.mergeMain) {
-            // 前提: main の取り込みが済んでいる。advance なしなら merge-base は main 先端と一致する。
-            expect(git(fx.work, "merge-base", fx.prHead, fx.mainTip) === fx.mainTip).toBe(
-              !plan.advanceAfterMerge,
-            );
+            // 前提: main の取り込みが済み、work の origin/main はまだ古い。advance なしなら merge-base は main 先端と一致する。
+            expect(git(fx.work, "merge-base", fx.prHead, fx.mergedTip)).toBe(fx.mergedTip);
+            expect(fx.mergedTip === fx.mainTip).toBe(!plan.advanceAfterMerge);
             expect(git(fx.work, "rev-parse", "origin/main")).not.toBe(fx.mainTip);
           }
           const run = runMerge(fx);
