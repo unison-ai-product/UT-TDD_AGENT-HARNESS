@@ -5,7 +5,15 @@
  * 実装 PR (Green) が `it.fails` を `it` に戻す。fixture は一時ディレクトリの git repo (bare origin + 2 clone)。
  */
 import { execFileSync } from "node:child_process";
-import { appendFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+  appendFileSync,
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { Command } from "commander";
@@ -57,6 +65,8 @@ interface Plan {
   pr: Edit;
   main: Edit;
   mergeMain?: boolean;
+  /** mergeMain の後に main を対象外の変更でさらに進める (merge-base が main 先端と一致しなくなる)。 */
+  advanceAfterMerge?: boolean;
 }
 
 function git(dir: string, ...args: string[]): string {
@@ -127,12 +137,15 @@ function buildFixture(plan: Plan): Fixture {
   git(other, "push", "-q", "origin", "main");
   let mainTip = git(other, "rev-parse", "HEAD");
   if (plan.mergeMain) {
-    git(work, "fetch", "-q", "origin");
-    git(work, "merge", "-q", "--no-ff", "--no-verify", "-m", "chore: merge main", "origin/main");
-    // 取り込み後にも main を対象外の変更で進め、work の origin/main を再び古くする (取得し直しを観測するため)。
-    applyEdit(other, { touch: [OUT_OF_SCOPE] }, "main-after-merge");
-    git(other, "push", "-q", "origin", "main");
-    mainTip = git(other, "rev-parse", "HEAD");
+    // work の origin/main (remote-tracking ref) を動かさずに main の先端だけを取り込む。
+    git(work, "fetch", "-q", "origin", "main:refs/tmp/main");
+    git(work, "merge", "-q", "--no-ff", "--no-verify", "-m", "chore: merge main", "refs/tmp/main");
+    git(work, "update-ref", "-d", "refs/tmp/main");
+    if (plan.advanceAfterMerge) {
+      applyEdit(other, { touch: [OUT_OF_SCOPE] }, "main-after-merge");
+      git(other, "push", "-q", "origin", "main");
+      mainTip = git(other, "rev-parse", "HEAD");
+    }
   }
   return { base, work, prHead: git(work, "rev-parse", "HEAD"), mainTip };
 }
@@ -296,14 +309,30 @@ describe("review merge gate baseline conflict (Issue #1423)", { timeout: 120_000
         { pr: { touch: [gate.target, gate.baseline] }, main: { touch: [OUT_OF_SCOPE] } },
       ],
       [
-        "(d) PR が main を取り込み済みで mb が main 先端",
+        "(d) PR が main を取り込み済みで mb が main 先端 (mainChanged が空)",
         { pr: { touch: [gate.target] }, main: { touch: [gate.baseline] }, mergeMain: true },
+      ],
+      [
+        "(e) PR が main を取り込んだ後に main が対象外の変更だけ進む",
+        {
+          pr: { touch: [gate.target] },
+          main: { touch: [gate.baseline] },
+          mergeMain: true,
+          advanceAfterMerge: true,
+        },
       ],
     ];
     for (const [label, plan] of clean) {
       it.fails(
         `CANDIDATE-U-RVMG-048: ${gate.name} ${label} は競合なしで merge し、判定のため origin/main を取得し直す`,
         withFixture(plan, (fx) => {
+          if (plan.mergeMain) {
+            // 前提: main の取り込みが済んでいる。advance なしなら merge-base は main 先端と一致する。
+            expect(git(fx.work, "merge-base", fx.prHead, fx.mainTip) === fx.mainTip).toBe(
+              !plan.advanceAfterMerge,
+            );
+            expect(git(fx.work, "rev-parse", "origin/main")).not.toBe(fx.mainTip);
+          }
           const run = runMerge(fx);
           expect(run.result).toMatchObject({ ok: true, decision: "merge" });
           expect(run.merges).toBe(1);
@@ -328,6 +357,8 @@ describe("review merge gate baseline conflict (Issue #1423)", { timeout: 120_000
       expect(cli.stdout).toContain("doc-split");
       expect(cli.stdout).toContain(DOC_SPLIT.target);
       expect(cli.stdout).toContain("git merge origin/main");
+      // L6 §6.2: 取り込み後に CI が緑になってから再実行する案内 (同じ行に CI・緑・再実行がこの順で出る)。
+      expect(cli.stdout).toMatch(/CI.*緑.*再実行/);
     }),
   );
 
@@ -350,9 +381,21 @@ describe("review merge gate baseline conflict (Issue #1423)", { timeout: 120_000
   );
 
   it.fails(
-    "CANDIDATE-U-RVMG-049: git diff の失敗 (error: PR head が repo に無い) は baseline_conflict_unknown で deny する",
+    "CANDIDATE-U-RVMG-049: git diff の失敗 (error: fetch と merge-base は成功し diff だけ失敗) は baseline_conflict_unknown で deny する",
     withFixture(untouched, (fx) => {
-      expectUnknownDeny(runMerge(fx, "c".repeat(40)));
+      // PR head の tree object を消す。commit は読めるので fetch と merge-base は成功し、diff だけが失敗する。
+      const tree = git(fx.work, "rev-parse", `${fx.prHead}^{tree}`);
+      const object = join(fx.work, ".git", "objects", tree.slice(0, 2), tree.slice(2));
+      expect(existsSync(object)).toBe(true);
+      chmodSync(object, 0o666);
+      rmSync(object, { force: true });
+      expect(existsSync(object)).toBe(false);
+      // 前提: fetch と merge-base は成功し、diff は失敗する。
+      expect(() => git(fx.work, "fetch", "-q", "origin")).not.toThrow();
+      const mb = git(fx.work, "merge-base", fx.prHead, "origin/main");
+      expect(mb).toMatch(/^[0-9a-f]{40}$/);
+      expect(() => git(fx.work, "diff", "-M", "--name-status", mb, fx.prHead)).toThrow();
+      expectUnknownDeny(runMerge(fx));
     }),
   );
 
