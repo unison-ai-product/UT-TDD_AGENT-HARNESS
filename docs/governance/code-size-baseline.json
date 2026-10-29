@@ -146,7 +146,7 @@
   "tests/setup-project-identity-bootstrap.test.ts": { "lines": 613, "functionExcess": null },
   "tests/setup.test.ts": { "lines": 1313, "functionExcess": null },
   "tests/skill-recommend.test.ts": { "lines": 723, "functionExcess": null },
-  "tests/snapshot-runner-lifecycle.test.ts": { "lines": 579, "functionExcess": null },
+  "tests/snapshot-runner-lifecycle.test.ts": { "lines": 573, "functionExcess": null },
   "tests/spec-ir-projections.test.ts": { "lines": 1339, "functionExcess": null },
   "tests/state-channel-consolidation.test.ts": { "lines": 2761, "functionExcess": null },
   "tests/support/pack-internal-canary.ts": { "lines": 654, "functionExcess": null },
