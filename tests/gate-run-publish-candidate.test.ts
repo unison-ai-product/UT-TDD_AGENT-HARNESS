@@ -3,9 +3,10 @@ import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createInterface } from "node:readline";
+import { pathToFileURL } from "node:url";
 import { describe, expect, it } from "vitest";
 
-const writerModuleUrl = new URL("../src/gate/run-evidence.ts", import.meta.url).href;
+const writerModuleUrl = pathToFileURL(join(process.cwd(), "src/gate/run-evidence.ts")).href;
 const syntheticPid = 271_828;
 const CHILD_LINE_TIMEOUT_MS = 10_000;
 const CHILD_CLOSE_TIMEOUT_MS = 5_000;
@@ -73,7 +74,7 @@ function startPublisher(repoRoot: string): ChildHandle {
     }
   `;
   const child = spawn(process.execPath, ["--input-type=module", "-e", childProgram], {
-    cwd: process.cwd(),
+    cwd: repoRoot,
     stdio: ["pipe", "pipe", "pipe"],
     windowsHide: true,
   });
