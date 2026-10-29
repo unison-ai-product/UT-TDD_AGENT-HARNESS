@@ -214,21 +214,23 @@ async function runPublishers(count: 1 | 2): Promise<PublishObservation> {
                 results.filter((result) => result.published).map((result) => result.relativePath),
               ),
             ];
-            artifacts = publishedPaths.flatMap((relativePath) => {
-              if (!relativePath) return [];
-              const absolutePath = join(repoRoot, ...relativePath.split("/"));
-              const exists = existsSync(absolutePath);
-              if (!exists) return [{ relativePath, exists: false, parsed: false }];
-              const text = readFileSync(absolutePath, "utf8");
-              try {
-                const parsed = JSON.parse(text) as { gate_run_id?: string };
-                return [
-                  { relativePath, exists: true, parsed: true, gateRunId: parsed.gate_run_id },
-                ];
-              } catch {
-                return [{ relativePath, exists: true, parsed: false }];
-              }
-            });
+            artifacts = publishedPaths.flatMap<PublishObservation["artifacts"][number]>(
+              (relativePath) => {
+                if (!relativePath) return [];
+                const absolutePath = join(repoRoot, ...relativePath.split("/"));
+                const exists = existsSync(absolutePath);
+                if (!exists) return [{ relativePath, exists: false, parsed: false }];
+                const text = readFileSync(absolutePath, "utf8");
+                try {
+                  const parsed = JSON.parse(text) as { gate_run_id?: string };
+                  return [
+                    { relativePath, exists: true, parsed: true, gateRunId: parsed.gate_run_id },
+                  ];
+                } catch {
+                  return [{ relativePath, exists: true, parsed: false }];
+                }
+              },
+            );
           }
         }
       }
