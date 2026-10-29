@@ -18,7 +18,6 @@ import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import type { Command } from "commander";
 import { parse as parseYaml } from "yaml";
 import { buildReleasePublicationPlan } from "../github/ops-guard.ts";
-import type { PrivacyScanResult } from "../lint/privacy-scan.ts";
 import {
   analyzeSecretScan,
   loadSecretScanArtifactsForPaths,
@@ -60,14 +59,7 @@ import {
 import { attestReleaseChannel } from "../setup/release-channel-adapter.ts";
 import { materializeReleaseArtifacts } from "../setup/release-materializer.ts";
 import { ensureDir } from "../shared/fs.ts";
-import {
-  DistributionPrivacyScanError,
-  privacyScanJson,
-  privacyScanTextLines,
-  redactRejectedArtifactPaths,
-  reportedArtifactPaths,
-  runDistributionPrivacyScan,
-} from "./distribution-privacy.ts";
+import * as privacy from "./distribution-privacy.ts";
 
 function gitHead(): string | null {
   // Distribution commands are intentionally valid in an unpacked clean artifact,
@@ -256,23 +248,6 @@ function readTrackedTeamBlob(repoRoot: string) {
     });
   }
   return projectTrackedTeamBlob({ blobs });
-}
-
-/** Same artifact list as the secret scan; the team yaml is read from its tracked blob. */
-function runDistributionPackPrivacyScan(input: {
-  repoRoot: string;
-  sourceRoot: string;
-  sourcePaths: readonly string[];
-  artifactPaths: readonly string[];
-  homeDirectory: string;
-}): PrivacyScanResult {
-  return runDistributionPrivacyScan({
-    ...input,
-    readTeamProjection: () => {
-      const projection = readTrackedTeamBlob(input.sourceRoot);
-      return projection.ok ? projection.bytes : null;
-    },
-  });
 }
 
 function runDistributionSecretScan(input: {
@@ -691,14 +666,14 @@ export async function packageConsumerRuntimeRelease(input: {
       throw new Error(
         `distribution package source preflight failed: ${secretScanMessages(secretScan)[0] ?? "plan"}`,
       );
-    const privacyScan = runDistributionPackPrivacyScan({
+    privacy.assertPackPrivacy({
       repoRoot: input.repoRoot,
       sourceRoot,
       sourcePaths,
-      artifactPaths: exportPlan.artifactPaths,
+      exportPlan,
       homeDirectory,
+      readTeam: readTrackedTeamBlob,
     });
-    if (!privacyScan.ok) throw new DistributionPrivacyScanError(privacyScan);
     const tarRelease = resolveDistributionTarReleaseIdentity({
       repoRoot: input.repoRoot,
       releaseRevision: sourceBinding.releaseRevision,
@@ -1160,12 +1135,13 @@ export function registerDistributionCommands(program: Command): void {
           sourcePaths,
           artifactPaths: exportPlan.artifactPaths,
         });
-        const privacyScan = runDistributionPackPrivacyScan({
+        const privacyScan = privacy.scanPack({
           repoRoot,
           sourceRoot: repoRoot,
           sourcePaths,
-          artifactPaths: exportPlan.artifactPaths,
+          exportPlan,
           homeDirectory: homedir(),
+          readTeam: readTrackedTeamBlob,
         });
         const scansOk = secretScan.ok && privacyScan.ok;
         const sync = buildPackSyncPlan({
@@ -1174,19 +1150,7 @@ export function registerDistributionCommands(program: Command): void {
           stagingDir: repoDir,
           branch: opts.branch,
         });
-        // L6 §8 / §12: every reported path list and command is built from the masked paths.
-        const reportedPlan = {
-          ...exportPlan,
-          artifactPaths: reportedArtifactPaths(privacyScan, exportPlan.artifactPaths),
-        };
-        const reportedSync = privacyScan.ok
-          ? sync
-          : buildPackSyncPlan({
-              exportPlan: reportedPlan,
-              sourcePaths,
-              stagingDir: repoDir,
-              branch: opts.branch,
-            });
+        const shown = privacy.reportedPack(privacyScan, exportPlan, sourcePaths, sync);
         const plannedArtifacts = new Set(exportPlan.artifactPaths);
         const existingBefore = repoExists
           ? collectFilesystemCandidatePaths(repoDir).filter((path) => !plannedArtifacts.has(path))
@@ -1238,53 +1202,48 @@ export function registerDistributionCommands(program: Command): void {
           manifestDir,
           `${exportPlan.sourceTag.replace(/[^A-Za-z0-9._-]+/g, "-")}.sync-pack.json`,
         );
-        const reported = redactRejectedArtifactPaths(
-          {
-            ok:
-              repoExists &&
-              exportPlan.ok &&
-              scansOk &&
-              pruneError === null &&
-              copyError === null &&
-              authoringSmoke.ok &&
-              unmanagedExistingPaths.length === 0,
-            export: reportedPlan,
-            secretScan: {
-              ok: secretScan.ok,
-              checked: secretScan.checked,
-              violations: secretScan.violations,
-            },
-            authoringSmoke,
-            sync: reportedSync,
-            pack: {
-              repoDir,
-              repoExists,
-              manifest,
-              copiedArtifacts:
-                repoExists && exportPlan.ok && scansOk && pruneError === null && copyError === null
-                  ? exportPlan.artifactPaths.length
-                  : 0,
-              pruneLocal: Boolean(opts.pruneLocal),
-              prunedPaths,
-              unmanagedExistingPaths,
-              pruneError,
-              copyError,
-              localGitMutationExecuted: false,
-              destructiveRemoteMutation: false,
-              actualRemoteMutationRequiresPoApproval: true,
-              nextCommands: [
-                `git -C ${repoDir} status --short`,
-                ...gitAddPathspecCommands(repoDir, reportedPlan.artifactPaths, existingBefore),
-                `git -C ${repoDir} commit -m "chore: sync clean pack ${exportPlan.sourceTag}"`,
-                `git -C ${repoDir} push origin ${opts.branch ?? "main"}`,
-              ],
-            },
+        const raw = {
+          ok:
+            repoExists &&
+            exportPlan.ok &&
+            scansOk &&
+            pruneError === null &&
+            copyError === null &&
+            authoringSmoke.ok &&
+            unmanagedExistingPaths.length === 0,
+          export: shown.plan,
+          secretScan: {
+            ok: secretScan.ok,
+            checked: secretScan.checked,
+            violations: secretScan.violations,
           },
-          privacyScan,
-          exportPlan.artifactPaths,
-        );
-        // The findings already follow L6 §8 (a hit path is masked by the scanner itself).
-        const output = { ...reported, privacyScan: privacyScanJson(privacyScan) };
+          authoringSmoke,
+          sync: shown.sync,
+          pack: {
+            repoDir,
+            repoExists,
+            manifest,
+            copiedArtifacts:
+              repoExists && exportPlan.ok && scansOk && pruneError === null && copyError === null
+                ? exportPlan.artifactPaths.length
+                : 0,
+            pruneLocal: Boolean(opts.pruneLocal),
+            prunedPaths,
+            unmanagedExistingPaths,
+            pruneError,
+            copyError,
+            localGitMutationExecuted: false,
+            destructiveRemoteMutation: false,
+            actualRemoteMutationRequiresPoApproval: true,
+            nextCommands: [
+              `git -C ${repoDir} status --short`,
+              ...gitAddPathspecCommands(repoDir, shown.plan.artifactPaths, existingBefore),
+              `git -C ${repoDir} commit -m "chore: sync clean pack ${exportPlan.sourceTag}"`,
+              `git -C ${repoDir} push origin ${opts.branch ?? "main"}`,
+            ],
+          },
+        };
+        const output = privacy.reportSyncPack(raw, privacyScan, exportPlan.artifactPaths);
         writeFileSync(manifest, `${JSON.stringify(output, null, 2)}\n`, "utf8");
         if (opts.json) {
           process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);
@@ -1299,8 +1258,8 @@ export function registerDistributionCommands(program: Command): void {
         if (!secretScan.ok) {
           process.stdout.write(`  ${secretScanMessages(secretScan)[0]}\n`);
         }
-        if (!privacyScan.ok)
-          for (const line of privacyScanTextLines(privacyScan)) process.stdout.write(`  ${line}\n`);
+        for (const line of privacy.privacyScanFailureLines(privacyScan))
+          process.stdout.write(`  ${line}\n`);
         process.stdout.write(`  unmanaged-existing: ${unmanagedExistingPaths.length}\n`);
         process.stdout.write(`  pruned-local: ${prunedPaths.length}\n`);
         process.stdout.write(
@@ -1362,13 +1321,7 @@ export function registerDistributionCommands(program: Command): void {
           process.stdout.write(`  sha256: ${name} ${digest}\n`);
         process.stdout.write(`  consumer-anchor: ${output.consumerAnchorDigest}\n`);
       } catch (error) {
-        const output = {
-          ok: false,
-          error: String(error),
-          ...(error instanceof DistributionPrivacyScanError
-            ? { privacyScan: privacyScanJson(error.privacyScan) }
-            : {}),
-        };
+        const output = { ok: false, error: String(error), ...privacy.privacyScanErrorJson(error) };
         if (opts.json) process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);
         else process.stdout.write(`distribution package: blocked ${output.error}\n`);
         process.exitCode = 1;

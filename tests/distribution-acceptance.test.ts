@@ -36,10 +36,7 @@ import {
   createLocalGitObjectReader,
   resolveReleaseArtifacts,
 } from "../src/setup/release-artifact-resolver.ts";
-import {
-  createSyntheticPrivacyHome,
-  writeSyntheticPrivacyDenylist,
-} from "./support/privacy-denylist-home.ts";
+import * as privacyHome from "./support/privacy-denylist-home.ts";
 import { removeTestTree } from "./support/temp-tree.ts";
 
 const repoRoot = process.cwd();
@@ -317,29 +314,23 @@ describe("clean distribution local acceptance smoke", () => {
   });
 
   it("PLAN-L7-413 D-4: a blocked export neither packages nor prunes", () => {
+    privacyHome.stubSyntheticPrivacyHome();
     const cleanRoot = createCleanDistributionFixture();
     const releaseDir = join(cleanRoot, ".release");
-    // Issue #1391: package / sync-pack read the denylist; use a synthetic one outside the repo.
-    const privacyHome = createSyntheticPrivacyHome();
-    const privacyEnv = { ...process.env, HOME: privacyHome, USERPROFILE: privacyHome };
     try {
       // blocked は missingRequired で誘発する (denied 入力は D-2 followup により通常除外で
       // あって blocked にならないため)。
       rmSync(join(cleanRoot, "LICENSE"), { force: true });
-      const result = runNode(
-        cleanRoot,
-        [
-          join(repoRoot, "src", "cli.ts"),
-          "distribution",
-          "package",
-          "--tag",
-          "v0.0.0-blocked",
-          "--out",
-          releaseDir,
-          "--json",
-        ],
-        privacyEnv,
-      );
+      const result = runNode(cleanRoot, [
+        join(repoRoot, "src", "cli.ts"),
+        "distribution",
+        "package",
+        "--tag",
+        "v0.0.0-blocked",
+        "--out",
+        releaseDir,
+        "--json",
+      ]);
       expect(result.status).toBe(1);
       expect(JSON.parse(result.stdout).ok).toBe(false);
       expect(existsSync(join(releaseDir, "v0.0.0-blocked.tar.gz"))).toBe(false);
@@ -348,25 +339,20 @@ describe("clean distribution local acceptance smoke", () => {
       mkdirSync(packDir, { recursive: true });
       const obsolete = join(packDir, "obsolete.txt");
       writeFileSync(obsolete, "must not be pruned\n", "utf8");
-      const pack = runNode(
-        cleanRoot,
-        [
-          join(repoRoot, "src", "cli.ts"),
-          "distribution",
-          "sync-pack",
-          "--repo-dir",
-          packDir,
-          "--prune-local",
-          "--json",
-        ],
-        privacyEnv,
-      );
+      const pack = runNode(cleanRoot, [
+        join(repoRoot, "src", "cli.ts"),
+        "distribution",
+        "sync-pack",
+        "--repo-dir",
+        packDir,
+        "--prune-local",
+        "--json",
+      ]);
       expect(pack.status).toBe(1);
       expect(JSON.parse(pack.stdout).pack.prunedPaths).toEqual([]);
       expect(existsSync(obsolete)).toBe(true);
     } finally {
       removeCleanRoot(cleanRoot);
-      removeTestTree(privacyHome);
     }
   }, 120_000);
 
@@ -407,9 +393,8 @@ describe("clean distribution local acceptance smoke", () => {
     expect(vmodelBuildInputs.length).toBeGreaterThan(0);
 
     const cleanRoot = mkdtempSync(join(tmpdir(), "ut-tdd-clean-acceptance-"));
-    const injectedHome = writeSyntheticPrivacyDenylist(
-      mkdtempSync(join(tmpdir(), "ut-tdd-acceptance-home-")),
-    );
+    const injectedHome = mkdtempSync(join(tmpdir(), "ut-tdd-acceptance-home-"));
+    privacyHome.writeSyntheticPrivacyDenylist(injectedHome);
     try {
       const sourcePaths = walkCandidatePaths(repoRoot);
       for (const rel of plan.artifactPaths) {

@@ -482,7 +482,6 @@ export async function createCanaryFixture(): Promise<CanaryFixture> {
         releaseDir,
         "--json",
       ],
-      // Issue #1391: package requires a denylist; a synthetic one in a home outside producerRoot.
       { ...isolatedCanaryEnv(root), HOME: producerHome, USERPROFILE: producerHome },
       undefined,
       // The real producer performs a second isolated npm ci from the tagged Git tree.
