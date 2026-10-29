@@ -74,6 +74,34 @@ function evidence(gateRunId: string, planId: string | null = null) {
   };
 }
 
+function writeAndVerifyPositiveControl(fixture: Fixture, targetId: string): string {
+  const control = writeGateRunEvidence({
+    ...candidateInput(fixture.root),
+    sessionId: sessionId + "-positive-control",
+  });
+  const directoryPrefix = ".ut-tdd/gate_runs/";
+  const controlName = control.path.slice(directoryPrefix.length);
+  const controlPath = join(fixture.root, control.path);
+  const emitted = JSON.parse(readFileSync(controlPath, "utf8")) as {
+    gate_run_id?: string;
+    gate_id?: string;
+    session_id?: string | null;
+  };
+
+  expect(control.evidence.gate_run_id).not.toBe(targetId);
+  expect(control.path.startsWith(directoryPrefix)).toBe(true);
+  expect(controlName).not.toContain("/");
+  expect(controlName).toMatch(/\.json$/);
+  expect(emitted).toMatchObject({
+    gate_run_id: control.evidence.gate_run_id,
+    gate_id: gateId,
+    session_id: sessionId + "-positive-control",
+  });
+  expect(JSON.parse(readFileSync(controlPath, "utf8"))).toEqual(control.evidence);
+  expect(readdirSync(fixture.gateRunsDir)).toEqual([controlName]);
+  return controlName;
+}
+
 interface Fixture {
   root: string;
   gateRunsDir: string;
@@ -247,12 +275,17 @@ describe("CANDIDATE-U-GATE-010 gate-run identity and path", () => {
     try {
       fixture = createFixture();
       const id = buildGateRunEvidence(candidateInput(fixture.root)).gate_run_id;
+      const controlName = writeAndVerifyPositiveControl(fixture, id);
       const filename = digest(id) + ".json";
       const destination = join(fixture.gateRunsDir, filename);
       const originalBytes = JSON.stringify(evidence("gate-run:G4:different-id"), null, 2) + "\n";
+      if (controlName === filename) return;
       writeFileSync(destination, originalBytes, "utf8");
       const occupant = JSON.parse(readFileSync(destination, "utf8")) as { gate_run_id?: string };
-      if (occupant.gate_run_id === id || readdirSync(fixture.gateRunsDir).join() !== filename) {
+      if (
+        occupant.gate_run_id === id ||
+        readdirSync(fixture.gateRunsDir).sort().join() !== [controlName, filename].sort().join()
+      ) {
         return;
       }
 
@@ -265,9 +298,9 @@ describe("CANDIDATE-U-GATE-010 gate-run identity and path", () => {
       actual = {
         threw,
         bytes: readFileSync(destination, "utf8"),
-        names: readdirSync(fixture.gateRunsDir),
+        names: readdirSync(fixture.gateRunsDir).sort(),
       };
-      expected = { threw: true, bytes: originalBytes, names: [filename] };
+      expected = { threw: true, bytes: originalBytes, names: [controlName, filename].sort() };
       setupReady = true;
     } catch {
       setupReady = false;
@@ -425,12 +458,18 @@ describe("CANDIDATE-U-GATE-010 gate-run identity and path", () => {
     try {
       fixture = createFixture();
       const id = buildGateRunEvidence(candidateInput(fixture.root)).gate_run_id;
+      const controlName = writeAndVerifyPositiveControl(fixture, id);
       const name = legacyFilename(id);
       const legacyPath = join(fixture.gateRunsDir, name);
       const originalBytes = JSON.stringify(evidence(id), null, 2) + "\n";
+      if (controlName === name) return;
       writeFileSync(legacyPath, originalBytes, "utf8");
       const existing = JSON.parse(readFileSync(legacyPath, "utf8")) as { gate_run_id?: string };
-      if (existing.gate_run_id !== id || readdirSync(fixture.gateRunsDir).join() !== name) return;
+      if (
+        existing.gate_run_id !== id ||
+        readdirSync(fixture.gateRunsDir).sort().join() !== [controlName, name].sort().join()
+      )
+        return;
 
       let threw = false;
       try {
@@ -441,9 +480,9 @@ describe("CANDIDATE-U-GATE-010 gate-run identity and path", () => {
       actual = {
         threw,
         bytes: readFileSync(legacyPath, "utf8"),
-        names: readdirSync(fixture.gateRunsDir),
+        names: readdirSync(fixture.gateRunsDir).sort(),
       };
-      expected = { threw: true, bytes: originalBytes, names: [name] };
+      expected = { threw: true, bytes: originalBytes, names: [controlName, name].sort() };
       setupReady = true;
     } catch {
       setupReady = false;

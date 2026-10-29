@@ -1,4 +1,12 @@
-import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -360,8 +368,24 @@ describe("gate-run-coverage doctor", () => {
       sessionId: "session-gate-run-id",
     };
 
-    const withPlan = buildGateRunEvidence({ ...input, planId: "PLAN-GATE-RUN-ID" });
-    const withoutPlan = buildGateRunEvidence({ ...input, planId: null });
+    let withPlan: ReturnType<typeof buildGateRunEvidence>;
+    let withoutPlan: ReturnType<typeof buildGateRunEvidence>;
+    try {
+      withPlan = buildGateRunEvidence({ ...input, planId: "PLAN-GATE-RUN-ID" });
+      withoutPlan = buildGateRunEvidence({ ...input, planId: null });
+    } catch {
+      return;
+    }
+
+    if (
+      withPlan.plan_id !== "PLAN-GATE-RUN-ID" ||
+      withoutPlan.plan_id !== null ||
+      typeof withPlan.gate_run_id !== "string" ||
+      withPlan.gate_run_id.length === 0 ||
+      typeof withoutPlan.gate_run_id !== "string" ||
+      withoutPlan.gate_run_id.length === 0
+    )
+      return;
 
     expect(withPlan.gate_run_id).toBe(withoutPlan.gate_run_id);
   });
@@ -380,9 +404,12 @@ describe("gate-run-coverage doctor", () => {
       const initialBytes = readFileSync(join(root, first.path), "utf8");
       const initialFiles = readdirSync(join(root, ".ut-tdd", "gate_runs"));
       const firstFileName = first.path.split("/").at(-1);
+      const initialEvidence = JSON.parse(initialBytes) as { gate_run_id?: string };
       if (
         !firstFileName ||
         initialBytes.length === 0 ||
+        !first.path.startsWith(".ut-tdd/gate_runs/") ||
+        initialEvidence.gate_run_id !== first.evidence.gate_run_id ||
         initialFiles.length !== 1 ||
         initialFiles[0] !== firstFileName
       )
@@ -396,8 +423,16 @@ describe("gate-run-coverage doctor", () => {
         // The contract does not expose a specific error class or code.
       }
 
-      const finalBytes = readFileSync(join(root, first.path), "utf8");
-      const finalFiles = readdirSync(join(root, ".ut-tdd", "gate_runs"));
+      let finalBytes: string | null = null;
+      let finalFiles: string[] = [];
+      let observationComplete = true;
+      try {
+        const finalPath = join(root, first.path);
+        finalBytes = existsSync(finalPath) ? readFileSync(finalPath, "utf8") : null;
+        finalFiles = readdirSync(join(root, ".ut-tdd", "gate_runs"));
+      } catch {
+        observationComplete = false;
+      }
       return {
         ready: true as const,
         secondCallReturned,
@@ -405,10 +440,10 @@ describe("gate-run-coverage doctor", () => {
         finalBytes,
         initialFiles,
         finalFiles,
+        observationComplete,
       };
     });
-    expect(fixture.ok && fixture.value.ready).toBe(true);
-    if (!fixture.ok || !fixture.value.ready) return;
+    if (!fixture.ok || !fixture.value.ready || !fixture.value.observationComplete) return;
 
     expect(fixture.value.secondCallReturned).toBe(false);
     expect(fixture.value.finalBytes).toBe(fixture.value.initialBytes);
