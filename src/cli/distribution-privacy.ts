@@ -70,24 +70,41 @@ export function privacyScanTextLines(result: PrivacyScanResult): string[] {
   return lines;
 }
 
+const maskedPath = (path: string) =>
+  `path-sha256:${createHash("sha256").update(path, "utf8").digest("hex")}`;
+
+/** The raw paths among `scannedPaths` that the scanner judged a hit (their masked form is a finding). */
+function hitPaths(result: PrivacyScanResult, scannedPaths: readonly string[]): string[] {
+  const masked = new Set(result.findings.map((finding) => finding.location.replace(/^pack:/, "")));
+  return scannedPaths.filter((path) => masked.has(maskedPath(path)));
+}
+
 /**
- * L6 §8 / §12: every output and evidence path must hide a path the scanner judged a hit. Replaces
- * each scanned path whose masked form appears in the findings, wherever it occurs in `value`.
+ * L6 §8 / §12: replaces each hit path with its masked form. Callers derive every reported value
+ * (including quoted command strings) from the masked list, so no escaped form of a hit can leak.
+ */
+export function maskPrivacyHitPaths(
+  result: PrivacyScanResult,
+  scannedPaths: readonly string[],
+): string[] {
+  const hits = new Set(hitPaths(result, scannedPaths));
+  return scannedPaths.map((path) => (hits.has(path) ? maskedPath(path) : path));
+}
+
+/**
+ * Defense in depth for values built from raw paths: replaces each raw hit path wherever it occurs
+ * in `value`. It cannot see escaped forms, so reported values must come from `maskPrivacyHitPaths`.
  */
 export function redactPrivacyHitPaths<T>(
   value: T,
   result: PrivacyScanResult,
   scannedPaths: readonly string[],
 ): T {
-  const masked = new Set(result.findings.map((finding) => finding.location.replace(/^pack:/, "")));
-  const hits = scannedPaths
-    .map((path) => [path, `path-sha256:${createHash("sha256").update(path, "utf8").digest("hex")}`])
-    .filter(([, mask]) => masked.has(mask))
-    .sort(([a], [b]) => b.length - a.length);
+  const hits = hitPaths(result, scannedPaths).sort((a, b) => b.length - a.length);
   if (hits.length === 0) return value;
   const walk = (item: unknown): unknown => {
     if (typeof item === "string")
-      return hits.reduce((text, [raw, mask]) => text.replaceAll(raw, mask), item);
+      return hits.reduce((text, raw) => text.replaceAll(raw, maskedPath(raw)), item);
     if (Array.isArray(item)) return item.map(walk);
     if (item !== null && typeof item === "object")
       return Object.fromEntries(Object.entries(item).map(([key, entry]) => [key, walk(entry)]));

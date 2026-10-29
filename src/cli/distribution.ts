@@ -62,6 +62,7 @@ import { materializeReleaseArtifacts } from "../setup/release-materializer.ts";
 import { ensureDir } from "../shared/fs.ts";
 import {
   DistributionPrivacyScanError,
+  maskPrivacyHitPaths,
   privacyScanJson,
   privacyScanTextLines,
   redactPrivacyHitPaths,
@@ -1173,6 +1174,19 @@ export function registerDistributionCommands(program: Command): void {
           stagingDir: repoDir,
           branch: opts.branch,
         });
+        // L6 §8 / §12: every reported path list and command is built from the masked paths.
+        const reportedPlan = {
+          ...exportPlan,
+          artifactPaths: maskPrivacyHitPaths(privacyScan, exportPlan.artifactPaths),
+        };
+        const reportedSync = privacyScan.ok
+          ? sync
+          : buildPackSyncPlan({
+              exportPlan: reportedPlan,
+              sourcePaths,
+              stagingDir: repoDir,
+              branch: opts.branch,
+            });
         const plannedArtifacts = new Set(exportPlan.artifactPaths);
         const existingBefore = repoExists
           ? collectFilesystemCandidatePaths(repoDir).filter((path) => !plannedArtifacts.has(path))
@@ -1234,7 +1248,7 @@ export function registerDistributionCommands(program: Command): void {
               copyError === null &&
               authoringSmoke.ok &&
               unmanagedExistingPaths.length === 0,
-            export: exportPlan,
+            export: reportedPlan,
             secretScan: {
               ok: secretScan.ok,
               checked: secretScan.checked,
@@ -1242,7 +1256,7 @@ export function registerDistributionCommands(program: Command): void {
             },
             privacyScan: privacyScanJson(privacyScan),
             authoringSmoke,
-            sync,
+            sync: reportedSync,
             pack: {
               repoDir,
               repoExists,
@@ -1261,7 +1275,7 @@ export function registerDistributionCommands(program: Command): void {
               actualRemoteMutationRequiresPoApproval: true,
               nextCommands: [
                 `git -C ${repoDir} status --short`,
-                ...gitAddPathspecCommands(repoDir, exportPlan.artifactPaths, existingBefore),
+                ...gitAddPathspecCommands(repoDir, reportedPlan.artifactPaths, existingBefore),
                 `git -C ${repoDir} commit -m "chore: sync clean pack ${exportPlan.sourceTag}"`,
                 `git -C ${repoDir} push origin ${opts.branch ?? "main"}`,
               ],

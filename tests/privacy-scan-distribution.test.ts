@@ -332,11 +332,16 @@ describe("privacy scan candidate oracles (distribution)", () => {
   });
 
   // #1454 r1 FINDING 1 (L6 §8 / §12): a hit artifact path must not leak through the export plan,
-  // the next commands, or the sync-pack evidence.
-  it("U-PRIVSCAN-018 (regression): masks a hit artifact path in sync-pack output and evidence", () => {
-    const home = makeHome("r-home", `${D}\n`);
-    const source = cleanSource("r-source", "plain line");
-    const hitPath = `skills/${D}-note.md`;
+  // the next commands, or the sync-pack evidence. #1454 r2: also when a command shell-escapes it.
+  it.each([
+    { label: "plain", hitPath: `skills/${D}-note.md` },
+    { label: "shell-escaped", hitPath: `skills/$${D}-note.md` },
+  ])("U-PRIVSCAN-018 (regression): masks a hit artifact path in sync-pack output and evidence ($label)", ({
+    label,
+    hitPath,
+  }) => {
+    const home = makeHome(`r-home-${label}`, `${D}\n`);
+    const source = cleanSource(`r-source-${label}`, "plain line");
     write(source, hitPath, "plain\n");
     git(source, ["add", "--", hitPath]);
     git(source, ["commit", "-q", "-m", "hit path"]);
@@ -345,7 +350,7 @@ describe("privacy scan candidate oracles (distribution)", () => {
       sourceTag: TAG,
     });
     expect(plan.artifactPaths).toContain(hitPath);
-    const packDir = join(scratchRoot, "r-pack");
+    const packDir = join(scratchRoot, `r-pack-${label}`);
     mkdirSync(packDir, { recursive: true });
     const evidenceBefore = walkFiles(join(source, ".ut-tdd"));
     const result = runDistribution(source, home, ["sync-pack", "--repo-dir", packDir, "--json"]);
