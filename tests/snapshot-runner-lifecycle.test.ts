@@ -660,17 +660,11 @@ describe("snapshot runner lifecycle L7 candidate Red (issue #1129 / #1415)", () 
         const executionSnapshot = captured.snapshotStages[0];
         if (!executionSnapshot)
           rejectCandidatePrecondition("npm stage has no snapshot observation");
-        if (
-          executionSnapshot.staged !== "base staged\n" ||
-          executionSnapshot.unstaged !== "base unstaged\n" ||
-          executionSnapshot.untracked ||
-          executionSnapshot.ignored
-        )
-          rejectCandidatePrecondition(
-            `execution snapshot does not match committed fixture: ${JSON.stringify(executionSnapshot)}`,
-          );
-
         assertionsReached();
+        expect(executionSnapshot.staged).toBe("base staged\n");
+        expect(executionSnapshot.unstaged).toBe("base unstaged\n");
+        expect(executionSnapshot.untracked).toBe(false);
+        expect(executionSnapshot.ignored).toBe(false);
         expect(captured.stderr).toContain(fixture.head);
         expect(captured.stderr).toMatch(/(?:作業\s*(?:tree|ツリー)|working tree)/i);
         expect(captured.stderr).toMatch(
@@ -753,12 +747,11 @@ describe("snapshot runner lifecycle L7 candidate Red (issue #1129 / #1415)", () 
         const completionFailure = snapshotRunnerCompletionFailure(captured);
         if (completionFailure) rejectCandidatePrecondition(completionFailure);
         const executionSnapshot = captured.snapshotStages[0];
-        if (!executionSnapshot || executionSnapshot.staged !== "base staged\n")
-          rejectCandidatePrecondition(
-            `clean execution snapshot mismatch: ${JSON.stringify(executionSnapshot)}`,
-          );
+        if (!executionSnapshot)
+          rejectCandidatePrecondition("npm stage has no snapshot observation");
 
         assertionsReached();
+        expect(executionSnapshot.staged).toBe("base staged\n");
         expect(`${captured.stdout}${captured.stderr}`).toContain(fixture.head);
       },
     );
