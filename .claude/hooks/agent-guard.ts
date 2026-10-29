@@ -11,30 +11,13 @@
  * bypass: 環境変数 UT_TDD_ALLOW_RAW_AGENT=1。
  */
 import "../../src/runtime/windows-hide.ts";
-import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import {
-  type AgentGuardInput,
-  evaluateAgentGuard,
-  normalizeModelFamily,
-  type ResolvedFamily,
-} from "../../src/runtime/agent-guard.ts";
+import { type AgentGuardInput, evaluateAgentGuard } from "../../src/runtime/agent-guard.ts";
 import { DEFAULT_MAX_PARALLEL, nodeAgentSlotsDeps, recordGuardFire } from "../../src/runtime/agent-slots.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(here, "..", "..");
-
-function resolveAgentFamily(subagentType: string): ResolvedFamily {
-  const md = join(repoRoot, ".claude", "agents", `${subagentType}.md`);
-  if (!existsSync(md)) return "missing";
-  const content = readFileSync(md, "utf8");
-  const fm = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
-  if (!fm) return "unknown";
-  const modelLine = fm[1].match(/^model:[ \t]*(\S+)/m);
-  // trim: CRLF チェックアウトされた agent .md で末尾 CR が残るのを防ぐ (NFR-01 cross-platform)
-  return normalizeModelFamily(modelLine?.[1]?.trim()) ?? "unknown";
-}
 
 async function readStdin(): Promise<string> {
   const chunks: Buffer[] = [];
@@ -60,7 +43,6 @@ try {
 }
 
 const decision = evaluateAgentGuard(input, {
-  resolveAgentFamily,
   allowRaw: process.env.UT_TDD_ALLOW_RAW_AGENT === "1",
 });
 

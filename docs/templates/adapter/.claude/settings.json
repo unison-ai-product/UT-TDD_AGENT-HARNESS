@@ -10,7 +10,7 @@
             "args": [".ut-tdd/bin/ut-tdd.mjs","hook","agent-guard"],
             "timeout": 5,
             "blockOnFailure": true,
-            "statusMessage": "agent-guard: subagent allowlist/model enforcement"
+            "statusMessage": "agent-guard: generic subagent type and model check"
           }
         ]
       },

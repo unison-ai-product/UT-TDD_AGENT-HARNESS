@@ -9,7 +9,7 @@
             "type": "command",
             "command": "node \"$(git rev-parse --show-toplevel)/.ut-tdd/bin/ut-tdd.mjs\" hook agent-guard",
             "timeout": 5,
-            "statusMessage": "agent-guard: Codex subagent allowlist/model enforcement"
+            "statusMessage": "agent-guard: Codex generic subagent type and model check"
           }
         ]
       },

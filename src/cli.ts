@@ -20,11 +20,7 @@ import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Command } from "commander";
 import { parse as parseYaml } from "yaml";
-import {
-  catalogAutomationAssets,
-  checkRosterConsistency,
-  listRosterRegistry,
-} from "./assets/catalog.ts";
+import { catalogAutomationAssets } from "./assets/catalog.ts";
 import { loadBranchAudit, renderBranchAudit } from "./audit/branches.ts";
 import { renderQualityAudit, runQualityAudit } from "./audit/quality.ts";
 import { registerCodeSizeCommands } from "./cli/code-size.ts";
@@ -155,13 +151,7 @@ import {
   type AdapterProvider,
   buildProviderInvocation,
 } from "./runtime/adapter.ts";
-import {
-  type AgentGuardInput,
-  evaluateAgentGuard,
-  normalizeModelFamily,
-  type ResolvedFamily,
-} from "./runtime/agent-guard.ts";
-import { SUBAGENT_ALLOWLIST } from "./runtime/agent-guard-policy.ts";
+import { type AgentGuardInput, evaluateAgentGuard } from "./runtime/agent-guard.ts";
 import {
   nodeAgentSlotsDeps,
   recordGuardFire,
@@ -501,16 +491,6 @@ function parseHookInput<T>(raw: string): T | null {
   } catch {
     return null;
   }
-}
-
-function resolveAgentFamilyFromRepo(repoRoot: string, subagentType: string): ResolvedFamily {
-  const md = join(repoRoot, ".claude", "agents", `${subagentType}.md`);
-  if (!existsSync(md)) return "missing";
-  const content = readFileSync(md, "utf8");
-  const fm = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
-  if (!fm) return "unknown";
-  const modelLine = fm[1].match(/^model:[ \t]*(\S+)/m);
-  return normalizeModelFamily(modelLine?.[1]?.trim()) ?? "unknown";
 }
 
 function hookTargetPaths(input: { tool_input?: unknown } | null, repoRoot: string): string[] {
@@ -1378,7 +1358,7 @@ hook
 hook
   .command("agent-guard")
   .description(
-    "PreToolUse(Agent|Task): enforce subagent allowlist and declared model family; exits: 0=pass, 1=error, 2=blocked",
+    "PreToolUse(Agent|Task): enforce generic subagent types and explicit non-fable model; exits: 0=pass, 1=error, 2=blocked",
   )
   .action(() => {
     const repoRoot = requireRuntimeRepoRoot();
@@ -1389,7 +1369,6 @@ hook
       return;
     }
     const decision = evaluateAgentGuard(input, {
-      resolveAgentFamily: (subagentType) => resolveAgentFamilyFromRepo(repoRoot, subagentType),
       allowRaw: process.env.UT_TDD_ALLOW_RAW_AGENT === "1",
     });
     if (decision.message) process.stderr.write(`${decision.message}\n`);
@@ -2431,7 +2410,7 @@ improvement
 const asset = program.command("asset").description("automation asset catalog");
 asset
   .command("catalog")
-  .description("catalog skill/roster/command docs into harness.db")
+  .description("catalog skill/command docs into harness.db")
   .option("--json", "JSON output")
   .action((opts: { json?: boolean }) => {
     const db = openHarnessDb(defaultHarnessDbPath(process.cwd()), { repoRoot: process.cwd() });
@@ -2450,47 +2429,6 @@ asset
     }
   });
 
-const rosterCommand = program.command("roster").description("subagent roster registry");
-rosterCommand
-  .command("list")
-  .description("scan .claude/agents into a deterministic roster registry")
-  .option("--json", "JSON output")
-  .action((opts: { json?: boolean }) => {
-    const result = listRosterRegistry({
-      repoRoot: process.cwd(),
-      allowlist: SUBAGENT_ALLOWLIST,
-    });
-    if (opts.json) {
-      process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
-    } else {
-      process.stdout.write(`roster list: ${result.count} agents\n`);
-      for (const entry of result.entries) {
-        process.stdout.write(
-          `  - ${entry.id} model=${entry.model_family} allowlisted=${entry.allowlisted}\n`,
-        );
-      }
-    }
-    process.exitCode = result.ok ? 0 : 1;
-  });
-rosterCommand
-  .command("check")
-  .description("compare .claude/agents roster with the guard allowlist")
-  .option("--json", "JSON output")
-  .action((opts: { json?: boolean }) => {
-    const result = checkRosterConsistency({
-      repoRoot: process.cwd(),
-      allowlist: SUBAGENT_ALLOWLIST,
-    });
-    if (opts.json) {
-      process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
-    } else {
-      process.stdout.write(
-        `roster check: ${result.ok ? "ok" : "failed"} allowlistedPresent=${result.allowlistedPresent} missingFromRoster=${result.missingFromRoster.length} nameMismatches=${result.nameMismatches.length} nonAllowlisted=${result.nonAllowlisted.length}\n`,
-      );
-    }
-    process.exitCode = result.ok ? 0 : 1;
-  });
-
 const builder = program.command("builder").description("command and workflow builder catalog");
 builder
   .command("catalog")
@@ -2502,8 +2440,6 @@ builder
       { path: "src/cli.ts", command: "ut-tdd review --uncommitted", description: "review packet" },
       { path: "src/cli.ts", command: "ut-tdd cutover --to", description: "cutover dry-run" },
       { path: "src/cli.ts", command: "ut-tdd asset catalog", description: "asset catalog" },
-      { path: "src/cli.ts", command: "ut-tdd roster list", description: "roster registry" },
-      { path: "src/cli.ts", command: "ut-tdd roster check", description: "roster guard check" },
       { path: "src/cli.ts", command: "ut-tdd builder catalog", description: "builder catalog" },
     ];
     const surface = commandDocs.map((doc) => doc.command);
@@ -3086,7 +3022,7 @@ task
           process.stdout.write(`    - ${r.pattern}: ${r.disposition} (${r.reason})\n`);
         }
         process.stdout.write("  recommended subagents:\n");
-        for (const a of coverage.recommended_subagents) {
+        for (const a of coverage.recommended_lanes) {
           process.stdout.write(
             `    - ${a.role}: ${a.tier} ${a.model} slots=${a.parallel_slots} closing=${a.closing_authority} ownership=${a.ownership} (${a.purpose}; guard=${a.guard})\n`,
           );
@@ -3241,7 +3177,7 @@ team
       const result = recommendTeamLaunch({
         task: opts.task,
         mode,
-        proposalSubagents: coverage?.recommended_subagents,
+        proposalSubagents: coverage?.recommended_lanes,
       });
       const output = coverage ? { ...result, document_coverage: coverage } : result;
       if (opts.json) {

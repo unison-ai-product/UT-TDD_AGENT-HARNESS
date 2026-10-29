@@ -140,11 +140,11 @@ Codex 側で使うモデルは GPT-6 の Astra / Sol / Terra / Luna の 4 つだ
 | Astra (`gpt-6-astra`) | ― | 常用しない。Sol から、超局所の難所の相談だけを受ける | ― |
 | Sol (`gpt-6.1-sol`) | どうしても解けないときだけ Astra に相談する | 常用。自分で判断し、control lane (Claude) と相談しながら Luna に振り、上がってきた成果を検収する | Luna |
 | Terra (`gpt-6.1-terra`) | フロントエンド・UI と設計の判断だけ Sol に相談する | 指揮。Claude 側の Sonnet と同じ位置づけで、チケットを分けて Luna に振り、上がってきた成果を検収し、Issue / PR に返事する。実装は自分でせず Luna に任せる | Luna |
-| Luna (`gpt-6-luna`) | Sol に相談する | worker。control lane の指示を受けて実装・テスト実装・文書修正・探索を行う | Luna の subagent (仲間を増やして並列に戦う) |
+| Luna (`gpt-6-luna`) | Sol に相談する | worker。control lane の指示を受けて実装・テスト実装・文書修正・探索を行う | Luna の subagent (手を動かす層。仲間を増やして並列に戦う) |
 
 - Sol の「検収」は PR を出す前の族内チェックであり、closing review の代わりにしない。Codex 著の成果物の
   closing review は従来どおり Claude Opus が行う (§Blind review role、`CLAUDE.md` §FLAG 後の限定是正と merge)。
-- Luna の仲間 (subagent) は closing の権限を持たない。
+- Luna の仲間 (subagent) は手を動かす層であり、closing の権限を持たない。判断する層 (closing review・advisor・merge) は委譲経路 (`ut-tdd claude|codex --role <role>`) と review custody だけが持つ (正本: `CLAUDE.md` §Model / Effort Routing の 2 層)。
 - Astra は `MODEL_IDS` に未登録であり、相談するときは明示の `--model gpt-6-astra` で呼ぶ。
 - Terra は GUI lane の指揮でだけ使い、`MODEL_IDS` には登録しない (委譲経路の role には割り当てない)。
   Terra が指揮しても、Codex 著の成果物の closing review は Claude Opus が行い、指揮の検収はその代わりにならない。
@@ -177,8 +177,8 @@ Use the valid-attack taxonomy and citation-only refutation from
 un-refuted attack), PASS (all attacks refuted by citation), or PASS-WEAK (no
 attack found, with a trial log of at least three attempted attacks). In `hybrid`,
 route blind review to the provider that did not author the change so
-attacker/defender providers stay separated. The Claude subagent counterpart is
-`.claude/agents/blind-reviewer.md`.
+attacker/defender providers stay separated. The Claude counterpart is
+`ut-tdd claude --role blind-reviewer` (a delegation-path role, not an Agent tool subagent; the harness keeps no subagent definition files, #1002).
 
 FLAG 後の**軽作業の是正は同 PR 内で往復する** (PO ルール 2026-09-14、正本: `CLAUDE.md`
 §FLAG 後の限定是正と merge)。Codex 著 PR では Claude Opus が FLAG → Codex (Luna、別 session)
@@ -196,7 +196,7 @@ Model / effort routing defaults (task-kind ベース、PO rule 2026-07-14):
 - Claude: フロントデザイン/UI デザインの判断・レビュー/設計ドキュメント作成 = Opus (`claude-opus-5-5`);
   決まった UI デザインの実装/ドキュメント修正 = Sonnet (`claude-sonnet-5-5`);
   web 検索/doc パッチ = Haiku (`claude-haiku-5-5`)。
-- 並列の軽量レーンは Luna の subagent と Claude Haiku が担い、closing の権限を持たない。
+- 並列の軽量レーンは Luna の subagent と Claude Haiku が担う (手を動かす層。closing の権限を持たない。正本: `CLAUDE.md` §Model / Effort Routing の 2 層)。
 - Effort はモデル別基準ラダー (PO rule 2026-07-28) が既定: Sol/Fable = `low`、
   Opus/Sonnet = `middle`、Luna = `high`。回答が浅い時は
   **まず effort を 1 段、その先はモデルを上げる** (`escalateShallowResponse`):

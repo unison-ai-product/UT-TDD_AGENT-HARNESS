@@ -192,11 +192,13 @@ Sonnet 自身が worker tier なので、通常の作業は自分で行う (「�
 
 | あなたが | 迷った判断・難所 | レビュー・UI デザイン判断 | 通常の作業 | 軽い作業 |
 |---|---|---|---|---|
-| Fable | 自分で決めて記録する。技術判断だけ Sol に相談する (`ut-tdd advisor`) | Opus の subagent | Sonnet | Haiku |
-| Opus | `ut-tdd advisor` で相談する。設計・進行・UI は Fable、技術判断は Sol (Model / Effort Routing の振り分けどおり) | 自分、または Opus の subagent | Sonnet | Haiku |
-| Sonnet | Opus に相談する (Agent tool で Opus の subagent を呼ぶ) | Opus の subagent | 自分 | Haiku |
+| Fable | 自分で決めて記録する。技術判断だけ Sol に相談する (`ut-tdd advisor`) | 委譲経路 (`ut-tdd claude --role` / `ut-tdd codex --role`、Opus / Sol) | Sonnet | Haiku |
+| Opus | `ut-tdd advisor` で相談する。設計・進行・UI は Fable、技術判断は Sol (Model / Effort Routing の振り分けどおり) | 自分の UI デザイン判断。closing review は委譲経路 (`ut-tdd claude --role` / `ut-tdd codex --role`) | Sonnet | Haiku |
+| Sonnet | Opus に相談する (Agent tool の汎用の型に `model: opus` を渡す。相談の回答は closing の根拠にしない) | 委譲経路 (`ut-tdd claude --role <role>`、Opus) | 自分 | Haiku |
 | Haiku | 指揮をしない。判断が出たら Sonnet に相談する | ― | ― | 自分 |
 
+- Agent tool の subagent は手を動かす層 (草稿・調査・並列作業) であり、closing の権限を持たない。レビューの verdict・merge の根拠は
+  委譲経路 (`ut-tdd claude|codex --role <role>`) と review custody だけが持つ (`../CLAUDE.md` §Model / Effort Routing の 2 層)。
 - 「通常の作業」は文書作成・決まった型での issue / PR 返信・決まった UI デザインの実装、「軽い作業」は
   gh の状態確認・grep・CI の見張り・ログの要約。
 - どの行でも変えないもの: モデル割当は Model / Effort Routing (`../CLAUDE.md`) と
@@ -240,71 +242,42 @@ plain fenced command for a human to run if the native tool is unavailable.
 node "${CLAUDE_PROJECT_DIR}/.claude/hooks/agent-guard.ts"
 ```
 
-Rules:
+Rules (contract: `docs/design/harness/L6-function-design/agent-guard-delegation-boundary.md`):
 
-1. Agent calls without a model are blocked, for every `subagent_type`.
-2. A `subagent_type` with no harness definition (`general-purpose` / `Explore` / `Plan`, or none)
-   passes with an explicit model; `fable` is not allowed there. It has no closing authority
-   (closing review goes through `ut-tdd claude|codex --role`). The allowlist below lists the
-   defined subagents, which keep their frontmatter floor until #1002 retires them.
-3. The requested model must be at or above the capability family declared in
-   the agent frontmatter (a floor, not an exact pin) — downgrades (cost-cutting)
-   are blocked; escalating to the orchestrator's own tier or higher is allowed.
-   Worker-role subagents (be-api / be-logic / db-schema / devops-deploy /
-   pmo-haiku / refactor-scout / etc.) stay pinned to a lower tier;
-   quality-check / gate subagents (code-reviewer / blind-reviewer / ut-tdd-tl /
-   security-audit / qa-test) declare an opus floor. Review must never be
-   lower-tier than the orchestrator it reviews (PO principle 2026-07-08,
-   PLAN-L7-399).
-4. Bypass is allowed only with `UT_TDD_ALLOW_RAW_AGENT=1` and must leave
-   evidence.
-5. Invalid stdin JSON or unverifiable state fails closed.
+1. An envelope without `tool_name` is blocked and cannot be bypassed.
+2. `subagent_type` must be one of the generic types below (exact, case-sensitive). The
+   harness keeps no subagent definition files (#1002); expertise is passed per task as
+   skills, decision packs, and design excerpts.
+3. Agent calls without an explicit, normalizable model are blocked.
+4. `fable` is not allowed in the Agent tool (the apex tier stays with the delegation path).
+5. The guard has no model floor. The floor for judgement gates lives in
+   `REVIEW_GATE_ROLES` (`src/team/delegation-routing.ts`).
+6. A subagent has no closing authority: its output is never a review verdict or a merge
+   basis. Closing review goes through `ut-tdd claude|codex --role <role>` and review custody.
+7. Bypass is allowed only with `UT_TDD_ALLOW_RAW_AGENT=1` (type / model / fable checks only)
+   and must leave evidence. Invalid stdin JSON or unverifiable state fails closed.
 
 Allowlist:
 
-- `be-api`
-- `be-logic`
-- `db-schema`
-- `devops-deploy`
-- `refactor-scout`
-- `pmo-sonnet`
-- `pmo-haiku`
-- `pmo-project-explorer`
-- `pmo-project-scout`
-- `pmo-tech-docs`
-- `pmo-tech-fork`
-- `pmo-tech-news`
-- `pdm-tech-innovation`
-- `pdm-marketing-innovation`
-- `pdm-innovation-manager`
-- `code-reviewer`
-- `blind-reviewer`
-- `security-audit`
-- `qa-test`
-- `ut-tdd-tl`
+- `general-purpose`
+- `Explore`
+- `Plan`
+- `claude`
 
-`blind-reviewer` is a review/gate subagent (opus floor) that judges the artifact
-against spec and self-run tests only, with the author's claims, self-assessment,
-intent, prior verdicts, and identity withheld by the orchestrator when it builds
-the packet. It runs two lanes — claim-blind (vs spec/AC) and spec-blind (artifact
-internal soundness). It is the subagent-scoped precursor to the full adversarial
-mechanism in `docs/plans/PLAN-L6-53-adversarial-review-mechanism.md`. In `hybrid`
-the blind review should run on the provider that did not author the change (Claude
-subagent for Codex-authored work, `ut-tdd codex --role blind-reviewer` for
-Claude-authored work) so attacker/defender providers stay separated; single-runtime
+`blind-reviewer` is a judgement-gate role name, not an Agent tool subagent. It is invoked
+through `ut-tdd claude|codex --role blind-reviewer` and judges the artifact against spec
+and self-run tests only, with the author's claims, self-assessment, intent, prior
+verdicts, and identity withheld by the orchestrator when it builds the packet. In
+`hybrid` the blind review runs on the provider that did not author the change; single-runtime
 modes record `intra_runtime_subagent` evidence instead. FLAG 後の軽作業の是正は
 author family が同 PR 内で行い、同じ非著者 reviewer が新 exact head を再検する。契約改訂へ
 戻すのは上位契約の齟齬だけ (`../CLAUDE.md` §FLAG 後の限定是正と merge)。
 
-Source-snapshot exploration is not an active Claude Code subagent route. Use
-project-focused agents for repository inspection and treat migration snapshots
-as read-only material.
-
 ## Parallel Task Limit
 
 Tasks that do not depend on each other may be submitted in parallel, default
-upper limit **8** concurrent subagent slots (`DEFAULT_MAX_PARALLEL` in
-`src/runtime/agent-slots.ts`, IMP-050). `agent-slots` records fire/release and
+upper limit **8** concurrent subagent slots for in-lane parallelism through the Agent tool
+(`DEFAULT_MAX_PARALLEL` in `src/runtime/agent-slots.ts`, IMP-050). `agent-slots` records fire/release and
 warns when active slots reach this limit; it does not hard-block above it
 (fail-open advisory, not a fail-close gate). This restores the reference that
 `src/runtime/agent-slots.ts` and `docs/design/harness/L6-function-design/agent-slots.md`
