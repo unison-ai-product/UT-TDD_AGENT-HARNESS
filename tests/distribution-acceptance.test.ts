@@ -607,15 +607,6 @@ describe("clean distribution local acceptance smoke", () => {
         "docs/templates/adapter/.codex/hooks.json",
       );
       expect(distributionJson.export.artifactPaths).toContain(
-        "docs/templates/adapter/.claude/agents/ut-tdd-tl.md",
-      );
-      expect(distributionJson.export.artifactPaths).toContain(
-        "docs/templates/adapter/.claude/agents/code-reviewer.md",
-      );
-      expect(distributionJson.export.artifactPaths).toContain(
-        "docs/templates/adapter/.claude/agents/qa-test.md",
-      );
-      expect(distributionJson.export.artifactPaths).toContain(
         "docs/templates/adapter/.claude/commands/build.md",
       );
       expect(distributionJson.export.artifactPaths).not.toContain(

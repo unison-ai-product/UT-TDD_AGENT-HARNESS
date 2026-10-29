@@ -137,7 +137,6 @@ const baseTemplates: TemplateSet = {
     "<!-- UT-TDD:managed:end -->",
     "",
   ].join("\n"),
-  "adapter/.claude/agents/ut-tdd-tl.md": "---\nname: ut-tdd-tl\n---\n",
   "adapter/.claude/commands/ut-tdd-status.md": "---\ndescription: Status\n---\n",
   "adapter/.claude/commands/ut-tdd-test.md": "---\ndescription: Test\n---\n",
   "adapter/.claude/settings.json": '{"hooks":{"SessionStart":[]}}\n',
@@ -467,30 +466,9 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
           }),
         ]),
       );
-      expect(templates["adapter/.claude/agents/pmo-sonnet.md"]).toContain(
-        `model: ${MODEL_IDS.claude.sonnet}`,
-      );
-      expect(templates["adapter/.claude/agents/pmo-haiku.md"]).toContain(
-        `model: ${MODEL_IDS.claude.haiku}`,
-      );
-      expect(templates["adapter/.claude/agents/pdm-tech-innovation.md"]).toContain(
-        `model: ${MODEL_IDS.claude.opus}`,
-      );
-      const claudeModelCatalog = new Set<string>(Object.values(MODEL_IDS.claude));
-      const agentTemplates = Object.entries(templates).filter(([path]) =>
-        path.startsWith("adapter/.claude/agents/"),
-      );
-      expect(agentTemplates.length).toBeGreaterThan(0);
-      for (const [path, body] of agentTemplates) {
-        const model = body.match(/^model:\s*(\S+)/m)?.[1];
-        expect(model, `${path} must declare a model`).toBeTruthy();
-        expect(claudeModelCatalog.has(model ?? ""), `${path} model must come from MODEL_IDS`).toBe(
-          true,
-        );
-        expect(model, `${path} must not retain legacy model suffixes`).not.toMatch(
-          /claude-opus-4-7|claude-sonnet-4-6|20251001/,
-        );
-      }
+      expect(
+        Object.keys(templates).filter((path) => path.startsWith("adapter/.claude/agents/")),
+      ).toEqual([]);
     } finally {
       rmSync(repo, { recursive: true, force: true });
     }
@@ -507,14 +485,6 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
         expect.objectContaining({ path: join(".codex", "hooks.json"), category: "A" }),
         expect.objectContaining({ path: join(".claude", "CLAUDE.md"), category: "A" }),
         expect.objectContaining({
-          path: join(".claude", "agents", "code-reviewer.md"),
-          category: "A",
-        }),
-        expect.objectContaining({
-          path: join(".claude", "agents", "qa-test.md"),
-          category: "A",
-        }),
-        expect.objectContaining({
           path: join(".claude", "commands", "build.md"),
           category: "A",
         }),
@@ -526,6 +496,10 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
       ]),
     );
 
+    expect(
+      plan.files.filter((f) => f.path.replaceAll("\\", "/").startsWith(".claude/agents/")),
+    ).toEqual([]);
+
     const deps = mockDeps({ templates: baseTemplates });
     const preview = emitSetup(plan, baseTemplates, deps);
     expect(preview).toEqual(
@@ -535,7 +509,6 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
         "CLAUDE.md",
         join(".codex", "hooks.json"),
         join(".claude", "CLAUDE.md"),
-        join(".claude", "agents", "code-reviewer.md"),
         join(".claude", "commands", "build.md"),
       ]),
     );
@@ -720,9 +693,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     expect(plan.artifactPaths).toContain("NOTICE");
     expect(plan.artifactPaths).toContain("docs/templates/adapter/AGENTS.md");
     expect(plan.artifactPaths).toContain("docs/templates/adapter/.codex/hooks.json");
-    expect(plan.artifactPaths).toContain("docs/templates/adapter/.claude/agents/code-reviewer.md");
     expect(plan.artifactPaths).toContain("docs/templates/adapter/.claude/commands/build.md");
-    expect(plan.artifactPaths).toContain("docs/templates/adapter/.claude/agents/ut-tdd-tl.md");
     expect(plan.artifactPaths).toContain("docs/governance/README.md");
     expect(plan.artifactPaths).toContain("docs/governance/ut-tdd-agent-harness-concept_v3.1.md");
     expect(plan.artifactPaths).toContain(
@@ -1102,7 +1073,6 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     expect(ready.rollback.backupRequired).toBe(true);
     expect(ready.rollback.managedPaths).toContain("AGENTS.md");
     expect(ready.rollback.managedPaths).toContain(".ut-tdd/bin/ut-tdd.mjs");
-    expect(ready.rollback.managedPaths).toContain(".claude/agents/code-reviewer.md");
     expect(ready.rollback.managedPaths).toContain(".claude/commands/build.md");
     expect(ready.contracts.tagPin).toBe(
       "github:unison-ai-product/UT-TDD_AGENT-HARNESS-Pack#v0.1.0",

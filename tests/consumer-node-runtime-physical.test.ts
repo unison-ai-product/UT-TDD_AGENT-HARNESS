@@ -772,7 +772,7 @@ describe("physical consumer Node runtime adapter", () => {
       cwd: root,
       input: JSON.stringify({
         tool_name: "Agent",
-        tool_input: { subagent_type: "pmo-haiku", model: "haiku" },
+        tool_input: { subagent_type: "general-purpose", model: "haiku" },
       }),
       encoding: "utf8",
     });
@@ -786,7 +786,7 @@ describe("physical consumer Node runtime adapter", () => {
     const codexCommand = codexSettings.hooks.PreToolUse[0].hooks[0].command;
     const codexHookInput = JSON.stringify({
       tool_name: "Agent",
-      tool_input: { subagent_type: "pmo-haiku", model: "haiku" },
+      tool_input: { subagent_type: "general-purpose", model: "haiku" },
     });
     const codexHook =
       process.platform === "win32"
