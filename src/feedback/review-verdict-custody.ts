@@ -12,6 +12,7 @@ import {
 } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { ensureDir } from "../shared/fs.ts";
+import { isReviewFloorModel } from "../team/model-policy.ts";
 
 export const REVIEW_REQUEST_SCHEMA_VERSION = "review-request/v1" as const;
 export const REVIEW_VERDICT_SCHEMA_VERSION = "ut-tdd.review-verdict/v1" as const;
@@ -530,6 +531,10 @@ export function beginReviewAttempt(input: {
   const expectedProvider = input.request.authorFamily === "codex" ? "claude" : "codex";
   if (input.provider !== expectedProvider)
     return { ok: false, reason: "same_family_reviewer_denied" };
+  if (typeof input.model !== "string" || !input.model.trim())
+    return { ok: false, reason: "invalid_attempt_outcome" };
+  if (!isReviewFloorModel(input.provider, input.model))
+    return { ok: false, reason: "reviewer_model_below_floor" };
   const digest = reviewIdentityDigest(input.request);
   const receiptPath = join(
     resolve(input.repoRoot),

@@ -694,11 +694,11 @@ SMB/NFS/OneDrive をまたぐ strict lease、heartbeat、clock-skew 耐性は主
 | U-GATE-006 | `ut-tdd gate --checklist` | checklist YAML 読込・parse 失敗は CLI crash ではなく review checklist violation として gate failure |
 | U-GATE-007 | `ut-tdd gate --plan --session` / `writeGateRunEvidence` | gate 判定後に `.ut-tdd/gate_runs/*.json` が作成され、`gate_id`、`plan_id`、`status`、`session_id`、`command`、`checks[]`、`source=ut-tdd gate` を持つ。証跡書込は gate verdict を変えない。 |
 | U-GATE-008 | `writeGateRunEvidence` failure boundary | `.ut-tdd/gate_runs` 書込失敗は `gate_run_evidence_warning` として surface されるが、`evaluateGateReview` / `evaluateStaticGate` の合成結果と exit code を変更しない。 |
-| CANDIDATE-U-GATE-009 | `writeGateRunEvidence` 排他作成 | 同一入力または hash collision の2回目は fail-close し、初回 bytes/path を保ち上書き・別名保存しない。 |
-| CANDIDATE-U-GATE-010 | `buildGateRunEvidence` 新規 ID | 新規 ID は `gate-run:${compactSlug(gateId)}:${sha256([gateId, checkedAt, sessionId ?? "", process.pid].join(":")).slice(0, 12)}` とし、PLAN 値を含めず、既存証跡の ID は変えない。 |
+| CANDIDATE-U-GATE-009 | `writeGateRunEvidence` no-clobber publish | 別 process から同じ ID を並行 publish すると一方だけ成功、他方は `EEXIST` 警告で exit/verdict 不変。完成 temp を同一 filesystem 上に `.tmp-*` (reader の `*.json` glob 外) で書き hard link publish。link 失敗・非対応・その他書込失敗は警告のみで未 publish・exit/verdict 不変 (fallback なし)。link 失敗の注入が発火したことと link 前に残した temp の実在を assert する。実際に crash させ retry し、final に不完全 JSON が現れず、残った temp を retry が削除せず projection reader も証跡として読まないことを確認する。 |
+| CANDIDATE-U-GATE-010 | `buildGateRunEvidence` ID / path と旧形式読込 | 新規 ID は `gate-run:${compactSlug(gateId)}:${sha256([gateId, checkedAt, sessionId ?? "", process.pid].join(":")).slice(0, 12)}` とし PLAN 値を含めず、path は UTF-8 ID の SHA-256 小文字 hex のみから決める。別 ID の hash collision は拒否。旧 `<gate>-<timestamp>-<hash>.json` も読み、新旧で同じ ID なら拒否。 |
 | CANDIDATE-U-DOCTOR-GATE-02 | `checkGateRunCoverage` 証跡照合 | 証跡と DB の6列 (`gate_run_id` / `gate_id` / `plan_id` / `status` / `checked_at` / `evidence_path`) を全て比較して不一致を fail-close、`plan_id=null` と DB 空値は一致。 |
 | CANDIDATE-U-DOCTOR-GATE-03 | `checkGateRunCoverage` DB-only 除外 | 証跡が無い実行の DB-only gate row と `stableId("gate-workflow", gate_run_id)` 由来の対応 workflow row を両方除外し、欠落対にしない (`gate_runs=0` は fail-close)。既存 `U-DOCTOR-GATE-01` の「証跡欠落」は現存証跡に対する必要 row の欠落・不正を指す。正常再投影は冪等。 |
-| CANDIDATE-U-DOCTOR-GATE-04 | `checkGateRunCoverage` transaction / fail-close | 追加・除外・全列照合を全体 transaction 内で行い、全証跡を評価する。1件でも不一致なら追加・削除を含め rollback し旧状態を保つ (「独立」は評価順序であり部分 commit ではない)。 |
+| CANDIDATE-U-DOCTOR-GATE-04 | `checkGateRunCoverage` / `analyzeDriveDbRegistration` | 追加・除外・全列照合を全体 transaction 内で行い、全証跡を評価する。1件でも不一致なら追加・削除を含め rollback し旧状態を保つ (「独立」は評価順序であり部分 commit ではない)。A4: PLAN がある fixture に `drive_run_id=""` と当該 PLAN の documented 以外を指す非空 `drive_run_id` の routine-gate 各1件以上と非 routine の orphan 1件以上が実在することを assert し、routine-gate は `workflow_orphans` に数えず非 routine は JOIN で違反になることを確認する。 |
 | U-TEAMRUN-001 | `validateTeamRun` | hybrid 以外は fail / hybrid で worker(se) と reviewer(tl/qa) が別 provider なら pass |
 | U-TEAMRUN-002 | `validateTeamRun` | 同一 role/provider 重複、worker/reviewer 同一 provider は fail |
 | U-TEAMRUN-003 | `recommendTeamLaunch` + `buildTeamRunPlan` | `team suggest` が返す critical definition は `se -> tl -> qa` の依存順へ正規化され、全 member が high effort selection を持つ。member prompt は resolved `provider` を header に出し、`model_family` 推奨ラベルと runtime provider を混同しない |
@@ -957,7 +957,7 @@ Issue #1357 の `U-DBPROJ-ING-001..003` は正式 ID へ昇格済み。001/002 �
 | U-DBPROJ-ING-001 | `analyzeDbProjectionIngestion` | `schedule_entries` と `execution_readiness_projection` が 0 行でも、他の全 automatic 要件が populated なら `ok=true` かつ `missingRows=[]`。さらに `AUTOMATIC_DB_PROJECTION_REQUIREMENTS` にこの2表が含まれない。両表は PLAN 入力が無いときの無条件 population 要件ではない。 |
 | U-DBPROJ-ING-002 | `analyzeDbProjectionIngestion` | 上記2表と既存 negative fixture の `mcp_server_profiles` が 0 行なら `ok=false` で、`missingRows.map(row => row.table)` の完全一致集合は `mcp_server_profiles` のみ。例外対象は指定の2表だけで、他の automatic 要件は fail-close のまま。 |
 | U-DBPROJ-ING-003 | `rebuildHarnessDb` | 隔離 `repoRoot` の明示的な PLAN Markdown fixture 1 件を入力すると `schedule_entries > 0` かつ `execution_readiness_projection > 0`。これは入力が存在する場合の生成保証であり、入力不在時の無条件 population 要件ではない。 |
-| U-DBPROJ-ATOMIC-01 | `rebuildHarnessDb` | The truncate + re-project sequence runs inside one `BEGIN IMMEDIATE` transaction. Injecting a failure during projection (a wrapped `db` that throws on the first `INSERT INTO plan_registry`, i.e. after `truncateProjectionTables` has emptied the tables) re-throws and **rolls back**, leaving the prior committed `plan_registry` projection intact (row count unchanged, not 0). Red→Green: fails pre-fix (188 → 0). |
+| U-DBPROJ-ATOMIC-01 | `rebuildHarnessDb` | truncate と再投影は 1 つの `BEGIN IMMEDIATE` transaction の中で走る。実 repo の基準 rebuild で 1 行以上ある、PLAN に依らない `test_cases` への最初の `INSERT` (truncate の後) で失敗を注入すると、例外が再送出されて rollback し、直前に commit した `test_cases` の行数が変わらない (0 にならない)。基準の行数が 0 なら失敗とし、`docs/plans` の有無で飛ばさない (#1430、旧版は `plan_registry` へ注入、修正前 188 → 0 で Red)。 |
 | U-DBPROJ-PROV-01 | `analyzeDbProjectionIngestion(..., { enforceTelemetryProvenance: true })` | Populated telemetry tables (`skill_invocations`, `test_runs`, `guardrail_decisions`, `model_runs`) with only projection provenance are not acceptable evidence for "fired/used/works" claims. Default doctor can surface migration state as partial, but provenance-enforced mode fail-closes when runtime rows are 0 and projection rows are non-zero. |
 | U-DBPROJ-PROV-02 | `projectRuntimeTestRunFromSessionEvent` | A session-log Bash verification event (`Bash (vitest)` etc.) creates exactly one `test_runs` row with non-empty `session_id`, `runtime=hook-session-log`, `scope=runtime-hook`, and the JSONL evidence path; non-verification Bash events such as `Bash (git)` do not fabricate runtime test evidence. |
 | U-DBPROJ-PROV-03 | `checkDbProjectionIngestion` / `projectRuntimeModelTelemetryForDoctor` | Doctor's in-memory DB rebuild overlays existing Claude/Codex JSONL token usage through `projectTokenUsage`, so `model_runs` with token/cost-valued columns count as runtime provenance without requiring provider CLI execution. The deterministic `db rebuild` command remains source-projection-only. |
@@ -1810,7 +1810,6 @@ Issue #926 の custody oracle 行は契約上の候補宣言であり、実装�
 | `CANDIDATE-U-RVMG-034` | allowlist 外 receipt の `at` だけを cutoff より前へ backdate し、attempt terminal event を欠く fixture | 自己申告時刻だけでは grandfather せず wrapper が deny、merge 0 |
 
 #### 同じ head の古い check run (Issue #1104)
-
 設計正本は `docs/design/harness/L6-function-design/merge-gate-check-run-selection.md`。実テストは `tests/review-merge-gate.test.ts`。
 
 | ID | mutation / fixture | expected |
@@ -1827,9 +1826,11 @@ Issue #926 の custody oracle 行は契約上の候補宣言であり、実装�
 | `U-RVMG-044` | 同じ check 名・異なる run id・両方 SUCCESS で、最早 startedAt が同時刻 | 最新を決められず `checksGreen=false` |
 | `U-RVMG-045` | 同じ run id・同じ workflow の同名 job が両方 SUCCESS | 識別不能な重複として `checksGreen=false` |
 | `U-RVMG-046` | `workflowName` 欠落・異なる run id・両方 SUCCESS の同名エントリ | 識別不能な重複として `checksGreen=false` |
+| `CANDIDATE-U-RVMG-047` | (#1423 L6 §6) checks 緑・review merge_ready の PR で、mb 後に main が (a) PR と同じ baseline 対象ファイルを変更 (b) PR が baseline ファイルを変更し main が別の対象ファイルを変更 (c) main が baseline ファイルを変更し PR が対象ファイルを変更 (d) PR が対象ファイルを rename し main が旧 path を変更 | 全て `baseline_conflict` で deny、`gh pr merge` 呼び出し 0。doc-split / code-size の両 gate で成り立つ |
+| `CANDIDATE-U-RVMG-048` | (#1423) 同条件の PR で、(a) PR と main が別々の対象ファイルを変更し baseline は両者とも不変 (b) PR が対象外だけを変更 (c) main が対象外だけを変更 (d) PR が main を取り込み済みで mb が main 先端 | 全て競合なしで従来どおり merge。誤拒否しない |
+| `CANDIDATE-U-RVMG-049` | (#1423) 競合 fixture の実行と、`git fetch` / `git diff` の失敗・mb 解決不能の fixture | 競合は exit 1、出力に gate 名・競合 path・main を取り込んで CI を取り直す案内を含み、`--json` の reason は `baseline_conflict`。git 失敗・mb 解決不能は `baseline_conflict_unknown` で deny し、緑にならない |
 
 ## Claude HARNESS memory async wake oracle (2026-08-03)
-
 対象 = `src/runtime/claude-memory-wake.ts`、`src/cli.ts`、Claude Stop hook、consumer setup
 template。永続memoryと即時配送runtime stateを分離し、通知をreview/署名の権威へ昇格させない。
 
@@ -1844,7 +1845,6 @@ template。永続memoryと即時配送runtime stateを分離し、通知をrevie
 | `U-MEMWAKE-007` | 同一git common dir上のtarget一致・不一致workspace、およびCLI publish→Stop hook配送 | 不一致watcherはclaim 0でentryを保持。一致workspaceだけが本文をstderrへ返しexit 2 |
 
 ## Claude inbox 明示 ACK candidate oracle (PLAN-L6-935)
-
 設計正本は docs/design/harness/L6-function-design/claude-inbox-explicit-ack.md。個別の詳細 pair は
 docs/test-design/harness/L7-claude-inbox-explicit-ack-test-design.md を参照する。本節の ID は未実装 candidate であり、正式 U-* oracle ではない。
 

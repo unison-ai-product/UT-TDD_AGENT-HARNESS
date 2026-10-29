@@ -28,7 +28,8 @@ import {
 const at = "@";
 const mail = (local: string, domain: string) => [local, domain].join(at);
 const P = mail("alice", "mail-provider.jp");
-const D = "example-private-repo";
+// L7 §2: tests/ ship in the Pack, so the synthetic denylist word is joined at runtime too.
+const D = ["example", "private", "repo"].join("-");
 const BASELINE_PATH = "docs/governance/privacy-scan-baseline.json";
 const DENYLIST = [".ut-tdd", "privacy-denylist.txt"];
 

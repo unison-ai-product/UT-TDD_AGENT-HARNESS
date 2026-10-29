@@ -13,7 +13,7 @@ export interface RepositoryReadContract {
 
 const CONTRACT_ROWS = `
 agent-guard-delegation-boundary:1
-asset-catalog:3 asset-drift:1 backfill-pairing:1 cited-command-existence:1 cli-surface:1 cli:1
+asset-catalog:2 asset-drift:1 backfill-pairing:1 cited-command-existence:1 cli-surface:1 cli:1
 advisory-strict-gate-aging:4
 codex-hook-adapter:5 coding-rules:1 context-doc-router:2 cycle-p4-verification:3 db-currency:1 db-projection-coverage:1 db-projection-ingestion:3
 dependency-drift:4 descent-obligation:3 distribution-acceptance:1 distribution-scratch-ignore:1 doctor-runtime-surface:2 doctor:25
@@ -24,7 +24,7 @@ release-artifact-resolver:1 release-consumer-skills:4
 right-lung-doc-governance:1 rule-drift:4 runtime-hook-entrypoints:1
 review-live-cli:4
 review-delegation-root:1
-runtime-portability:2 screen-impl-pair-freeze:1 setup-bun-removal:2 ban-lint-detection-power:3 bun-permanent-ban:14 self-pair-normative-guard:1 setup-agent-floor:2 setup:8 skill-assignment:1 state-db:1
+runtime-portability:2 screen-impl-pair-freeze:1 setup-bun-removal:2 ban-lint-detection-power:3 bun-permanent-ban:14 self-pair-normative-guard:1 setup:8 skill-assignment:1 state-db:1
 sub-doc-catalog-drift:5 sub-doc-section-structure:1 telemetry-closure:1 test-design-naming:1 toolchain-pin:1 tracked-canonical:1
 vmodel-contract-compiler:1 vmodel-source-assets:1 work-guard:1 workspace-roots:3 write-encoding-guard:1
 vmodel-consumer-lint:1

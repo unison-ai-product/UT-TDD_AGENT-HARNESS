@@ -1,7 +1,8 @@
-import { SUBAGENT_ALLOWLIST } from "../runtime/agent-guard-policy.ts";
+import { CODEX_WORKSPACE_WRITE_ROLES } from "../runtime/agent-guard-policy.ts";
 import { READ_ONLY_DELEGATION_ROLES } from "../runtime/review-guard.ts";
 import { modelOverrideSchema, reasoningEffortSchema } from "../schema/team.ts";
 import {
+  isReviewFloorModel,
   MODEL_EFFORT_LADDER,
   MODEL_IDS,
   REVIEW_LANE_MODELS,
@@ -20,10 +21,9 @@ import {
  */
 
 /**
- * subagent 名形の判断ゲート role (.claude/CLAUDE.md の opus-floor gate subagent 群)。
- * allowlist 合流 (SUBAGENT_ALLOWLIST) で role として許可されるため、短縮形
- * (qa/tl/security) と同様に frontier reviewer tier へ固定しないと worker tier へ
- * 落ちる (2026-07-16 クロスレビュー指摘 1)。
+ * 判断ゲート role の名前 (名前だけを残す。subagent 定義ファイルとは無関係)。
+ * 短縮形 (qa/tl/security) と同様に frontier reviewer tier へ固定しないと worker tier へ
+ * 落ちるため、REVIEW_GATE_ROLES に含める (既存運用 `--role qa-test` などを壊さない)。
  */
 const GATE_SUBAGENT_ROLES = ["ut-tdd-tl", "qa-test", "security-audit"] as const;
 
@@ -37,13 +37,14 @@ export const REVIEW_GATE_ROLES: ReadonlySet<string> = new Set([
 const WORKER_DELEGATION_ROLES = ["se", "po", "pm", "docs", "advisor", "tl-advisor"] as const;
 
 /**
- * 許可 role = 判断ゲート role + worker role + subagent 名 (subagent と同名 role での委譲を許容)。
- * 未知 role は fail-close (agent-guard rule 1 と対称、A-177 F-4)。
+ * 許可 role = 判断ゲート role + worker role + Codex workspace-write の role 名。
+ * agent-guard の許可型 (GENERIC_SUBAGENT_TYPES) とは別の層の語彙である。
+ * 未知 role は fail-close (A-177 F-4)。
  */
 export const DELEGATION_ROLE_ALLOWLIST: ReadonlySet<string> = new Set([
-  ...READ_ONLY_DELEGATION_ROLES,
+  ...REVIEW_GATE_ROLES,
   ...WORKER_DELEGATION_ROLES,
-  ...SUBAGENT_ALLOWLIST,
+  ...CODEX_WORKSPACE_WRITE_ROLES,
 ]);
 
 export type DelegationProvider = "claude" | "codex";
@@ -106,6 +107,16 @@ export function resolveDelegationRouting(input: DelegationRoutingInput): Delegat
   // 判断ゲート role: 族内の frontier reviewer tier へ固定 (review は worker tier に流さない)。
   if (REVIEW_GATE_ROLES.has(role)) {
     const lane = reviewLaneForRole(role);
+    if (input.model !== undefined && !isReviewFloorModel(input.provider, input.model)) {
+      return {
+        ok: false,
+        message:
+          `[ut-tdd-delegation] BLOCK: role=${input.role} (provider=${input.provider}) ` +
+          `model=${input.model} is below the review floor.
+` +
+          `Minimum: ${REVIEW_LANE_MODELS[lane][input.provider]}`,
+      };
+    }
     const model = input.model ?? REVIEW_LANE_MODELS[lane][input.provider];
     // REVIEW_LANE_MODELS は常に ladder に載るが、明示 --model が ladder 外
     // (例: 新モデル ID) の場合のみこの fallback に到達する。

@@ -15,7 +15,6 @@ export interface AssetDriftInput {
   assets: AssetDoc[];
   skillRootExists: boolean;
   skillDocCount: number;
-  allowlist: string[];
   enrolledRootCount: number;
 }
 
@@ -24,9 +23,7 @@ export interface AssetDriftViolation {
     | "legacy-source-path-residue"
     | "legacy-command-residue"
     | "legacy-runtime-name-residue"
-    | "empty-docs-skills"
-    | "missing-allowlisted-agent"
-    | "non-allowlisted-agent";
+    | "empty-docs-skills";
   path?: string;
   detail: string;
 }
@@ -91,7 +88,6 @@ function defaultSkillRoot(repoRoot: string): string {
 }
 
 export function loadAssetDriftInput(repoRoot: string): AssetDriftInput {
-  const agentRoot = join(repoRoot, ".claude", "agents");
   const agentMemoryRoot = join(repoRoot, ".claude", "agent-memory");
   const skillRootRel = defaultSkillRoot(repoRoot);
   const skillRoot = join(repoRoot, skillRootRel);
@@ -100,23 +96,18 @@ export function loadAssetDriftInput(repoRoot: string): AssetDriftInput {
   const extraSkillFiles = hasNonGitkeepFile(skillRoot) ? 1 : 0;
   return {
     assets: [
-      ...loadAssetFiles(repoRoot, join(".claude", "agents"), "agent"),
       ...loadAssetFiles(repoRoot, join(".claude", "agent-memory"), "agent"),
       ...skillDocs,
       ...loadAssetFiles(repoRoot, join("docs", "templates", "prompts"), "prompt"),
     ],
     skillRootExists: existsSync(skillRoot),
     skillDocCount: skillDocs.length + extraSkillFiles,
-    allowlist: [],
-    enrolledRootCount: [agentRoot, agentMemoryRoot, skillRoot, promptRoot].filter((p) =>
-      existsSync(p),
-    ).length,
+    enrolledRootCount: [agentMemoryRoot, skillRoot, promptRoot].filter((p) => existsSync(p)).length,
   };
 }
 
 export function analyzeAssetDrift(input: AssetDriftInput): AssetDriftResult {
   const violations: AssetDriftViolation[] = [];
-  const assetById = new Map(input.assets.filter((a) => a.type === "agent").map((a) => [a.id, a]));
 
   for (const asset of input.assets) {
     for (const pattern of LEGACY_SOURCE_PATH_PATTERNS) {
@@ -167,31 +158,6 @@ export function analyzeAssetDrift(input: AssetDriftInput): AssetDriftResult {
     });
   }
 
-  for (const id of input.allowlist) {
-    if (!assetById.has(id)) {
-      violations.push({
-        kind: "missing-allowlisted-agent",
-        path: `.claude/agents/${id}.md`,
-        detail: "guard allowlist references a missing agent definition",
-      });
-    }
-  }
-
-  if (input.allowlist.length > 0) {
-    const allowlist = new Set(input.allowlist);
-    for (const asset of input.assets.filter(
-      (a) => a.type === "agent" && a.path.startsWith(".claude/agents/"),
-    )) {
-      if (!allowlist.has(asset.id)) {
-        violations.push({
-          kind: "non-allowlisted-agent",
-          path: asset.path,
-          detail: "agent definition is generated/enrolled but not accepted by agent-guard",
-        });
-      }
-    }
-  }
-
   return {
     ok: violations.length === 0,
     checkedAssets: input.assets.length,
@@ -202,7 +168,7 @@ export function analyzeAssetDrift(input: AssetDriftInput): AssetDriftResult {
 export function assetDriftMessages(result: AssetDriftResult): string[] {
   if (result.ok) {
     return [
-      `asset-drift - OK (agent/skill/prompt docs=${result.checkedAssets}, legacy_source_path_residue=0, legacy_command_residue=0, legacy_runtime_name_residue=0, allowlist_missing=0, non_allowlisted=0)`,
+      `asset-drift - OK (agent/skill/prompt docs=${result.checkedAssets}, legacy_source_path_residue=0, legacy_command_residue=0, legacy_runtime_name_residue=0)`,
     ];
   }
   return result.violations.map((v) => {

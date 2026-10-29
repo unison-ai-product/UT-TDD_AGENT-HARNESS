@@ -4,7 +4,7 @@ layer: L7
 executed_at_layer: L7
 artifact_type: test_design
 status: draft
-updated: 2026-10-19
+updated: 2026-10-28
 pair_artifact: docs/design/harness/L6-function-design/snapshot-runner-lifecycle.md
 ---
 
@@ -13,7 +13,7 @@ pair_artifact: docs/design/harness/L6-function-design/snapshot-runner-lifecycle.
 ## 1. 位置付け
 
 対になる設計文書は `docs/design/harness/L6-function-design/snapshot-runner-lifecycle.md` である (**未実装の目標契約**)。
-本書はその §3 生きている runner の寿命規則、§4 lease と sweeper、§5 OS 別の差、§6 fail-close / fail-open、§8 の DbC と不変条件を検証する oracle を定める。
+本書はその §2.1 snapshot source と検証対象の出力、および §3 生きている runner の寿命規則、§4 lease と sweeper、§5 OS 別の差、§6 fail-close / fail-open、§8 の DbC と不変条件を検証する oracle を定める。
 共有の `docs/test-design/harness/L7-unit-test-design.md` には索引 (§snapshot runner の寿命) だけを置き、本書が詳細の正本である。
 
 この pair-freeze では候補 ID (`CANDIDATE-U-SNAPLC-*`) だけを宣言する。工程は次のとおり。
@@ -21,13 +21,16 @@ pair_artifact: docs/design/harness/L6-function-design/snapshot-runner-lifecycle.
 1. **契約 PR (本 PR)**: 候補 oracle の宣言と、純関数の候補 Red (`it.fails`、001〜012・018・019・021) を `tests/snapshot-runner-lifecycle.test.ts` に入れる。実プロセスの oracle (013〜017・020) は**候補のまま**で、テストも昇格もここでは行わない (`src/` と `scripts/` を変えない契約 PR では、実プロセス fixture を要する検証を Red にできない)。
 2. **実プロセスの Red 追加 (src/ を含まない)**: 013〜017・020 の `it.fails` を `CANDIDATE-U-SNAPLC-*` の引用で追加する。開発 repo を読む場合は `test-repository-isolation` の登録行をこの PR の `src/` 変更として入れる。
 3. **昇格 (src/ を含まない)**: 引用の揃った候補 (全件) の正式 ID `U-SNAPLC-*` への昇格と、テスト名の引用の書き換えを同じ PR で入れる。正式宣言を citation より先に作らない (`oracle-test-trace`、設計保護 gate §10.2 / §10.3)。
-4. **実装 PR (L6 §9 の 4〜6)**: `it.fails` を `it` に戻して Green にする。実装 PR は `docs/test-design/` を変えない。
+4. **実装 PR (L6 §9 の 4〜6)**: `it.fails` を `it` に戻して Green にする。#1415 の `022`〜`024` を通常の `it` に戻す前に、`verifySnapshotCandidate` が precondition の不成立、assertion 未到達 (例外を含む)、cleanup 失敗を必ず throw し、通常のテスト失敗にする。これら各失敗経路を直接誘発して失敗を確認する oracle を、Green 実装 PR までに必ず用意する。実装 PR は `docs/test-design/` を変えない。
 
-**Red の読み方 (弱い Red であることの明示)**: 本 PR の時点では対象 module (`src/runtime/snapshot-run-lease.ts`) が存在せず、動的 import の失敗が `it.fails` を通す。これは個々の guard が Red である証拠ではない。実装 PR は候補ごとに mutation probe (対象の規則を 1 つ外して落ちること) を取ってから `it` に戻す。
+**issue #1415 の独立順序**: §2.1 source provenance は上の寿命候補一括昇格とは独立させる。候補 oracle `CANDIDATE-U-SNAPLC-022` / `023` / `024` の固定と `it.fails` からの引用は同じ Red PR で行う。本 Red は `runSnapshotTests` の実経路を temp Git / Pack fixture に対して呼び、Git 以外の child process stage は stub して重い処理を実行しない。Red の後に候補を正式 ID へ昇格し、Green は別 PR で実装する。上の寿命候補全件昇格は依存条件にしない。
+
+**既存候補 Red の読み方 (弱い Red であることの明示)**: 対象 module (`src/runtime/snapshot-run-lease.ts`) の不存在によって動的 import の失敗が `it.fails` を通すのは、純関数候補 `CANDIDATE-U-SNAPLC-001`〜`012`・`018`・`019`・`021` のみである。これは個々の guard が Red である証拠ではない。これらの実装 PR は候補ごとに mutation probe (対象の規則を 1 つ外して落ちること) を取ってから `it` に戻す。#1415 の `022`〜`024` は別の runner 出力契約を実経路で検証し、上記 module の不存在には依存しない。
 
 ## 2. fixture
 
 - 001〜012・018・019・021 は純関数 (`classifyLiveness` / `decideParentWatch` / `planSweep`) と、port を stub した `killTree` 呼び出し規則のテストで、ファイルシステム・環境変数・時刻・実プロセスを使わない。入力は L6 §4.2 の型 (`ProcessEntry` / `SnapshotLease`) を手で組み、最小の完備 fixture を基準に 1 点だけ壊す。
+- 022〜024 は `runSnapshotTests` を temp Git / Pack fixture に対して呼び、Git は小さな一時 repo 上で実行し、npm / DB rebuild / Vitest の child process は成功 stub とする。出力先 (`stdout` / `stderr`)、終了コード、npm stage 時点の snapshot 内容を観測する。Red 期間は現状どおり、fixture / runner の setup 失敗が assertion に到達せず `it.fails` の unexpected pass になるよう扱い、環境エラーを期待 Red と誤認しない。Green で `it.fails` を `it` に戻すときは、`verifySnapshotCandidate` が precondition の不成立、assertion 未到達 (例外を含む)、cleanup 失敗を必ず throw し、通常のテスト失敗として扱うこと。各失敗経路を直接誘発し、失敗になることを確認する oracle を Green 実装 PR までに必ず用意する。test repo は一時領域内だけで作るため、開発 repo の読み取りも `repositoryReadContracts` の登録も要しない。
 - 013〜017・020 は実プロセスの oracle で、`detached: true` で起動した `親 → 子 → 孫` の fixture を使う (L6 §1 実測 6: `detached` を付けない子は実行環境の job で親と一緒に消えるので、生存の oracle にならない)。Windows と POSIX の両方で実行し、OS に無い面は skip ではなく OS 別の期待値を持つ。判定は `Get-CimInstance Win32_Process` / `ps` の再観測で行い、コマンド出力の文面は読まない。
 - 実プロセスの oracle は自分が起動した fixture の pid だけを kill する。終了時に必ず後始末する (残した fixture は本 issue が扱う事故そのものである)。
 
@@ -56,6 +59,9 @@ pair_artifact: docs/design/harness/L6-function-design/snapshot-runner-lifecycle.
 | `CANDIDATE-U-SNAPLC-019` | stub の `killTree` が (a) 日本語・英語・空の出力で終了コード 0、(b) 出力は成功文だが終了コード非 0、(c) 終了コード 0 だが再観測で生存 | 判定は終了コードと再観測だけで決まる。(a) は成功、(b) は失敗、(c) は生存者あり (lease を残す)。出力の文面は結果に影響しない (L6 I8、I4) | `成功しました` のような文面を解析する |
 | `CANDIDATE-U-SNAPLC-020` (実プロセス) | SubagentStop hook から sweeper を呼ぶ入口に、stale な lease と生きた runner の lease を置いて 3 秒の予算で実行 | stale だけを回収し、生きた runner には触れず、予算内に戻る。sweeper が失敗しても hook は 0 を返し診断を 1 行出す (L6 §4.3 fail-open) | hook が subagent との相関を要求する / 失敗で hook を落とす |
 | `CANDIDATE-U-SNAPLC-021` | `decideParentWatch` に unknown を `consecutiveUnknown` 14 / 15 / 16 で。さらに 15 回目の観測が dead / alive のとき | 14 は `continue`、15 と 16 は `stop_parent_unobservable`。観測が dead なら回数に関わらず `stop_parent_lost`、alive なら `continue` (L6 §3.4・3.6、I2) | 観測不能が無期限に続く / 15 回未満で停止する / dead より unobservable を優先して判定を取り違える |
+| `U-SNAPLC-022` | commit 済み tracked ファイル 2 本の staged / unstaged 変更、non-ignored untracked path、ignored path を持つ Git fixture で `runSnapshotTests` を呼ぶ | 実行 snapshot は HEAD の tracked 内容で untracked / ignored path を含まず、stderr warning は staged / unstaged / non-ignored untracked の path と「検証対象は作業 tree でなく commit `<SHA>`」を示す。ignored path は含まず、stub stage を通じて runner が完了し終了コードは変わらない (L6 §2.1) | dirty を黙って無視する / dirty working tree を snapshot 入力にする / 対象外 path を警告に含める / warning を stdout に出すか失敗扱いにする |
+| `U-SNAPLC-023` | unrelated Git root 配下にある non-Git Pack fixture で `runSnapshotTests` を呼ぶ | runner は stub stage を通じて完了し、出力に `source: copy (commit なし)` と Pack のコピー元 path を含み、終了コードは変わらない (L6 §2.1) | commit 不在で copy の既存経路を拒否する / source または path を黙る / warning 扱いで失敗する |
+| `U-SNAPLC-024` | 未変更の Git fixture で `runSnapshotTests` を呼ぶ | runner は stub stage を通じて完了し、stdout / stderr の出力に HEAD の commit SHA を含み、終了コードは変わらない (L6 §2.1) | dirty 時だけ SHA を出す / Git source の provenance を黙る |
 
 ## 4. 既存 oracle への影響
 

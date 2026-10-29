@@ -209,7 +209,7 @@ describe("IT-DB-01/02: harness.db projection writer", () => {
   });
 
   it("detects typed refactor candidates for split, extraction, dedupe, and externalization", () => {
-    expect(REFACTOR_CANDIDATE_THRESHOLDS.splitModuleLines).toBe(700);
+    expect(REFACTOR_CANDIDATE_THRESHOLDS.splitModuleLines).toBe(400);
     expect(REFACTOR_POLICY_TERMS).toContain("subagent");
 
     const longFunction = Array.from({ length: 121 }, (_, i) => `  total += ${i};`).join("\n");
@@ -331,7 +331,7 @@ export const noise = [
     ]).find((candidate) => candidate.kind === "split-module");
     expect(declarativeCatalog).toMatchObject({
       score: expect.any(Number),
-      threshold: 700,
+      threshold: 400,
       confidence: "medium",
     });
     const shortFunctionOrchestrator = analyzeRefactorCandidates([
@@ -345,7 +345,7 @@ export const noise = [
     ]).find((candidate) => candidate.kind === "split-module");
     expect(shortFunctionOrchestrator).toMatchObject({
       score: expect.any(Number),
-      threshold: 700,
+      threshold: 400,
       confidence: "medium",
     });
     const largeFunctionModule = analyzeRefactorCandidates([
@@ -359,7 +359,7 @@ export const noise = [
     ]).find((candidate) => candidate.kind === "split-module");
     expect(largeFunctionModule).toMatchObject({
       score: expect.any(Number),
-      threshold: 700,
+      threshold: 400,
       confidence: "high",
     });
     const policyExternalization = analyzeRefactorCandidates([

@@ -86,7 +86,7 @@ families to worker and reviewer slots:
 
 | Slot | Example assignment | Rule |
 |---|---|---|
-| Worker / implementer | `pmo-haiku` | Produces artefact |
+| Worker / implementer | `docs` | Produces artefact |
 | Reviewer / frontier | `code-reviewer` (primary model) | Clears gate — different family |
 | Fast checker | `pmo-project-scout` | Structural checks only, not final verdict |
 
