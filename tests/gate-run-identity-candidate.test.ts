@@ -314,6 +314,46 @@ describe("CANDIDATE-U-GATE-010 gate-run identity and path", () => {
     }
   });
 
+  it("CANDIDATE-U-GATE-009/010 temp reader oracle ignores .tmp-* beside finalized JSON", () => {
+    const fixture = createFixture();
+    let db: ReturnType<typeof openHarnessDb> | undefined;
+    try {
+      db = openHarnessDb(":memory:", { repoRoot: fixture.root });
+      const finalId = "gate-run:G4:finalized-reader-fixture";
+      const tempId = "gate-run:G4:temporary-reader-fixture";
+      const finalName = digest(finalId) + ".json";
+      const tempName = ".tmp-gate-run-reader-fixture";
+      const finalPath = join(fixture.gateRunsDir, finalName);
+      const tempPath = join(fixture.gateRunsDir, tempName);
+      const finalBytes = JSON.stringify(evidence(finalId), null, 2) + "\n";
+      const tempBytes = JSON.stringify(evidence(tempId), null, 2) + "\n";
+      writeFileSync(finalPath, finalBytes, "utf8");
+      writeFileSync(tempPath, tempBytes, "utf8");
+
+      expect(tempName.startsWith(".tmp-")).toBe(true);
+      expect(tempName.endsWith(".json")).toBe(false);
+      expect(readdirSync(fixture.gateRunsDir).sort()).toEqual([finalName, tempName].sort());
+      expect(JSON.parse(readFileSync(finalPath, "utf8")).gate_run_id).toBe(finalId);
+      expect(JSON.parse(readFileSync(tempPath, "utf8")).gate_run_id).toBe(tempId);
+
+      rebuildHarnessDb({ repoRoot: fixture.root, db });
+      expect(
+        db.prepare("SELECT gate_run_id, evidence_path FROM gate_runs ORDER BY gate_run_id").all(),
+      ).toEqual([
+        {
+          gate_run_id: finalId,
+          evidence_path: ".ut-tdd/gate_runs/" + finalName,
+        },
+      ]);
+    } finally {
+      try {
+        db?.close();
+      } finally {
+        removeFixture(fixture);
+      }
+    }
+  });
+
   it("CANDIDATE-U-GATE-010 accepts one new file via checkGateRunCoverage", () => {
     const control = observeIsolatedFixture((fixture) => {
       const planId = "PLAN-GATE-IDENTITY-READER-CONTROL";
