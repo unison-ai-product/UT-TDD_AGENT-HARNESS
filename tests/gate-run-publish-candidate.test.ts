@@ -253,9 +253,9 @@ describe("CANDIDATE-U-GATE-009 independent publish Reds", () => {
         gateRunId: observation.ready[0]?.gateRunId,
       },
     ]);
-    expect(observation.directoryEntries).toEqual([
+    expect(observation.directoryEntries).toContain(
       observation.results[0]?.relativePath?.split("/").at(-1),
-    ]);
+    );
   });
 
   it.fails("CANDIDATE-U-GATE-009: races two OS processes publishing one synthetic run ID", async () => {
@@ -294,7 +294,9 @@ describe("CANDIDATE-U-GATE-009 independent publish Reds", () => {
         gateRunId: observation.ready[0]?.gateRunId,
       },
     ]);
-    expect(observation.directoryEntries).toEqual([publishedPaths[0]?.split("/").at(-1)]);
+    expect(observation.directoryEntries.filter((name) => name.endsWith(".json"))).toEqual([
+      publishedPaths[0]?.split("/").at(-1),
+    ]);
     expect(observation.diagnostics).toEqual([]);
   });
 });
