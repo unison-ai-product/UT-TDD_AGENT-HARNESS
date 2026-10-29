@@ -18,7 +18,7 @@ import {
 
 const HOOK_INPUT = JSON.stringify({
   tool_name: "Agent",
-  tool_input: { subagent_type: "pmo-haiku", model: "haiku" },
+  tool_input: { subagent_type: "general-purpose", model: "haiku" },
 });
 
 const HOOK_ENV = (root: string) => ({

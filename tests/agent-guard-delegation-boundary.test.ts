@@ -3,9 +3,7 @@
  * 契約: docs/design/harness/L6-function-design/agent-guard-delegation-boundary.md
  * test-design: docs/test-design/harness/L7-agent-guard-delegation-boundary-test-design.md
  *
- * 25 件の `it.fails` Red と 11 件の既存 Green `it` を保持する。036(e) は別途通常 `it` のまま。テスト名は正式 oracle ID (U-AGBOUND-*) を引用する。
- * 実装 PR (L6 §11 の PR 2〜5) が `it.fails` を `it` に戻して Green にする。
- * 25 件の Red、11 件の既存 Green、および 036(e) の通常 `it` は昇格後も状態を変えない。
+ * 実装 PR (L6 §11 の PR 2〜5) で `it.fails` を `it` に戻し、全件 Green。
  */
 import { execFileSync, spawnSync } from "node:child_process";
 import {
@@ -171,10 +169,10 @@ function setEqual(left: Iterable<string>, right: Iterable<string>): boolean {
   return a.size === b.size && [...a].every((x) => b.has(x));
 }
 
-describe("issue #1002 agent-guard と委譲の境界 (Red)", () => {
+describe("issue #1002 agent-guard と委譲の境界", () => {
   // ---- agent-guard (G3〜G6 / §3) ----
 
-  it.fails("U-AGBOUND-005: 旧 allowlist 20 名は閉じた許可集合の外として BLOCK される", () => {
+  it("U-AGBOUND-005: 旧 allowlist 20 名は閉じた許可集合の外として BLOCK される", () => {
     for (const type of OLD_ALLOWLIST_20) {
       const result = run("Agent", { subagent_type: type, model: "sonnet" });
       expect(result.code, type).toBe(2);
@@ -182,7 +180,7 @@ describe("issue #1002 agent-guard と委譲の境界 (Red)", () => {
     }
   });
 
-  it.fails("U-AGBOUND-006: 型の比較は完全一致 (大小文字を畳まず、未知・実環境の型を通さず、trim だけする)", () => {
+  it("U-AGBOUND-006: 型の比較は完全一致 (大小文字を畳まず、未知・実環境の型を通さず、trim だけする)", () => {
     for (const type of [
       "explore",
       "General-Purpose",
@@ -195,7 +193,7 @@ describe("issue #1002 agent-guard と委譲の境界 (Red)", () => {
     expect(run("Agent", { subagent_type: " Plan ", model: "sonnet" }).code).toBe(0);
   });
 
-  it.fails("U-AGBOUND-009: Agent tool では型によらず fable を使えない", () => {
+  it("U-AGBOUND-009: Agent tool では型によらず fable を使えない", () => {
     for (const type of GENERIC) {
       for (const model of ["fable", "claude-fable-5-1"]) {
         const result = run("Agent", { subagent_type: type, model });
@@ -209,7 +207,7 @@ describe("issue #1002 agent-guard と委譲の境界 (Red)", () => {
     expect(legacy.message).toContain("general-purpose");
   });
 
-  it.fails("U-AGBOUND-011: 判定の根拠は G3→G4→G5→G6 の順で 1 つに決まる", () => {
+  it("U-AGBOUND-011: 判定の根拠は G3→G4→G5→G6 の順で 1 つに決まる", () => {
     const unknownNoModel = run("Agent", { subagent_type: "foo" });
     expect(unknownNoModel.code).toBe(2);
     expect(unknownNoModel.message).toContain("general-purpose");
@@ -225,7 +223,7 @@ describe("issue #1002 agent-guard と委譲の境界 (Red)", () => {
     expect(unknownFable.message).not.toMatch(/fable を使えない/);
   });
 
-  it.fails("U-AGBOUND-012: bypass は G3〜G6 の全てに効き、通常の通過には印を付けない", () => {
+  it("U-AGBOUND-012: bypass は G3〜G6 の全てに効き、通常の通過には印を付けない", () => {
     const cases: Array<[string, Record<string, string>]> = [
       ["(a) 未知の型", { subagent_type: "foo", model: "sonnet" }],
       ["(b) model 無し", { subagent_type: "general-purpose" }],
@@ -243,7 +241,7 @@ describe("issue #1002 agent-guard と委譲の境界 (Red)", () => {
     expect(normal.bypassed).toBeUndefined();
   });
 
-  it.fails("U-AGBOUND-013: agent-guard は定義ファイルを読まず floor の残骸も持たない", () => {
+  it("U-AGBOUND-013: agent-guard は定義ファイルを読まず floor の残骸も持たない", () => {
     const files = ["src/runtime/agent-guard.ts", ".claude/hooks/agent-guard.ts", "src/cli.ts"];
     const banned = [
       "resolveAgentFamily",
@@ -261,11 +259,11 @@ describe("issue #1002 agent-guard と委譲の境界 (Red)", () => {
     expect(sourceOf("src/runtime/agent-guard.ts")).not.toMatch(/from\s+["']node:fs["']/);
   });
 
-  it.fails("U-AGBOUND-014: GENERIC_SUBAGENT_TYPES はちょうど汎用の型 4 種", () => {
+  it("U-AGBOUND-014: GENERIC_SUBAGENT_TYPES はちょうど汎用の型 4 種", () => {
     expect(setEqual(genericTypes(), GENERIC)).toBe(true);
   });
 
-  it.fails("U-AGBOUND-015: .claude/CLAUDE.md の型の一覧は GENERIC_SUBAGENT_TYPES と機械照合される", () => {
+  it("U-AGBOUND-015: .claude/CLAUDE.md の型の一覧は GENERIC_SUBAGENT_TYPES と機械照合される", () => {
     const text = sourceOf(".claude/CLAUDE.md");
     const section = text.match(/^Allowlist:\n\n((?:- `[^`]+`\n)+)/m);
     expect(section, "Allowlist bullet section in .claude/CLAUDE.md").not.toBeNull();
@@ -307,7 +305,7 @@ describe("issue #1002 agent-guard と委譲の境界 (Red)", () => {
         env: { ...process.env, UT_TDD_ALLOW_RAW_AGENT: "" },
       });
 
-    it.fails("U-AGBOUND-016: 定義ファイルが無い repo でも汎用の型は通り、旧 allowlist の型は定義があっても BLOCK", () => {
+    it("U-AGBOUND-016: 定義ファイルが無い repo でも汎用の型は通り、旧 allowlist の型は定義があっても BLOCK", () => {
       expect(
         shim(
           JSON.stringify({
@@ -340,7 +338,7 @@ describe("issue #1002 agent-guard と委譲の境界 (Red)", () => {
 
   // ---- 委譲 role (§4〜§6) ----
 
-  it.fails("U-AGBOUND-018: DELEGATION_ROLE_ALLOWLIST は SUBAGENT_ALLOWLIST に依存しない和集合と等しい", () => {
+  it("U-AGBOUND-018: DELEGATION_ROLE_ALLOWLIST は SUBAGENT_ALLOWLIST に依存しない和集合と等しい", () => {
     const expected = new Set<string>([
       ...READ_ONLY_DELEGATION_ROLES,
       "ut-tdd-tl",
@@ -360,7 +358,7 @@ describe("issue #1002 agent-guard と委譲の境界 (Red)", () => {
     }
   });
 
-  it.fails("U-AGBOUND-019: 外す 12 名は fail-close、残る 8 名は通る", () => {
+  it("U-AGBOUND-019: 外す 12 名は fail-close、残る 8 名は通る", () => {
     for (const role of DROPPED_12) {
       const result = resolveDelegationRouting({ provider: "claude", role, task: "t" });
       expect(result.ok, role).toBe(false);
@@ -371,7 +369,7 @@ describe("issue #1002 agent-guard と委譲の境界 (Red)", () => {
     }
   });
 
-  it.fails("U-AGBOUND-021: 層の語彙は混ざらず、許可集合は GENERIC_SUBAGENT_TYPES と交わらない", () => {
+  it("U-AGBOUND-021: 層の語彙は混ざらず、許可集合は GENERIC_SUBAGENT_TYPES と交わらない", () => {
     // 集合の等価 (過不足の両方を検出): REVIEW_GATE_ROLES = READ_ONLY ∪ {ut-tdd-tl, qa-test, security-audit}
     expect(
       setEqual(REVIEW_GATE_ROLES, [
@@ -392,14 +390,14 @@ describe("issue #1002 agent-guard と委譲の境界 (Red)", () => {
     }
   });
 
-  it.fails("U-AGBOUND-022: 外した role は read-only 契約の対象に残らない", () => {
+  it("U-AGBOUND-022: 外した role は read-only 契約の対象に残らない", () => {
     expect(isReadOnlyDelegationRole("code-reviewer")).toBe(false);
     for (const role of ["code-review", "blind-reviewer", "reviewer"]) {
       expect(isReadOnlyDelegationRole(role), role).toBe(true);
     }
   });
 
-  it.fails("U-AGBOUND-023: sandbox 権限の role は 6 つに固定され、判断ゲートには与えない", () => {
+  it("U-AGBOUND-023: sandbox 権限の role は 6 つに固定され、判断ゲートには与えない", () => {
     expect(
       setEqual(policy.CODEX_WORKSPACE_WRITE_ROLES, [
         "se",
@@ -424,7 +422,7 @@ describe("issue #1002 agent-guard と委譲の境界 (Red)", () => {
     );
   });
 
-  it.fails("U-AGBOUND-024: floor の正本は 1 か所で、allowlist への依存は残らない", () => {
+  it("U-AGBOUND-024: floor の正本は 1 か所で、allowlist への依存は残らない", () => {
     const routing = sourceOf("src/team/delegation-routing.ts");
     const agentGuard = sourceOf("src/runtime/agent-guard.ts");
     expect(routing).not.toContain("SUBAGENT_ALLOWLIST");
@@ -435,7 +433,7 @@ describe("issue #1002 agent-guard と委譲の境界 (Red)", () => {
 
   // ---- 周辺 (§8) ----
 
-  it.fails("U-AGBOUND-025: asset-drift は agent 定義を照合せず、残すべき検査は残る", () => {
+  it("U-AGBOUND-025: asset-drift は agent 定義を照合せず、残すべき検査は残る", () => {
     const skill = { path: "skills/a.md", type: "skill" as const, id: "a", text: "clean" };
     const base = { assets: [skill], skillRootExists: true, skillDocCount: 1, enrolledRootCount: 1 };
     const noAllowlist = (extra: AssetDriftInput["assets"] = []) =>
@@ -457,7 +455,7 @@ describe("issue #1002 agent-guard と委譲の境界 (Red)", () => {
     expect(residue.violations.map((v) => v.kind)).toContain("legacy-source-path-residue");
   });
 
-  it.fails("U-AGBOUND-026: roster CLI と registry は撤廃される", async () => {
+  it("U-AGBOUND-026: roster CLI と registry は撤廃される", async () => {
     for (const sub of ["list", "check"]) {
       const result = spawnSync(process.execPath, [join(root, "src", "cli.ts"), "roster", sub], {
         encoding: "utf8",
@@ -472,7 +470,7 @@ describe("issue #1002 agent-guard と委譲の境界 (Red)", () => {
     expect(sourceOf("src/assets/catalog.ts")).not.toContain(".claude/agents");
   });
 
-  it.fails("U-AGBOUND-027: setup と同梱 template は agent 定義を生成せず、文言に allowlist を残さない", () => {
+  it("U-AGBOUND-027: setup と同梱 template は agent 定義を生成せず、文言に allowlist を残さない", () => {
     const plan = planSetup("0-A", { dryRun: true });
     expect(
       plan.files
@@ -492,7 +490,7 @@ describe("issue #1002 agent-guard と委譲の境界 (Red)", () => {
     }
   });
 
-  it.fails("U-AGBOUND-028: Pack 配布物にも開発 repo にも agent 定義が残らない", () => {
+  it("U-AGBOUND-028: Pack 配布物にも開発 repo にも agent 定義が残らない", () => {
     const tracked = spawnSync("git", ["ls-files"], {
       encoding: "utf8",
       cwd: root,
@@ -504,7 +502,7 @@ describe("issue #1002 agent-guard と委譲の境界 (Red)", () => {
     expect(paths.filter((p) => /^\.claude\/agents\/.+\.md$/.test(p))).toEqual([]);
   });
 
-  it.fails("U-AGBOUND-029: 分類の出力は recommended_lanes で、レーンの role は委譲 role の語彙", () => {
+  it("U-AGBOUND-029: 分類の出力は recommended_lanes で、レーンの role は委譲 role の語彙", () => {
     // worker 判定はレーンの tier (T0-frontier 以外) で行い、role 名を決め打ちしない。
     // fixture: se(T1-worker) の経路と uiux(T2-mini) の経路。docs は常に T2-mini。
     // qa(T1-worker) は discovery が G5 (= risky) のため classify.ts の現行経路では到達できない。
@@ -535,7 +533,7 @@ describe("issue #1002 agent-guard と委譲の境界 (Red)", () => {
     expect([...seenWorkerTiers].sort()).toEqual(["T1-worker", "T2-mini"]);
   });
 
-  it.fails("U-AGBOUND-030: skills は撤廃済みの role を --role で案内しない", () => {
+  it("U-AGBOUND-030: skills は撤廃済みの role を --role で案内しない", () => {
     const names = new Set<string>();
     for (const file of listFiles(join(root, "skills"), ".md")) {
       for (const m of readFileSync(file, "utf8").matchAll(
@@ -547,7 +545,7 @@ describe("issue #1002 agent-guard と委譲の境界 (Red)", () => {
     expect([...names].filter((n) => (DROPPED_12 as readonly string[]).includes(n))).toEqual([]);
   });
 
-  it.fails("U-AGBOUND-031: SUBAGENT_ALLOWLIST は src/ から消え、実 repo の asset-drift は通る", async () => {
+  it("U-AGBOUND-031: SUBAGENT_ALLOWLIST は src/ から消え、実 repo の asset-drift は通る", async () => {
     const hits = listFiles(join(root, "src"), ".ts").filter((f) =>
       readFileSync(f, "utf8").includes("SUBAGENT_ALLOWLIST"),
     );
@@ -558,7 +556,7 @@ describe("issue #1002 agent-guard と委譲の境界 (Red)", () => {
 
   // ---- floor (§5.1) ----
 
-  it.fails("U-AGBOUND-034: isReviewFloorModel は下限未満と未知を通さない", () => {
+  it("U-AGBOUND-034: isReviewFloorModel は下限未満と未知を通さない", () => {
     const fn = exported(modelPolicy, "isReviewFloorModel");
     expect(typeof fn, "isReviewFloorModel is exported from model-policy.ts").toBe("function");
     const check = fn as (provider: string, model: string) => boolean;
@@ -572,7 +570,7 @@ describe("issue #1002 agent-guard と委譲の境界 (Red)", () => {
     expect(check("claude", "")).toBe(false);
   });
 
-  it.fails("U-AGBOUND-035: 判断ゲート role の明示 --model は下限未満なら fail-close", () => {
+  it("U-AGBOUND-035: 判断ゲート role の明示 --model は下限未満なら fail-close", () => {
     const route = (provider: "claude" | "codex", role: string, model: string, effort?: string) =>
       resolveDelegationRouting({ provider, role, task: "t", model, ...(effort ? { effort } : {}) });
     for (const role of GATE_ROLES) {
@@ -674,7 +672,7 @@ describe("issue #1002 agent-guard と委譲の境界 (Red)", () => {
       }
     });
 
-    it.fails("U-AGBOUND-036: 非著者 family でも下限未満の model は受理されず、receipt を作らない", () => {
+    it("U-AGBOUND-036: 非著者 family でも下限未満の model は受理されず、receipt を作らない", () => {
       const attempt = (
         author: "codex" | "claude",
         provider: "codex" | "claude",

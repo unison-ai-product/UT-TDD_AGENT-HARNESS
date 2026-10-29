@@ -705,7 +705,7 @@ describe("runtime hook entrypoints", () => {
         [
           "claude",
           "--role",
-          "pmo-sonnet",
+          "docs",
           "--task",
           "review explicit plan",
           "--plan",

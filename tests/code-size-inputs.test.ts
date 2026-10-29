@@ -90,22 +90,22 @@ describe("code size gate filesystem and git adapter candidate oracles", () => {
     expect(Array.isArray(checked.messages)).toBe(true);
   });
 
-  it.fails("U-CODESIZE-013(b): reports unreadable sources and fails closed instead of treating them as empty", () => {
+  it("U-CODESIZE-013(b): reports unreadable sources and fails closed instead of treating them as empty", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-code-size-unreadable-"));
     rmSync(root, { recursive: true, force: true });
     try {
       const loaded = loadCodeSizeSources(root);
-      expect.soft(loaded.sources).toEqual([]);
-      expect.soft(loaded.unreadable.length).toBeGreaterThan(0);
+      expect(loaded.sources).toEqual([]);
+      expect(loaded.unreadable.length).toBeGreaterThan(0);
       const result = checkCodeSize(root);
-      expect.soft(result.ok).toBe(false);
-      expect.soft(hasMessage(result, "code-size-input-unreadable")).toBe(true);
+      expect(result.ok).toBe(false);
+      expect(hasMessage(result, "code-size-input-unreadable")).toBe(true);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
   });
 
-  it.fails("U-CODESIZE-015(a): loads a parseable previous baseline at origin/main", () => {
+  it("U-CODESIZE-015(a): loads a parseable previous baseline at origin/main", () => {
     const entryPath = "src/big.ts";
     const root = initRepo({
       [entryPath]: lines(900),
@@ -121,46 +121,46 @@ describe("code size gate filesystem and git adapter candidate oracles", () => {
     }
   });
 
-  it.fails("U-CODESIZE-015(b): reports absent and skips the comparison when the merge-base has no baseline file", () => {
+  it("U-CODESIZE-015(b): reports absent and skips the comparison when the merge-base has no baseline file", () => {
     const root = initRepo({ "src/small.ts": lines(3) });
     try {
-      expect.soft(loadPreviousCodeSizeBaseline(root)).toEqual({ kind: "absent" });
+      expect(loadPreviousCodeSizeBaseline(root)).toEqual({ kind: "absent" });
       const result = checkCodeSize(root);
-      expect.soft(result.ok).toBe(true);
-      expect.soft(hasMessage(result, "checked=1 over=0 stale=0 baseline=0")).toBe(true);
+      expect(result.ok).toBe(true);
+      expect(hasMessage(result, "checked=1 over=0 stale=0 baseline=0")).toBe(true);
     } finally {
       removeRepo(root);
     }
   });
 
-  it.fails("U-CODESIZE-015(c): reports unreadable and fails closed when origin/main cannot resolve", () => {
+  it("U-CODESIZE-015(c): reports unreadable and fails closed when origin/main cannot resolve", () => {
     const root = initRepo(
       { "src/small.ts": lines(3), [BASELINE]: baselineEntry("src/small.ts", 900, null) },
       false,
     );
     try {
-      expect.soft(loadPreviousCodeSizeBaseline(root)).toEqual({ kind: "unreadable" });
+      expect(loadPreviousCodeSizeBaseline(root)).toEqual({ kind: "unreadable" });
       const result = checkCodeSize(root);
-      expect.soft(result.ok).toBe(false);
-      expect.soft(hasMessage(result, "code-size-baseline-base-unreadable")).toBe(true);
+      expect(result.ok).toBe(false);
+      expect(hasMessage(result, "code-size-baseline-base-unreadable")).toBe(true);
     } finally {
       removeRepo(root);
     }
   });
 
-  it.fails("U-CODESIZE-015(d): reports unreadable and fails closed for malformed baseline JSON", () => {
+  it("U-CODESIZE-015(d): reports unreadable and fails closed for malformed baseline JSON", () => {
     const root = initRepo({ "src/small.ts": lines(3), [BASELINE]: "{" });
     try {
-      expect.soft(loadPreviousCodeSizeBaseline(root)).toEqual({ kind: "unreadable" });
+      expect(loadPreviousCodeSizeBaseline(root)).toEqual({ kind: "unreadable" });
       const result = checkCodeSize(root);
-      expect.soft(result.ok).toBe(false);
-      expect.soft(hasMessage(result, "code-size-baseline-base-unreadable")).toBe(true);
+      expect(result.ok).toBe(false);
+      expect(hasMessage(result, "code-size-baseline-base-unreadable")).toBe(true);
     } finally {
       removeRepo(root);
     }
   });
 
-  it.fails("U-CODESIZE-015(e): measures the merge-base content and rejects initial self-growth", () => {
+  it("U-CODESIZE-015(e): measures the merge-base content and rejects initial self-growth", () => {
     const path = "src/big.ts";
     const root = initRepo({ [path]: lines(900) });
     try {
@@ -168,19 +168,19 @@ describe("code size gate filesystem and git adapter candidate oracles", () => {
       writeRepoFile(root, BASELINE, baselineEntry(path, 950, null));
       commit(root, "grow the file and record the grown value");
 
-      expect.soft(loadCodeSizeMergeBaseMeasures(root, [path])).toEqual({
+      expect(loadCodeSizeMergeBaseMeasures(root, [path])).toEqual({
         kind: "found",
         measures: { [path]: { lines: 900, functionExcess: null } },
       });
       const result = checkCodeSize(root);
-      expect.soft(result.ok).toBe(false);
-      expect.soft(hasMessage(result, "code-size-initial-baseline-grown")).toBe(true);
+      expect(result.ok).toBe(false);
+      expect(hasMessage(result, "code-size-initial-baseline-grown")).toBe(true);
     } finally {
       removeRepo(root);
     }
   });
 
-  it.fails("U-CODESIZE-015(f): recognizes a same-class nested rename and carries the row", () => {
+  it("U-CODESIZE-015(f): recognizes a same-class nested rename and carries the row", () => {
     const oldPath = "src/big.ts";
     const newPath = "src/sub/big.ts";
     const root = initRepo({
@@ -197,67 +197,67 @@ describe("code size gate filesystem and git adapter candidate oracles", () => {
         .soft(loadRenamedCodeFiles(root))
         .toEqual({ kind: "found", renames: [{ from: oldPath, to: newPath }] });
       const result = checkCodeSize(root);
-      expect.soft(result.ok).toBe(true);
-      expect.soft(hasMessage(result, "checked=1 over=0 stale=0 baseline=1")).toBe(true);
+      expect(result.ok).toBe(true);
+      expect(hasMessage(result, "checked=1 over=0 stale=0 baseline=1")).toBe(true);
     } finally {
       removeRepo(root);
     }
   });
 
-  it.fails("U-CODESIZE-015(g): fails closed when git rename input is unreadable", () => {
+  it("U-CODESIZE-015(g): fails closed when git rename input is unreadable", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-code-size-no-git-"));
     try {
-      expect.soft(loadRenamedCodeFiles(root)).toEqual({ kind: "unreadable" });
+      expect(loadRenamedCodeFiles(root)).toEqual({ kind: "unreadable" });
       const result = checkCodeSize(root);
-      expect.soft(result.ok).toBe(false);
-      expect.soft(hasMessage(result, "code-size-baseline-base-unreadable")).toBe(true);
+      expect(result.ok).toBe(false);
+      expect(hasMessage(result, "code-size-baseline-base-unreadable")).toBe(true);
     } finally {
       removeRepo(root);
     }
   });
 
-  it.fails("U-CODESIZE-004(message): reports lines=501/500 through the check messages", () => {
-    expect.soft(messagesFor("src/x.ts", lines(501))).toContain("lines=501/500");
-    expect.soft(messagesFor("tests/x.test.ts", lines(501))).toContain("lines=501/500");
-    expect.soft(messagesFor("src/x.ts", lines(500))).not.toContain("code-size-required");
+  it("U-CODESIZE-004(message): reports lines=501/500 through the check messages", () => {
+    expect(messagesFor("src/x.ts", lines(501))).toContain("lines=501/500");
+    expect(messagesFor("tests/x.test.ts", lines(501))).toContain("lines=501/500");
+    expect(messagesFor("src/x.ts", lines(500))).not.toContain("code-size-required");
   });
 
-  it.fails("U-CODESIZE-005(message): reports functionExcess=1/0 through the check messages", () => {
-    expect.soft(messagesFor("src/x.ts", fn("f", 121))).toContain("functionExcess=1/0");
-    expect.soft(messagesFor("src/x.ts", fn("f", 120))).not.toContain("code-size-required");
+  it("U-CODESIZE-005(message): reports functionExcess=1/0 through the check messages", () => {
+    expect(messagesFor("src/x.ts", fn("f", 121))).toContain("functionExcess=1/0");
+    expect(messagesFor("src/x.ts", fn("f", 120))).not.toContain("code-size-required");
   });
 
-  it.fails("U-CODESIZE-012: points to what to split and where through the check messages", () => {
+  it("U-CODESIZE-012: points to what to split and where through the check messages", () => {
     const limit = 500;
     // (a) over by 20: trailing statements are selected from the back
     const featureText =
       statement("alpha", 3) + statement("beta", limit + 20 - 3 - 15) + statement("gamma", 15);
     const feature = messagesFor("src/feature/x.ts", featureText);
-    expect.soft(feature).toContain("gamma (15 行)");
-    expect.soft(feature).toContain("beta");
-    expect.soft(feature).not.toContain("alpha");
-    expect.soft(feature).toContain("src/feature/");
-    expect.soft(feature).toContain("tests/");
+    expect(feature).toContain("gamma (15 行)");
+    expect(feature).toContain("beta");
+    expect(feature).not.toContain("alpha");
+    expect(feature).toContain("src/feature/");
+    expect(feature).toContain("tests/");
     // (b) over by 1: at least one statement, the last one
     const tailMessage = messagesFor(
       "src/feature/y.ts",
       statement("head", limit + 1 - 5) + statement("tail", 5),
     );
-    expect.soft(tailMessage).toContain("tail (5 行)");
-    expect.soft(tailMessage).not.toContain("head");
+    expect(tailMessage).toContain("tail (5 行)");
+    expect(tailMessage).not.toContain("head");
     // (c) tests: a describe statement is named by its title and only tests/ is suggested
     const describeText = `${statement("filler", limit + 10 - 30)}describe("末尾の題", () => {\n${body(28)}});\n`;
     const testsMessage = messagesFor("tests/x.test.ts", describeText);
-    expect.soft(testsMessage).toContain("describe: 末尾の題");
-    expect.soft(testsMessage).not.toContain("src/");
+    expect(testsMessage).toContain("describe: 末尾の題");
+    expect(testsMessage).not.toContain("src/");
     // (d) functions over the limit, longest first, anonymous ones by line number
     const functionMessage = messagesFor(
       "src/f.ts",
       `${fn("big", 150)}run(() => {\n${body(130)}});\n`,
     );
-    expect.soft(functionMessage).toContain("150/120");
-    expect.soft(functionMessage).toContain("<anon@153>");
-    expect.soft(functionMessage).toContain("130/120");
-    expect.soft(functionMessage.indexOf("big")).toBeLessThan(functionMessage.indexOf("<anon@153>"));
+    expect(functionMessage).toContain("150/120");
+    expect(functionMessage).toContain("<anon@153>");
+    expect(functionMessage).toContain("130/120");
+    expect(functionMessage.indexOf("big")).toBeLessThan(functionMessage.indexOf("<anon@153>"));
   });
 });
