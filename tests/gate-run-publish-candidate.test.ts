@@ -284,8 +284,8 @@ async function runPublishers(count: 1 | 2): Promise<PublishObservation> {
   };
 }
 
-describe("CANDIDATE-U-GATE-009 independent publish Reds", () => {
-  it("CANDIDATE-U-GATE-009: validates the isolated child publisher fixture by itself", async () => {
+describe("U-GATE-009 independent publish Reds", () => {
+  it("U-GATE-009: validates the isolated child publisher fixture by itself", async () => {
     const observation = await runPublishers(1);
     expect(observation.setupReady).toBe(true);
     expect(observation.executionComplete).toBe(true);
@@ -309,7 +309,7 @@ describe("CANDIDATE-U-GATE-009 independent publish Reds", () => {
     );
   }, 120_000);
 
-  it.fails("CANDIDATE-U-GATE-009: races two OS processes publishing one synthetic run ID", async () => {
+  it.fails("U-GATE-009: races two OS processes publishing one synthetic run ID", async () => {
     let observation: PublishObservation;
     try {
       observation = await runPublishers(2);
@@ -327,7 +327,7 @@ describe("CANDIDATE-U-GATE-009 independent publish Reds", () => {
       console.error(
         observation.diagnostics.length > 0
           ? observation.diagnostics.join("\n")
-          : `CANDIDATE-U-GATE-009 race prerequisites incomplete: setup=${observation.setupReady}, execution=${observation.executionComplete}, cleanup=${observation.cleanupComplete}, ready=${observation.ready.length}, results=${observation.results.length}`,
+          : `U-GATE-009 race prerequisites incomplete: setup=${observation.setupReady}, execution=${observation.executionComplete}, cleanup=${observation.cleanupComplete}, ready=${observation.ready.length}, results=${observation.results.length}`,
       );
       return;
     }

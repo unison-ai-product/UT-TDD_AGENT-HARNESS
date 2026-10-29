@@ -346,7 +346,7 @@ describe("drive DB registration lint", () => {
     }
   });
 
-  it("CANDIDATE-U-DOCTOR-GATE-04 A4 fixture: has a PLAN and both routine-gate variants plus one non-routine orphan", () => {
+  it("U-DOCTOR-GATE-04 A4 fixture: has a PLAN and both routine-gate variants plus one non-routine orphan", () => {
     const fixture = buildRoutineGateOrphanFixture();
     try {
       expect(fixture.stats.planCount).toBe(1);
@@ -359,7 +359,7 @@ describe("drive DB registration lint", () => {
     }
   });
 
-  it.fails("CANDIDATE-U-DOCTOR-GATE-04 A4: excludes routine-gate rows without documented drive runs but keeps other workflow orphans", () => {
+  it.fails("U-DOCTOR-GATE-04 A4: excludes routine-gate rows without documented drive runs but keeps other workflow orphans", () => {
     let fixture: ReturnType<typeof buildRoutineGateOrphanFixture>;
     try {
       fixture = buildRoutineGateOrphanFixture();
