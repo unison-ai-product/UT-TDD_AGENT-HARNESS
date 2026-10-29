@@ -126,7 +126,7 @@ jobs:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v4
         with:
-          node-version: "24.13.0"
+          node-version: "24.22.1"
           cache: npm
       - run: npm ci --no-audit --no-fund
       - run: npm run typecheck
@@ -248,6 +248,40 @@ function docs(source = SOURCE_WORKFLOW, pack = PACK_WORKFLOW): GithubWorkflowDoc
     },
   ];
 }
+
+function nodeVersionFromWorkflow(content: string): unknown {
+  const parsed = parseYaml(content) as {
+    jobs?: Record<string, { steps?: { uses?: unknown; with?: Record<string, unknown> }[] }>;
+  };
+  for (const job of Object.values(parsed.jobs ?? {})) {
+    const setupNode = job.steps?.find((step) => step.uses === "actions/setup-node@v4");
+    if (setupNode) return setupNode.with?.["node-version"];
+  }
+  return undefined;
+}
+
+describe("Issue #1411 Node pin Red oracles", () => {
+  const sourceDocs = loadGithubCiPolicyDocs({ repoRoot: REPO_ROOT, runtimeProfile: "source" });
+  const reviewAttestation = sourceDocs.find((doc) => doc.role === "attestation_runtime");
+  const packTemplate = sourceDocs.find((doc) => doc.role === "pack_template");
+
+  if (!reviewAttestation || !packTemplate)
+    throw new Error("Issue #1411 requires the source attestation workflow and Pack template");
+
+  it("U-CIPOL-040: review-attestation pins the reviewed Node version", () => {
+    expect(nodeVersionFromWorkflow(reviewAttestation.content)).toBe("24.22.1");
+  });
+
+  it("U-CIPOL-041: Pack policy fixture mirrors the template's reviewed Node pin", () => {
+    const reviewedNodeVersion = "24.22.1";
+    const fixtureVersion = nodeVersionFromWorkflow(PACK_WORKFLOW);
+    const templateVersion = nodeVersionFromWorkflow(packTemplate.content);
+
+    expect(templateVersion).toBe(reviewedNodeVersion);
+    expect(fixtureVersion).toBe(reviewedNodeVersion);
+    expect(fixtureVersion).toBe(templateVersion);
+  });
+});
 
 describe("github-ci-policy lint", () => {
   it("U-CIPOL-013: accepts Linux and Windows runtime legs behind one final aggregate gate", () => {
