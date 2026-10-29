@@ -62,10 +62,10 @@ import { materializeReleaseArtifacts } from "../setup/release-materializer.ts";
 import { ensureDir } from "../shared/fs.ts";
 import {
   DistributionPrivacyScanError,
-  maskPrivacyHitPaths,
   privacyScanJson,
   privacyScanTextLines,
-  redactPrivacyHitPaths,
+  redactRejectedArtifactPaths,
+  reportedArtifactPaths,
   runDistributionPrivacyScan,
 } from "./distribution-privacy.ts";
 
@@ -1177,7 +1177,7 @@ export function registerDistributionCommands(program: Command): void {
         // L6 §8 / §12: every reported path list and command is built from the masked paths.
         const reportedPlan = {
           ...exportPlan,
-          artifactPaths: maskPrivacyHitPaths(privacyScan, exportPlan.artifactPaths),
+          artifactPaths: reportedArtifactPaths(privacyScan, exportPlan.artifactPaths),
         };
         const reportedSync = privacyScan.ok
           ? sync
@@ -1238,7 +1238,7 @@ export function registerDistributionCommands(program: Command): void {
           manifestDir,
           `${exportPlan.sourceTag.replace(/[^A-Za-z0-9._-]+/g, "-")}.sync-pack.json`,
         );
-        const output = redactPrivacyHitPaths(
+        const reported = redactRejectedArtifactPaths(
           {
             ok:
               repoExists &&
@@ -1254,7 +1254,6 @@ export function registerDistributionCommands(program: Command): void {
               checked: secretScan.checked,
               violations: secretScan.violations,
             },
-            privacyScan: privacyScanJson(privacyScan),
             authoringSmoke,
             sync: reportedSync,
             pack: {
@@ -1284,6 +1283,8 @@ export function registerDistributionCommands(program: Command): void {
           privacyScan,
           exportPlan.artifactPaths,
         );
+        // The findings already follow L6 §8 (a hit path is masked by the scanner itself).
+        const output = { ...reported, privacyScan: privacyScanJson(privacyScan) };
         writeFileSync(manifest, `${JSON.stringify(output, null, 2)}\n`, "utf8");
         if (opts.json) {
           process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);

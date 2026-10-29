@@ -363,4 +363,39 @@ describe("privacy scan candidate oracles (distribution)", () => {
       expect(text).not.toContain(D);
     }
   }, 400_000);
+
+  // #1454 r2 (L6 §8 / §12): an unreadable artifact drops every finding, so no hit path can be
+  // derived. A rejected sync-pack must still report no artifact path at all.
+  it("U-PRIVSCAN-018 (regression): reports no artifact path when an artifact is unreadable", () => {
+    const home = makeHome("u-home", `${D}\n`);
+    const source = cleanSource("u-source", "plain line");
+    const hitPath = `skills/${D}-note.md`;
+    const missingPath = "skills/zz-missing-note.md";
+    write(source, hitPath, "plain\n");
+    write(source, missingPath, "plain\n");
+    git(source, ["add", "--", hitPath, missingPath]);
+    git(source, ["commit", "-q", "-m", "hit path and missing path"]);
+    rmSync(join(source, missingPath));
+    const plan = buildCleanDistributionPlan({
+      paths: git(source, ["ls-files"]).split(/\r?\n/).filter(Boolean),
+      sourceTag: TAG,
+    });
+    expect(plan.artifactPaths).toEqual(expect.arrayContaining([hitPath, missingPath]));
+    const packDir = join(scratchRoot, "u-pack");
+    mkdirSync(packDir, { recursive: true });
+    const evidenceBefore = walkFiles(join(source, ".ut-tdd"));
+    const result = runDistribution(source, home, ["sync-pack", "--repo-dir", packDir, "--json"]);
+    expect(result.status).toBe(1);
+    expect(kinds(privacyJson(result.stdout))).toContain("privacy-input-unreadable");
+    expect((parseJson(result.stdout)?.pack as { copiedArtifacts?: number })?.copiedArtifacts).toBe(
+      0,
+    );
+    expect(readdirSync(packDir)).toEqual([]);
+    const evidence = [...changedFiles(evidenceBefore, walkFiles(join(source, ".ut-tdd"))).values()];
+    expect(evidence.length).toBeGreaterThan(0);
+    for (const text of [result.stdout, result.stderr, ...evidence]) {
+      expect(text).not.toContain(D);
+      expect(text).not.toContain(missingPath);
+    }
+  }, 400_000);
 });

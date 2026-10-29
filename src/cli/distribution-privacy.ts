@@ -73,38 +73,37 @@ export function privacyScanTextLines(result: PrivacyScanResult): string[] {
 const maskedPath = (path: string) =>
   `path-sha256:${createHash("sha256").update(path, "utf8").digest("hex")}`;
 
-/** The raw paths among `scannedPaths` that the scanner judged a hit (their masked form is a finding). */
-function hitPaths(result: PrivacyScanResult, scannedPaths: readonly string[]): string[] {
-  const masked = new Set(result.findings.map((finding) => finding.location.replace(/^pack:/, "")));
-  return scannedPaths.filter((path) => masked.has(maskedPath(path)));
-}
-
 /**
- * L6 §8 / §12: replaces each hit path with its masked form. Callers derive every reported value
- * (including quoted command strings) from the masked list, so no escaped form of a hit can leak.
+ * L6 §8 / §12: when the scan rejects (a hit, an unreadable artifact, or a missing one), no artifact
+ * path is reported: every one is masked. An unreadable artifact drops the findings, so the hit
+ * paths cannot be derived and all paths are treated alike. Callers derive every reported value
+ * (including quoted command strings) from this list, so no escaped form of a path can leak.
  */
-export function maskPrivacyHitPaths(
+export function reportedArtifactPaths(
   result: PrivacyScanResult,
-  scannedPaths: readonly string[],
+  artifactPaths: readonly string[],
 ): string[] {
-  const hits = new Set(hitPaths(result, scannedPaths));
-  return scannedPaths.map((path) => (hits.has(path) ? maskedPath(path) : path));
+  return result.ok ? [...artifactPaths] : artifactPaths.map(maskedPath);
 }
 
 /**
- * Defense in depth for values built from raw paths: replaces each raw hit path wherever it occurs
- * in `value`. It cannot see escaped forms, so reported values must come from `maskPrivacyHitPaths`.
+ * Defense in depth for values built from raw paths: on rejection, replaces every raw artifact path
+ * wherever it occurs in `value`. It cannot see escaped forms, so reported path lists and commands
+ * must come from `reportedArtifactPaths`.
  */
-export function redactPrivacyHitPaths<T>(
+export function redactRejectedArtifactPaths<T>(
   value: T,
   result: PrivacyScanResult,
-  scannedPaths: readonly string[],
+  artifactPaths: readonly string[],
 ): T {
-  const hits = hitPaths(result, scannedPaths).sort((a, b) => b.length - a.length);
-  if (hits.length === 0) return value;
+  if (result.ok) return value;
+  const paths = [...artifactPaths].sort((a, b) => b.length - a.length);
   const walk = (item: unknown): unknown => {
     if (typeof item === "string")
-      return hits.reduce((text, raw) => text.replaceAll(raw, maskedPath(raw)), item);
+      return paths.reduce(
+        (text, raw) => (text.includes(raw) ? text.replaceAll(raw, maskedPath(raw)) : text),
+        item,
+      );
     if (Array.isArray(item)) return item.map(walk);
     if (item !== null && typeof item === "object")
       return Object.fromEntries(Object.entries(item).map(([key, entry]) => [key, walk(entry)]));
