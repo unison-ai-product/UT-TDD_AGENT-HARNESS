@@ -103,18 +103,25 @@ function buildRoutineGateOrphanFixture() {
         planId,
         undocumentedDriveRunId,
         stats: collectDriveDbRegistrationStats(db),
-        registeredPlanIds: db.prepare("SELECT plan_id FROM plan_registry").all()
+        registeredPlanIds: db
+          .prepare("SELECT plan_id FROM plan_registry")
+          .all()
           .map((row) => String(row.plan_id)),
-        driveRunIds: db.prepare("SELECT drive_run_id FROM drive_runs").all()
+        driveRunIds: db
+          .prepare("SELECT drive_run_id FROM drive_runs")
+          .all()
           .map((row) => String(row.drive_run_id)),
-        workflowRows: db.prepare(
-          "SELECT workflow_run_id, plan_id, drive_run_id, workflow FROM workflow_runs ORDER BY workflow_run_id",
-        ).all().map((row) => ({
-          workflowRunId: String(row.workflow_run_id),
-          planId: String(row.plan_id),
-          driveRunId: String(row.drive_run_id),
-          workflow: String(row.workflow),
-        })),
+        workflowRows: db
+          .prepare(
+            "SELECT workflow_run_id, plan_id, drive_run_id, workflow FROM workflow_runs ORDER BY workflow_run_id",
+          )
+          .all()
+          .map((row) => ({
+            workflowRunId: String(row.workflow_run_id),
+            planId: String(row.plan_id),
+            driveRunId: String(row.drive_run_id),
+            workflow: String(row.workflow),
+          })),
       };
     } finally {
       db.close();
@@ -128,7 +135,8 @@ function buildRoutineGateOrphanFixture() {
 function isRoutineGateOrphanFixtureCorrect(
   fixture: ReturnType<typeof buildRoutineGateOrphanFixture>,
 ): boolean {
-  const { planId, undocumentedDriveRunId, stats, registeredPlanIds, driveRunIds, workflowRows } = fixture;
+  const { planId, undocumentedDriveRunId, stats, registeredPlanIds, driveRunIds, workflowRows } =
+    fixture;
   return (
     stats.planCount === 1 &&
     registeredPlanIds.length === 1 &&
@@ -136,20 +144,23 @@ function isRoutineGateOrphanFixtureCorrect(
     stats.workflowRuns === 3 &&
     workflowRows.length === 3 &&
     workflowRows.every((row) => row.planId === planId) &&
-    workflowRows.some((row) =>
-      row.workflowRunId === "routine-gate-empty-drive-id" &&
-      row.workflow === "routine-gate" &&
-      row.driveRunId === "",
+    workflowRows.some(
+      (row) =>
+        row.workflowRunId === "routine-gate-empty-drive-id" &&
+        row.workflow === "routine-gate" &&
+        row.driveRunId === "",
     ) &&
-    workflowRows.some((row) =>
-      row.workflowRunId === "routine-gate-undocumented-drive-id" &&
-      row.workflow === "routine-gate" &&
-      row.driveRunId === undocumentedDriveRunId,
+    workflowRows.some(
+      (row) =>
+        row.workflowRunId === "routine-gate-undocumented-drive-id" &&
+        row.workflow === "routine-gate" &&
+        row.driveRunId === undocumentedDriveRunId,
     ) &&
-    workflowRows.some((row) =>
-      row.workflowRunId === "non-routine-missing-drive-run" &&
-      row.workflow === "manual" &&
-      row.driveRunId === undocumentedDriveRunId,
+    workflowRows.some(
+      (row) =>
+        row.workflowRunId === "non-routine-missing-drive-run" &&
+        row.workflow === "manual" &&
+        row.driveRunId === undocumentedDriveRunId,
     ) &&
     !driveRunIds.includes("") &&
     !driveRunIds.includes(undocumentedDriveRunId)
@@ -348,33 +359,30 @@ describe("drive DB registration lint", () => {
     }
   });
 
-  it.fails(
-    "CANDIDATE-U-DOCTOR-GATE-04 A4: excludes routine-gate rows without documented drive runs but keeps other workflow orphans",
-    () => {
-      let fixture: ReturnType<typeof buildRoutineGateOrphanFixture>;
-      try {
-        fixture = buildRoutineGateOrphanFixture();
-      } catch {
-        // A setup failure must not be mistaken for the expected contract failure.
-        return;
-      }
-      let fixtureIsCorrect = false;
-      try {
-        fixtureIsCorrect = isRoutineGateOrphanFixtureCorrect(fixture);
-      } catch {
-        // A fixture-verification failure must not be mistaken for the expected contract failure.
-      }
-      try {
-        removeTestTree(fixture.root);
-      } catch {
-        // Cleanup failure must not be mistaken for the expected contract failure.
-        return;
-      }
-      if (!fixtureIsCorrect) return;
-      // Both routine-gate rows are intentional; only the non-routine row is an orphan.
-      expect(fixture.stats.workflowOrphans).toBe(1);
-    },
-  );
+  it.fails("CANDIDATE-U-DOCTOR-GATE-04 A4: excludes routine-gate rows without documented drive runs but keeps other workflow orphans", () => {
+    let fixture: ReturnType<typeof buildRoutineGateOrphanFixture>;
+    try {
+      fixture = buildRoutineGateOrphanFixture();
+    } catch {
+      // A setup failure must not be mistaken for the expected contract failure.
+      return;
+    }
+    let fixtureIsCorrect = false;
+    try {
+      fixtureIsCorrect = isRoutineGateOrphanFixtureCorrect(fixture);
+    } catch {
+      // A fixture-verification failure must not be mistaken for the expected contract failure.
+    }
+    try {
+      removeTestTree(fixture.root);
+    } catch {
+      // Cleanup failure must not be mistaken for the expected contract failure.
+      return;
+    }
+    if (!fixtureIsCorrect) return;
+    // Both routine-gate rows are intentional; only the non-routine row is an orphan.
+    expect(fixture.stats.workflowOrphans).toBe(1);
+  });
 
   it("U-DDBREG-003: persisted fixture has complete automatic registration evidence", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-ddbreg-current-"));
