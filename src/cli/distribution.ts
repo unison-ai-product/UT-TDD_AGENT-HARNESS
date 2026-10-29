@@ -64,6 +64,7 @@ import {
   DistributionPrivacyScanError,
   privacyScanJson,
   privacyScanTextLines,
+  redactPrivacyHitPaths,
   runDistributionPrivacyScan,
 } from "./distribution-privacy.ts";
 
@@ -1223,48 +1224,52 @@ export function registerDistributionCommands(program: Command): void {
           manifestDir,
           `${exportPlan.sourceTag.replace(/[^A-Za-z0-9._-]+/g, "-")}.sync-pack.json`,
         );
-        const output = {
-          ok:
-            repoExists &&
-            exportPlan.ok &&
-            scansOk &&
-            pruneError === null &&
-            copyError === null &&
-            authoringSmoke.ok &&
-            unmanagedExistingPaths.length === 0,
-          export: exportPlan,
-          secretScan: {
-            ok: secretScan.ok,
-            checked: secretScan.checked,
-            violations: secretScan.violations,
+        const output = redactPrivacyHitPaths(
+          {
+            ok:
+              repoExists &&
+              exportPlan.ok &&
+              scansOk &&
+              pruneError === null &&
+              copyError === null &&
+              authoringSmoke.ok &&
+              unmanagedExistingPaths.length === 0,
+            export: exportPlan,
+            secretScan: {
+              ok: secretScan.ok,
+              checked: secretScan.checked,
+              violations: secretScan.violations,
+            },
+            privacyScan: privacyScanJson(privacyScan),
+            authoringSmoke,
+            sync,
+            pack: {
+              repoDir,
+              repoExists,
+              manifest,
+              copiedArtifacts:
+                repoExists && exportPlan.ok && scansOk && pruneError === null && copyError === null
+                  ? exportPlan.artifactPaths.length
+                  : 0,
+              pruneLocal: Boolean(opts.pruneLocal),
+              prunedPaths,
+              unmanagedExistingPaths,
+              pruneError,
+              copyError,
+              localGitMutationExecuted: false,
+              destructiveRemoteMutation: false,
+              actualRemoteMutationRequiresPoApproval: true,
+              nextCommands: [
+                `git -C ${repoDir} status --short`,
+                ...gitAddPathspecCommands(repoDir, exportPlan.artifactPaths, existingBefore),
+                `git -C ${repoDir} commit -m "chore: sync clean pack ${exportPlan.sourceTag}"`,
+                `git -C ${repoDir} push origin ${opts.branch ?? "main"}`,
+              ],
+            },
           },
-          privacyScan: privacyScanJson(privacyScan),
-          authoringSmoke,
-          sync,
-          pack: {
-            repoDir,
-            repoExists,
-            manifest,
-            copiedArtifacts:
-              repoExists && exportPlan.ok && scansOk && pruneError === null && copyError === null
-                ? exportPlan.artifactPaths.length
-                : 0,
-            pruneLocal: Boolean(opts.pruneLocal),
-            prunedPaths,
-            unmanagedExistingPaths,
-            pruneError,
-            copyError,
-            localGitMutationExecuted: false,
-            destructiveRemoteMutation: false,
-            actualRemoteMutationRequiresPoApproval: true,
-            nextCommands: [
-              `git -C ${repoDir} status --short`,
-              ...gitAddPathspecCommands(repoDir, exportPlan.artifactPaths, existingBefore),
-              `git -C ${repoDir} commit -m "chore: sync clean pack ${exportPlan.sourceTag}"`,
-              `git -C ${repoDir} push origin ${opts.branch ?? "main"}`,
-            ],
-          },
-        };
+          privacyScan,
+          exportPlan.artifactPaths,
+        );
         writeFileSync(manifest, `${JSON.stringify(output, null, 2)}\n`, "utf8");
         if (opts.json) {
           process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);

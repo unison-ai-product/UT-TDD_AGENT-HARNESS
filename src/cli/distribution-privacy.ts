@@ -3,6 +3,7 @@
  * docs/design/harness/L6-function-design/privacy-scan.md §5 / §11). The denylist is mandatory
  * here; its contents never reach the output, which carries only the §8 finding values.
  */
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { type PrivacyScanResult, privacyScanMessages } from "../lint/privacy-scan.ts";
@@ -67,4 +68,30 @@ export function privacyScanTextLines(result: PrivacyScanResult): string[] {
   if (denylistBlocked)
     lines.push(`denylist: ${DENYLIST_HINT} に 1 行 1 個の正規表現を置く (# で始まる行は無視)`);
   return lines;
+}
+
+/**
+ * L6 §8 / §12: every output and evidence path must hide a path the scanner judged a hit. Replaces
+ * each scanned path whose masked form appears in the findings, wherever it occurs in `value`.
+ */
+export function redactPrivacyHitPaths<T>(
+  value: T,
+  result: PrivacyScanResult,
+  scannedPaths: readonly string[],
+): T {
+  const masked = new Set(result.findings.map((finding) => finding.location.replace(/^pack:/, "")));
+  const hits = scannedPaths
+    .map((path) => [path, `path-sha256:${createHash("sha256").update(path, "utf8").digest("hex")}`])
+    .filter(([, mask]) => masked.has(mask))
+    .sort(([a], [b]) => b.length - a.length);
+  if (hits.length === 0) return value;
+  const walk = (item: unknown): unknown => {
+    if (typeof item === "string")
+      return hits.reduce((text, [raw, mask]) => text.replaceAll(raw, mask), item);
+    if (Array.isArray(item)) return item.map(walk);
+    if (item !== null && typeof item === "object")
+      return Object.fromEntries(Object.entries(item).map(([key, entry]) => [key, walk(entry)]));
+    return item;
+  };
+  return walk(value) as T;
 }

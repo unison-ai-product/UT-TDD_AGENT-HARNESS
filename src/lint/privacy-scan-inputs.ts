@@ -5,7 +5,7 @@
  * from `<home>/.ut-tdd/privacy-denylist.txt`; its contents never leave the parsed regexes.
  */
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readFileSync, realpathSync, statSync } from "node:fs";
 import { isAbsolute, join, relative, resolve } from "node:path";
 import {
   analyzePrivacyScan,
@@ -101,29 +101,53 @@ function unquote(path: string): string {
   return path.startsWith('"') ? JSON.parse(path) : path;
 }
 
-/** Parses a `git diff -U0` patch into added-line units and added / renamed path units. */
+/** Parses a `git diff -U0` patch into added-line units (paths are read by `addedPathUnits`). */
 function diffUnits(patch: string, commit: string): PrivacyUnit[] {
   const units: PrivacyUnit[] = [];
   let current: { line: number; text: string }[] | null = null;
-  let newPath = false;
   let next = 0;
   for (const line of patch.replace(/\r\n/g, "\n").split("\n")) {
-    if (line.startsWith("diff --git ")) {
-      current = null;
-      newPath = false;
-    } else if (line.startsWith("new file mode") || line.startsWith("rename to ")) newPath = true;
+    if (line.startsWith("diff --git ")) current = null;
     else if (line.startsWith("+++ ")) {
       const target = line.slice(4);
       if (target === "/dev/null") continue;
       const path = unquote(target).replace(/^b\//, "");
       current = [];
       units.push({ source: "diff", path, commit, field: "content", lines: current });
-      if (newPath) units.push(pathUnit("diff", path, commit));
     } else if (line.startsWith("@@ ")) next = Number(/\+(\d+)/.exec(line)?.[1] ?? 0);
     else if (current !== null && line.startsWith("+")) {
       current.push({ line: next, text: line.slice(1) });
       next += 1;
     }
+  }
+  return units;
+}
+
+/**
+ * L6 §2: the path of every added or renamed file, read from `--name-status` so a rename without a
+ * content change (no `+++` header in the patch) still yields its destination path.
+ */
+function addedPathUnits(repoRoot: string, parent: string, commit: string): PrivacyUnit[] {
+  const fields = decoder
+    .decode(
+      gitBytes(repoRoot, [
+        "diff",
+        "--no-ext-diff",
+        "-z",
+        "--name-status",
+        "-M",
+        "--diff-filter=AR",
+        parent,
+        commit,
+      ]),
+    )
+    .split("\0");
+  const units: PrivacyUnit[] = [];
+  for (let index = 0; index < fields.length - 1; ) {
+    const status = fields[index];
+    const path = status.startsWith("R") ? fields[index + 2] : fields[index + 1];
+    index += status.startsWith("R") ? 3 : 2;
+    units.push(pathUnit("diff", path, commit));
   }
   return units;
 }
@@ -170,7 +194,11 @@ export function loadDiffPrivacyUnits(
         firstParent,
         commit,
       ]);
-      units.push(...diffUnits(decoder.decode(patch), commit), ...metaUnits(repoRoot, commit));
+      units.push(
+        ...diffUnits(decoder.decode(patch), commit),
+        ...addedPathUnits(repoRoot, firstParent, commit),
+        ...metaUnits(repoRoot, commit),
+      );
     }
     return { kind: "found", units };
   } catch {
@@ -208,6 +236,9 @@ export function readPrivacyDenylistFile(input: {
   if (isWithin(input.repoRoot, path)) return { kind: "in-repo" };
   if (!existsSync(path)) return { kind: "absent" };
   try {
+    // A junction or symlink can place the file inside the repo; compare the real paths too.
+    if (isWithin(realpathSync.native(input.repoRoot), realpathSync.native(path)))
+      return { kind: "in-repo" };
     if (!statSync(path).isFile()) return { kind: "unreadable" };
     return parsePrivacyDenylist(readFileSync(path, "utf8"));
   } catch {

@@ -330,4 +330,32 @@ describe("privacy scan candidate oracles (distribution)", () => {
       );
     }, 400_000);
   });
+
+  // #1454 r1 FINDING 1 (L6 §8 / §12): a hit artifact path must not leak through the export plan,
+  // the next commands, or the sync-pack evidence.
+  it("U-PRIVSCAN-018 (regression): masks a hit artifact path in sync-pack output and evidence", () => {
+    const home = makeHome("r-home", `${D}\n`);
+    const source = cleanSource("r-source", "plain line");
+    const hitPath = `skills/${D}-note.md`;
+    write(source, hitPath, "plain\n");
+    git(source, ["add", "--", hitPath]);
+    git(source, ["commit", "-q", "-m", "hit path"]);
+    const plan = buildCleanDistributionPlan({
+      paths: git(source, ["ls-files"]).split(/\r?\n/).filter(Boolean),
+      sourceTag: TAG,
+    });
+    expect(plan.artifactPaths).toContain(hitPath);
+    const packDir = join(scratchRoot, "r-pack");
+    mkdirSync(packDir, { recursive: true });
+    const evidenceBefore = walkFiles(join(source, ".ut-tdd"));
+    const result = runDistribution(source, home, ["sync-pack", "--repo-dir", packDir, "--json"]);
+    expect(result.status).toBe(1);
+    expect(kinds(privacyJson(result.stdout))).toContain("privacy-denylist-hit");
+    expect(result.stdout).toContain("path-sha256:");
+    const evidence = [...changedFiles(evidenceBefore, walkFiles(join(source, ".ut-tdd"))).values()];
+    expect(evidence.length).toBeGreaterThan(0);
+    for (const text of [result.stdout, result.stderr, ...evidence]) {
+      expect(text).not.toContain(D);
+    }
+  }, 400_000);
 });

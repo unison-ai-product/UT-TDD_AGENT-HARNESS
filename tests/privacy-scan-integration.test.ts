@@ -6,6 +6,7 @@ import {
   readFileSync,
   rmSync,
   statSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -327,5 +328,46 @@ describe("privacy scan candidate oracles (adapters and live repository)", () => 
         previousBaseline: null,
       }).findings,
     ).toEqual([]);
+  });
+
+  // #1454 r1 FINDING 2 (L6 §2): a rename without a content change has no `+++` header.
+  it("U-PRIVSCAN-013 (regression): reads the path of a rename without a content change", () => {
+    const root = initRepo("rename-only");
+    write(root, "docs/safe.md", "plain\n");
+    const base = commit(root, "safe");
+    git(root, ["mv", "docs/safe.md", `docs/${P}.md`]);
+    commit(root, "rename to a leaking name");
+    git(root, ["mv", `docs/${P}.md`, "docs/safe.md"]);
+    const head = commit(root, "rename back");
+    const loaded = loadDiffPrivacyUnits(root, { base, head });
+    expect(loaded.kind).toBe("found");
+    const units = loaded.kind === "found" ? loaded.units : [];
+    expect(units.some((unit) => unit.field === "path" && unit.path === `docs/${P}.md`)).toBe(true);
+    const result = analyzePrivacyScan({
+      mode: "diff",
+      units,
+      skipped: 0,
+      denylist: null,
+      baseline: null,
+      baselineUnreadable: false,
+      previousBaseline: null,
+    });
+    expect(result.ok).toBe(false);
+    expect(result.findings.map((finding) => finding.kind)).toContain("privacy-email-hit");
+  });
+
+  // #1454 r1 FINDING 3 (L6 §4): a junction (Windows) or symlink must not hide an in-repo denylist.
+  it("U-PRIVSCAN-013 (regression): judges the denylist placement by real paths", () => {
+    const tree = initRepo("link-tree");
+    const target = join(tree, "linked-state");
+    mkdirSync(target, { recursive: true });
+    writeFileSync(join(target, DENYLIST[1]), `${D}\n`, "utf8");
+    const home = join(scratchRoot, "link-home");
+    mkdirSync(home, { recursive: true });
+    symlinkSync(target, join(home, DENYLIST[0]), process.platform === "win32" ? "junction" : "dir");
+    expect(readFileSync(join(home, ...DENYLIST), "utf8")).toBe(`${D}\n`);
+    expect(readPrivacyDenylistFile({ homeDirectory: home, repoRoot: tree })).toEqual({
+      kind: "in-repo",
+    });
   });
 });
