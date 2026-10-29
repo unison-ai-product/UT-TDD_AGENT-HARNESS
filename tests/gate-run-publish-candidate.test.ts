@@ -257,11 +257,15 @@ async function runPublishers(count: 1 | 2): Promise<PublishObservation> {
   }
 
   let rootRemoved = !repoRoot;
-  try {
-    if (repoRoot && existsSync(repoRoot)) rmSync(repoRoot, { recursive: true, force: true });
-    rootRemoved = !repoRoot || !existsSync(repoRoot);
-  } catch (error) {
-    diagnostics.push(`fixture cleanup error: ${String(error)}`);
+  if (!childrenClosed) {
+    diagnostics.push(`fixture root retained because child exit was not confirmed: ${repoRoot}`);
+  } else {
+    try {
+      if (repoRoot && existsSync(repoRoot)) rmSync(repoRoot, { recursive: true, force: true });
+      rootRemoved = !repoRoot || !existsSync(repoRoot);
+    } catch (error) {
+      diagnostics.push(`fixture cleanup error: ${String(error)}`);
+    }
   }
   const cleanupComplete = childrenClosed && rootRemoved;
 
@@ -316,8 +320,14 @@ describe("CANDIDATE-U-GATE-009 independent publish Reds", () => {
       observation.ready.length !== 2 ||
       observation.results.length !== 2 ||
       observation.diagnostics.length !== 0
-    )
+    ) {
+      console.error(
+        observation.diagnostics.length > 0
+          ? observation.diagnostics.join("\n")
+          : `CANDIDATE-U-GATE-009 race prerequisites incomplete: setup=${observation.setupReady}, execution=${observation.executionComplete}, cleanup=${observation.cleanupComplete}, ready=${observation.ready.length}, results=${observation.results.length}`,
+      );
       return;
+    }
 
     const published = observation.results.filter((result) => result.published).length;
     const exclusiveConflicts = observation.results.filter(
