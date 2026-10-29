@@ -130,6 +130,9 @@ Design decisions, judgement gates, and R4 merge decisions should go through a
 different runtime / model family when feasible. In single-runtime modes, record
 `intra_runtime_subagent` as the review substitute and leave evidence.
 
+lane 間の依頼 (止まったら待たずに control / ほかの lane / PO へ依頼をかける) は
+`CLAUDE.md` §lane 間の依頼 が正本。
+
 ### あなたが○○なら (Codex 指揮モデル別の振る舞い、PO ルール 2026-10-09)
 
 Codex 側で使うモデルは GPT-6 の Astra / Sol / Terra / Luna の 4 つだけである (委譲経路の ID の正本は
