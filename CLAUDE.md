@@ -497,7 +497,7 @@ VS Code session と Codex の GUI root lane) で、Issue / PR コメントと HA
   (`src/feedback/review-merge-gate.ts`) が merge を拒否し、request を取り下げる正規の手段が無いため
   2 件とも review しないと merge できない。Codex lane は是正を push したら PR コメントで報告して止まる。
   1 つの作業は、control lane が発注した 1 本だけを進める (同じ PR の並行再起票も同じ原因で詰まる)。
-- レーンの中の並列 (Luna の subagent、Claude の Agent tool) は別の話であり、本節は制限しない。上限は
+- レーンの中の並列 (Luna の subagent、Claude の Agent tool) は手を動かす層の話であり、closing の権限を持たない。本節は制限しない。上限は
   §Shared Guard Discipline の 8 のまま。
 
 2026-10-08 の決定は Claude の私的メモリと #733 にしか無く、規律の正本に入っていなかった。その間に、
@@ -550,7 +550,13 @@ Task-kind ベースの割当 (PO rule 2026-07-14、旧 tier 記述を supersede)
   決まった UI デザインの実装/ドキュメント修正 = Sonnet (`claude-sonnet-5-5`)
   (指揮モデル別の相談先と委譲先は `.claude/CLAUDE.md` §委譲と判断層 の「あなたが○○なら」の表);
   web 検索/doc パッチ = Haiku (`claude-haiku-5-5`)。
-- 並列の軽量レーンは Luna の subagent と Claude Haiku が担い、closing の権限を持たない。
+- 作業の守り方は 2 層に分ける (契約: `docs/design/harness/L6-function-design/agent-guard-delegation-boundary.md` §9)。
+  **判断する層** (closing review・advisor・merge) は委譲経路 (`ut-tdd claude|codex --role <role>`)・
+  review-guard・review custody・`ut-tdd pr merge` だけが持つ。**手を動かす層** (レーン内の並列、草稿・調査・編集)
+  は Luna の subagent と Claude の Agent tool の汎用の型 (`general-purpose` / `Explore` / `Plan` / `claude`、
+  model 必須・fable 不可) が担う。**Agent tool の subagent は closing の権限を持たず**、その出力は PR の verdict にも
+  receipt にも使えない。subagent 定義ファイルは持たず、専門性は作業ごとに skill・判断パック・設計抜粋を task に渡して
+  与える。並列の軽量レーンは Luna の subagent と Claude Haiku が担う。
 - Effort はモデル別基準ラダー (PO rule 2026-07-28) が既定: Sol/Fable = `low`、
   Opus/Sonnet = `middle`、Luna = `high`。回答が浅い時は
   **まず effort を 1 段、その先はモデルを上げる** (`escalateShallowResponse`):

@@ -32,7 +32,6 @@ const input = (overrides: Partial<AssetDriftInput>): AssetDriftInput => ({
   assets: [agent("pmo-sonnet"), skill("review-checklist")],
   skillRootExists: true,
   skillDocCount: 1,
-  allowlist: ["pmo-sonnet"],
   enrolledRootCount: 2,
   ...overrides,
 });
@@ -90,7 +89,6 @@ describe("asset-drift lint (U-FR-L1-49)", () => {
     const r = analyzeAssetDrift(
       input({
         assets: [agent("pdm-tech", `Run ${legacyRuntimeName} codex --role tl-advisor`)],
-        allowlist: ["pdm-tech"],
       }),
     );
     expect(r.ok).toBe(false);
@@ -104,7 +102,6 @@ describe("asset-drift lint (U-FR-L1-49)", () => {
           agent("pdm-tech", `Use pmo-${legacyRuntimeName}-explorer`),
           skill("runtime-env", `${legacyRuntimeName.toUpperCase()}_CODEX_BIN=true`),
         ],
-        allowlist: ["pdm-tech"],
       }),
     );
     expect(r.ok).toBe(false);
@@ -117,29 +114,7 @@ describe("asset-drift lint (U-FR-L1-49)", () => {
     expect(r.violations.map((v) => v.kind)).toContain("empty-docs-skills");
   });
 
-  it("detects guard allowlist entries without matching agent docs", () => {
-    const r = analyzeAssetDrift(input({ allowlist: ["pmo-sonnet", "missing-agent"] }));
-    expect(r.ok).toBe(false);
-    expect(r.violations.map((v) => v.kind)).toContain("missing-allowlisted-agent");
-  });
-
-  it("detects generated or enrolled agent docs that are not guard allowlisted", () => {
-    const r = analyzeAssetDrift(
-      input({
-        assets: [agent("pmo-sonnet"), agent("be-logic"), skill("review-checklist")],
-        allowlist: ["pmo-sonnet"],
-      }),
-    );
-
-    expect(r.ok).toBe(false);
-    expect(r.violations).toContainEqual({
-      kind: "non-allowlisted-agent",
-      path: ".claude/agents/be-logic.md",
-      detail: "agent definition is generated/enrolled but not accepted by agent-guard",
-    });
-  });
-
-  it("passes when enrolled assets are UT-TDD local and guard allowlist resolves", () => {
+  it("passes when enrolled assets are UT-TDD local", () => {
     const r = analyzeAssetDrift(input({}));
     expect(r.ok).toBe(true);
     expect(assetDriftMessages(r)[0]).toContain("OK");

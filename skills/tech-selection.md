@@ -30,7 +30,7 @@ decision_points:
     over: "authoring the new ADR without updating the old one's status"
     because: "the pair-freeze checklist explicitly requires no ADR is superseded without a status update and back-link — leaving the old ADR `Accepted` would let two contradictory accepted decisions coexist."
   - when: "A PLAN needs external documentation or comparative research for S2 PoC evidence-gathering."
-    choose: "use `ut-tdd claude --role pmo-tech-docs --dry-run` for the retrieval"
+    choose: "use `ut-tdd claude --role docs --dry-run` for the retrieval"
     over: "having the orchestrating agent browse and synthesize external docs directly inline"
     because: "the Discovery drive S1-S2 cycle names this delegation path specifically for external documentation retrieval, keeping the research role and evidence trail separate from the orchestrating PLAN work."
 ---
@@ -99,7 +99,7 @@ before pair-freeze.
   criteria. Use `ut-tdd skill suggest` to confirm no existing ADR already covers
   the decision.
 - S2 (PoC): gather evidence per candidate; fill the comparison table. Use
-  `ut-tdd claude --role pmo-tech-docs --dry-run` for external documentation
+  `ut-tdd claude --role docs --dry-run` for external documentation
   retrieval when web research is needed.
 - S3 (verify): read the filled comparison table; confirm the recommendation is
   tied to project FRs and UT-TDD constraints.
