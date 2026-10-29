@@ -7,6 +7,8 @@ import { describe, expect, it } from "vitest";
 
 const writerModuleUrl = new URL("../src/gate/run-evidence.ts", import.meta.url).href;
 const syntheticPid = 271_828;
+const CHILD_LINE_TIMEOUT_MS = 10_000;
+const CHILD_CLOSE_TIMEOUT_MS = 5_000;
 const input = {
   gateId: "G4",
   planId: null,
@@ -31,6 +33,11 @@ interface ChildHandle {
   nextLine: () => Promise<string | null>;
   close: Promise<{ code: number | null; signal: NodeJS.Signals | null }>;
   stderr: () => string;
+}
+
+interface BoundedCloseResult {
+  closed: boolean;
+  results?: Array<{ code: number | null; signal: NodeJS.Signals | null }>;
 }
 
 interface PublishObservation {
@@ -89,7 +96,7 @@ function startPublisher(repoRoot: string): ChildHandle {
         const next = await Promise.race([
           iterator.next(),
           new Promise<IteratorResult<string>>((resolve) => {
-            timer = setTimeout(() => resolve({ done: true, value: "" }), 10_000);
+            timer = setTimeout(() => resolve({ done: true, value: "" }), CHILD_LINE_TIMEOUT_MS);
           }),
         ]);
         return next.done ? null : next.value;
@@ -100,6 +107,24 @@ function startPublisher(repoRoot: string): ChildHandle {
     close,
     stderr: () => stderr,
   };
+}
+
+async function waitForChildCloses(handles: ChildHandle[]): Promise<BoundedCloseResult> {
+  if (handles.length === 0) return { closed: true, results: [] };
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      Promise.all(handles.map((handle) => handle.close)).then((results) => ({
+        closed: true,
+        results,
+      })),
+      new Promise<BoundedCloseResult>((resolve) => {
+        timer = setTimeout(() => resolve({ closed: false }), CHILD_CLOSE_TIMEOUT_MS);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
 }
 
 function parseRecord(line: string | null): ChildRecord | null {
@@ -167,11 +192,15 @@ async function runPublishers(count: 1 | 2): Promise<PublishObservation> {
         }
 
         if (results.length === count) {
-          const closeResults = await Promise.all(handles.map((handle) => handle.close));
-          executionComplete = closeResults.every((result) => result.code === 0);
+          const closeOutcome = await waitForChildCloses(handles);
+          executionComplete =
+            closeOutcome.closed &&
+            closeOutcome.results?.every((result) => result.code === 0) === true;
           if (!executionComplete) {
+            if (!closeOutcome.closed)
+              diagnostics.push("child close timed out before publish inspection");
             diagnostics.push(
-              ...closeResults.map(
+              ...(closeOutcome.results ?? []).map(
                 (result, index) => `child ${index} exit=${result.code} signal=${result.signal}`,
               ),
               ...handles.map((handle, index) => `child ${index} stderr=${handle.stderr()}`),
@@ -208,18 +237,33 @@ async function runPublishers(count: 1 | 2): Promise<PublishObservation> {
     diagnostics.push(`setup/execution error: ${String(error)}`);
   } finally {
     for (const handle of handles) {
-      if (handle.child.exitCode === null && handle.child.signalCode === null) handle.child.kill();
+      if (handle.child.exitCode === null && handle.child.signalCode === null) {
+        try {
+          handle.child.kill();
+        } catch (error) {
+          diagnostics.push(`child kill error: ${String(error)}`);
+        }
+      }
     }
-    await Promise.all(handles.map((handle) => handle.close));
   }
 
-  let cleanupComplete = false;
+  let childrenClosed = handles.length === 0;
+  try {
+    const closeOutcome = await waitForChildCloses(handles);
+    childrenClosed = closeOutcome.closed;
+    if (!childrenClosed) diagnostics.push("child close timed out during cleanup");
+  } catch (error) {
+    diagnostics.push(`child close wait error: ${String(error)}`);
+  }
+
+  let rootRemoved = !repoRoot;
   try {
     if (repoRoot && existsSync(repoRoot)) rmSync(repoRoot, { recursive: true, force: true });
-    cleanupComplete = !repoRoot || !existsSync(repoRoot);
+    rootRemoved = !repoRoot || !existsSync(repoRoot);
   } catch (error) {
     diagnostics.push(`fixture cleanup error: ${String(error)}`);
   }
+  const cleanupComplete = childrenClosed && rootRemoved;
 
   return {
     ready,
@@ -256,7 +300,7 @@ describe("CANDIDATE-U-GATE-009 independent publish Reds", () => {
     expect(observation.directoryEntries).toContain(
       observation.results[0]?.relativePath?.split("/").at(-1),
     );
-  });
+  }, 120_000);
 
   it.fails("CANDIDATE-U-GATE-009: races two OS processes publishing one synthetic run ID", async () => {
     let observation: PublishObservation;
@@ -298,5 +342,5 @@ describe("CANDIDATE-U-GATE-009 independent publish Reds", () => {
       publishedPaths[0]?.split("/").at(-1),
     ]);
     expect(observation.diagnostics).toEqual([]);
-  });
+  }, 120_000);
 });
