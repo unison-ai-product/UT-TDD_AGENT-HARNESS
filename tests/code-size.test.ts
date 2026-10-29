@@ -120,7 +120,7 @@ describe("code size gate candidate oracles", () => {
 
   it.fails("U-CODESIZE-006: lets baseline rows cap growth and requires shrink updates", () => {
     const baseline = { "src/big.ts": row(1300) };
-    const run = (file: CodeSizeSource) => analyze([file], baseline);
+    const run = (file: CodeSizeSource) => analyze([file], baseline, baseline);
     expect.soft(run(codeFile("src/big.ts", 1300)).findings).toHaveLength(0);
     expect(reasons(run(codeFile("src/big.ts", 1301)), "code-size-required")).toContain(
       "exceeds-baseline",
@@ -139,7 +139,7 @@ describe("code size gate candidate oracles", () => {
   it.fails("U-CODESIZE-007: keeps function-only baseline rows from freezing the file size", () => {
     const limit = CODE_SIZE_LIMITS.src.lines;
     const baseline = { "src/mid.ts": row(null, 30) };
-    const run = (file: CodeSizeSource) => analyze([file], baseline);
+    const run = (file: CodeSizeSource) => analyze([file], baseline, baseline);
     expect.soft(run(codeFile("src/mid.ts", limit, 30)).findings).toHaveLength(0);
     expect(reasons(run(codeFile("src/mid.ts", limit + 1, 30)), "code-size-required")).toContain(
       "exceeds-baseline",

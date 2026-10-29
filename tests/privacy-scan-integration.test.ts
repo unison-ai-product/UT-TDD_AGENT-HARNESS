@@ -28,7 +28,8 @@ import {
 const at = "@";
 const mail = (local: string, domain: string) => [local, domain].join(at);
 const P = mail("alice", "mail-provider.jp");
-const D = "example-private-repo";
+// L7 §2: tests/ ship in the Pack, so the synthetic denylist word is joined at runtime too.
+const D = ["example", "private", "repo"].join("-");
 const BASELINE_PATH = "docs/governance/privacy-scan-baseline.json";
 const DENYLIST = [".ut-tdd", "privacy-denylist.txt"];
 
@@ -100,7 +101,7 @@ afterAll(() => {
 });
 
 describe("privacy scan candidate oracles (adapters and live repository)", () => {
-  it.fails("CANDIDATE-U-PRIVSCAN-013: loaders read commits, not the work tree, and fail closed", () => {
+  it.fails("U-PRIVSCAN-013: loaders read commits, not the work tree, and fail closed", () => {
     const tree = initRepo("tree");
     write(tree, "docs/x.md", `head\n${P}\n`);
     commit(tree, "add x");
@@ -191,7 +192,7 @@ describe("privacy scan candidate oracles (adapters and live repository)", () => 
     });
   });
 
-  it.fails("CANDIDATE-U-PRIVSCAN-015: accepts the live repository and rejects new hits via the CLI", () => {
+  it.fails("U-PRIVSCAN-015: accepts the live repository and rejects new hits via the CLI", () => {
     const live = checkPrivacyScan({ repoRoot: authorRoot, mode: "tree", rev: "HEAD" });
     expect(live.ok).toBe(true);
     expect(live.messages.at(-1)).toContain("denylist=unused");
@@ -237,7 +238,7 @@ describe("privacy scan candidate oracles (adapters and live repository)", () => 
     expect(stateMtimes(copy)).toEqual(before);
   }, 300_000);
 
-  it.fails("CANDIDATE-U-PRIVSCAN-016: wires the scan into the required Linux CI job", () => {
+  it.fails("U-PRIVSCAN-016: wires the scan into the required Linux CI job", () => {
     const workflows = join(authorRoot, ".github", "workflows");
     const harness = readFileSync(join(workflows, "harness-check.yml"), "utf8");
     const job = harness.slice(
@@ -264,7 +265,7 @@ describe("privacy scan candidate oracles (adapters and live repository)", () => 
     expect(readFileSync(join(workflows, "security.yml"), "utf8")).not.toContain("privacy-scan");
   });
 
-  it.fails("CANDIDATE-U-PRIVSCAN-017: reads lines added while resolving a merge conflict", () => {
+  it.fails("U-PRIVSCAN-017: reads lines added while resolving a merge conflict", () => {
     const build = (label: string, resolutionLine: string) => {
       const root = initRepo(label);
       write(root, "docs/x.md", "one\ntwo\nthree\nfour\nfive\n");

@@ -9,8 +9,10 @@ import {
   assetDriftMessages,
   loadAssetDriftInput,
 } from "../src/lint/asset-drift.ts";
-import { LEGACY_SOURCE_REPO } from "../src/lint/personal-path.ts";
 import { removeTestTree } from "./support/temp-tree.ts";
+
+// production 定数から独立させるため、旧ソース repo 名はテスト側で実行時に連結する (リテラル禁止)。
+const legacySourceName = ["ai", "dev", "kit", "vscode"].join("-");
 
 const agent = (id: string, text = "---\nmodel: claude-sonnet-4-6\n---\nbody"): AssetDoc => ({
   path: `.claude/agents/${id}.md`,
@@ -40,7 +42,7 @@ describe("asset-drift lint (U-FR-L1-49)", () => {
   it("detects legacy source personal path residue in enrolled assets", () => {
     const r = analyzeAssetDrift(
       input({
-        assets: [agent("pmo-sonnet", `Read ~/${LEGACY_SOURCE_REPO}/skills/SKILL_MAP.md`)],
+        assets: [agent("pmo-sonnet", `Read ~/${legacySourceName}/skills/SKILL_MAP.md`)],
       }),
     );
     expect(r.ok).toBe(false);

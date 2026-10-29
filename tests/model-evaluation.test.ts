@@ -11,13 +11,14 @@
  * AC-38-02 (disabled): no opt-in file => 0 model_evaluations rows.
  * Cold-start: enabled but 0 model_runs => 0 rows, no throw.
  */
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { openHarnessDb, upsertRow } from "../src/state-db/index.ts";
 import { migrate, rowCounts } from "../src/state-db/migration.ts";
 import { projectModelEvaluations } from "../src/state-db/projection-writer.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 
 function makeTmpRoot(): string {
   const root = mkdtempSync(join(tmpdir(), "ut-tdd-model-eval-"));
@@ -82,7 +83,7 @@ describe("U-FR-L1-38: projectModelEvaluations", () => {
       expect(rowCounts(db).model_evaluations).toBe(0);
     } finally {
       db.close();
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -101,7 +102,7 @@ describe("U-FR-L1-38: projectModelEvaluations", () => {
       expect(rowCounts(db).model_evaluations).toBe(0);
     } finally {
       db.close();
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -118,7 +119,7 @@ describe("U-FR-L1-38: projectModelEvaluations", () => {
       expect(rowCounts(db).model_evaluations).toBe(0);
     } finally {
       db.close();
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -147,7 +148,7 @@ describe("U-FR-L1-38: projectModelEvaluations", () => {
       expect(Number(row?.success_rate)).toBeCloseTo(1.0, 4);
     } finally {
       db.close();
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -176,7 +177,7 @@ describe("U-FR-L1-38: projectModelEvaluations", () => {
       expect(Number(row?.success_rate)).toBeCloseTo(0.5, 4);
     } finally {
       db.close();
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -216,7 +217,7 @@ describe("U-FR-L1-38: projectModelEvaluations", () => {
       expect(Number(rowB?.success_rate)).toBeCloseTo(0.5, 4);
     } finally {
       db.close();
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -244,7 +245,7 @@ describe("U-FR-L1-38: projectModelEvaluations", () => {
       expect(Number(row?.success_rate)).toBeCloseTo(0.0, 4);
     } finally {
       db.close();
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -270,7 +271,7 @@ describe("U-FR-L1-38: projectModelEvaluations", () => {
       expect(row?.evaluated_at.length).toBeGreaterThan(0);
     } finally {
       db.close();
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 });

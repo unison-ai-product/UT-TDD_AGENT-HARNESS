@@ -5,8 +5,8 @@ Status: executed (PO 明示許可「履歴を書き換えて force push して�
 
 ## What / Why
 
-- repo の Contributors に **RetryYN** (個人アカウント) が表示されていた。原因 = 全 259 commit の author email `yoshiyuki0907yn@gmail.com` が GitHub 上で RetryYN に登録されているため。
-- PO 判断により **方法 B (履歴書き換え)** を採用: 全 commit の author/committer email を `253932653+unison-ai-product@users.noreply.github.com` へ書き換え (`git filter-branch --env-filter`、author name "yoshiyuki" は不変) → force push。
+- repo の Contributors に個人アカウントが表示されていた。原因 = 全 259 commit の author email (個人の email。公開 repo のため記載を伏せる) が GitHub 上でその個人アカウントに登録されているため。
+- PO 判断により **方法 B (履歴書き換え)** を採用: 全 commit の author/committer email を `253932653+unison-ai-product@users.noreply.github.com` へ書き換え (`git filter-branch --env-filter`、author name は不変) → force push。
 - 以後の commit も同帰属になるよう repo-local `git config user.email` を同 noreply に設定済み。
 
 ## Safety / Rollback

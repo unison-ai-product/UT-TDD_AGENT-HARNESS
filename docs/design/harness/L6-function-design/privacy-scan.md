@@ -10,7 +10,7 @@ next_pair_freeze: L7
 issue: 1391
 ---
 
-> **L6 contract marker**: `analyzePrivacyScan(input: PrivacyScanInput) => PrivacyScanResult` は unit-test-granularity contract である (未実装の目標契約。実装は本書の凍結後)。DbC pre/post/invariant は §12 にまとめる。oracle の詳細 (CANDIDATE-U-PRIVSCAN-001〜) は専用の `docs/test-design/harness/L7-privacy-scan-test-design.md` が固定する。共有の `L7-unit-test-design.md` と `function-spec.md` には索引行を足さない。
+> **L6 contract marker**: `analyzePrivacyScan(input: PrivacyScanInput) => PrivacyScanResult` は unit-test-granularity contract である (未実装の目標契約。実装は本書の凍結後)。DbC pre/post/invariant は §12 にまとめる。oracle の詳細 (正式 oracle `U-PRIVSCAN-001`〜`018`。候補 ID から昇格済みで、実装と Green の結果は示さない) は専用の `docs/test-design/harness/L7-privacy-scan-test-design.md` が固定する。共有の `L7-unit-test-design.md` と `function-spec.md` には索引行を足さない。
 
 # 個人情報と私有の名前の検査 (privacy scan) — 関数設計 (issue #1391)
 
@@ -142,17 +142,17 @@ finding ごとに 1 行 `<location>:<line>:<kind>[:<reason>]` を出し、末尾
 
 | Function | Signature | pre | post | invariant | oracle |
 |---|---|---|---|---|---|
-| `findEmailHitLines` | `findEmailHitLines(unit: PrivacyUnit) => number[]` | 単位 | 除外に当たらない email を含む行番号 (昇順、重複なし) | 一致ごとに除外を判定する | `CANDIDATE-U-PRIVSCAN-001`, `002` |
-| `parsePrivacyDenylist` | `parsePrivacyDenylist(text: string) => PrivacyDenylist` | ファイルの中身 | `{ kind: "empty" }` / `{ kind: "provided"; entries: readonly RegExp[] }` / `{ kind: "invalid"; entryLines: readonly number[] }` | 例外のメッセージを外へ出さない | `CANDIDATE-U-PRIVSCAN-003` |
-| `parsePrivacyBaseline` | `parsePrivacyBaseline(sourceText: string) => PrivacyBaseline \| null` | 文字列 | 解釈できなければ `null` | 壊れた入力を空とみなさない | `CANDIDATE-U-PRIVSCAN-011` |
-| `analyzePrivacyScan` | `analyzePrivacyScan(input: PrivacyScanInput) => PrivacyScanResult` | 入力は §12 の Pre | `{ ok, findings, summary }` (§7) | 純粋。入力順に依存しない。出力は §8 の語彙だけ | `CANDIDATE-U-PRIVSCAN-004`〜`010`, `012` |
-| `privacyScanMessages` | `privacyScanMessages(result: PrivacyScanResult) => string[]` | 結果 | §8 の行 | 語彙が閉じている | `CANDIDATE-U-PRIVSCAN-005` |
-| `loadTreePrivacyUnits` | `loadTreePrivacyUnits(repoRoot: string, rev: string) => { kind: "found"; units: PrivacyUnit[]; skipped: number } \| { kind: "unreadable" }` | repo root と commit | 木の全 tracked file と path | 作業木を読まない | `CANDIDATE-U-PRIVSCAN-013` |
-| `loadDiffPrivacyUnits` | `loadDiffPrivacyUnits(repoRoot: string, range: { base: string; head: string }) => { kind: "found"; units: PrivacyUnit[] } \| { kind: "unreadable" }` | 範囲 | commit ごとの追加行 (merge commit は first parent との差分)・path・メタ | 読めない git を差分なしにしない。merge commit を飛ばさない | `CANDIDATE-U-PRIVSCAN-013`, `017` |
-| `loadPreviousPrivacyBaseline` | `loadPreviousPrivacyBaseline(repoRoot: string) => { kind: "found"; baseline: PrivacyBaseline } \| { kind: "absent" } \| { kind: "unreadable" }` | repo root | §6 の比較元 | 読めない比較元を `absent` にしない | `CANDIDATE-U-PRIVSCAN-013` |
-| `readPrivacyDenylistFile` | `readPrivacyDenylistFile(input: { homeDirectory: string; repoRoot: string }) => PrivacyDenylistState` | home と repo root | `<home>/.ut-tdd/privacy-denylist.txt` を読み `parsePrivacyDenylist` に渡す。無い・読めない・repo の中は `absent` / `unreadable` / `in-repo` | 環境変数を読まない。中身を返り値の外へ出さない | `CANDIDATE-U-PRIVSCAN-013` |
-| `checkPrivacyScan` | `checkPrivacyScan(options: { repoRoot: string; mode: "tree" \| "diff"; rev?: string; range?: { base: string; head: string } }) => { messages: string[]; ok: boolean }` | repo root と mode | adapter を合成し `analyzePrivacyScan` を呼ぶ | 例外を握りつぶさない。denylist を読まない | `CANDIDATE-U-PRIVSCAN-015` |
-| `scanPackPrivacy` | `scanPackPrivacy(input: { artifacts: readonly { path: string; text: string }[]; repoRoot: string; homeDirectory: string }) => PrivacyScanResult` | Pack の artifact | `mode=pack` の結果 | baseline を読まない。denylist は必須 | `CANDIDATE-U-PRIVSCAN-014`, `018` |
+| `findEmailHitLines` | `findEmailHitLines(unit: PrivacyUnit) => number[]` | 単位 | 除外に当たらない email を含む行番号 (昇順、重複なし) | 一致ごとに除外を判定する | `U-PRIVSCAN-001`, `002` |
+| `parsePrivacyDenylist` | `parsePrivacyDenylist(text: string) => PrivacyDenylist` | ファイルの中身 | `{ kind: "empty" }` / `{ kind: "provided"; entries: readonly RegExp[] }` / `{ kind: "invalid"; entryLines: readonly number[] }` | 例外のメッセージを外へ出さない | `U-PRIVSCAN-003` |
+| `parsePrivacyBaseline` | `parsePrivacyBaseline(sourceText: string) => PrivacyBaseline \| null` | 文字列 | 解釈できなければ `null` | 壊れた入力を空とみなさない | `U-PRIVSCAN-011` |
+| `analyzePrivacyScan` | `analyzePrivacyScan(input: PrivacyScanInput) => PrivacyScanResult` | 入力は §12 の Pre | `{ ok, findings, summary }` (§7) | 純粋。入力順に依存しない。出力は §8 の語彙だけ | `U-PRIVSCAN-004`〜`010`, `012` |
+| `privacyScanMessages` | `privacyScanMessages(result: PrivacyScanResult) => string[]` | 結果 | §8 の行 | 語彙が閉じている | `U-PRIVSCAN-005` |
+| `loadTreePrivacyUnits` | `loadTreePrivacyUnits(repoRoot: string, rev: string) => { kind: "found"; units: PrivacyUnit[]; skipped: number } \| { kind: "unreadable" }` | repo root と commit | 木の全 tracked file と path | 作業木を読まない | `U-PRIVSCAN-013` |
+| `loadDiffPrivacyUnits` | `loadDiffPrivacyUnits(repoRoot: string, range: { base: string; head: string }) => { kind: "found"; units: PrivacyUnit[] } \| { kind: "unreadable" }` | 範囲 | commit ごとの追加行 (merge commit は first parent との差分)・path・メタ | 読めない git を差分なしにしない。merge commit を飛ばさない | `U-PRIVSCAN-013`, `017` |
+| `loadPreviousPrivacyBaseline` | `loadPreviousPrivacyBaseline(repoRoot: string) => { kind: "found"; baseline: PrivacyBaseline } \| { kind: "absent" } \| { kind: "unreadable" }` | repo root | §6 の比較元 | 読めない比較元を `absent` にしない | `U-PRIVSCAN-013` |
+| `readPrivacyDenylistFile` | `readPrivacyDenylistFile(input: { homeDirectory: string; repoRoot: string }) => PrivacyDenylistState` | home と repo root | `<home>/.ut-tdd/privacy-denylist.txt` を読み `parsePrivacyDenylist` に渡す。無い・読めない・repo の中は `absent` / `unreadable` / `in-repo` | 環境変数を読まない。中身を返り値の外へ出さない | `U-PRIVSCAN-013` |
+| `checkPrivacyScan` | `checkPrivacyScan(options: { repoRoot: string; mode: "tree" \| "diff"; rev?: string; range?: { base: string; head: string } }) => { messages: string[]; ok: boolean }` | repo root と mode | adapter を合成し `analyzePrivacyScan` を呼ぶ | 例外を握りつぶさない。denylist を読まない | `U-PRIVSCAN-015` |
+| `scanPackPrivacy` | `scanPackPrivacy(input: { artifacts: readonly { path: string; text: string }[]; repoRoot: string; homeDirectory: string }) => PrivacyScanResult` | Pack の artifact | `mode=pack` の結果 | baseline を読まない。denylist は必須 | `U-PRIVSCAN-014`, `018` |
 
 `PrivacyUnit` は `{ source: "tree" | "pack" | "diff" | "commit-meta"; path: string | null; commit: string | null; field: "content" | "path" | "author" | "committer" | "message"; lines: readonly { line: number; text: string }[] }`。`PrivacyDenylistState` は `PrivacyDenylist | { kind: "absent" } | { kind: "unreadable" } | { kind: "in-repo" }`。`PrivacyScanInput` は `{ mode: "tree" | "diff" | "pack"; units: readonly PrivacyUnit[]; skipped: number; denylist: PrivacyDenylistState | null; baseline: PrivacyBaseline | null; baselineUnreadable: boolean; previousBaseline: { kind: "found"; baseline: PrivacyBaseline } | { kind: "absent" } | { kind: "unreadable" } | null }`。`denylist` は `pack` だけが渡し、他の mode は `null`。`baseline` 以下は `tree` だけが使い、他の mode は `null` と `false` を渡す (`max-source-params` に合わせて 1 つの object にまとめる)。`PrivacyBaseline` は `readonly string[]` (path の昇順)。
 

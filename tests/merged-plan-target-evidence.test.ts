@@ -14,6 +14,7 @@ import {
   selectCanonicalMergedTarget,
 } from "../src/lint/merged-plan-target-evidence.ts";
 import { gitChecked as git, gitTextTrimmedDefaultStdio as gitText } from "./support/git.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 
 describe("merged-plan canonical target evidence", () => {
   it("selects the remote default branch instead of the immediate stacked PR base", () => {
@@ -118,7 +119,7 @@ describe("merged-plan canonical target evidence", () => {
     } finally {
       if (previousEvent === undefined) delete process.env.GITHUB_EVENT_PATH;
       else process.env.GITHUB_EVENT_PATH = previousEvent;
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -140,7 +141,7 @@ describe("merged-plan canonical target evidence", () => {
         "merged-plan canonical target could not be verified",
       );
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -162,7 +163,7 @@ describe("merged-plan canonical target evidence", () => {
     } finally {
       if (previousEvent === undefined) delete process.env.GITHUB_EVENT_PATH;
       else process.env.GITHUB_EVENT_PATH = previousEvent;
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -201,7 +202,7 @@ describe("merged-plan canonical target evidence", () => {
     } finally {
       if (previousEvent === undefined) delete process.env.GITHUB_EVENT_PATH;
       else process.env.GITHUB_EVENT_PATH = previousEvent;
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 });
@@ -292,9 +293,9 @@ describe("stacked PR canonical target inside a snapshot (issue #186)", () => {
       mainSha,
       childSha,
       cleanup: () => {
-        rmSync(origin, { recursive: true, force: true });
-        rmSync(checkout, { recursive: true, force: true });
-        rmSync(snapshot, { recursive: true, force: true });
+        removeTestTree(origin);
+        removeTestTree(checkout);
+        removeTestTree(snapshot);
       },
     };
   };

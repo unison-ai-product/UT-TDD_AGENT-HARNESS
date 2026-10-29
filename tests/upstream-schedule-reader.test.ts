@@ -22,7 +22,7 @@ vi.mock("node:fs", async (importOriginal) => {
   };
 });
 
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -39,6 +39,7 @@ import {
   loadRuleAutomationClosureDocs,
   ruleAutomationClosureMessages,
 } from "../src/lint/rule-automation-closure.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 import { headSnapshotRoot } from "./support/workspace-roots.ts";
 
 const L3_PATH = "docs/design/harness/L3-functional/upstream-schedule-reconciliation.md";
@@ -194,7 +195,7 @@ function closureMutationVariants(): Array<{
 afterEach(() => {
   readTrace.active = false;
   readTrace.calls = [];
-  for (const root of temporaryRoots.splice(0)) rmSync(root, { recursive: true, force: true });
+  for (const root of temporaryRoots.splice(0)) removeTestTree(root);
 });
 
 describe("upstream schedule reader candidate oracles", () => {

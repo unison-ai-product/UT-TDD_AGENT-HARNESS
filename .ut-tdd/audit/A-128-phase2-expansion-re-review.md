@@ -60,7 +60,7 @@ remediation 選択肢: (a) tracked 維持 → repository-structure.md に配置�
 
 ### F-7 [env / out-of-repo] Claude Code env 注入の PATH 破壊が spawn 系テストを環境誘発 fail させる
 
-- user-global `~/.claude/settings.json` の `env.PATH = "/c/Program Files/nodejs:/c/Users/micro/AppData/Roaming/npm:${PATH}"` は **`${PATH}` が展開されず literal のまま**注入され、Windows の System PATH (System32 等) が消える。
+- user-global `~/.claude/settings.json` の `env.PATH = "/c/Program Files/nodejs:/c/Users/<user>/AppData/Roaming/npm:${PATH}"` は **`${PATH}` が展開されず literal のまま**注入され、Windows の System PATH (System32 等) が消える。
 - 結果: PowerShell tool で `git`/`cmd` が not found、vitest の `tests/runtime-hook-entrypoints.test.ts` 5 件が `spawnSync("cmd.exe")` ENOENT (status null) で fail。**PATH に System32 を戻すと 6/6 pass、全回帰 329/329 green** — repo の退行ではない (本 audit で実証)。
 - F-5 (spawnSync child.error 沈黙) の実害インスタンスでもある (ENOENT が無言で exit 1 になる)。
 - remediation: user settings の env.PATH エントリを除去 or Windows 形式へ修正 (Claude Code は env 値の変数展開をしない)。repo 側は IMP-130(d) の child.error surface で診断性を上げる。
@@ -94,8 +94,8 @@ A-120→A-121 と同型の audit-remediation cycle として同日実装。詳�
 - **F-4/F-5/F-6 (IMP-130)**: envWithoutAuthSecrets / probe・run timeout / Object.hasOwn 境界 + PROFILE_RUNNERS readonly / cli.ts child.error surface / doctor warn-first 根拠コメント / テスト強化 (最小件数・拒否理由・負系 4・schema_version 定数化)。**(f) engines は package.json `">=1.3"` 既宣言で取り下げ** ([[feedback_verify_intent_before_calling_gate_a_bug]] 同型 — agent 所見は検証してから直す)。
 - **F-7 repo 側無害化 (2026-06-10 追補)**: 根本原因 (user settings) は下記のとおり PO 手動だが、**repo への影響は除去済** — ① `tests/runtime-hook-entrypoints.test.ts` の cmd.exe と ② `src/runtime/detect.ts` の where.exe を PATH 探索でなく `%SystemRoot%\System32` canonical 解決へ変更。壊れた PATH 注入下でも **332/332 green + doctor exit 0 + codex 検出正常 (mode=hybrid 復帰)** を素の環境で実証。②は change-impact lint が「design 更新なし」を fail-close 検出 → function-spec.md RuntimeDetection 行へ検出契約を追記して解消 (柱 3 フィードバックループの実働例)。
 - **F-7/F-8 根本対処 (repo 外) — 解消 (2026-06-10 PM)**: PO の個別明示指示 (「2は消して」) により settings.json から ① env.PATH エントリ ② OPENAI_API_KEY 平文 2 エントリを削除 (JSON 妥当性検証済、env 反映は次 session から)。当初は classifier が「improve everything は明示授権でない」として 2 経路とも拒否 → 個別指示で通過 (境界設計どおり)。key は未使用と PO 確認済み。**OpenAI ダッシュボードにも該当 key は存在せず (失効済み、PO 確認 2026-06-10) → F-8 完全クローズ (残タスクなし)**。
-- **push — 解消 (2026-06-10 PM)**: PO が `gh auth refresh -s workflow` デバイス認証を完了 (罠: ブラウザの RetryYN ログインに付与される / GCM は別トークンのため素の git push は依然失敗 → gh トークン + temp credential 経由が正)。4 commit push 済、CI harness-check success。手順は memory [[project_github_push_workflow_scope]] に更新済。
-- **push**: `git push` は workflow スコープ不足で remote rejected。代替経路も試行済 — gh 第 2 アカウント (RetryYN、workflow スコープ有) は対象 repo への権限なしで 403。**PO 操作が必須**: `gh auth refresh -h github.com -s workflow` (active = unison-ai-product、browser 認証) 後に `git push origin main`。
+- **push — 解消 (2026-06-10 PM)**: PO が `gh auth refresh -s workflow` デバイス認証を完了 (罠: ブラウザの個人アカウントのログインに付与される / GCM は別トークンのため素の git push は依然失敗 → gh トークン + temp credential 経由が正)。4 commit push 済、CI harness-check success。手順は memory [[project_github_push_workflow_scope]] に更新済。
+- **push**: `git push` は workflow スコープ不足で remote rejected。代替経路も試行済 — gh 第 2 アカウント (個人アカウント、workflow スコープ有) は対象 repo への権限なしで 403。**PO 操作が必須**: `gh auth refresh -h github.com -s workflow` (active = unison-ai-product、browser 認証) 後に `git push origin main`。
 - 検証: typecheck / biome lint clean、vitest 332/332 green、doctor exit 0。
 
 ### Review evidence (review 前置、claude-only mode)
