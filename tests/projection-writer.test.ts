@@ -144,7 +144,7 @@ describe("IT-DB-01/02: harness.db projection writer", () => {
     }
   });
 
-  it("projects design-quality coverage rows from the real repo rebuild", () => {
+  it("CANDIDATE-U-PLANRET-022: projects design-quality coverage rows from the real repo rebuild", () => {
     const db = openHarnessDb(":memory:");
     try {
       migrate(db);
@@ -2199,7 +2199,7 @@ export function evaluateAgentGuard(input: { stage: string; route: string; model:
     }
   });
 
-  it("auto-populates relation, profile, document export, and test catalog projections on rebuild", () => {
+  it("CANDIDATE-U-PLANRET-021: auto-populates relation, profile, document export, and test catalog projections on rebuild", () => {
     const db = openHarnessDb(":memory:");
     try {
       const result = rebuildHarnessDb({ repoRoot: process.cwd(), db });
@@ -2516,7 +2516,7 @@ Fixture.
     }
   });
 
-  it("rebuildHarnessDb deterministically projects Phase3 outputs without source mutation", () => {
+  it("CANDIDATE-U-PLANRET-023: rebuildHarnessDb deterministically projects Phase3 outputs without source mutation", () => {
     const db = openHarnessDb(":memory:");
     try {
       const result = rebuildHarnessDb({

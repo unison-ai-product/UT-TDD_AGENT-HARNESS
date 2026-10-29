@@ -654,7 +654,7 @@ describe("loadRelationGraphSourceSet", () => {
 // すべて実在し stale-edge == 0 であることを機械保証する (coverage≠substance、PLAN-L7-32 の
 // loader が requirement node を一切 materialize しなかった回帰の再発防止)。
 describe("relation graph real-repo loader (PLAN-L7-142 stale-edge fence)", () => {
-  it("has zero stale-edge findings through the real loader and materializes requirement nodes", () => {
+  it("CANDIDATE-U-PLANRET-024: has zero stale-edge findings through the real loader and materializes requirement nodes", () => {
     const projection = collectRelationGraphProjection(loadRelationGraphSourceSet(process.cwd()));
     const result = analyzeRelationImpact({ changedPaths: [], projection });
     const staleEdges = result.findings.filter((f) => f.code === "stale-edge");
