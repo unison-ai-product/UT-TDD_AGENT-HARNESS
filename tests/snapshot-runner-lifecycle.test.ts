@@ -619,7 +619,7 @@ describe("snapshot runner lifecycle L7 candidate Red (issue #1129 / #1415)", () 
     expect(at(owner, 15)).toBe("continue");
   });
 
-  it.fails("U-SNAPLC-022: dirty Git runner warns and continues on the committed snapshot", async () => {
+  it("U-SNAPLC-022: dirty Git runner warns and continues on the committed snapshot", async () => {
     let fixture: GitSourceFixture | null = null;
     await verifySnapshotCandidate(
       "022",
@@ -678,7 +678,7 @@ describe("snapshot runner lifecycle L7 candidate Red (issue #1129 / #1415)", () 
     );
   });
 
-  it.fails("U-SNAPLC-023: non-Git Pack runner names copy source and path", async () => {
+  it("U-SNAPLC-023: non-Git Pack runner names copy source and path", async () => {
     let parent: string | null = null;
     let pack: string | null = null;
     await verifySnapshotCandidate(
@@ -723,7 +723,7 @@ describe("snapshot runner lifecycle L7 candidate Red (issue #1129 / #1415)", () 
     );
   });
 
-  it.fails("U-SNAPLC-024: clean Git runner output identifies the commit SHA", async () => {
+  it("U-SNAPLC-024: clean Git runner output identifies the commit SHA", async () => {
     let fixture: GitSourceFixture | null = null;
     await verifySnapshotCandidate(
       "024",
