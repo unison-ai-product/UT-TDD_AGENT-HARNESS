@@ -234,7 +234,7 @@ describe("team run validation", () => {
     const recommendation = recommendTeamLaunch({
       task,
       mode: "hybrid",
-      proposalSubagents: coverage.recommended_subagents,
+      proposalSubagents: coverage.recommended_lanes,
     });
 
     expect(recommendation.should_launch).toBe(true);

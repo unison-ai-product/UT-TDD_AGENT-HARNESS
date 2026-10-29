@@ -89,8 +89,6 @@ describe("loadLintWiringInput (live repo regression fence)", () => {
     expect(r.staleDeferred).toEqual([]);
     expect(r.deferred).toEqual([
       "backfill-pairing",
-      "code-size",
-      "code-size-inputs",
       "consumer-trace",
       "forward-convergence",
       "plan-supersession",

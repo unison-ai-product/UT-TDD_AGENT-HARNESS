@@ -497,11 +497,38 @@ VS Code session と Codex の GUI root lane) で、Issue / PR コメントと HA
   (`src/feedback/review-merge-gate.ts`) が merge を拒否し、request を取り下げる正規の手段が無いため
   2 件とも review しないと merge できない。Codex lane は是正を push したら PR コメントで報告して止まる。
   1 つの作業は、control lane が発注した 1 本だけを進める (同じ PR の並行再起票も同じ原因で詰まる)。
-- レーンの中の並列 (Luna の subagent、Claude の Agent tool) は別の話であり、本節は制限しない。上限は
+- レーンの中の並列 (Luna の subagent、Claude の Agent tool) は手を動かす層の話であり、closing の権限を持たない。本節は制限しない。上限は
   §Shared Guard Discipline の 8 のまま。
 
 2026-10-08 の決定は Claude の私的メモリと #733 にしか無く、規律の正本に入っていなかった。その間に、
 control lane は補助のはずの CLI 経路を記録なしに常用していた (2026-10-13、#998 の昇格対象の実例)。
+
+### lane 間の依頼 (待たずに依頼をかける)
+
+PO 指摘 (2026-10-29、#1465): 「ほかのレーンが能動的に働きかけるようにさせたほうがいい。永遠に待機しやがる」。
+control lane の合図を待つことを基本にせず、止まったら相手に依頼をかける。両ランタイム共通で、導入先の lane も同じ。
+
+- **待機を状態として使わない**。自分の作業が他の lane や control で止まったら、待たずに相手へ依頼をかける。
+- **依頼に書くもの**: (1) 何をしてほしいか、(2) 対象の Issue / PR と exact HEAD、(3) それが済むと自分が何を
+  始めるか、(4) 依頼を出した時刻。
+- **依頼の相手**:
+  - control: review の request、merge、割り当て、順序、設計判断、高影響境界。
+  - ほかの lane: その PR / Issue に直接コメントする。
+  - PO: §PO 判断への反射的エスカレーション禁止 の条件を満たす判断だけ (advisor 相談と実測のあとにも残る、PO の
+    権限を要する trade-off と、高影響境界)。止まっている時間や督促の回数だけを理由に、PO 判断へ移さない。
+- **手が空いて割り当てが無いとき**は、control に割り当てを依頼する。候補 2〜3 件と推奨 1 件を添える。
+- **返事が無ければ督促する**。仮の値は「30 分ごとに督促し、2 回督促しても返事が無ければ止まっている依頼として
+  上げる」。「上げる」は、止まっている依頼を control の一覧と、PO が見える Issue のコメントで知らせることであり、
+  PO に判断を依頼することではない。これは仮の値であり、間隔と回数は #1465 で決める。
+- **禁止**: 中身の無い確認 (「進捗どうですか」) と、同じ状態報告の繰り返し。
+- **返事を待つ間も、手元で進められる作業を進める**。
+- **決まった順序の次の作業**は、前提 (先の PR の merge など) がそろったら依頼を待たずに着手し、着手したことを
+  1 回だけ報告する。
+
+根拠 (2026-10-29 実測、#1465): Codex lane は「空きメモリが開始条件に届かない」という同じ報告を条件が変わらない
+まま繰り返し、「CI 完了・review お願い」と「進捗の確認」が同じ状態について何回も届いた。朝に割り当てた #1357 と
+#1247 は、昼まで control の合図を待って着手されなかった。仕組み (依頼・督促・止まっている依頼の一覧) と Pack への
+配布は #1465 の後続で扱い、本節は規律だけを定める。
 
 ## GitHub Issue Hierarchy
 
@@ -550,7 +577,13 @@ Task-kind ベースの割当 (PO rule 2026-07-14、旧 tier 記述を supersede)
   決まった UI デザインの実装/ドキュメント修正 = Sonnet (`claude-sonnet-5-5`)
   (指揮モデル別の相談先と委譲先は `.claude/CLAUDE.md` §委譲と判断層 の「あなたが○○なら」の表);
   web 検索/doc パッチ = Haiku (`claude-haiku-5-5`)。
-- 並列の軽量レーンは Luna の subagent と Claude Haiku が担い、closing の権限を持たない。
+- 作業の守り方は 2 層に分ける (契約: `docs/design/harness/L6-function-design/agent-guard-delegation-boundary.md` §9)。
+  **判断する層** (closing review・advisor・merge) は委譲経路 (`ut-tdd claude|codex --role <role>`)・
+  review-guard・review custody・`ut-tdd pr merge` だけが持つ。**手を動かす層** (レーン内の並列、草稿・調査・編集)
+  は Luna の subagent と Claude の Agent tool の汎用の型 (`general-purpose` / `Explore` / `Plan` / `claude`、
+  model 必須・fable 不可) が担う。**Agent tool の subagent は closing の権限を持たず**、その出力は PR の verdict にも
+  receipt にも使えない。subagent 定義ファイルは持たず、専門性は作業ごとに skill・判断パック・設計抜粋を task に渡して
+  与える。並列の軽量レーンは Luna の subagent と Claude Haiku が担う。
 - Effort はモデル別基準ラダー (PO rule 2026-07-28) が既定: Sol/Fable = `low`、
   Opus/Sonnet = `middle`、Luna = `high`。回答が浅い時は
   **まず effort を 1 段、その先はモデルを上げる** (`escalateShallowResponse`):

@@ -84,7 +84,7 @@ function attestation(overrides: Partial<ReviewAttestation> = {}): ReviewAttestat
   return {
     provider: "codex",
     role: "blind-reviewer",
-    model: "gpt-5.6-sol",
+    model: "gpt-6.1-sol",
     pr: 731,
     head,
     reviewRevision: "review-rvatt-1",
@@ -118,7 +118,7 @@ function strictRefactorVerdictFixture(
     strict: true,
   });
   if (!issued.ok) throw new Error(`strict request fixture failed: ${issued.reason}`);
-  const reviewer = { provider: "codex" as const, model: "gpt-5.6-sol" };
+  const reviewer = { provider: "codex" as const, model: "gpt-6.1-sol" };
   const attempt = beginReviewAttempt({
     repoRoot: root,
     request: issued.request,

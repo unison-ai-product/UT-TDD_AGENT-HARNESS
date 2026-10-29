@@ -557,7 +557,7 @@ describe("L7 CLI surface closure", () => {
     expect(help.stdout).toContain("pending");
     expect(classify.status).toBe(0);
     expect(payload).toMatchObject({
-      role: "pmo-haiku",
+      role: "docs",
       text: "please review this regression",
     });
     expect(payload.output_schema.category).toContain("feedback");
@@ -592,7 +592,7 @@ describe("L7 CLI surface closure", () => {
         [
           "codex",
           "--role",
-          "reviewer",
+          "po",
           "--task",
           "mechanical ledger check",
           "--model",
@@ -629,7 +629,7 @@ describe("L7 CLI surface closure", () => {
           "--task",
           "mechanical ledger check",
           "--model",
-          "claude-opus-5",
+          MODEL_IDS.claude.opus,
           "--effort",
           "xhigh",
         ],
@@ -639,7 +639,7 @@ describe("L7 CLI surface closure", () => {
       expect(payload).toMatchObject({
         provider: "claude",
         dry_run: true,
-        model: "claude-opus-5",
+        model: MODEL_IDS.claude.opus,
         effort: "high",
       });
       expect(payload.args).toEqual([
@@ -647,7 +647,7 @@ describe("L7 CLI surface closure", () => {
         "--input-format",
         "text",
         "--model",
-        "claude-opus-5",
+        MODEL_IDS.claude.opus,
         "--effort",
         "high",
       ]);
@@ -711,7 +711,7 @@ describe("L7 CLI surface closure", () => {
 
     expect(classify.status).toBe(0);
     expect(route.status).toBe(0);
-    expect(classifyPayload.document_coverage.recommended_subagents).toEqual(
+    expect(classifyPayload.document_coverage.recommended_lanes).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           tier: "T2-mini",
@@ -1512,25 +1512,6 @@ describe("L7 CLI surface closure", () => {
     expect(JSON.parse(alias.stdout)).toEqual(JSON.parse(legacy.stdout));
   }, 20_000);
 
-  it("exposes roster list and check as JSON command surfaces", () => {
-    const list = runCli(["roster", "list", "--json"]);
-    const listed = JSON.parse(list.stdout);
-    const check = runCli(["roster", "check", "--json"]);
-    const checked = JSON.parse(check.stdout);
-
-    expect(list.status).toBe(0);
-    expect(listed.ok).toBe(true);
-    expect(listed.count).toBeGreaterThanOrEqual(14);
-    expect(listed.entries.map((entry: { id: string }) => entry.id)).toContain("pmo-sonnet");
-
-    expect(check.status).toBe(0);
-    expect(checked.ok).toBe(true);
-    expect(checked.missingFromRoster).toEqual([]);
-    expect(checked.nameMismatches).toEqual([]);
-    expect(checked.allowlistedPresent).toBe(20);
-    expect(checked.nonAllowlisted).toEqual([]);
-  }, 20_000);
-
   it("exposes branch audit as a read-only JSON command surface", () => {
     const run = runCli(["branch", "audit", "--json"]);
     const payload = JSON.parse(run.stdout);
@@ -1627,7 +1608,7 @@ describe("L7 CLI surface closure", () => {
       mode: "hybrid",
       trigger: "difficulty",
     });
-    expect(payload.document_coverage.recommended_subagents).toEqual(
+    expect(payload.document_coverage.recommended_lanes).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           tier: "T2-mini",
