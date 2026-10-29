@@ -140,8 +140,8 @@ function buildFixture(plan: Plan): Fixture {
   let mainTip = git(other, "rev-parse", "HEAD");
   const mergedTip = mainTip;
   if (plan.mergeMain) {
-    // work の origin/main (remote-tracking ref) を動かさずに main の先端だけを取り込む。
-    git(work, "fetch", "-q", "origin", "main:refs/tmp/main");
+    // work の origin/main (remote-tracking ref) を動かさないよう、origin ではなく other clone から main の先端だけを取り込む。
+    git(work, "fetch", "-q", other, "main:refs/tmp/main");
     git(work, "merge", "-q", "--no-ff", "--no-verify", "-m", "chore: merge main", "refs/tmp/main");
     git(work, "update-ref", "-d", "refs/tmp/main");
     if (plan.advanceAfterMerge) {
