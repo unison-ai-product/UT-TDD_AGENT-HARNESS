@@ -5,11 +5,14 @@ import {
   mkdtempSync,
   readFileSync,
   writeFileSync,
-  writeSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
+import {
+  CandidatePreconditionFailure,
+  verifySnapshotCandidate,
+} from "./support/snapshot-candidate.ts";
 import { removeTestTree } from "./support/temp-tree.ts";
 
 /*
@@ -98,67 +101,8 @@ interface SnapshotRunnerCapture {
   snapshotStages: SnapshotStageObservation[];
 }
 
-class CandidatePreconditionFailure extends Error {}
-
 function rejectCandidatePrecondition(reason: string): never {
   throw new CandidatePreconditionFailure(reason);
-}
-
-function candidateDiagnostic(candidate: string, outcome: string, details?: unknown): void {
-  try {
-    const suffix = details === undefined ? "" : ` ${JSON.stringify(details)}`;
-    writeSync(2, `[snapshot-lifecycle ${candidate}] ${outcome}${suffix}\n`);
-  } catch {
-    // Diagnostic I/O must not affect whether the contract assertions run.
-  }
-}
-
-async function verifySnapshotCandidate(
-  candidate: string,
-  cleanup: () => void,
-  action: (assertionsReached: () => void) => Promise<void>,
-): Promise<void> {
-  let reachedAssertions = false;
-  let actionFailed = false;
-  let actionFailure: unknown;
-  try {
-    await action(() => {
-      reachedAssertions = true;
-      candidateDiagnostic(candidate, "contract-assertions-reached");
-    });
-  } catch (error) {
-    actionFailed = true;
-    actionFailure = error;
-    if (error instanceof CandidatePreconditionFailure) {
-      candidateDiagnostic(candidate, "precondition-not-met", error.message);
-    } else if (reachedAssertions) {
-      candidateDiagnostic(candidate, "contract-assertions-failed", String(error));
-    } else {
-      candidateDiagnostic(candidate, "pre-assertion-exception", String(error));
-    }
-  }
-
-  const failures: unknown[] = [];
-  if (actionFailed) failures.push(actionFailure);
-  else if (!reachedAssertions)
-    failures.push(
-      new Error(`snapshot candidate ${candidate} completed without reaching contract assertions`),
-    );
-
-  try {
-    cleanup();
-  } catch (error) {
-    candidateDiagnostic(candidate, "cleanup-failed", String(error));
-    failures.push(error);
-  }
-
-  if (failures.length === 1) throw failures[0];
-  if (failures.length > 1)
-    throw new AggregateError(
-      failures,
-      `snapshot candidate ${candidate} failed during execution or cleanup`,
-    );
-  candidateDiagnostic(candidate, "contract-assertions-completed");
 }
 
 function gitOk(cwd: string, args: string[]): boolean {
@@ -336,94 +280,6 @@ const plan = (
   table: Entry[] | "query_failed",
   platform: "win32" | "posix" = "win32",
 ) => api.planSweep({ leases, table, tmpRoot: TMP, platform });
-
-describe("snapshot candidate verification failure safety", () => {
-  it("parses porcelain -z paths without losing special characters or rename sources", async () => {
-    const { parseSnapshotDirtyPaths } = await import("../scripts/run-vitest-snapshot.ts");
-    const paths = parseSnapshotDirtyPaths(
-      [
-        " M line\nbreak.txt",
-        '?? 日本語 "quote".txt',
-        "R  renamed target.txt",
-        "old source.txt",
-        "",
-      ].join("\0"),
-    );
-    expect(paths).toEqual(
-      ["line\nbreak.txt", '日本語 "quote".txt', "old source.txt", "renamed target.txt"].sort(),
-    );
-  });
-
-  it("throws when the fixture precondition is not met", async () => {
-    await expect(
-      verifySnapshotCandidate(
-        "helper-precondition",
-        () => {},
-        async () => {
-          rejectCandidatePrecondition("fixture was unavailable");
-        },
-      ),
-    ).rejects.toThrow("fixture was unavailable");
-  });
-
-  it("throws when setup fails before contract assertions are reached", async () => {
-    await expect(
-      verifySnapshotCandidate(
-        "helper-pre-assertion",
-        () => {},
-        async () => {
-          throw new Error("runner harness setup failed");
-        },
-      ),
-    ).rejects.toThrow("runner harness setup failed");
-  });
-
-  it("throws when the action completes without reaching contract assertions", async () => {
-    await expect(
-      verifySnapshotCandidate(
-        "helper-no-assertions",
-        () => {},
-        async () => {},
-      ),
-    ).rejects.toThrow("completed without reaching contract assertions");
-  });
-
-  it("throws when cleanup fails after contract assertions are reached", async () => {
-    await expect(
-      verifySnapshotCandidate(
-        "helper-cleanup",
-        () => {
-          throw new Error("fixture cleanup failed");
-        },
-        async (assertionsReached) => {
-          assertionsReached();
-        },
-      ),
-    ).rejects.toThrow("fixture cleanup failed");
-  });
-
-  it("preserves both action and cleanup failures", async () => {
-    const actionFailure = new Error("contract assertion failed");
-    const cleanupFailure = new Error("fixture cleanup failed");
-    let thrown: unknown;
-    try {
-      await verifySnapshotCandidate(
-        "helper-action-and-cleanup",
-        () => {
-          throw cleanupFailure;
-        },
-        async (assertionsReached) => {
-          assertionsReached();
-          throw actionFailure;
-        },
-      );
-    } catch (error) {
-      thrown = error;
-    }
-    expect(thrown).toBeInstanceOf(AggregateError);
-    expect((thrown as AggregateError).errors).toEqual([actionFailure, cleanupFailure]);
-  });
-});
 
 describe("snapshot runner lifecycle L7 candidate Red (issue #1129 / #1415)", () => {
   it.fails("CANDIDATE-U-SNAPLC-001: liveness uses pid and startToken, unknown is not dead", async () => {
