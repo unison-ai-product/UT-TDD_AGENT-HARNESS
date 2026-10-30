@@ -1012,7 +1012,7 @@ export function registerDistributionCommands(program: Command): void {
           stagingDir: repoDir,
           branch: opts.branch,
         });
-        const shown = privacy.reportedPack(privacyScan, exportPlan, sourcePaths, sync);
+        const shown = privacy.reportedPack({ privacyScan, exportPlan, sourcePaths, sync });
         const plannedArtifacts = new Set(exportPlan.artifactPaths);
         const existingBefore = repoExists
           ? collectFilesystemCandidatePaths(repoDir).filter((path) => !plannedArtifacts.has(path))

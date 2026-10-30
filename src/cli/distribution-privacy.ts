@@ -217,9 +217,9 @@ export function privacyScanTextLines(result: PrivacyScanResult): string[] {
 }
 
 /** The sync-pack text-mode lines of the rejected scans (none when both passed). */
-export function scanFailureLines(secret: SecretScanResult, privacy: PrivacyScanResult): string[] {
+export function scanFailureLines(leakScan: SecretScanResult, privacy: PrivacyScanResult): string[] {
   return [
-    ...(secret.ok ? [] : [`${secretScanMessages(secret)[0]}`]),
+    ...(leakScan.ok ? [] : [`${secretScanMessages(leakScan)[0]}`]),
     ...(privacy.ok ? [] : privacyScanTextLines(privacy)),
   ];
 }
@@ -233,13 +233,14 @@ const maskedPath = (path: string) =>
  * paths cannot be derived and all paths are treated alike. The reported plan and sync plan are
  * rebuilt from the masked list before any command string is made, so no escaped form can leak.
  */
-export function reportedPack(
-  result: PrivacyScanResult,
-  exportPlan: CleanDistributionPlan,
-  sourcePaths: readonly string[],
-  sync: PackSyncPlan,
-): { plan: CleanDistributionPlan; sync: PackSyncPlan } {
-  if (result.ok) return { plan: exportPlan, sync };
+export function reportedPack(input: {
+  privacyScan: PrivacyScanResult;
+  exportPlan: CleanDistributionPlan;
+  sourcePaths: readonly string[];
+  sync: PackSyncPlan;
+}): { plan: CleanDistributionPlan; sync: PackSyncPlan } {
+  const { privacyScan, exportPlan, sourcePaths, sync } = input;
+  if (privacyScan.ok) return { plan: exportPlan, sync };
   const plan = { ...exportPlan, artifactPaths: exportPlan.artifactPaths.map(maskedPath) };
   return {
     plan,
