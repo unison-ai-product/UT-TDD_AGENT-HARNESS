@@ -7,7 +7,7 @@
  * remain Red until a later implementation PR changes them to it.
  */
 import { execFileSync, spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -16,6 +16,7 @@ import { resolveNodeBinary } from "../scripts/run-vitest-snapshot.ts";
 import { buildFullDoctorCheckDefinitions } from "../src/doctor/check-definitions.ts";
 import { nodeDoctorDeps } from "../src/doctor/runtime-state.ts";
 import { buildCleanDistributionPlan, buildPackSyncPlan } from "../src/setup/distribution.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 
 type ChildProcessFunction = (...args: unknown[]) => unknown;
 type FakeChildProcess = Record<string, ChildProcessFunction>;
@@ -57,8 +58,7 @@ const STATIC_ENTRIES = ["src/cli.ts", ...HOOK_ENTRIES, ...SCRIPT_ENTRIES];
 const FIXTURE_ROOTS: string[] = [];
 
 afterEach(() => {
-  for (const fixtureRoot of FIXTURE_ROOTS.splice(0))
-    rmSync(fixtureRoot, { recursive: true, force: true });
+  for (const fixtureRoot of FIXTURE_ROOTS.splice(0)) removeTestTree(fixtureRoot);
 });
 
 async function loadWindowsHide(): Promise<WindowsHideModule> {
