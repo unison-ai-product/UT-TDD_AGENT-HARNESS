@@ -13,18 +13,18 @@ issue: 1469
 
 ## 1. 位置付け
 
-対になる設計文書は `docs/design/harness/L6-function-design/snapshot-runner-argv.md` である (未実装の目標契約)。本書は同書 §2 の help、明示 option 集合、test path、separator、未知 option の拒否を検証する。候補 ID は `CANDIDATE-U-SNAPARG-*` とし、後続の Red PR で `tests/snapshot-runner-argv-candidates.test.ts` に追加する候補テストの名前・挙動と同じ family / ID を使う。候補宣言とテスト名は対応づけ、正式 `U-*` への昇格は Red を引用した後の src/scripts を含まない段階で行う。
+対になる設計文書は `docs/design/harness/L6-function-design/snapshot-runner-argv.md` である (未実装の目標契約)。本書の正式 oracle `U-SNAPARG-001` / `U-SNAPARG-002` は、Red PR #1479 で候補 Red として登録・確認した契約を、Red 証拠の引用後に正式 ID へ昇格したものである。対応する test name と挙動は `tests/snapshot-runner-argv-candidates.test.ts` に置く。src/scripts を含む実装と `it.fails` の解除は後続の Green 段階で行う。
 
 ## 2. fixture と実行境界
 
 runner の起動境界を子プロセス fixture と spawn preload の注入で観測する。本物の clone、install、DB rebuild、Vitest は起動しない。help と unknown の候補では clone/install/DB rebuild/Vitest の入口が呼ばれないことを記録済み spawn から判定する。許可 option の互換テストでは clone/install/DB rebuild/Vitest の各子プロセスを fixture 内で stub し、Vitest entrypoint に到達したときの argv を比較する。fixture setup・preload・子プロセス起動の失敗は候補 Red とみなさない。
 
-## 3. 候補 oracle
+## 3. 正式 oracle
 
 | ID | 軸 / 入力 | 期待 | 落とす退行 |
 |---|---|---|---|
-| `CANDIDATE-U-SNAPARG-001` | `--help` と `-h` を個別に起動 | どちらも usage を表示して exit `0`。clone、install、DB rebuild、Vitest の spawn は 0 件 | alias の片方の欠落、help の non-zero、help 後に重い stage を開始 |
-| `CANDIDATE-U-SNAPARG-002` | `-z` と `--not-a-vitest-option` をそれぞれ単独で起動 | exit は非 `0`。未知 option の診断・当該 token・clone/install/DB rebuild/Vitest の spawn 0 件、許可 option の一覧、独立 token としての `--` の説明を3つの独立した assertion 群で確認する | 未知 option の透過、diagnostic 欠落、一覧の欠落、separator の案内欠落、clone/install/DB rebuild/Vitest のいずれかを起動してから未知 option で失敗 |
+| `U-SNAPARG-001` | `--help` と `-h` を個別に起動 | どちらも usage を表示して exit `0`。clone、install、DB rebuild、Vitest の spawn は 0 件 | alias の片方の欠落、help の non-zero、help 後に重い stage を開始 |
+| `U-SNAPARG-002` | `-z` と `--not-a-vitest-option` をそれぞれ単独で起動 | exit は非 `0`。未知 option の診断・当該 token・clone/install/DB rebuild/Vitest の spawn 0 件、許可 option の一覧、独立 token としての `--` の説明を3つの独立した assertion 群で確認する | 未知 option の透過、diagnostic 欠落、一覧の欠落、separator の案内欠落、clone/install/DB rebuild/Vitest のいずれかを起動してから未知 option で失敗 |
 
 ## 4. 既存互換テスト (candidate ではなく通常 `it`)
 
@@ -43,4 +43,4 @@ runner の起動境界を子プロセス fixture と spawn preload の注入で�
 
 ## 5. 境界と重複の回避
 
-既存 oracle `U-TESTHYGIENE-045` / `U-TESTHYGIENE-046` は watch 拒否と watch script 不在を所有する。本書の `CANDIDATE-U-SNAPARG-001` / `002` は help と unknown-option の新契約を所有し、watch を新しい候補として重ねない。通常互換テストは現在の `assertBatchVitestArgs` の観測を固定する。separator は allowlist 判定だけを省略し、watch を通す迂回路にはしない (control #6513968105)。
+既存 oracle `U-TESTHYGIENE-045` / `U-TESTHYGIENE-046` は watch 拒否と watch script 不在を所有する。本書の `U-SNAPARG-001` / `U-SNAPARG-002` は help と unknown-option の新契約を所有し、watch を新しい oracle として重ねない。通常互換テストは現在の `assertBatchVitestArgs` の観測を固定する。separator は allowlist 判定だけを省略し、watch を通す迂回路にはしない (control #6513968105)。
