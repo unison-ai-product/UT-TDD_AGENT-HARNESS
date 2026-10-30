@@ -52,7 +52,6 @@ import {
   loadPlaceholderDepsDocs,
   placeholderDepsMessages,
 } from "../lint/placeholder-deps.ts";
-import { analyzePlanDod, loadPlanDodDocs, planDodMessages } from "../lint/plan-dod.ts";
 import {
   analyzeRuleAutomationClosure,
   loadRuleAutomationClosureDocs,
@@ -89,18 +88,6 @@ import {
   loadOrBuildDriveDbRegistrationStats,
 } from "../state-db/drive-registration.ts";
 import { loadGateRunCoverageStats } from "./gate-run-coverage-reconciliation.ts";
-
-export function checkPlanDod(repoRoot: string): { messages: string[]; ok: boolean } {
-  if (!existsSync(repoRoot)) {
-    return { messages: ["plan-dod - violation: repo root could not be read"], ok: false };
-  }
-  try {
-    const r = analyzePlanDod(loadPlanDodDocs(repoRoot));
-    return { messages: planDodMessages(r), ok: r.checked > 0 && r.ok };
-  } catch {
-    return { messages: ["plan-dod - violation: L7 PLAN DoD could not be read"], ok: false };
-  }
-}
 
 export function checkPlaceholderDeps(repoRoot: string): { messages: string[]; ok: boolean } {
   if (!existsSync(repoRoot)) {

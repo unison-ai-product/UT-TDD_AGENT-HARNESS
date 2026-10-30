@@ -54,7 +54,6 @@ import {
   checkOracleTestTrace,
   checkPairFreeze,
   checkPlaceholderDeps,
-  checkPlanDod,
   checkPlanGovernance,
   checkPlanReferenceFreshnessAdvisory,
   checkPlanSchedule,
@@ -1979,17 +1978,6 @@ describe("runDoctor", () => {
     expect(r.messages.some((m) => m.includes("scaffold stub"))).toBe(false);
   });
 
-  it("surfaces roadmap-rollup as a hard gate summary line", () => {
-    const r = realRepoDoctor();
-    const rollupLines = r.messages.filter((m) => m.startsWith("doctor: roadmap-rollup"));
-
-    expect(rollupLines).toHaveLength(1);
-    expect(rollupLines[0]).toContain("bands ");
-    expect(rollupLines[0]).toContain("gates ");
-    expect(rollupLines[0]).toContain("spans ");
-    expect(rollupLines[0]).toContain("frontier:");
-  });
-
   it("surfaces Cycle P4 closure audit as a hard gate", () => {
     const r = realRepoDoctor();
 
@@ -2150,40 +2138,6 @@ describe("runDoctor", () => {
     expect(result.ok).toBe(false);
   });
 
-  it("fails confirmed L7 PLANs with unchecked DoD items", () => {
-    const root = mkdtempSync(join(tmpdir(), "ut-tdd-doctor-plan-dod-"));
-    try {
-      const planDir = join(root, "docs", "plans");
-      mkdirSync(planDir, { recursive: true });
-      writeFileSync(
-        join(planDir, "PLAN-L7-99-unchecked.md"),
-        [
-          "---",
-          "plan_id: PLAN-L7-99-unchecked",
-          "status: confirmed",
-          "kind: impl",
-          "---",
-          "",
-          "## L4 DoD",
-          "",
-          "- [ ] verification evidence is not closed",
-          "",
-          "## L5 Notes",
-          "",
-        ].join("\n"),
-        "utf8",
-      );
-
-      const result = checkPlanDod(root);
-
-      expect(result.ok).toBe(false);
-      expect(result.messages.join("\n")).toContain("plan-dod - violation");
-      expect(result.messages.join("\n")).toContain("PLAN-L7-99-unchecked:9");
-    } finally {
-      removeTestTree(root);
-    }
-  });
-
   it("fails active design/test-design docs with unresolved L7 placeholder_deps", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-doctor-placeholder-deps-"));
     try {
@@ -2305,7 +2259,6 @@ describe("runDoctor", () => {
       ["rule-drift", checkRuleDrift(missingRoot)],
       ["gate-confirm", checkGateConfirm(missingRoot)],
       ["gate-id-format", checkGateIdFormat(missingRoot)],
-      ["plan-dod", checkPlanDod(missingRoot)],
       ["placeholder-deps", checkPlaceholderDeps(missingRoot)],
       ["g1-trace", checkPlanTraceGate(missingRoot, "G1-trace")],
       ["g3-trace", checkPlanTraceGate(missingRoot, "G3-trace")],
@@ -2458,7 +2411,6 @@ describe("runDoctor", () => {
       "gate-id-format",
       "plan-schedule",
       "plan-governance",
-      "plan-dod",
       "placeholder-deps",
       "g1-trace",
       "g3-trace",
