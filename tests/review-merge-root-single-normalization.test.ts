@@ -74,6 +74,7 @@ describe("review merge custody root normalization", () => {
         ports: {
           getPullRequest: () => facts(),
           mergePullRequest: () => undefined,
+          checkBaselineConflict: () => null,
         },
       });
 

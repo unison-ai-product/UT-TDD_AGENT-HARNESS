@@ -247,21 +247,20 @@ describe("#418 Pack-only internal canary boundary (PR-1 / first layer)", () => {
       const setupEnv = isolatedCanaryEnv(fixture.root);
       const readme = join(fixture.consumerRoot, "README.md");
       writeFileSync(readme, "# Isolated consumer fixture\n", "utf8");
-      execFileSync("git", ["init", "--quiet"], { cwd: fixture.consumerRoot, windowsHide: true });
+      execFileSync("git", ["init", "--quiet", "-b", "main"], {
+        cwd: fixture.consumerRoot,
+        windowsHide: true,
+      });
       execFileSync("git", ["config", "user.email", "test@example.invalid"], {
         cwd: fixture.consumerRoot,
       });
       execFileSync("git", ["config", "user.name", "UT canary consumer"], {
         cwd: fixture.consumerRoot,
       });
-      execFileSync(
-        "git",
-        ["remote", "add", "origin", "https://github.com/example/canary-consumer.git"],
-        {
-          cwd: fixture.consumerRoot,
-          windowsHide: true,
-        },
-      );
+      execFileSync("git", ["remote", "add", "origin", fixture.consumerRoot], {
+        cwd: fixture.consumerRoot,
+        windowsHide: true,
+      });
       execFileSync("git", ["add", "README.md"], { cwd: fixture.consumerRoot });
       execFileSync("git", ["commit", "--quiet", "-m", "consumer fixture"], {
         cwd: fixture.consumerRoot,

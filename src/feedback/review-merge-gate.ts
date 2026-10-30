@@ -310,31 +310,27 @@ export function runPrMerge(input: {
   const timestamp = input.now?.() ?? new Date().toISOString();
   let repoRoot = input.repoRoot;
   const deny = (
-    headSha: string | null,
-    verdict: ReviewVerdict | null,
     reason: string,
-    authorizedEntry: AuthorizedReviewEntry | null = null,
-  ): PrMergeResult =>
-    makeResult({
-      result: { ok: false, pr: input.pr, headSha, verdict, decision: "deny", reason },
-      repoRoot,
-      timestamp,
-      authorizedEntry,
-    });
+    from: Partial<Pick<MergeGateDecision, "headSha" | "verdict" | "authorizedEntry">> = {},
+  ): PrMergeResult => {
+    const { headSha = null, verdict = null, authorizedEntry = null } = from;
+    const result = { ok: false, pr: input.pr, headSha, verdict, decision: "deny", reason } as const;
+    return makeResult({ result, repoRoot, timestamp, authorizedEntry });
+  };
   try {
     repoRoot = resolveRepositoryRoot(input.repoRoot);
   } catch (error) {
-    return deny(null, null, `review_input_failed:${errorMessage(error)}`);
+    return deny(`review_input_failed:${errorMessage(error)}`);
   }
   if (!Number.isInteger(input.pr) || input.pr <= 0) {
-    return deny(null, null, "invalid_pr");
+    return deny("invalid_pr");
   }
 
   let facts: MergeGateFacts;
   try {
     facts = input.ports.getPullRequest(input.pr);
   } catch (error) {
-    return deny(null, null, `gh_fetch_failed:${errorMessage(error)}`);
+    return deny(`gh_fetch_failed:${errorMessage(error)}`);
   }
 
   let decision: MergeGateDecision;
@@ -342,19 +338,17 @@ export function runPrMerge(input: {
     const reviewInputs = loadReviewInputs(repoRoot);
     decision = evaluateMergeGate({ ...reviewInputs, pr: input.pr, facts, now: timestamp });
   } catch (error) {
-    return deny(facts.headSha, null, `review_input_failed:${errorMessage(error)}`);
+    return deny(`review_input_failed:${errorMessage(error)}`, { headSha: facts.headSha });
   }
   if (!decision.ok) {
-    return deny(
-      decision.headSha,
-      decision.verdict,
-      decision.reasons.join(",") || "merge_not_ready",
-      decision.authorizedEntry,
-    );
+    return deny(decision.reasons.join(",") || "merge_not_ready", decision);
   }
 
   if (decision.headSha === null || decision.verdict === null || decision.authorizedEntry === null) {
-    return deny(decision.headSha, decision.verdict, "merge_authorization_incomplete");
+    return deny("merge_authorization_incomplete", {
+      headSha: decision.headSha,
+      verdict: decision.verdict,
+    });
   }
 
   const conflict = (input.ports.checkBaselineConflict ?? checkBaselineConflict)(
@@ -362,7 +356,7 @@ export function runPrMerge(input: {
     decision.headSha,
   );
   if (conflict !== null) {
-    return deny(decision.headSha, decision.verdict, conflict, decision.authorizedEntry);
+    return deny(conflict, decision);
   }
 
   try {
@@ -379,7 +373,7 @@ export function runPrMerge(input: {
   } catch (error) {
     const reason = `intent_receipt_write_failed:${errorMessage(error)}`;
     process.stderr.write(`review merge: ${reason}\n`);
-    return deny(decision.headSha, decision.verdict, reason);
+    return deny(reason, { headSha: decision.headSha, verdict: decision.verdict });
   }
 
   try {
