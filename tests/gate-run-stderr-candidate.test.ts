@@ -39,7 +39,7 @@ describe("CANDIDATE-U-GATE-011: human gate evidence warning uses stderr", () => 
       {
         cwd: fixtureRoot,
         encoding: "utf8",
-        env: process.env,
+        env: { ...process.env, UT_TDD_PLAN_ID: "" },
         windowsHide: true,
         timeout: 30_000,
         maxBuffer: 8 * 1024 * 1024,
@@ -57,6 +57,7 @@ describe("CANDIDATE-U-GATE-011: human gate evidence warning uses stderr", () => 
     stderr = run.stderr;
     expect(stdout).toMatch(/^gate G0\.5: passed mode=standalone review=human\b/m);
     expect(`${stdout}\n${stderr}`).toContain(warning);
+    expect(`${stdout}\n${stderr}`).toContain("gate_runs");
   }, 45_000);
 
   afterAll(() => {
