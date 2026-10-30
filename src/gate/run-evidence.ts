@@ -1,5 +1,5 @@
-import { createHash } from "node:crypto";
-import { writeFileSync } from "node:fs";
+import { createHash, randomUUID } from "node:crypto";
+import { linkSync, readdirSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { ensureDir } from "../shared/fs.ts";
 
@@ -81,13 +81,7 @@ export function gateRunEvidenceDir(repoRoot: string): string {
 export function buildGateRunEvidence(input: GateRunEvidenceInput): GateRunEvidence {
   const checkedAt = input.checkedAt ?? new Date().toISOString();
   const planId = input.planId?.trim() ? input.planId.trim() : null;
-  const runSeed = [
-    planId ?? "no-plan",
-    input.gateId,
-    checkedAt,
-    input.sessionId ?? "",
-    process.pid,
-  ].join(":");
+  const runSeed = [input.gateId, checkedAt, input.sessionId ?? "", process.pid].join(":");
   return {
     schema_version: 1,
     gate_run_id: `gate-run:${compactSlug(input.gateId)}:${shortHash(runSeed)}`,
@@ -120,10 +114,33 @@ export function writeGateRunEvidence(input: GateRunEvidenceInput): WrittenGateRu
   const evidence = buildGateRunEvidence(input);
   const dir = gateRunEvidenceDir(input.repoRoot);
   ensureDir(dir, { recursive: true });
-  const timestamp = compactSlug(evidence.checked_at.replace(/[:.]/g, "-"));
-  const suffix = shortHash(evidence.gate_run_id);
-  const absolutePath = join(dir, `${compactSlug(evidence.gate_id)}-${timestamp}-${suffix}.json`);
-  writeFileSync(absolutePath, `${JSON.stringify(evidence, null, 2)}\n`, "utf8");
+  const existingFiles = readdirSync(dir).filter((name) => name.endsWith(".json"));
+  for (const name of existingFiles) {
+    const existingPath = join(dir, name);
+    const existing = JSON.parse(readFileSync(existingPath, "utf8")) as {
+      gate_run_id?: unknown;
+    };
+    if (existing.gate_run_id === evidence.gate_run_id) {
+      const error = Object.assign(new Error("gate run evidence ID already exists"), {
+        code: "EEXIST",
+      });
+      throw error;
+    }
+  }
+
+  const evidenceIdDigest = createHash("sha256").update(evidence.gate_run_id, "utf8").digest("hex");
+  const absolutePath = join(dir, `${evidenceIdDigest}.json`);
+  const temporaryPath = join(dir, `.tmp-${randomUUID()}`);
+  writeFileSync(temporaryPath, `${JSON.stringify(evidence, null, 2)}\n`, {
+    encoding: "utf8",
+    flag: "wx",
+  });
+  linkSync(temporaryPath, absolutePath);
+  try {
+    unlinkSync(temporaryPath);
+  } catch {
+    // The complete final record is already published; readers ignore leftover temps.
+  }
   return {
     evidence,
     path: relative(input.repoRoot, absolutePath).replace(/\\/g, "/"),

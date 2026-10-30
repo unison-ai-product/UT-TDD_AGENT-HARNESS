@@ -1,4 +1,5 @@
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import {
   chmodSync,
   existsSync,
@@ -192,15 +193,14 @@ describe("L7 CLI surface closure", () => {
         "session-gate-test",
         "--json",
       ]);
-      expect(run.status, `stderr:\n${run.stderr}\nstdout:\n${run.stdout}`).toBe(0);
-      const payload = JSON.parse(run.stdout);
+      const payload = parseCliJson(run);
       expect(payload.passed).toBe(true);
-      expect(payload.gate_run_evidence.path).toMatch(/^\.ut-tdd\/gate_runs\/G0\.5-/);
       const files = readdirSync(join(root, ".ut-tdd", "gate_runs"));
       expect(files).toHaveLength(1);
-      const evidence = JSON.parse(
-        readFileSync(join(root, ".ut-tdd", "gate_runs", files[0]), "utf8"),
-      );
+      const evidence = JSON.parse(readFileSync(join(root, ".ut-tdd/gate_runs", files[0]), "utf8"));
+      const expectedFileName = `${createHash("sha256").update(evidence.gate_run_id, "utf8").digest("hex")}.json`;
+      expect(files).toEqual([expectedFileName]);
+      expect(payload.gate_run_evidence.path).toBe(`.ut-tdd/gate_runs/${expectedFileName}`);
       expect(evidence).toMatchObject({
         gate_id: "G0.5",
         plan_id: "PLAN-L7-363-routine-gate-run-projection",

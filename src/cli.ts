@@ -2955,7 +2955,7 @@ program
           `gate ${id}: ${result.passed ? "passed" : "failed"} mode=${result.mode} review=${result.review_kind ?? "-"} cross_agent_review=${result.cross_agent_review} static=${staticGate.applicable ? (staticGate.passed ? "passed" : "failed") : "n-a"}\n`,
         );
         if (gateRunEvidence) process.stdout.write(`  - evidence: ${gateRunEvidence.path}\n`);
-        if (gateRunEvidenceWarning) process.stdout.write(`  - ${gateRunEvidenceWarning}\n`);
+        if (gateRunEvidenceWarning) process.stderr.write(`  - ${gateRunEvidenceWarning}\n`);
         for (const m of result.messages) process.stdout.write(`  - ${m}\n`);
       }
       process.exitCode = result.passed ? 0 : 1;

@@ -64,11 +64,11 @@ describe("U-GATE-011: human gate evidence warning uses stderr", () => {
     if (fixtureRoot) removeTestTree(fixtureRoot);
   });
 
-  it.fails("U-GATE-011: writes the evidence warning to stderr", () => {
+  it("U-GATE-011: writes the evidence warning to stderr", () => {
     expect(stderr).toContain(warning);
   });
 
-  it.fails("U-GATE-011: keeps the evidence warning out of stdout", () => {
+  it("U-GATE-011: keeps the evidence warning out of stdout", () => {
     expect(stdout).not.toContain(warning);
   });
 });

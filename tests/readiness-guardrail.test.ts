@@ -111,7 +111,7 @@ describe("IT-AUTOMATION-01 / IT-GUARDRAIL-01", () => {
       }
     });
 
-    it.fails("allows a matching passed gate to unblock a workflow whose plan_id is empty", () => {
+    it("allows a matching passed gate to unblock a workflow whose plan_id is empty", () => {
       const db = openHarnessDb(":memory:");
       try {
         migrate(db);
@@ -135,7 +135,7 @@ describe("IT-AUTOMATION-01 / IT-GUARDRAIL-01", () => {
       }
     });
 
-    it.fails("does not borrow a passed gate from another run with the same plan_id", () => {
+    it("does not borrow a passed gate from another run with the same plan_id", () => {
       const db = openHarnessDb(":memory:");
       try {
         migrate(db);
@@ -212,7 +212,7 @@ describe("IT-AUTOMATION-01 / IT-GUARDRAIL-01", () => {
       }
     });
 
-    it.fails("does not let another run's passed gate override a failed matching gate", () => {
+    it("does not let another run's passed gate override a failed matching gate", () => {
       const db = openHarnessDb(":memory:");
       try {
         migrate(db);
