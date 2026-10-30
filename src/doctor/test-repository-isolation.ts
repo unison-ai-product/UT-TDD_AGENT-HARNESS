@@ -45,7 +45,7 @@ profile/tracked-loader:2
 plan-asset/ledger-schema:4 plan-asset/project-identity-loader:1
 disposition/git-authoring-provenance:3 disposition/projection:6 disposition/tracked-target-registry:2
   forward-escape-issue-contract:2
-  pack-consumer-runtime-release:4 release-consumer-vmodel-template:1
+  pack-consumer-runtime-release:3 release-consumer-vmodel-template:1
   release-consumer-setup-artifacts:1
   pack-internal-canary-boundary:1 support/pack-internal-canary.ts:1
   pack-canary-acceptance:3
@@ -186,7 +186,7 @@ repositoryReadContracts["tests/support/pack-consumer-runtime.ts"] = {
 };
 repositoryReadContracts["tests/pack-consumer-runtime-release.test.ts"] = {
   mode: "isolated_fixture",
-  calls: 4,
+  calls: 3,
   reason:
     "clean Pack producer fixture copies tracked assets into a temporary Git repository and installer CLI runs only from the detached execution snapshot",
 };

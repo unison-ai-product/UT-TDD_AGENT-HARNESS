@@ -70,7 +70,7 @@ const rows = (result: PrivacyScanResult) => result.findings.map(fmt);
 const sha256 = (text: string) => createHash("sha256").update(text, "utf8").digest("hex");
 
 describe("privacy scan candidate oracles (pure functions)", () => {
-  it.fails("U-PRIVSCAN-001: reports 1-based email hit lines once per line", () => {
+  it("U-PRIVSCAN-001: reports 1-based email hit lines once per line", () => {
     expect(findEmailHitLines(lineUnit(["", P, `${P} and ${P}`]))).toEqual([2, 3]);
     expect(findEmailHitLines(lineUnit(["a\r", "b\r", `${P}\r`]))).toEqual([3]);
     // L6 §3: the local part may hold `.` and letters, so `x.` + P and `b` + P are whole addresses.
@@ -81,7 +81,7 @@ describe("privacy scan candidate oracles (pure functions)", () => {
     expect(findEmailHitLines(lineUnit(["@types/node", "react@18.3.1", "@"]))).toEqual([]);
   });
 
-  it.fails("U-PRIVSCAN-002: decides exclusions per matched address, not per line", () => {
+  it("U-PRIVSCAN-002: decides exclusions per matched address, not per line", () => {
     const excluded = [
       mail("alice", "example.com"),
       mail("bob", "mail.example.org"),
@@ -111,7 +111,7 @@ describe("privacy scan candidate oracles (pure functions)", () => {
     }
   });
 
-  it.fails("U-PRIVSCAN-003: parses the denylist without leaking entries", () => {
+  it("U-PRIVSCAN-003: parses the denylist without leaking entries", () => {
     expect(parsePrivacyDenylist("")).toEqual({ kind: "empty" });
     expect(parsePrivacyDenylist("  \n\t\n")).toEqual({ kind: "empty" });
     expect(parsePrivacyDenylist("# only\n#comment\n")).toEqual({ kind: "empty" });
@@ -132,7 +132,7 @@ describe("privacy scan candidate oracles (pure functions)", () => {
     expect(JSON.stringify(invalid)).not.toContain("broken-");
   });
 
-  it.fails("U-PRIVSCAN-004: applies the denylist to pack content and paths", () => {
+  it("U-PRIVSCAN-004: applies the denylist to pack content and paths", () => {
     const content = packInput(packFile("docs/a.md", ["a", "b", "c", "d", `x ${D.toUpperCase()}`]));
     expect(rows(analyzePrivacyScan(content))).toEqual(["pack:docs/a.md:5:privacy-denylist-hit"]);
     const hitPath = `docs/${D}-notes.md`;
@@ -150,7 +150,7 @@ describe("privacy scan candidate oracles (pure functions)", () => {
     expect(rows(twice)).toEqual(["pack:docs/c.md:1:privacy-denylist-hit"]);
   });
 
-  it.fails("U-PRIVSCAN-005: emits only the closed output vocabulary", () => {
+  it("U-PRIVSCAN-005: emits only the closed output vocabulary", () => {
     const hitPath = `docs/${D}/notes.md`;
     const units = [
       ...packFile("docs/a.md", [P, `${D} line`, `Co-Authored-By: X <${P}>`]),
@@ -203,7 +203,7 @@ describe("privacy scan candidate oracles (pure functions)", () => {
     ]);
   });
 
-  it.fails("U-PRIVSCAN-006: requires a provided denylist only in pack mode", () => {
+  it("U-PRIVSCAN-006: requires a provided denylist only in pack mode", () => {
     const units = packFile("docs/a.md", [P]);
     const email = "pack:docs/a.md:1:privacy-email-hit";
     for (const reason of ["absent", "unreadable", "empty", "in-repo"] as const) {
@@ -229,7 +229,7 @@ describe("privacy scan candidate oracles (pure functions)", () => {
     }
   });
 
-  it.fails("U-PRIVSCAN-007: reports every added line per commit in diff mode", () => {
+  it("U-PRIVSCAN-007: reports every added line per commit in diff mode", () => {
     const units = [
       lineUnit([], {
         source: "diff",
@@ -251,7 +251,7 @@ describe("privacy scan candidate oracles (pure functions)", () => {
     expect(removedOnly.findings).toEqual([]);
   });
 
-  it.fails("U-PRIVSCAN-008: checks commit metadata including merge commits", () => {
+  it("U-PRIVSCAN-008: checks commit metadata including merge commits", () => {
     const meta = (field: PrivacyUnit["field"], texts: string[], commit = COMMIT_A) =>
       lineUnit(texts, { source: "commit-meta", path: null, commit, field });
     const id = COMMIT_A.slice(0, 12);
@@ -271,7 +271,7 @@ describe("privacy scan candidate oracles (pure functions)", () => {
     ]);
   });
 
-  it.fails("U-PRIVSCAN-009: lets the baseline excuse tree email hits only", () => {
+  it("U-PRIVSCAN-009: lets the baseline excuse tree email hits only", () => {
     const baseline = ["docs/p.md"];
     const hit = treeFile("docs/p.md", [P, "x", P]);
     const allowed = analyzePrivacyScan(treeInput(hit, baseline));
@@ -294,7 +294,7 @@ describe("privacy scan candidate oracles (pure functions)", () => {
     ]);
   });
 
-  it.fails("U-PRIVSCAN-010: only lets the baseline shrink against the merge-base", () => {
+  it("U-PRIVSCAN-010: only lets the baseline shrink against the merge-base", () => {
     const units = [...treeFile("docs/p.md", [P]), ...treeFile("docs/r.md", [P])];
     const current = ["docs/p.md", "docs/r.md"];
     const kinds = (result: PrivacyScanResult) => result.findings.map((finding) => finding.kind);
@@ -317,7 +317,7 @@ describe("privacy scan candidate oracles (pure functions)", () => {
     expect(broken.ok).toBe(false);
   });
 
-  it.fails("U-PRIVSCAN-011: parses the baseline strictly", () => {
+  it("U-PRIVSCAN-011: parses the baseline strictly", () => {
     expect(parsePrivacyBaseline('["docs/a.md","docs/b.md"]')).toEqual(["docs/a.md", "docs/b.md"]);
     expect(parsePrivacyBaseline("[]")).toEqual([]);
     expect(parsePrivacyBaseline("{}")).toBeNull();
@@ -326,7 +326,7 @@ describe("privacy scan candidate oracles (pure functions)", () => {
     expect(parsePrivacyBaseline('["docs/a.md"')).toBeNull();
   });
 
-  it.fails("U-PRIVSCAN-012: is deterministic and fails closed on empty input", () => {
+  it("U-PRIVSCAN-012: is deterministic and fails closed on empty input", () => {
     const emptyTree = analyzePrivacyScan(treeInput([]));
     expect(emptyTree.findings.map((finding) => finding.kind)).toContain("privacy-input-unreadable");
     expect(emptyTree.ok).toBe(false);

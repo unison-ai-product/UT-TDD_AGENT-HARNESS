@@ -30,6 +30,7 @@ import { digestMaterializedReleaseEntries } from "../src/setup/release-materiali
 import { defaultHarnessDbPath, openHarnessDb, upsertRow } from "../src/state-db/index.ts";
 import { migrate } from "../src/state-db/migration.ts";
 import { MODEL_IDS } from "../src/team/model-policy.ts";
+import { stubSyntheticPrivacyHome } from "./support/privacy-denylist-home.ts";
 import { removeTestTree } from "./support/temp-tree.ts";
 
 const repoRoot = process.cwd();
@@ -1119,6 +1120,7 @@ describe("L7 CLI surface closure", () => {
   }, 30_000);
 
   it("U-DOCSECRET-006: updates a local Pack checkout and prunes non-Pack files only when requested", () => {
+    stubSyntheticPrivacyHome();
     const packDir = mkdtempSync(join(tmpdir(), "ut-tdd-pack-repo-"));
     let manifest: string | null = null;
     try {
@@ -1126,15 +1128,8 @@ describe("L7 CLI surface closure", () => {
       mkdirSync(join(packDir, "docs", "plans"), { recursive: true });
       writeFileSync(stalePlan, "dogfood plan should not ship\n", "utf8");
 
-      const blocked = runCli([
-        "distribution",
-        "sync-pack",
-        "--tag",
-        "v0.1.0",
-        "--repo-dir",
-        packDir,
-        "--json",
-      ]);
+      const syncPack = ["distribution", "sync-pack", "--tag", "v0.1.0", "--repo-dir", packDir];
+      const blocked = runCli([...syncPack, "--json"]);
       const blockedPayload = JSON.parse(blocked.stdout);
       manifest = blockedPayload.pack.manifest;
 
@@ -1156,16 +1151,7 @@ describe("L7 CLI surface closure", () => {
       });
       expect(existsSync(stalePlan)).toBe(true);
 
-      const pruned = runCli([
-        "distribution",
-        "sync-pack",
-        "--tag",
-        "v0.1.0",
-        "--repo-dir",
-        packDir,
-        "--prune-local",
-        "--json",
-      ]);
+      const pruned = runCli([...syncPack, "--prune-local", "--json"]);
       const prunedPayload = JSON.parse(pruned.stdout);
       manifest = prunedPayload.pack.manifest;
 
