@@ -247,24 +247,19 @@ describe("#418 Pack-only internal canary boundary (PR-1 / first layer)", () => {
       const setupEnv = isolatedCanaryEnv(fixture.root);
       const readme = join(fixture.consumerRoot, "README.md");
       writeFileSync(readme, "# Isolated consumer fixture\n", "utf8");
-      execFileSync("git", ["init", "--quiet", "-b", "main"], {
-        cwd: fixture.consumerRoot,
-        windowsHide: true,
-      });
-      execFileSync("git", ["config", "user.email", "test@example.invalid"], {
-        cwd: fixture.consumerRoot,
-      });
-      execFileSync("git", ["config", "user.name", "UT canary consumer"], {
-        cwd: fixture.consumerRoot,
-      });
-      execFileSync("git", ["remote", "add", "origin", fixture.consumerRoot], {
-        cwd: fixture.consumerRoot,
-        windowsHide: true,
-      });
-      execFileSync("git", ["add", "README.md"], { cwd: fixture.consumerRoot });
-      execFileSync("git", ["commit", "--quiet", "-m", "consumer fixture"], {
-        cwd: fixture.consumerRoot,
-      });
+      // origin は実在するローカルの bare repo にし、その origin を network URL にする (identity の 1 hop 解決。§6.2 の fetch を実際に成功させる)。
+      const originRepo = join(fixture.root, "canary-origin.git");
+      const sh = (cwd: string, ...args: string[]) =>
+        execFileSync("git", args, { cwd, windowsHide: true });
+      sh(fixture.root, "init", "--quiet", "--bare", "-b", "main", originRepo);
+      sh(originRepo, "remote", "add", "origin", "https://github.com/example/canary-consumer.git");
+      sh(fixture.consumerRoot, "init", "--quiet", "-b", "main");
+      sh(fixture.consumerRoot, "config", "user.email", "test@example.invalid");
+      sh(fixture.consumerRoot, "config", "user.name", "UT canary consumer");
+      sh(fixture.consumerRoot, "remote", "add", "origin", originRepo);
+      sh(fixture.consumerRoot, "add", "README.md");
+      sh(fixture.consumerRoot, "commit", "--quiet", "-m", "consumer fixture");
+      sh(fixture.consumerRoot, "push", "--quiet", "origin", "HEAD:main");
 
       const commands = selectExactCanaryAssets(CANARY_FIXTURE_TAG, readdirSync(fixture.releaseDir));
       expect(commands).toEqual(CANARY_ASSET_NAMES);

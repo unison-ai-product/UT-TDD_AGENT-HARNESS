@@ -112,7 +112,7 @@
   "tests/oracle-test-trace.test.ts": { "lines": 1769, "functionExcess": null },
   "tests/pack-canary-acceptance.test.ts": { "lines": 2167, "functionExcess": null },
   "tests/pack-consumer-runtime-release.test.ts": { "lines": 2137, "functionExcess": null },
-  "tests/pack-internal-canary-boundary.test.ts": { "lines": 678, "functionExcess": null },
+  "tests/pack-internal-canary-boundary.test.ts": { "lines": 673, "functionExcess": null },
   "tests/pack-publication-adapter.test.ts": { "lines": 2666, "functionExcess": null },
   "tests/pack-publication-admission.test.ts": { "lines": 624, "functionExcess": null },
   "tests/persistent-db-cleanup-contract.test.ts": { "lines": 616, "functionExcess": null },
