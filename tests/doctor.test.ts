@@ -645,7 +645,7 @@ describe("gate-run-coverage doctor", () => {
       workflowSql: undefined,
       workflowValue: undefined,
     },
-  ])("CANDIDATE-U-DOCTOR-GATE-02 rejects evidence $field mismatch", ({
+  ])("U-DOCTOR-GATE-02 rejects evidence $field mismatch", ({
     gateSql,
     gateValue,
     workflowSql,
@@ -701,7 +701,7 @@ describe("gate-run-coverage doctor", () => {
     expect(fixture.value.result.ok).toBe(false);
   });
 
-  it.fails("CANDIDATE-U-DOCTOR-GATE-02 treats null evidence plan_id and empty DB plan_id as equal", () => {
+  it.fails("U-DOCTOR-GATE-02 treats null evidence plan_id and empty DB plan_id as equal", () => {
     const fixture = observeIsolatedFixture("ut-tdd-doctor-gate-run-empty-plan-equal-", (root) => {
       writeGateRunEvidence(root, { gateRunId: "gate-run:empty-plan-equal", planId: null });
       const result = checkGateRunCoverage(root);
@@ -723,7 +723,7 @@ describe("gate-run-coverage doctor", () => {
     ]);
   });
 
-  it.fails("CANDIDATE-U-DOCTOR-GATE-04 rolls back additions and deletions when an existing row mismatches", () => {
+  it.fails("U-DOCTOR-GATE-04 rolls back additions and deletions when an existing row mismatches", () => {
     const mismatchedGateRunId = "gate-run:rollback-mismatched-existing";
     const removedEvidenceGateRunId = "gate-run:rollback-removed-evidence";
     const addedEvidenceGateRunId = "gate-run:rollback-added-evidence";
@@ -804,7 +804,7 @@ describe("gate-run-coverage doctor", () => {
     );
   });
 
-  it.fails("CANDIDATE-U-DOCTOR-GATE-03 removes the DB-only gate/workflow pair after evidence disappears", () => {
+  it.fails("U-DOCTOR-GATE-03 removes the DB-only gate/workflow pair after evidence disappears", () => {
     const fixture = observeIsolatedFixture("ut-tdd-doctor-gate-run-missing-evidence-", (root) => {
       const planId = "PLAN-GATE-COVERAGE-MISSING-EVIDENCE";
       writePlanFixture(root, planId);

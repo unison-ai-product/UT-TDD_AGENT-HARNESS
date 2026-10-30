@@ -195,8 +195,8 @@ function observeIsolatedFixture<T>(observe: (fixture: Fixture) => T): { ok: bool
   return { ok: observed && cleaned, value };
 }
 
-describe("CANDIDATE-U-GATE-010 gate-run identity and path", () => {
-  it("CANDIDATE-U-GATE-010: creates and removes an isolated gate-run fixture", () => {
+describe("U-GATE-010 gate-run identity and path", () => {
+  it("U-GATE-010: creates and removes an isolated gate-run fixture", () => {
     const fixture = createFixture();
     try {
       expect(readdirSync(fixture.gateRunsDir)).toEqual([]);
@@ -206,7 +206,7 @@ describe("CANDIDATE-U-GATE-010 gate-run identity and path", () => {
     expect(existsSync(fixture.root)).toBe(false);
   });
 
-  it("CANDIDATE-U-GATE-010: writes a valid gate-run evidence file for an ordinary input", () => {
+  it("U-GATE-010: writes a valid gate-run evidence file for an ordinary input", () => {
     const fixture = createFixture();
     try {
       const result = writeGateRunEvidence(candidateInput(fixture.root));
@@ -219,7 +219,7 @@ describe("CANDIDATE-U-GATE-010 gate-run identity and path", () => {
     }
   });
 
-  it.fails("CANDIDATE-U-GATE-010 derives the ID from the specified runSeed only", () => {
+  it.fails("U-GATE-010 derives the ID from the specified runSeed only", () => {
     const input = {
       repoRoot: "/repo",
       gateId: "G4",
@@ -242,7 +242,7 @@ describe("CANDIDATE-U-GATE-010 gate-run identity and path", () => {
     expect(actualId).toBe(expectedId);
   });
 
-  it.fails("CANDIDATE-U-GATE-010 hashes path from UTF-8 ID", () => {
+  it.fails("U-GATE-010 hashes path from UTF-8 ID", () => {
     let fixture: Fixture | undefined;
     let observation: { path: string; expectedPath: string; digestFilename: boolean } | undefined;
     let setupReady = false;
@@ -285,7 +285,7 @@ describe("CANDIDATE-U-GATE-010 gate-run identity and path", () => {
     });
   });
 
-  it.fails("CANDIDATE-U-GATE-010 rejects hash-address ID mismatch", () => {
+  it.fails("U-GATE-010 rejects hash-address ID mismatch", () => {
     let fixture: Fixture | undefined;
     let actual: { threw: boolean; bytes: string; names: string[] } | undefined;
     let expected: { threw: boolean; bytes: string; names: string[] } | undefined;
@@ -339,7 +339,7 @@ describe("CANDIDATE-U-GATE-010 gate-run identity and path", () => {
     expect(actual).toEqual(expected);
   });
 
-  it("CANDIDATE-U-GATE-010 reads legacy filenames", () => {
+  it("U-GATE-010 reads legacy filenames", () => {
     const fixture = createFixture();
     try {
       const legacyId = "gate-run:G4:legacy-reader-fixture";
@@ -367,7 +367,7 @@ describe("CANDIDATE-U-GATE-010 gate-run identity and path", () => {
     }
   });
 
-  it("CANDIDATE-U-GATE-009/010 temp reader oracle ignores .tmp-* beside finalized JSON", () => {
+  it("U-GATE-009/010 temp reader oracle ignores .tmp-* beside finalized JSON", () => {
     const fixture = createFixture();
     let db: ReturnType<typeof openHarnessDb> | undefined;
     try {
@@ -407,7 +407,7 @@ describe("CANDIDATE-U-GATE-010 gate-run identity and path", () => {
     }
   });
 
-  it("CANDIDATE-U-GATE-010 accepts one new file via checkGateRunCoverage", () => {
+  it("U-GATE-010 accepts one new file via checkGateRunCoverage", () => {
     const control = observeIsolatedFixture((fixture) => {
       const planId = "PLAN-GATE-IDENTITY-READER-CONTROL";
       const runId = "gate-run:G4:reader-control";
@@ -434,7 +434,7 @@ describe("CANDIDATE-U-GATE-010 gate-run identity and path", () => {
     expect(control.value.result.ok).toBe(true);
   });
 
-  it.fails("CANDIDATE-U-GATE-010 rejects new/legacy duplicates via checkGateRunCoverage", () => {
+  it.fails("U-GATE-010 rejects new/legacy duplicates via checkGateRunCoverage", () => {
     const duplicate = observeIsolatedFixture((fixture) => {
       const planId = "PLAN-GATE-IDENTITY-READER-DUPLICATE";
       const runId = "gate-run:G4:reader-duplicate";
@@ -468,7 +468,7 @@ describe("CANDIDATE-U-GATE-010 gate-run identity and path", () => {
     expect(duplicate.value.result.ok).toBe(false);
   });
 
-  it.fails("CANDIDATE-U-GATE-010 rejects existing legacy ID on write", () => {
+  it.fails("U-GATE-010 rejects existing legacy ID on write", () => {
     let fixture: Fixture | undefined;
     let actual: { threw: boolean; bytes: string; names: string[] } | undefined;
     let expected: { threw: boolean; bytes: string; names: string[] } | undefined;
