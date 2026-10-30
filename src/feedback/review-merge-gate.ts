@@ -1,6 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { checkBaselineConflict } from "./baseline-conflict.ts";
 import { resolveRepositoryRoot } from "./repository-root.ts";
 import {
   analyzeReviewDispatch,
@@ -20,6 +21,7 @@ export interface MergeGateFacts extends PrObservation {
 export interface GhPrMergePorts {
   getPullRequest: (pr: number) => MergeGateFacts;
   mergePullRequest: (pr: number, headSha: string) => void;
+  checkBaselineConflict?: (repoRoot: string, headSha: string) => string | null;
 }
 
 export interface AuthorizedReviewEntry {
@@ -307,53 +309,28 @@ export function runPrMerge(input: {
 }): PrMergeResult {
   const timestamp = input.now?.() ?? new Date().toISOString();
   let repoRoot = input.repoRoot;
+  const deny = (
+    reason: string,
+    from: Partial<Pick<MergeGateDecision, "headSha" | "verdict" | "authorizedEntry">> = {},
+  ): PrMergeResult => {
+    const { headSha = null, verdict = null, authorizedEntry = null } = from;
+    const result = { ok: false, pr: input.pr, headSha, verdict, decision: "deny", reason } as const;
+    return makeResult({ result, repoRoot, timestamp, authorizedEntry });
+  };
   try {
     repoRoot = resolveRepositoryRoot(input.repoRoot);
   } catch (error) {
-    return makeResult({
-      result: {
-        ok: false,
-        pr: input.pr,
-        headSha: null,
-        verdict: null,
-        decision: "deny",
-        reason: `review_input_failed:${errorMessage(error)}`,
-      },
-      repoRoot: input.repoRoot,
-      timestamp,
-    });
+    return deny(`review_input_failed:${errorMessage(error)}`);
   }
   if (!Number.isInteger(input.pr) || input.pr <= 0) {
-    return makeResult({
-      result: {
-        ok: false,
-        pr: input.pr,
-        headSha: null,
-        verdict: null,
-        decision: "deny",
-        reason: "invalid_pr",
-      },
-      repoRoot,
-      timestamp,
-    });
+    return deny("invalid_pr");
   }
 
   let facts: MergeGateFacts;
   try {
     facts = input.ports.getPullRequest(input.pr);
   } catch (error) {
-    return makeResult({
-      result: {
-        ok: false,
-        pr: input.pr,
-        headSha: null,
-        verdict: null,
-        decision: "deny",
-        reason: `gh_fetch_failed:${errorMessage(error)}`,
-      },
-      repoRoot,
-      timestamp,
-    });
+    return deny(`gh_fetch_failed:${errorMessage(error)}`);
   }
 
   let decision: MergeGateDecision;
@@ -361,48 +338,25 @@ export function runPrMerge(input: {
     const reviewInputs = loadReviewInputs(repoRoot);
     decision = evaluateMergeGate({ ...reviewInputs, pr: input.pr, facts, now: timestamp });
   } catch (error) {
-    return makeResult({
-      result: {
-        ok: false,
-        pr: input.pr,
-        headSha: facts.headSha,
-        verdict: null,
-        decision: "deny",
-        reason: `review_input_failed:${errorMessage(error)}`,
-      },
-      repoRoot,
-      timestamp,
-    });
+    return deny(`review_input_failed:${errorMessage(error)}`, { headSha: facts.headSha });
   }
   if (!decision.ok) {
-    return makeResult({
-      result: {
-        ok: false,
-        pr: input.pr,
-        headSha: decision.headSha,
-        verdict: decision.verdict,
-        decision: "deny",
-        reason: decision.reasons.join(",") || "merge_not_ready",
-      },
-      repoRoot,
-      timestamp,
-      authorizedEntry: decision.authorizedEntry,
-    });
+    return deny(decision.reasons.join(",") || "merge_not_ready", decision);
   }
 
   if (decision.headSha === null || decision.verdict === null || decision.authorizedEntry === null) {
-    return makeResult({
-      result: {
-        ok: false,
-        pr: input.pr,
-        headSha: decision.headSha,
-        verdict: decision.verdict,
-        decision: "deny",
-        reason: "merge_authorization_incomplete",
-      },
-      repoRoot,
-      timestamp,
+    return deny("merge_authorization_incomplete", {
+      headSha: decision.headSha,
+      verdict: decision.verdict,
     });
+  }
+
+  const conflict = (input.ports.checkBaselineConflict ?? checkBaselineConflict)(
+    repoRoot,
+    decision.headSha,
+  );
+  if (conflict !== null) {
+    return deny(conflict, decision);
   }
 
   try {
@@ -419,18 +373,7 @@ export function runPrMerge(input: {
   } catch (error) {
     const reason = `intent_receipt_write_failed:${errorMessage(error)}`;
     process.stderr.write(`review merge: ${reason}\n`);
-    return makeResult({
-      result: {
-        ok: false,
-        pr: input.pr,
-        headSha: decision.headSha,
-        verdict: decision.verdict,
-        decision: "deny",
-        reason,
-      },
-      repoRoot,
-      timestamp,
-    });
+    return deny(reason, { headSha: decision.headSha, verdict: decision.verdict });
   }
 
   try {

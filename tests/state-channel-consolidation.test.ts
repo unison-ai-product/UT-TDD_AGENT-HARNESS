@@ -519,8 +519,7 @@ describe("Issue #1062: review custody no longer depends on memory", () => {
     if (!revision.ok) throw new Error(`historical identity fixture invalid: ${revision.reason}`);
     const requests = join(root, ".ut-tdd", "review", "requests");
     const receipts = join(root, ".ut-tdd", "review", "receipts");
-    mkdirSync(requests, { recursive: true });
-    mkdirSync(receipts, { recursive: true });
+    for (const dir of [requests, receipts]) mkdirSync(dir, { recursive: true });
     const historicalRequestBytes = `{
   "memoryId": "memory:project:legacy-review-283",
   "pr": 283,
@@ -595,6 +594,7 @@ describe("Issue #1062: review custody no longer depends on memory", () => {
           checksGreen: true,
         }),
         mergePullRequest: () => undefined,
+        checkBaselineConflict: () => null,
       },
     });
     expect(mergeResult.ok).toBe(true);
