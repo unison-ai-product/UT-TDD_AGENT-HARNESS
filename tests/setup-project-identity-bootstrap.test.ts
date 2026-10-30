@@ -3,7 +3,6 @@ import {
   mkdtempSync,
   readFileSync,
   renameSync,
-  rmSync,
   statSync,
   symlinkSync,
   unlinkSync,
@@ -22,6 +21,7 @@ import {
   bootstrapProjectIdentity,
   repositoryIdentityFromOrigin,
 } from "../src/setup/project-identity-bootstrap.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 import { headSnapshotRoot } from "./support/workspace-roots.ts";
 
 const fixtures: string[] = [];
@@ -37,7 +37,7 @@ const expectedCandidateIds = new Set([
 ]);
 
 afterEach(() => {
-  for (const root of fixtures.splice(0)) rmSync(root, { recursive: true, force: true });
+  for (const root of fixtures.splice(0)) removeTestTree(root);
 });
 
 function fixture(remote = "git@github.com:acme/widget.git"): string {
