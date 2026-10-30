@@ -81,27 +81,11 @@ function changedPaths(repoRoot: string, from: string, to: string): string[] {
   return paths;
 }
 
-function hasOrigin(repoRoot: string): boolean {
-  try {
-    git(repoRoot, ["remote", "get-url", "origin"]);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 /**
  * deny の reason を返す。競合なしは null。
- * git 作業ツリーでない root と origin の無い repo は比較対象の main が無いので判定しない (fixture 用の既存挙動を保つ)。
- * origin があるのに fetch / merge-base / diff が失敗したときは `baseline_conflict_unknown` (競合なしにしない)。
+ * git の起動・fetch・merge-base・diff の失敗はすべて `baseline_conflict_unknown` で返す (L6 §6.2。競合なしにしない)。
  */
 export function checkBaselineConflict(repoRoot: string, headSha: string): string | null {
-  try {
-    git(repoRoot, ["rev-parse", "--git-dir"]);
-  } catch {
-    return null;
-  }
-  if (!hasOrigin(repoRoot)) return null;
   try {
     git(repoRoot, ["fetch", "-q", "origin", "+refs/heads/main:refs/remotes/origin/main"]);
     const mergeBase = git(repoRoot, ["merge-base", headSha, "origin/main"]);

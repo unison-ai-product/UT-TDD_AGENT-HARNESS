@@ -21,6 +21,7 @@ export interface MergeGateFacts extends PrObservation {
 export interface GhPrMergePorts {
   getPullRequest: (pr: number) => MergeGateFacts;
   mergePullRequest: (pr: number, headSha: string) => void;
+  checkBaselineConflict?: (repoRoot: string, headSha: string) => string | null;
 }
 
 export interface AuthorizedReviewEntry {
@@ -356,7 +357,10 @@ export function runPrMerge(input: {
     return deny(decision.headSha, decision.verdict, "merge_authorization_incomplete");
   }
 
-  const conflict = checkBaselineConflict(repoRoot, decision.headSha);
+  const conflict = (input.ports.checkBaselineConflict ?? checkBaselineConflict)(
+    repoRoot,
+    decision.headSha,
+  );
   if (conflict !== null) {
     return deny(decision.headSha, decision.verdict, conflict, decision.authorizedEntry);
   }
@@ -375,18 +379,7 @@ export function runPrMerge(input: {
   } catch (error) {
     const reason = `intent_receipt_write_failed:${errorMessage(error)}`;
     process.stderr.write(`review merge: ${reason}\n`);
-    return makeResult({
-      result: {
-        ok: false,
-        pr: input.pr,
-        headSha: decision.headSha,
-        verdict: decision.verdict,
-        decision: "deny",
-        reason,
-      },
-      repoRoot,
-      timestamp,
-    });
+    return deny(decision.headSha, decision.verdict, reason);
   }
 
   try {
