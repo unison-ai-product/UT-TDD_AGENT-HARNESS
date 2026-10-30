@@ -448,16 +448,16 @@ describe("snapshot runner argv candidates (#1469)", () => {
     ]);
   });
 
-  it.fails("CANDIDATE-U-SNAPARG-001 --help prints usage and exits successfully before any child command", () => {
+  it.fails("U-SNAPARG-001 --help prints usage and exits successfully before any child command", () => {
     assertHelpUsage(requireHelpProbe("--help"));
   });
 
-  it.fails("CANDIDATE-U-SNAPARG-001 -h prints usage and exits successfully before any child command", () => {
+  it.fails("U-SNAPARG-001 -h prints usage and exits successfully before any child command", () => {
     assertHelpUsage(requireHelpProbe("-h"));
   });
 
   for (const testCase of UNKNOWN_OPTION_CASES) {
-    it.fails(`CANDIDATE-U-SNAPARG-002 rejects ${testCase.name} before clone or Vitest`, () => {
+    it.fails(`U-SNAPARG-002 rejects ${testCase.name} before clone or Vitest`, () => {
       const probe = unknownOptionProbes.get(testCase.key);
       if (!probe) throw new Error(`missing ${testCase.key} precondition probe`);
       const output = outputOf(probe);
@@ -466,7 +466,7 @@ describe("snapshot runner argv candidates (#1469)", () => {
       expect(probe.result.status).toBeGreaterThan(0);
       expect(hasUnknownOptionDiagnostic(output, testCase.option)).toBe(true);
     });
-    it.fails(`CANDIDATE-U-SNAPARG-002 lists accepted options for ${testCase.name}`, () => {
+    it.fails(`U-SNAPARG-002 lists accepted options for ${testCase.name}`, () => {
       const probe = unknownOptionProbes.get(testCase.key);
       if (!probe) throw new Error(`missing ${testCase.key} precondition probe`);
       const tokens =
@@ -475,7 +475,7 @@ describe("snapshot runner argv candidates (#1469)", () => {
         ) ?? [];
       for (const option of ACCEPTED_OPTION_TOKENS) expect(tokens).toContain(option);
     });
-    it.fails(`CANDIDATE-U-SNAPARG-002 explains the separator for ${testCase.name}`, () => {
+    it.fails(`U-SNAPARG-002 explains the separator for ${testCase.name}`, () => {
       const probe = unknownOptionProbes.get(testCase.key);
       if (!probe) throw new Error(`missing ${testCase.key} precondition probe`);
       expect(outputOf(probe)).toMatch(/(?:^|[\s`"'])--(?=$|[\s`"'])/m);
