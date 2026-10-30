@@ -36,8 +36,8 @@ const repoRoot = process.cwd();
 const cliPath = join(repoRoot, "src", "cli.ts");
 const legacyEnvPrefix = ["HE", "LIX"].join("");
 
-function runCli(args: string[]) {
-  return runCliIn(repoRoot, args);
+function runCli(args: string[], env?: NodeJS.ProcessEnv) {
+  return runCliIn(repoRoot, args, env);
 }
 
 function runCliIn(cwd: string, args: string[], env: NodeJS.ProcessEnv = process.env) {
@@ -917,7 +917,7 @@ describe("L7 CLI surface closure", () => {
       );
       const fakeCodex = writeFakeProvider(binDir, "codex");
       writeFakeUtTdd(binDir);
-      const run = runCliIn(repoRoot, ["distribution", "plan", "--tag", "v0.1.0", "--json"], {
+      const run = runCli(["distribution", "plan", "--tag", "v0.1.0", "--json"], {
         ...process.env,
         UT_TDD_CODEX_BIN: fakeCodex,
         UT_TDD_TEST_PROVIDER_OUTPUT_DIR: binDir,
@@ -959,15 +959,7 @@ describe("L7 CLI surface closure", () => {
   it("fails closed when the distribution source tag is unavailable", () => {
     const outDir = mkdtempSync(join(tmpdir(), "ut-tdd-package-out-"));
     try {
-      const run = runCliIn(repoRoot, [
-        "distribution",
-        "package",
-        "--tag",
-        "v0.1.0",
-        "--out",
-        outDir,
-        "--json",
-      ]);
+      const run = runCli(["distribution", "package", "--tag", "v0.1.0", "--out", outDir, "--json"]);
       const payload = JSON.parse(run.stdout);
 
       expect(run.status, run.stderr || run.stdout).toBe(1);
@@ -985,7 +977,7 @@ describe("L7 CLI surface closure", () => {
     const traceRoot = mkdtempSync(join(tmpdir(), "ut-tdd-cli-git-trace-"));
     const tracePath = join(traceRoot, "git-trace.log");
     try {
-      const run = runCliIn(repoRoot, ["--version"], {
+      const run = runCli(["--version"], {
         ...process.env,
         GIT_TRACE: tracePath,
       });
@@ -1020,14 +1012,14 @@ describe("L7 CLI surface closure", () => {
       });
       expect(head.status).toBe(0);
       const omittedTrace = join(traceRoot, "omitted.log");
-      const omitted = runCliIn(repoRoot, ["distribution", "sync-plan", "--json"], {
+      const omitted = runCli(["distribution", "sync-plan", "--json"], {
         ...process.env,
         GIT_TRACE: omittedTrace,
       });
       expect(parseCliJson(omitted).export.sourceTag).toBe(head.stdout.trim());
       expect(readFileSync(omittedTrace, "utf8")).toMatch(/rev-parse --short HEAD/);
 
-      const omittedPlan = parseCliJson(runCliIn(repoRoot, ["distribution", "plan", "--json"]));
+      const omittedPlan = parseCliJson(runCli(["distribution", "plan", "--json"]));
       expect(omittedPlan.export.sourceTag).toBe(head.stdout.trim());
       expect(omittedPlan.readiness.contracts.tagPin).toBe(
         `github:unison-ai-product/UT-TDD_AGENT-HARNESS-Pack#${head.stdout.trim()}`,
@@ -1039,7 +1031,7 @@ describe("L7 CLI surface closure", () => {
   });
 
   it("exposes a non-destructive Pack repository sync plan", () => {
-    const run = runCliIn(repoRoot, [
+    const run = runCli([
       "distribution",
       "sync-plan",
       "--tag",
@@ -1087,7 +1079,7 @@ describe("L7 CLI surface closure", () => {
   it("U-DOCSECRET-006: materializes clean Pack artifacts into a local staging directory without publishing", () => {
     const outDir = mkdtempSync(join(tmpdir(), "ut-tdd-pack-stage-"));
     try {
-      const run = runCliIn(repoRoot, [
+      const run = runCli([
         "distribution",
         "sync-stage",
         "--tag",
@@ -1134,7 +1126,7 @@ describe("L7 CLI surface closure", () => {
       mkdirSync(join(packDir, "docs", "plans"), { recursive: true });
       writeFileSync(stalePlan, "dogfood plan should not ship\n", "utf8");
 
-      const blocked = runCliIn(repoRoot, [
+      const blocked = runCli([
         "distribution",
         "sync-pack",
         "--tag",
@@ -1164,7 +1156,7 @@ describe("L7 CLI surface closure", () => {
       });
       expect(existsSync(stalePlan)).toBe(true);
 
-      const pruned = runCliIn(repoRoot, [
+      const pruned = runCli([
         "distribution",
         "sync-pack",
         "--tag",
@@ -1214,7 +1206,7 @@ describe("L7 CLI surface closure", () => {
   }, 40_000);
 
   it("exposes non-destructive release publication planning", () => {
-    const run = runCliIn(repoRoot, [
+    const run = runCli([
       "distribution",
       "release-plan",
       "--tag",
@@ -1252,7 +1244,7 @@ describe("L7 CLI surface closure", () => {
     writeFileSync(body, "## Summary\nPatch only.\n", "utf8");
     writeFileSync(commits, "fix: patch production regression\n", "utf8");
     try {
-      const run = runCliIn(repoRoot, [
+      const run = runCli([
         "github",
         "guard",
         "--head-ref",

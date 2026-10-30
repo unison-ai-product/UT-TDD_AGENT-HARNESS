@@ -115,29 +115,11 @@ const REQUIRED_CONCURRENCY_GROUP =
 const REQUIRED_CANCEL_IN_PROGRESS = "$" + "{{ github.ref != 'refs/heads/main' }}";
 const REQUIRED_AGGREGATE_IF = "$" + "{{ always() }}";
 
-const PULL_REQUEST_ACTIVITY_TYPES = new Set([
-  "assigned",
-  "unassigned",
-  "labeled",
-  "unlabeled",
-  "opened",
-  "edited",
-  "closed",
-  "reopened",
-  "synchronize",
-  "converted_to_draft",
-  "locked",
-  "unlocked",
-  "enqueued",
-  "dequeued",
-  "milestoned",
-  "demilestoned",
-  "ready_for_review",
-  "review_requested",
-  "review_request_removed",
-  "auto_merge_enabled",
-  "auto_merge_disabled",
-]);
+const PULL_REQUEST_ACTIVITY_TYPES = new Set(
+  `assigned unassigned labeled unlabeled opened edited closed reopened synchronize
+  converted_to_draft locked unlocked enqueued dequeued milestoned demilestoned ready_for_review
+  review_requested review_request_removed auto_merge_enabled auto_merge_disabled`.split(/\s+/),
+);
 
 const SOURCE_REQUIRED_STEPS = [
   { label: "checkout@v5", any: ["actions/checkout@v5"] },
@@ -350,23 +332,20 @@ const step = (name: string, fields: Record<string, unknown>): Record<string, unk
 });
 const run = (name: string, command: string, condition?: string): Record<string, unknown> =>
   step(name, { ...(condition ? { if: condition } : {}), run: command });
-const commonRuntimeSteps = [
-  step("checkout", { uses: "actions/checkout@v5", with: { "fetch-depth": 0 } }),
-  // Issue #472 (S1-c, PLAN-L7-522): node が harness 実行系の正式 runtime。setup-bun は撤去済み。
-  step("setup node (harness 実行系の正式 runtime、PLAN-L7-462 step 2)", {
-    uses: "actions/setup-node@v4",
-    with: { "node-version": "24.22.1", cache: "npm" },
-  }),
-  run("install deps (frozen)", "npm ci --no-audit --no-fund"),
-] as const;
-const commonNodeGenerationSteps = [
-  step("checkout", { uses: "actions/checkout@v5", with: { "fetch-depth": 0 } }),
-  step("setup node (sealed generation runtime)", {
-    uses: "actions/setup-node@v4",
-    with: { "node-version": "24.22.1", cache: "npm" },
-  }),
-  run("install deps (frozen)", "npm ci --no-audit --no-fund"),
-] as const;
+const commonSteps = (setupNodeName: string) =>
+  [
+    step("checkout", { uses: "actions/checkout@v5", with: { "fetch-depth": 0 } }),
+    step(setupNodeName, {
+      uses: "actions/setup-node@v4",
+      with: { "node-version": "24.22.1", cache: "npm" },
+    }),
+    run("install deps (frozen)", "npm ci --no-audit --no-fund"),
+  ] as const;
+// Issue #472 (S1-c, PLAN-L7-522): node が harness 実行系の正式 runtime。setup-bun は撤去済み。
+const commonRuntimeSteps = commonSteps(
+  "setup node (harness 実行系の正式 runtime、PLAN-L7-462 step 2)",
+);
+const commonNodeGenerationSteps = commonSteps("setup node (sealed generation runtime)");
 const classifyFields = { id: "classify", run: CLASSIFY_COMMAND };
 const nodeGenerationStep = (lane: (typeof NODE_GENERATION_LEGS)[number]) =>
   step(`build and verify sealed Node generation (${lane.replace("node-generation-", "")})`, {
