@@ -290,7 +290,7 @@ describe("review merge gate baseline conflict (Issue #1423)", { timeout: 120_000
       ],
     ];
     for (const [label, plan] of conflicts) {
-      it.fails(
+      it(
         `CANDIDATE-U-RVMG-047: ${gate.name} ${label} は baseline_conflict で deny し gh pr merge を呼ばない`,
         withFixture(plan, (fx) => {
           expectBaselineConflictDeny(runMerge(fx));
@@ -326,7 +326,7 @@ describe("review merge gate baseline conflict (Issue #1423)", { timeout: 120_000
       ],
     ];
     for (const [label, plan] of clean) {
-      it.fails(
+      it(
         `CANDIDATE-U-RVMG-048: ${gate.name} ${label} は競合なしで merge し、判定のため origin/main を取得し直す`,
         withFixture(plan, (fx) => {
           if (plan.mergeMain) {
@@ -350,7 +350,7 @@ describe("review merge gate baseline conflict (Issue #1423)", { timeout: 120_000
     main: { touch: [DOC_SPLIT.target] },
   };
 
-  it.fails(
+  it(
     "CANDIDATE-U-RVMG-049: 競合は exit 1 で、出力に gate 名・競合 path・main を取り込んで CI を取り直す案内を含む",
     withFixture(conflictPlan, async (fx) => {
       const cli = await runCli(fx, false);
@@ -364,7 +364,7 @@ describe("review merge gate baseline conflict (Issue #1423)", { timeout: 120_000
     }),
   );
 
-  it.fails(
+  it(
     "CANDIDATE-U-RVMG-049: --json の reason は baseline_conflict になる",
     withFixture(conflictPlan, async (fx) => {
       const cli = await runCli(fx, true);
@@ -374,7 +374,7 @@ describe("review merge gate baseline conflict (Issue #1423)", { timeout: 120_000
     }),
   );
 
-  it.fails(
+  it(
     "CANDIDATE-U-RVMG-049: git fetch の失敗 (error) は baseline_conflict_unknown で deny し緑にならない",
     withFixture(untouched, (fx) => {
       git(fx.work, "remote", "set-url", "origin", join(fx.base, "missing-origin.git"));
@@ -382,7 +382,7 @@ describe("review merge gate baseline conflict (Issue #1423)", { timeout: 120_000
     }),
   );
 
-  it.fails(
+  it(
     "CANDIDATE-U-RVMG-049: git diff の失敗 (error: fetch と merge-base は成功し diff だけ失敗) は baseline_conflict_unknown で deny する",
     withFixture(untouched, (fx) => {
       // PR head の tree object を消す。commit は読めるので fetch と merge-base は成功し、diff だけが失敗する。
@@ -401,7 +401,7 @@ describe("review merge gate baseline conflict (Issue #1423)", { timeout: 120_000
     }),
   );
 
-  it.fails(
+  it(
     "CANDIDATE-U-RVMG-049: merge-base を解決できない (origin/main と履歴が無関係) PR は baseline_conflict_unknown で deny する",
     withFixture(untouched, (fx) => {
       git(fx.work, "checkout", "-q", "--orphan", "unrelated");

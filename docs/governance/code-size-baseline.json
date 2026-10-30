@@ -16,7 +16,7 @@
   "src/feedback/review-attestation.ts": { "lines": 604, "functionExcess": 1 },
   "src/feedback/review-custody.ts": { "lines": 643, "functionExcess": null },
   "src/feedback/review-dispatch.ts": { "lines": 606, "functionExcess": 27 },
-  "src/feedback/review-merge-gate.ts": { "lines": 578, "functionExcess": 33 },
+  "src/feedback/review-merge-gate.ts": { "lines": 533, "functionExcess": null },
   "src/feedback/review-verdict-custody.ts": { "lines": 673, "functionExcess": 11 },
   "src/forward/application/forward-workflow.ts": { "lines": null, "functionExcess": 7 },
   "src/gate/right-arm-static.ts": { "lines": 1450, "functionExcess": 41 },
