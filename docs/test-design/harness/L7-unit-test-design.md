@@ -17,7 +17,6 @@ updated: 2026-07-10
 ## 2026-06-09 L6 pair-scope addendum
 
 The historical pair text below was written when L6 only had `function-spec` and `edge-case`. For G6 readiness, the current L6 pair scope is the full directory `docs/design/harness/L6-function-design/*.md`, including add-design slices PLAN-L6-03..21.
-
 This L7 document remains the single pair artifact for L6 and must carry a U-* oracle family for every L6 design artifact listed in `docs/design/harness/L6-function-design/function-spec.md` "L6 completion の範囲と inventory".
 
 The additional SQLite/reference-feedback/search/drive-log/skill-metric requirements are covered through `docs/design/harness/L6-function-design/fr-unit-coverage.md` and the U-FR-L1-* rows added at the end of this document. This is coverage of the function-design contract, not proof that every L7 implementation test already exists.
@@ -462,6 +461,7 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 | U-CODE-008 | structured error handling | source catch block with undocumented empty body or rethrow-only body -> `structured-error-handling` violation |
 | U-CODE-009 | module boundary | disallowed reverse dependency such as `src/lint/*` importing `../runtime/*` -> `module-boundary` violation |
 | U-CODE-010 | machine surface language | machine-facing CLI/doctor/lint/gate message line with Japanese-only decision words and no ASCII token (`OK`, `violation`, `warning`, `skipped`, `note`, `error`, `ready`, `not ready`) -> `machine-surface-language` violation; Japanese explanatory prose after the ASCII token remains allowed |
+| CANDIDATE-U-CODE-011 | machine-surface language の test-title 判定 | bare `describe`/`it`/`test` の直接呼出し、またはその `.fails`/`.skip`/`.only`/`.todo` 呼出しでは第1引数の文字列・置換なし template literal のみ除外する。`receiver.each(data)(title, ...)` は2回目の呼出しの第1引数のみ除外し、data は除外しない。未知の receiver、未列挙の modifier、title 位置以外の日本語だけの machine decision text は `machine-surface-language` 違反のまま。 |
 
 ### U-DDDTDD Addendum (DDD/TDD strictness)
 
