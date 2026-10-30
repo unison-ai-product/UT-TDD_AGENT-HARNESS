@@ -844,7 +844,7 @@ describe("gate-run-coverage doctor", () => {
 
       expect(result.ok).toBe(true);
       expect(projection.gateRuns).toEqual(
-        VERIFICATION_BAND_LAYERS.map((layer) => ({
+        [...VERIFICATION_BAND_LAYERS].sort().map((layer) => ({
           gate_run_id: stableId("verification-band-gate", layer),
           gate_id: `G-VERIFY.${layer}`,
           plan_id: "",

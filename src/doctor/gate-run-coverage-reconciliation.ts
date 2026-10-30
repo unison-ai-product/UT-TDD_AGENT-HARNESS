@@ -1,6 +1,5 @@
 import { existsSync } from "node:fs";
-import { join } from "node:path";
-import { type GateRunCoverageStats } from "../lint/gate-run-coverage.ts";
+import type { GateRunCoverageStats } from "../lint/gate-run-coverage.ts";
 import { stableId } from "../stable-id.ts";
 import { defaultHarnessDbPath, type HarnessDb, openHarnessDb } from "../state-db/index.ts";
 import { migrate } from "../state-db/migration.ts";
@@ -13,7 +12,7 @@ import { runSqliteTransaction } from "../state-db/sqlite-transaction.ts";
 const A132_PATH = ".ut-tdd/audit/A-132-l8-l14-verification-band-execution.md";
 const VERIFICATION_LAYERS = ["L8", "L9", "L10", "L11", "L12", "L13", "L14"] as const;
 
-interface GateRunRow {
+interface GateRunRow extends Record<string, unknown> {
   gate_run_id: string;
   gate_id: string;
   plan_id: string | null;
@@ -22,7 +21,7 @@ interface GateRunRow {
   evidence_path: string;
 }
 
-interface RoutineGateRow {
+interface RoutineGateRow extends Record<string, unknown> {
   workflow_run_id: string;
   plan_id: string | null;
   workflow: string;
@@ -271,8 +270,7 @@ function reconcile(db: HarnessDb, repoRoot: string): GateRunCoverageStats {
   for (const expected of sourceRows) {
     const candidateRows = existingGateRows.filter(
       (row) =>
-        row.gate_run_id === expected.gate_run_id ||
-        row.evidence_path === expected.evidence_path,
+        row.gate_run_id === expected.gate_run_id || row.evidence_path === expected.evidence_path,
     );
     if (candidateRows.length > 1) {
       orphanGateRuns += 1;
@@ -339,9 +337,9 @@ function reconcile(db: HarnessDb, repoRoot: string): GateRunCoverageStats {
   }
 
   for (const workflowRunId of deleteWorkflowIds) {
-    db.prepare("DELETE FROM workflow_runs WHERE workflow_run_id = ? AND workflow = 'routine-gate'").run(
-      workflowRunId,
-    );
+    db.prepare(
+      "DELETE FROM workflow_runs WHERE workflow_run_id = ? AND workflow = 'routine-gate'",
+    ).run(workflowRunId);
   }
   for (const gateRunId of deleteGateIds) {
     db.prepare("DELETE FROM gate_runs WHERE gate_run_id = ?").run(gateRunId);

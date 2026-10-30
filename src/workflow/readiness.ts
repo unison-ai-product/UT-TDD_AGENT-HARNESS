@@ -1,6 +1,6 @@
+import { stableId } from "../stable-id.ts";
 import type { HarnessDb } from "../state-db/index.ts";
 import { upsertRow } from "../state-db/index.ts";
-import { stableId } from "../stable-id.ts";
 
 export interface AutomationReadinessRow {
   workflow_run_id: string;
@@ -31,13 +31,14 @@ function passedGateCount(db: HarnessDb, planId: string): number {
   return Number(row?.n ?? 0);
 }
 
-function hasMatchingPassedRoutineGate(db: HarnessDb, workflowRow: Record<string, unknown>): boolean {
+function hasMatchingPassedRoutineGate(
+  db: HarnessDb,
+  workflowRow: Record<string, unknown>,
+): boolean {
   const workflowRunId = String(workflowRow.workflow_run_id ?? "");
   const planId = String(workflowRow.plan_id ?? "");
   const phase = String(workflowRow.phase ?? "");
-  const rows = db
-    .prepare("SELECT gate_run_id, gate_id, plan_id, status FROM gate_runs")
-    .all();
+  const rows = db.prepare("SELECT gate_run_id, gate_id, plan_id, status FROM gate_runs").all();
   return rows.some((gate) => {
     const gateRunId = String(gate.gate_run_id ?? "");
     return (

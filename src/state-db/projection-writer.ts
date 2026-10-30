@@ -178,7 +178,7 @@ interface ProjectedGateRunEvidence {
   checked_at?: unknown;
 }
 
-export interface GateRunEvidenceProjectionRow {
+export interface GateRunEvidenceProjectionRow extends Record<string, unknown> {
   gate_run_id: string;
   gate_id: string;
   plan_id: string;
@@ -187,7 +187,7 @@ export interface GateRunEvidenceProjectionRow {
   evidence_path: string;
 }
 
-export interface GateRunWorkflowProjectionRow {
+export interface GateRunWorkflowProjectionRow extends Record<string, unknown> {
   workflow_run_id: string;
   plan_id: string;
   drive_run_id: string;
@@ -241,10 +241,6 @@ function scalarNumber(db: HarnessDb, sql: string, params: unknown[] = []): numbe
   const row = db.prepare(sql).get(...params) as Record<string, unknown> | undefined;
   const value = row?.value;
   return typeof value === "number" ? value : Number(value ?? 0);
-}
-
-function planExists(db: HarnessDb, planId: string): boolean {
-  return new SqliteProjectionStore(db).planExists(planId);
 }
 
 function recordFinding(db: HarnessDb, input: ProjectionFindingInput): void {

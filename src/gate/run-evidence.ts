@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
-import { linkSync, readFileSync, readdirSync, unlinkSync, writeFileSync } from "node:fs";
+import { linkSync, readdirSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { ensureDir } from "../shared/fs.ts";
 
@@ -81,12 +81,7 @@ export function gateRunEvidenceDir(repoRoot: string): string {
 export function buildGateRunEvidence(input: GateRunEvidenceInput): GateRunEvidence {
   const checkedAt = input.checkedAt ?? new Date().toISOString();
   const planId = input.planId?.trim() ? input.planId.trim() : null;
-  const runSeed = [
-    input.gateId,
-    checkedAt,
-    input.sessionId ?? "",
-    process.pid,
-  ].join(":");
+  const runSeed = [input.gateId, checkedAt, input.sessionId ?? "", process.pid].join(":");
   return {
     schema_version: 1,
     gate_run_id: `gate-run:${compactSlug(input.gateId)}:${shortHash(runSeed)}`,
@@ -133,9 +128,7 @@ export function writeGateRunEvidence(input: GateRunEvidenceInput): WrittenGateRu
     }
   }
 
-  const evidenceIdDigest = createHash("sha256")
-    .update(evidence.gate_run_id, "utf8")
-    .digest("hex");
+  const evidenceIdDigest = createHash("sha256").update(evidence.gate_run_id, "utf8").digest("hex");
   const absolutePath = join(dir, `${evidenceIdDigest}.json`);
   const temporaryPath = join(dir, `.tmp-${randomUUID()}`);
   writeFileSync(temporaryPath, `${JSON.stringify(evidence, null, 2)}\n`, {

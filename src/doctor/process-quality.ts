@@ -26,7 +26,6 @@ import {
   loadFrRoadmapCoverageDocs,
 } from "../lint/fr-roadmap-coverage.ts";
 import { analyzeGateRunCoverage, gateRunCoverageMessages } from "../lint/gate-run-coverage.ts";
-import { loadGateRunCoverageStats } from "./gate-run-coverage-reconciliation.ts";
 import {
   analyzeL6Completion,
   canLoadL6CompletionInputs,
@@ -89,6 +88,7 @@ import {
   loadDriveDbRegistrationStats,
   loadOrBuildDriveDbRegistrationStats,
 } from "../state-db/drive-registration.ts";
+import { loadGateRunCoverageStats } from "./gate-run-coverage-reconciliation.ts";
 
 export function checkPlanDod(repoRoot: string): { messages: string[]; ok: boolean } {
   if (!existsSync(repoRoot)) {

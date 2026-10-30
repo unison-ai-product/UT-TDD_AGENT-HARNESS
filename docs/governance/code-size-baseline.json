@@ -64,7 +64,7 @@
   "src/setup/templates.ts": { "lines": 627, "functionExcess": null },
   "src/state-db/feedback-projections.ts": { "lines": 775, "functionExcess": 52 },
   "src/state-db/github-forward-projection.ts": { "lines": 543, "functionExcess": null },
-  "src/state-db/projection-writer.ts": { "lines": 2598, "functionExcess": 4 },
+  "src/state-db/projection-writer.ts": { "lines": 2595, "functionExcess": 4 },
   "src/state-db/scope-preview.ts": { "lines": null, "functionExcess": 11 },
   "src/state-db/spec-ir-projections.ts": { "lines": 2453, "functionExcess": 220 },
   "src/state-db/stop-refresh-coordinator.ts": { "lines": 602, "functionExcess": null },
