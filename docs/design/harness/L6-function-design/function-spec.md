@@ -428,7 +428,7 @@ function runGate(gId):
   exit status == "passed" ? 0 : 1
 ```
 
-PLAN-L7-363 以降、`appendGateRun` は `writeGateRunEvidence` として CLI 判定後に必ず呼ぶ。gate verdict は `evaluateGateReview` + `evaluateStaticGate` の合成であり、証跡書込の失敗も verdict / exit を変えず stderr 警告にする。
+PLAN-L7-363 以降、`appendGateRun` は `writeGateRunEvidence` として CLI 判定後に必ず呼ぶ。証跡書込失敗時の verdict / exit と stderr 警告の契約は `gate-run-evidence-warning.md` §2 を参照する。
 新規 final は `.ut-tdd/gate_runs/<lowercase hex(sha256(UTF-8 bytes of gate_run_id))>.json` とし、完成 JSON を同一 filesystem 上の一意な `.tmp-*` (末尾 `.json` 以外) temp に書き、hard link で no-clobber publish する。temp は reader の `*.json` glob 外に置く。ID 以外の hash 入力・別名救済はなく、hash collision も拒否する。
 同じ ID の並行実行は一方だけ publish し、EEXIST / link 非対応・失敗を含む全書込失敗は警告に留める。crash した temp は次の実行で削除せず、retry は新しい ID を使う。
 旧 `<gate>-<timestamp>-<hash>.json` も読み、全形式を内容の ID で照合して同じ ID の重複を拒否する。schema は `schema_version`、`gate_run_id`、`gate_id`、`timestamp/checked_at`、`plan_id`、`session_id`、`mode`、`review_kind`、`worker_model`、`reviewer_model`、`checklist_path`、`coverage_summary_path`、`command`、`checks[]`、`messages[]` を持つ。
