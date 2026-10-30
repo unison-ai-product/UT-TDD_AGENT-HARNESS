@@ -1128,15 +1128,8 @@ describe("L7 CLI surface closure", () => {
       mkdirSync(join(packDir, "docs", "plans"), { recursive: true });
       writeFileSync(stalePlan, "dogfood plan should not ship\n", "utf8");
 
-      const blocked = runCli([
-        "distribution",
-        "sync-pack",
-        "--tag",
-        "v0.1.0",
-        "--repo-dir",
-        packDir,
-        "--json",
-      ]);
+      const syncPack = ["distribution", "sync-pack", "--tag", "v0.1.0", "--repo-dir", packDir];
+      const blocked = runCli([...syncPack, "--json"]);
       const blockedPayload = JSON.parse(blocked.stdout);
       manifest = blockedPayload.pack.manifest;
 
@@ -1158,16 +1151,7 @@ describe("L7 CLI surface closure", () => {
       });
       expect(existsSync(stalePlan)).toBe(true);
 
-      const pruned = runCli([
-        "distribution",
-        "sync-pack",
-        "--tag",
-        "v0.1.0",
-        "--repo-dir",
-        packDir,
-        "--prune-local",
-        "--json",
-      ]);
+      const pruned = runCli([...syncPack, "--prune-local", "--json"]);
       const prunedPayload = JSON.parse(pruned.stdout);
       manifest = prunedPayload.pack.manifest;
 

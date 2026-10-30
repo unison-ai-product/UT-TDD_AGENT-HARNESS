@@ -1,25 +1,113 @@
 /**
- * Pack pre-publication privacy scan for `distribution sync-pack` / `package` (issue #1391,
- * docs/design/harness/L6-function-design/privacy-scan.md §5 / §11). The denylist is mandatory
- * here; its contents never reach the output, which carries only the §8 finding values.
- * `distribution.ts` only calls into this module; the wiring and the masking live here.
+ * Pre-distribution scans for `distribution sync-pack` / `package`: the existing secret scan and the
+ * Pack privacy scan (issue #1391, docs/design/harness/L6-function-design/privacy-scan.md §5 / §11).
+ * The denylist is mandatory here; its contents never reach the output, which carries only the §8
+ * finding values. `distribution.ts` only calls into this module; the wiring and the masking live
+ * here (the secret scan and the team blob reader were moved here unchanged, PO exception on #1454).
  */
+import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
+import { homedir } from "node:os";
 import { join } from "node:path";
 import { type PrivacyScanResult, privacyScanMessages } from "../lint/privacy-scan.ts";
 import { PRIVACY_DENYLIST_RELATIVE_PATH, scanPackPrivacy } from "../lint/privacy-scan-inputs.ts";
 import {
-  type AuthoringProjectionResult,
+  analyzeSecretScan,
+  loadSecretScanArtifactsForPaths,
+  secretScanMessages,
+} from "../lint/secret-scan.ts";
+import {
   buildPackSyncPlan,
   type CleanDistributionPlan,
   cleanDistributionSourcePath,
   type PackSyncPlan,
+  projectTrackedTeamBlob,
+  type TrackedGitBlob,
 } from "../setup/index.ts";
 
 const TEAM_SOURCE = ".ut-tdd/teams/example-review-team.yaml";
 const DENYLIST_HINT = `~/${PRIVACY_DENYLIST_RELATIVE_PATH.join("/")}`;
 const decoder = new TextDecoder("utf-8");
+
+export function readTrackedTeamBlob(repoRoot: string) {
+  const tree = spawnSync(
+    "git",
+    ["ls-tree", "-r", "-z", "--full-tree", "HEAD", "--", ".ut-tdd/teams/example-review-team.yaml"],
+    { cwd: repoRoot, encoding: "buffer", stdio: ["ignore", "pipe", "ignore"] },
+  );
+  const records = Buffer.from(tree.stdout ?? new Uint8Array())
+    .toString("utf8")
+    .split("\0")
+    .filter(Boolean);
+  const blobs: TrackedGitBlob[] = [];
+  for (const record of records) {
+    const match = /^(\d{6}) blob ([a-f0-9]{40})\t(.+)$/.exec(record);
+    if (!match) continue;
+    const blob = spawnSync("git", ["cat-file", "blob", match[2]], {
+      cwd: repoRoot,
+      encoding: "buffer",
+      stdio: ["ignore", "pipe", "ignore"],
+    });
+    if (blob.status !== 0) continue;
+    blobs.push({
+      path: match[3],
+      mode: match[1] === "100644" ? "100644" : match[1],
+      objectId: match[2],
+      bytes: new Uint8Array(blob.stdout ?? new Uint8Array()),
+    });
+  }
+  return projectTrackedTeamBlob({ blobs });
+}
+
+export function runDistributionSecretScan(input: {
+  repoRoot: string;
+  sourcePaths: readonly string[];
+  artifactPaths: readonly string[];
+}): ReturnType<typeof analyzeSecretScan> {
+  const sourceArtifactPaths = input.artifactPaths.map((rel) =>
+    cleanDistributionSourcePath(rel, input.sourcePaths),
+  );
+  const artifacts = loadSecretScanArtifactsForPaths(input.repoRoot, sourceArtifactPaths).filter(
+    (artifact) => artifact.path !== ".ut-tdd/teams/example-review-team.yaml",
+  );
+  if (sourceArtifactPaths.includes(".ut-tdd/teams/example-review-team.yaml")) {
+    const projection = readTrackedTeamBlob(input.repoRoot);
+    if (!projection.ok)
+      return {
+        checked: artifacts.length,
+        violations: [
+          {
+            path: ".ut-tdd/teams/example-review-team.yaml",
+            line: 1,
+            marker: `authoring-projection-${projection.error}`,
+          },
+        ],
+        ok: false,
+      };
+    try {
+      artifacts.push({
+        path: ".ut-tdd/teams/example-review-team.yaml",
+        text: new TextDecoder("utf-8", { fatal: true }).decode(projection.bytes),
+      });
+    } catch {
+      return {
+        checked: artifacts.length,
+        violations: [
+          {
+            path: ".ut-tdd/teams/example-review-team.yaml",
+            line: 1,
+            marker: "authoring-projection-invalid-utf8",
+          },
+        ],
+        ok: false,
+      };
+    }
+  }
+  return analyzeSecretScan(artifacts);
+}
+
+type SecretScanResult = ReturnType<typeof analyzeSecretScan>;
 
 export class DistributionPrivacyScanError extends Error {
   readonly privacyScan: PrivacyScanResult;
@@ -39,7 +127,6 @@ export interface PackPrivacySource {
   sourcePaths: readonly string[];
   exportPlan: CleanDistributionPlan;
   homeDirectory: string;
-  readTeam: (sourceRoot: string) => AuthoringProjectionResult;
 }
 
 export function scanPack(source: PackPrivacySource): PrivacyScanResult {
@@ -47,7 +134,7 @@ export function scanPack(source: PackPrivacySource): PrivacyScanResult {
   try {
     for (const path of source.exportPlan.artifactPaths) {
       const sourcePath = cleanDistributionSourcePath(path, source.sourcePaths);
-      const team = sourcePath === TEAM_SOURCE ? source.readTeam(source.sourceRoot) : null;
+      const team = sourcePath === TEAM_SOURCE ? readTrackedTeamBlob(source.sourceRoot) : null;
       if (team !== null && !team.ok) throw new Error("team projection unavailable");
       const bytes =
         team?.ok === true
@@ -65,10 +152,45 @@ export function scanPack(source: PackPrivacySource): PrivacyScanResult {
   });
 }
 
-/** `distribution package`: stops before anything is written when the scan rejects. */
-export function assertPackPrivacy(source: PackPrivacySource): void {
-  const result = scanPack(source);
+/** One entry point of the pre-distribution scans; `sourceRoot` defaults to `repoRoot`. */
+export interface PreDistributionSource
+  extends Omit<PackPrivacySource, "sourceRoot" | "homeDirectory"> {
+  sourceRoot?: string;
+  homeDirectory?: string;
+}
+
+function secretScanOf(source: PreDistributionSource, sourceRoot: string): SecretScanResult {
+  return runDistributionSecretScan({
+    repoRoot: sourceRoot,
+    sourcePaths: source.sourcePaths,
+    artifactPaths: source.exportPlan.artifactPaths,
+  });
+}
+
+/** `distribution sync-pack`: the secret scan, then the privacy scan, both always run. */
+export function runPreDistributionScans(source: PreDistributionSource) {
+  const sourceRoot = source.sourceRoot ?? source.repoRoot;
+  const secretScan = secretScanOf(source, sourceRoot);
+  const homeDirectory = source.homeDirectory ?? homedir();
+  const privacyScan = scanPack({ ...source, sourceRoot, homeDirectory });
+  return { secretScan, privacyScan, ok: secretScan.ok && privacyScan.ok };
+}
+
+/** `distribution package`: stops before anything is written, the secret scan and plan first. */
+export function assertPreDistributionScans(source: PreDistributionSource): void {
+  const sourceRoot = source.sourceRoot ?? source.repoRoot;
+  const secretScan = secretScanOf(source, sourceRoot);
+  if (!source.exportPlan.ok || !secretScan.ok)
+    throw new Error(
+      `distribution package source preflight failed: ${secretScanMessages(secretScan)[0] ?? "plan"}`,
+    );
+  const homeDirectory = source.homeDirectory ?? homedir();
+  const result = scanPack({ ...source, sourceRoot, homeDirectory });
   if (!result.ok) throw new DistributionPrivacyScanError(result);
+}
+
+export function secretScanJson(result: SecretScanResult) {
+  return { ok: result.ok, checked: result.checked, violations: result.violations };
 }
 
 export function privacyScanJson(result: PrivacyScanResult) {
@@ -94,9 +216,12 @@ export function privacyScanTextLines(result: PrivacyScanResult): string[] {
   return lines;
 }
 
-/** The text-mode lines of a rejected scan (none when it passed). */
-export function privacyScanFailureLines(result: PrivacyScanResult): string[] {
-  return result.ok ? [] : privacyScanTextLines(result);
+/** The sync-pack text-mode lines of the rejected scans (none when both passed). */
+export function scanFailureLines(secret: SecretScanResult, privacy: PrivacyScanResult): string[] {
+  return [
+    ...(secret.ok ? [] : [`${secretScanMessages(secret)[0]}`]),
+    ...(privacy.ok ? [] : privacyScanTextLines(privacy)),
+  ];
 }
 
 const maskedPath = (path: string) =>

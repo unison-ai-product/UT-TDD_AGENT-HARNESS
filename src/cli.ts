@@ -23,23 +23,21 @@ import { parse as parseYaml } from "yaml";
 import { catalogAutomationAssets } from "./assets/catalog.ts";
 import { loadBranchAudit, renderBranchAudit } from "./audit/branches.ts";
 import { renderQualityAudit, runQualityAudit } from "./audit/quality.ts";
-import { registerCodeSizeCommands } from "./cli/code-size.ts";
 import {
   adapterExecutionEnv,
   executeAdapterPlanForCli,
   registerDelegationCommands,
 } from "./cli/delegation.ts";
 import { registerDistributionCommands } from "./cli/distribution.ts";
-import { registerDocSplitCommands } from "./cli/doc-split.ts";
 import { registerFeedbackCommands } from "./cli/feedback.ts";
 import { registerGuardrailCommands } from "./cli/guardrail.ts";
 import { registerIssueCommands } from "./cli/issue.ts";
+import { registerLintGateCommands } from "./cli/lint-gates.ts";
 import { registerPlanAdmissionCommands } from "./cli/plan-admission.ts";
 import { registerPlanAssetCommands } from "./cli/plan-asset.ts";
 import { registerPlanDraftCommand } from "./cli/plan-draft.ts";
 import { registerPlanRevisionCommand } from "./cli/plan-revise.ts";
 import { registerPrMergeCommands } from "./cli/pr-merge.ts";
-import { registerPrivacyScanCommands } from "./cli/privacy-scan.ts";
 import { registerLiveReviewCommands } from "./cli/review-live.ts";
 import { contextSuggest } from "./context/doc-router.ts";
 import {
@@ -2360,9 +2358,7 @@ automation
   });
 
 registerGuardrailCommands(program);
-registerDocSplitCommands(program);
-registerPrivacyScanCommands(program);
-registerCodeSizeCommands(program);
+registerLintGateCommands(program);
 registerIssueCommands(program);
 
 const trouble = program.command("trouble").description("trouble taxonomy events");

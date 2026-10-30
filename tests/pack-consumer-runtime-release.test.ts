@@ -1509,12 +1509,10 @@ describe("Pack consumer runtime release producer byte and fail-close oracles", (
       const userHome = process.env.USERPROFILE ?? process.env.HOME ?? "";
       const username = process.env.USERNAME ?? process.env.USER ?? "";
       const forbidden = [
-        fixture.root,
-        fixture.root.replaceAll("\\", "/"),
-        process.cwd(),
-        process.cwd().replaceAll("\\", "/"),
-        join(fixture.root, "synthetic-home"),
-        join(fixture.root, "synthetic-home").replaceAll("\\", "/"),
+        ...[fixture.root, process.cwd(), privacyHome.path].flatMap((path) => [
+          path,
+          path.replaceAll("\\", "/"),
+        ]),
         userHome,
         userHome.replaceAll("\\", "/"),
         username,

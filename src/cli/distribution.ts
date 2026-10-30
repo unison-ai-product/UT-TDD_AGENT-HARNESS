@@ -18,11 +18,7 @@ import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import type { Command } from "commander";
 import { parse as parseYaml } from "yaml";
 import { buildReleasePublicationPlan } from "../github/ops-guard.ts";
-import {
-  analyzeSecretScan,
-  loadSecretScanArtifactsForPaths,
-  secretScanMessages,
-} from "../lint/secret-scan.ts";
+import { secretScanMessages } from "../lint/secret-scan.ts";
 import { detectMode } from "../runtime/detect.ts";
 import {
   buildNodeGeneration,
@@ -42,10 +38,8 @@ import {
   DEFAULT_PACK_REPO,
   gitAddPathspecCommands,
   type PackAuthoringSmokeResult,
-  projectTrackedTeamBlob,
   releaseArtifactFileNames,
   runPackAuthoringSmoke,
-  type TrackedGitBlob,
   transformCleanDistributionArtifact,
   validateConsumerRuntimeRelease,
 } from "../setup/index.ts";
@@ -200,7 +194,7 @@ function copyCleanDistributionArtifact(input: {
     input.sourcePath === ".ut-tdd/teams/example-review-team.yaml" &&
     input.artifactPath === "docs/templates/team/example-review-team.yaml"
   ) {
-    const projection = readTrackedTeamBlob(input.sourceRoot);
+    const projection = privacy.readTrackedTeamBlob(input.sourceRoot);
     if (!projection.ok) throw new Error(`authoring projection denied: ${projection.error}`);
     const to = join(input.targetRoot, ...input.artifactPath.split("/"));
     ensureDir(dirname(to), { recursive: true });
@@ -219,83 +213,6 @@ function copyCleanDistributionArtifact(input: {
     return;
   }
   cpSync(from, to, { recursive: true });
-}
-
-function readTrackedTeamBlob(repoRoot: string) {
-  const tree = spawnSync(
-    "git",
-    ["ls-tree", "-r", "-z", "--full-tree", "HEAD", "--", ".ut-tdd/teams/example-review-team.yaml"],
-    { cwd: repoRoot, encoding: "buffer", stdio: ["ignore", "pipe", "ignore"] },
-  );
-  const records = Buffer.from(tree.stdout ?? new Uint8Array())
-    .toString("utf8")
-    .split("\0")
-    .filter(Boolean);
-  const blobs: TrackedGitBlob[] = [];
-  for (const record of records) {
-    const match = /^(\d{6}) blob ([a-f0-9]{40})\t(.+)$/.exec(record);
-    if (!match) continue;
-    const blob = spawnSync("git", ["cat-file", "blob", match[2]], {
-      cwd: repoRoot,
-      encoding: "buffer",
-      stdio: ["ignore", "pipe", "ignore"],
-    });
-    if (blob.status !== 0) continue;
-    blobs.push({
-      path: match[3],
-      mode: match[1] === "100644" ? "100644" : match[1],
-      objectId: match[2],
-      bytes: new Uint8Array(blob.stdout ?? new Uint8Array()),
-    });
-  }
-  return projectTrackedTeamBlob({ blobs });
-}
-
-function runDistributionSecretScan(input: {
-  repoRoot: string;
-  sourcePaths: readonly string[];
-  artifactPaths: readonly string[];
-}): ReturnType<typeof analyzeSecretScan> {
-  const sourceArtifactPaths = input.artifactPaths.map((rel) =>
-    cleanDistributionSourcePath(rel, input.sourcePaths),
-  );
-  const artifacts = loadSecretScanArtifactsForPaths(input.repoRoot, sourceArtifactPaths).filter(
-    (artifact) => artifact.path !== ".ut-tdd/teams/example-review-team.yaml",
-  );
-  if (sourceArtifactPaths.includes(".ut-tdd/teams/example-review-team.yaml")) {
-    const projection = readTrackedTeamBlob(input.repoRoot);
-    if (!projection.ok)
-      return {
-        checked: artifacts.length,
-        violations: [
-          {
-            path: ".ut-tdd/teams/example-review-team.yaml",
-            line: 1,
-            marker: `authoring-projection-${projection.error}`,
-          },
-        ],
-        ok: false,
-      };
-    try {
-      artifacts.push({
-        path: ".ut-tdd/teams/example-review-team.yaml",
-        text: new TextDecoder("utf-8", { fatal: true }).decode(projection.bytes),
-      });
-    } catch {
-      return {
-        checked: artifacts.length,
-        violations: [
-          {
-            path: ".ut-tdd/teams/example-review-team.yaml",
-            line: 1,
-            marker: "authoring-projection-invalid-utf8",
-          },
-        ],
-        ok: false,
-      };
-    }
-  }
-  return analyzeSecretScan(artifacts);
 }
 
 function hexDigest(bytes: Uint8Array): string {
@@ -658,22 +575,12 @@ export async function packageConsumerRuntimeRelease(input: {
     const sourceRoot = createTaggedSourceSnapshot(input.repoRoot, sourceRevision, scratch);
     const sourcePaths = collectDistributionCandidatePaths(sourceRoot);
     const exportPlan = buildCleanDistributionPlan({ paths: sourcePaths, sourceTag: input.tag });
-    const secretScan = runDistributionSecretScan({
-      repoRoot: sourceRoot,
-      sourcePaths,
-      artifactPaths: exportPlan.artifactPaths,
-    });
-    if (!exportPlan.ok || !secretScan.ok)
-      throw new Error(
-        `distribution package source preflight failed: ${secretScanMessages(secretScan)[0] ?? "plan"}`,
-      );
-    privacy.assertPackPrivacy({
+    privacy.assertPreDistributionScans({
       repoRoot: input.repoRoot,
       sourceRoot,
       sourcePaths,
       exportPlan,
       homeDirectory,
-      readTeam: readTrackedTeamBlob,
     });
     const tarRelease = resolveDistributionTarReleaseIdentity({
       repoRoot: input.repoRoot,
@@ -965,7 +872,7 @@ export function registerDistributionCommands(program: Command): void {
           sourceTag: tag,
           cleanRepo: opts.cleanRepo,
         });
-        const secretScan = runDistributionSecretScan({
+        const secretScan = privacy.runDistributionSecretScan({
           repoRoot,
           sourcePaths,
           artifactPaths: exportPlan.artifactPaths,
@@ -1090,20 +997,15 @@ export function registerDistributionCommands(program: Command): void {
           sourceTag: tag,
           cleanRepo: opts.cleanRepo,
         });
-        const secretScan = runDistributionSecretScan({
+        const {
+          secretScan,
+          privacyScan,
+          ok: scansOk,
+        } = privacy.runPreDistributionScans({
           repoRoot,
-          sourcePaths,
-          artifactPaths: exportPlan.artifactPaths,
-        });
-        const privacyScan = privacy.scanPack({
-          repoRoot,
-          sourceRoot: repoRoot,
           sourcePaths,
           exportPlan,
-          homeDirectory: homedir(),
-          readTeam: readTrackedTeamBlob,
         });
-        const scansOk = secretScan.ok && privacyScan.ok;
         const sync = buildPackSyncPlan({
           exportPlan,
           sourcePaths,
@@ -1172,11 +1074,7 @@ export function registerDistributionCommands(program: Command): void {
             authoringSmoke.ok &&
             unmanagedExistingPaths.length === 0,
           export: shown.plan,
-          secretScan: {
-            ok: secretScan.ok,
-            checked: secretScan.checked,
-            violations: secretScan.violations,
-          },
+          secretScan: privacy.secretScanJson(secretScan),
           authoringSmoke,
           sync: shown.sync,
           pack: {
@@ -1215,10 +1113,7 @@ export function registerDistributionCommands(program: Command): void {
         );
         process.stdout.write(`  repo-dir: ${repoDir}\n`);
         process.stdout.write(`  copied-artifacts: ${output.pack.copiedArtifacts}\n`);
-        if (!secretScan.ok) {
-          process.stdout.write(`  ${secretScanMessages(secretScan)[0]}\n`);
-        }
-        for (const line of privacy.privacyScanFailureLines(privacyScan))
+        for (const line of privacy.scanFailureLines(secretScan, privacyScan))
           process.stdout.write(`  ${line}\n`);
         process.stdout.write(`  unmanaged-existing: ${unmanagedExistingPaths.length}\n`);
         process.stdout.write(`  pruned-local: ${prunedPaths.length}\n`);

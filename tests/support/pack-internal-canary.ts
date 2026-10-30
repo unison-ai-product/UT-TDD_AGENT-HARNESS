@@ -448,10 +448,8 @@ export async function createCanaryFixture(): Promise<CanaryFixture> {
     const releaseDir = join(root, "release");
     const consumerRoot = join(root, "consumer");
     const alternateCwd = join(root, "alternate-cwd");
-    mkdirSync(producerRoot, { recursive: true });
-    mkdirSync(releaseDir, { recursive: true });
-    mkdirSync(consumerRoot, { recursive: true });
-    mkdirSync(alternateCwd, { recursive: true });
+    for (const dir of [producerRoot, releaseDir, consumerRoot, alternateCwd])
+      mkdirSync(dir, { recursive: true });
 
     materializeProducerRoot(producerRoot);
     git(producerRoot, ["init", "--quiet"]);
