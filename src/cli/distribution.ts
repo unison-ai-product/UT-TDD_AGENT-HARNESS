@@ -60,6 +60,7 @@ import { attestReleaseChannel } from "../setup/release-channel-adapter.ts";
 import { materializeReleaseArtifacts } from "../setup/release-materializer.ts";
 import { ensureDir } from "../shared/fs.ts";
 import * as privacy from "./distribution-privacy.ts";
+import { emitSyncPlan, type SyncPlanOptions } from "./distribution-sync-plan.ts";
 
 function gitHead(): string | null {
   // Distribution commands are intentionally valid in an unpacked clean artifact,
@@ -928,56 +929,15 @@ export function registerDistributionCommands(program: Command): void {
     .option("--branch <name>", "Pack repository target branch", "main")
     .option("--staging-dir <path>", "local Pack staging clone path")
     .option("--json", "JSON output")
-    .action(
-      (opts: {
-        tag?: string;
-        cleanRepo?: string;
-        branch?: string;
-        stagingDir?: string;
-        json?: boolean;
-      }) => {
-        const repoRoot = process.cwd();
-        const tag = resolveDistributionTag(opts.tag);
-        const sourcePaths = collectDistributionCandidatePaths(repoRoot);
-        const exportPlan = buildCleanDistributionPlan({
-          paths: sourcePaths,
-          sourceTag: tag,
-          cleanRepo: opts.cleanRepo,
-        });
-        const stagingDir = opts.stagingDir
-          ? isAbsolute(opts.stagingDir)
-            ? opts.stagingDir
-            : join(repoRoot, opts.stagingDir)
-          : join(repoRoot, ".ut-tdd", "pack-sync", exportPlan.sourceTag);
-        const sync = buildPackSyncPlan({
-          exportPlan,
-          sourcePaths,
-          stagingDir,
-          branch: opts.branch,
-        });
-        const output = {
-          ok: sync.ok,
-          export: exportPlan,
-          sync,
-          actualRemoteMutationRequiresPoApproval: true,
-        };
-        if (opts.json) {
-          process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);
-          process.exitCode = sync.ok ? 0 : 1;
-          return;
-        }
-        process.stdout.write(
-          `distribution sync-plan: ${sync.ok ? "ok" : "blocked"} tag=${sync.sourceTag}\n`,
-        );
-        process.stdout.write(`  clean-repo: ${sync.cleanRepo}\n`);
-        process.stdout.write(`  staging-dir: ${sync.stagingDir}\n`);
-        process.stdout.write(`  copy-plan: ${sync.copyPlan.length} files\n`);
-        process.stdout.write(
-          "  remote mutation: requires PO approval; commands were not executed\n",
-        );
-        process.exitCode = sync.ok ? 0 : 1;
-      },
-    );
+    .action((opts: SyncPlanOptions) => {
+      const repoRoot = process.cwd();
+      emitSyncPlan({
+        repoRoot,
+        tag: resolveDistributionTag(opts.tag),
+        sourcePaths: collectDistributionCandidatePaths(repoRoot),
+        opts,
+      });
+    });
 
   distribution
     .command("sync-stage")

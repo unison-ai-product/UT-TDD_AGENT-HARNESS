@@ -333,6 +333,10 @@ function gitHead(): string | null {
   }
 }
 
+function fullGitHead(cwd: string): string {
+  return execFileSync("git", ["rev-parse", "HEAD"], { cwd, encoding: "utf8" }).trim();
+}
+
 function optionFromCommandChain<T>(cmd: Command, key: string): T | undefined {
   let current: Command | null = cmd;
   while (current) {
@@ -3417,10 +3421,7 @@ audit
   .action((opts: { generation: string; json?: boolean }) => {
     try {
       const repoRoot = process.cwd();
-      const subjectRevision = execFileSync("git", ["rev-parse", "HEAD"], {
-        cwd: repoRoot,
-        encoding: "utf8",
-      }).trim();
+      const subjectRevision = fullGitHead(repoRoot);
       const generation = verifyNodeGeneration(
         repoRoot,
         resolve(repoRoot, opts.generation),
@@ -3453,10 +3454,7 @@ audit
     }) => {
       try {
         const repoRoot = process.cwd();
-        const subjectRevision = execFileSync("git", ["rev-parse", "HEAD"], {
-          cwd: repoRoot,
-          encoding: "utf8",
-        }).trim();
+        const subjectRevision = fullGitHead(repoRoot);
         const generation = verifyNodeGeneration(
           repoRoot,
           resolve(repoRoot, opts.generation),
@@ -3577,10 +3575,7 @@ audit
         const repoRoot = process.cwd();
         const readJson = <T>(path: string): T =>
           JSON.parse(readFileSync(resolve(repoRoot, path), "utf8")) as T;
-        const retirementSubject = execFileSync("git", ["rev-parse", "HEAD"], {
-          cwd: repoRoot,
-          encoding: "utf8",
-        }).trim();
+        const retirementSubject = fullGitHead(repoRoot);
         const lanes = opts.f0cLane.map((path) => {
           const evidence = parseNodeGenerationCiEvidence(readJson<unknown>(path));
           if (!evidence) throw new Error("invalid F0c lane evidence");

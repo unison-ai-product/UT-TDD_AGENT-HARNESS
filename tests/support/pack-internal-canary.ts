@@ -211,10 +211,9 @@ function assertFixtureTree(root: string): void {
   const visit = (path: string): void => {
     for (const entry of readdirSync(path, { withFileTypes: true })) {
       const child = join(path, entry.name);
-      const info = lstatSync(child);
       // Do not follow a symlink/junction while checking our owned tree. `rmSync` unlinks it as
       // an entry; it never recursively traverses the target.
-      if (info.isSymbolicLink()) continue;
+      if (lstatSync(child).isSymbolicLink()) continue;
       if (entry.isDirectory()) visit(child);
     }
   };
@@ -225,8 +224,7 @@ function makeFixtureDirectoriesWritable(root: string): void {
   if (process.platform === "win32") return;
   const visit = (path: string): void => {
     const info = lstatSync(path);
-    if (info.isSymbolicLink()) return;
-    if (!info.isDirectory()) return;
+    if (info.isSymbolicLink() || !info.isDirectory()) return;
     chmodSync(path, info.mode | 0o700);
     for (const entry of readdirSync(path, { withFileTypes: true }))
       if (entry.isDirectory()) visit(join(path, entry.name));

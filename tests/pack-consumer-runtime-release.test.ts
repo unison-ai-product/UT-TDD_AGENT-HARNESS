@@ -302,10 +302,7 @@ function releaseManifestForFixture(artifactSourceCommit: string): Record<string,
   };
 }
 
-function createReleaseBindingFixture(
-  variant: "normal" | "tag-at-c1" | "side-branch" | "second-parent" | "src-mutation" | "schema",
-): { root: string; tag: string; c1: string; c2: string | null; side?: string } {
-  const root = mkdtempSync(join(tmpdir(), "ut-tdd-packrt-011-"));
+function commitFixtureArtifact(root: string): void {
   mkdirSync(join(root, "src"), { recursive: true });
   writeFileSync(join(root, "src", "artifact.ts"), "export const fixture = true;\n", "utf8");
   fixtureGit(root, ["init", "--quiet"]);
@@ -313,6 +310,13 @@ function createReleaseBindingFixture(
   fixtureGit(root, ["config", "user.name", "UT test"]);
   fixtureGit(root, ["add", "--", "."]);
   fixtureGit(root, ["commit", "--quiet", "-m", "fixture artifact"]);
+}
+
+function createReleaseBindingFixture(
+  variant: "normal" | "tag-at-c1" | "side-branch" | "second-parent" | "src-mutation" | "schema",
+): { root: string; tag: string; c1: string; c2: string | null; side?: string } {
+  const root = mkdtempSync(join(tmpdir(), "ut-tdd-packrt-011-"));
+  commitFixtureArtifact(root);
   const c1 = fixtureGit(root, ["rev-parse", "HEAD"]);
   const tag = "v0.2.0-canary.2";
   if (variant === "tag-at-c1") {
@@ -424,13 +428,7 @@ async function createProducerFixture(
     cpSync(from, to, { recursive: true });
   }
   rmSync(join(root, ".github", "workflows", "harness-check.yml"), { force: true });
-  mkdirSync(join(root, "src"), { recursive: true });
-  writeFileSync(join(root, "src", "artifact.ts"), "export const fixture = true;\n", "utf8");
-  fixtureGit(root, ["init", "--quiet"]);
-  fixtureGit(root, ["config", "user.email", "test@example.invalid"]);
-  fixtureGit(root, ["config", "user.name", "UT test"]);
-  fixtureGit(root, ["add", "--", "."]);
-  fixtureGit(root, ["commit", "--quiet", "-m", "fixture artifact"]);
+  commitFixtureArtifact(root);
   const fixturePlan = buildCleanDistributionPlan({
     paths: collectDistributionCandidatePaths(root),
     sourceTag: "fixture",

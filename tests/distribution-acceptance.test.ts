@@ -844,20 +844,23 @@ describe("U-OIDBASE-009 packaged default baseline authority", () => {
         encoding: "utf8",
       }).trim();
       const artifactInventoryDigest = deriveArtifactInventoryDigest(artifacts);
+      const zeroAssetInventoryDigest = `sha256:${"0".repeat(64)}`;
+      const recordDigestFor = (releaseAssetInventoryDigest: string) =>
+        deriveReleaseRecordDigest({
+          materializerVersion: "1",
+          artifactSourceCommit,
+          artifactSetDigest: materialized.digest,
+          artifactInventoryDigest,
+          releaseAssetInventoryDigest,
+        });
       const provisionalRelease = {
         releaseId: deriveReleaseId("1", artifactSourceCommit, materialized.digest),
         materializerVersion: "1",
         artifactSourceCommit,
         artifactSetDigest: materialized.digest,
         artifactInventoryDigest,
-        releaseAssetInventoryDigest: `sha256:${"0".repeat(64)}`,
-        releaseRecordDigest: deriveReleaseRecordDigest({
-          materializerVersion: "1",
-          artifactSourceCommit,
-          artifactSetDigest: materialized.digest,
-          artifactInventoryDigest,
-          releaseAssetInventoryDigest: `sha256:${"0".repeat(64)}`,
-        }),
+        releaseAssetInventoryDigest: zeroAssetInventoryDigest,
+        releaseRecordDigest: recordDigestFor(zeroAssetInventoryDigest),
         artifacts,
       };
       const provisionalPack = derivePackPublicationAssets({
@@ -870,13 +873,7 @@ describe("U-OIDBASE-009 packaged default baseline authority", () => {
       const release = {
         ...provisionalRelease,
         releaseAssetInventoryDigest: provisionalPack.value.releaseAssetInventoryDigest,
-        releaseRecordDigest: deriveReleaseRecordDigest({
-          materializerVersion: provisionalRelease.materializerVersion,
-          artifactSourceCommit: provisionalRelease.artifactSourceCommit,
-          artifactSetDigest: provisionalRelease.artifactSetDigest,
-          artifactInventoryDigest: provisionalRelease.artifactInventoryDigest,
-          releaseAssetInventoryDigest: provisionalPack.value.releaseAssetInventoryDigest,
-        }),
+        releaseRecordDigest: recordDigestFor(provisionalPack.value.releaseAssetInventoryDigest),
       };
       const packed = derivePackPublicationAssets({ release, entries: publicationEntries });
       expect(packed.ok, packed.ok ? undefined : packed.error).toBe(true);
