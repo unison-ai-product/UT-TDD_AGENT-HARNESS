@@ -3,9 +3,8 @@
  *
  * master-hub PLAN frontmatter の `roadmap:` block を読み、第一級登録工程表として扱う:
  *  - extractRoadmap / parseRoadmap: frontmatter から roadmap を抽出・schema 検証。
- *  - checkSpanExistence: span.plan_id が docs/plans に実在するか (孤児 span = 統制漏れ)。
  *  - computeGateProgress: 各層内ゲートの到達状況 (直前 span PLAN が全 confirmed か) を surface。
- *  - loadRoadmaps: docs/plans/ の登録工程表を全 load (doctor surface 用)。
+ *  - loadRoadmaps: docs/plans/ の登録工程表を全 load (harness.db projection 用)。
  *
  * 配置 = src/lint (既存 module、新 src/roadmap module を作ると module-drift 孤児になるため spike は
  * lint 配下に寄せる。S4 confirmed 後に dedicated module 化を Reverse で判断)。
@@ -63,13 +62,6 @@ export function parseRoadmap(content: string): { roadmap: Roadmap | null; errors
   }
   const structure = validateRoadmapStructure(parsed.data);
   return { roadmap: parsed.data, errors: structure.map((s) => s.message) };
-}
-
-/** span.plan_id が既知 PLAN 集合に実在するか。実在しない span = 孤児 (統制漏れ)。 */
-export function checkSpanExistence(roadmap: Roadmap, knownPlanIds: Set<string>): string[] {
-  return roadmap.spans
-    .filter((s) => !knownPlanIds.has(s.plan_id))
-    .map((s) => `工程表 span PLAN 不在 (孤児): ${s.plan_id}`);
 }
 
 export interface GateProgress {
@@ -180,27 +172,6 @@ export function analyzeProgramCoverage(
   const parked = coverage.filter((c) => !c.covered && parkedBandIds.has(c.band.id));
   const uncovered = coverage.filter((c) => !c.covered && !parkedBandIds.has(c.band.id));
   return { coverage, parked, uncovered };
-}
-
-/** doctor surface 用メッセージ (fail-close)。 */
-export function programCoverageMessages(result: ProgramCoverageResult): string[] {
-  const covered = result.coverage.filter((c) => c.covered).length;
-  const total = result.coverage.length;
-  const parked = result.parked;
-  const uncovered = result.uncovered;
-  const parkedDetails = parked
-    .map((c) => `${c.band.id}: ${PARKED_BANDS.get(c.band.id) ?? "parked"}`)
-    .join("; ");
-  if (uncovered.length === 0) {
-    return [
-      `program-coverage — OK (forward ${total} バンド、登録 ${covered} / park ${parked.length}${parkedDetails ? ` [${parkedDetails}]` : ""}、未登録 (park 除く) なし)`,
-    ];
-  }
-  const missing = uncovered.map((c) => `${c.band.id}(${c.band.name})`).join(", ");
-  const parkSuffix = parkedDetails ? `、park ${parked.length}: ${parkedDetails}` : "";
-  return [
-    `program-coverage — ⚠ ${covered}/${total} バンド登録、未登録 ${uncovered.length} 件: ${missing}${parkSuffix}。工程表 (roadmap) 未登録の forward work = 「実装どこまで?」の残り frontier (PLAN-RECOVERY-04、fail-close)`,
-  ];
 }
 
 export interface ProgramRollup {

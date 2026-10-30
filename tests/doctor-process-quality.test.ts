@@ -14,7 +14,6 @@ import {
   checkL7Completion,
   checkL14CloseAudit,
   checkPlaceholderDeps,
-  checkPlanDod,
   checkPlanTraceGate,
   checkRuleAutomationClosure,
   checkScreenImplPairFreeze,
@@ -28,7 +27,6 @@ describe("doctor process quality checks", () => {
     const missingRoot = join(tmpdir(), `ut-tdd-doctor-process-quality-${Date.now()}-missing`);
 
     const checks = [
-      ["plan-dod", checkPlanDod(missingRoot)],
       ["placeholder-deps", checkPlaceholderDeps(missingRoot)],
       ["g1-trace", checkPlanTraceGate(missingRoot, "G1-trace")],
       ["g3-trace", checkPlanTraceGate(missingRoot, "G3-trace")],

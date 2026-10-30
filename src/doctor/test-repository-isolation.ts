@@ -39,7 +39,7 @@ gate-run-publish-candidate:3 gate-run-stderr-candidate:1 github-ci-policy:1
 github-forward-store:2
 node-self-host-bootstrap:1 node-slice-admission:3 node-plan-revision-runner:3
 global-setup.ts:1 support/workspace-roots.ts:3
-global-setup-fence:1 vitest-snapshot-runner:3
+global-setup-fence:1 vitest-snapshot-runner:3 snapshot-runner-argv-candidates:2
 hook-native-launcher:1 claude-memory-terminal-gc:1 release-version-identity:2 windows-ci-single-snapshot:2 pack-authoring-template-scope:2
 profile/tracked-loader:2
 plan-asset/ledger-schema:4 plan-asset/project-identity-loader:1

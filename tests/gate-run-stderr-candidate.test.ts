@@ -9,7 +9,7 @@ const snapshotRepoRoot = process.cwd();
 const cliPath = join(snapshotRepoRoot, "src", "cli.ts");
 const warning = "gate run evidence write failed";
 
-describe("CANDIDATE-U-GATE-011: human gate evidence warning uses stderr", () => {
+describe("U-GATE-011: human gate evidence warning uses stderr", () => {
   let fixtureRoot: string | undefined;
   let stdout = "";
   let stderr = "";
@@ -64,11 +64,11 @@ describe("CANDIDATE-U-GATE-011: human gate evidence warning uses stderr", () => 
     if (fixtureRoot) removeTestTree(fixtureRoot);
   });
 
-  it.fails("CANDIDATE-U-GATE-011: writes the evidence warning to stderr", () => {
+  it.fails("U-GATE-011: writes the evidence warning to stderr", () => {
     expect(stderr).toContain(warning);
   });
 
-  it.fails("CANDIDATE-U-GATE-011: keeps the evidence warning out of stdout", () => {
+  it.fails("U-GATE-011: keeps the evidence warning out of stdout", () => {
     expect(stdout).not.toContain(warning);
   });
 });

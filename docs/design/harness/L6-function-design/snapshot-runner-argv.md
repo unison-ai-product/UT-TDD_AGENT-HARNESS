@@ -10,7 +10,7 @@ next_pair_freeze: L7
 issue: 1469
 ---
 
-> **L6 contract marker**: `parseSnapshotRunnerArgs(args: readonly string[]) => SnapshotRunnerArgs` は snapshot runner (`scripts/run-vitest-snapshot.ts`) の argv 境界に関する unit-test-granularity contract である。候補 oracle は `CANDIDATE-U-SNAPARG-001` / `CANDIDATE-U-SNAPARG-002`。oracle の詳細と既存互換軸は `docs/test-design/harness/L7-snapshot-runner-argv-test-design.md` が固定する。
+> **L6 contract marker**: `parseSnapshotRunnerArgs(args: readonly string[]) => SnapshotRunnerArgs` は snapshot runner (`scripts/run-vitest-snapshot.ts`) の argv 境界に関する unit-test-granularity contract である。正式 oracle は `U-SNAPARG-001` / `U-SNAPARG-002`。oracle の詳細と既存互換軸は `docs/test-design/harness/L7-snapshot-runner-argv-test-design.md` が固定する。
 
 > **状態**: 本書は issue #1469 の**未実装の目標契約**である。既存 runner が一部の境界を既に実装していることは、契約全体が実装済みであることを意味しない。実装はこの契約と L7 の Red を固定した後に行う。方式変更が必要なら実装を止め、本書と対になる L7 を同時に改訂する。
 

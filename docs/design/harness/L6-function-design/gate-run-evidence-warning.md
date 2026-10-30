@@ -12,7 +12,7 @@ issue: 1359
 
 # gate-run 証跡保存失敗時の警告境界 (Issue #1359)
 
-> **L6 contract marker**: `runGate(gId) => exit status` のうち、`writeGateRunEvidence` が失敗した場合の警告境界を対象とする unit-test-granularity contract である。DbC oracle の詳細 (`CANDIDATE-U-GATE-011`) は対になる L7 に置く。
+> **L6 contract marker**: `runGate(gId) => exit status` のうち、`writeGateRunEvidence` が失敗した場合の警告境界を対象とする unit-test-granularity contract である。DbC oracle の詳細 (`U-GATE-011`) は対になる L7 に置く。
 
 ## 1. 位置付け
 

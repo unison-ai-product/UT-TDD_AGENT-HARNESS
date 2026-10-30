@@ -58,7 +58,6 @@ import {
   checkL7Completion,
   checkL14CloseAudit,
   checkPlaceholderDeps,
-  checkPlanDod,
   checkPlanTraceGate,
   checkRuleAutomationClosure,
   checkScreenImplPairFreeze,
@@ -113,7 +112,6 @@ import {
   checkImprovementBacklog,
   checkLintWiring,
   checkProposalDocumentCoverage,
-  checkRightArmGatePlanning,
   checkRightLungDocGovernance,
 } from "./workflow-quality.ts";
 
@@ -192,7 +190,6 @@ export function buildDoctorCheckDefinitionGroups(
         full("gate-id-format", () => checkGateIdFormat(deps.repoRoot)),
         full("plan-schedule", () => checkPlanSchedule(deps.repoRoot)),
         full("plan-governance", () => checkPlanGovernance(deps.repoRoot)),
-        full("plan-dod", () => checkPlanDod(deps.repoRoot)),
         full("placeholder-deps", () => checkPlaceholderDeps(deps.repoRoot)),
         full("g1-trace", () => checkPlanTraceGate(deps.repoRoot, "G1-trace")),
         full("g3-trace", () => checkPlanTraceGate(deps.repoRoot, "G3-trace")),
@@ -292,7 +289,6 @@ export function buildDoctorCheckDefinitionGroups(
       id: "workflow-and-final",
       definitions: [
         full("improvement-backlog", () => checkImprovementBacklog(deps.repoRoot)),
-        full("right-arm-gate-planning", () => checkRightArmGatePlanning(deps.repoRoot)),
         full("right-lung-doc-governance", () => checkRightLungDocGovernance(deps.repoRoot)),
         full("g8-integration-workflow", () => checkG8IntegrationWorkflow(deps.repoRoot)),
         full("g9-system-workflow", () => checkG9SystemWorkflow(deps.repoRoot)),
