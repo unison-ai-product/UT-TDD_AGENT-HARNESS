@@ -34,6 +34,7 @@ const mail = (local: string, domain: string) => [local, domain].join(at);
 const P = mail("alice", "mail-provider.jp");
 // L7 §2: tests/ ship in the Pack, so the synthetic denylist word is joined at runtime too.
 const D = ["example", "private", "repo"].join("-");
+const LEAK_LINE = `${["pass", "word"].join("")} = q7w8e9r0t1y2u3`;
 const BASELINE_PATH = "docs/governance/privacy-scan-baseline.json";
 const DENYLIST = [".ut-tdd", "privacy-denylist.txt"];
 const TAG = "v0.0.0-test";
@@ -117,7 +118,11 @@ function releaseManifest(artifactSourceCommit: string): Record<string, unknown> 
  * The artifacts are commit c1; c2 adds a release manifest bound to c1 and carries TAG, so
  * `package` scans the tag snapshot (L6 §2 / §11) and `sync-pack` scans the HEAD tree.
  */
-function cleanSource(label: string, readmeSuffix: string): string {
+function cleanSource(
+  label: string,
+  readmeSuffix: string,
+  extra: Record<string, string> = {},
+): string {
   const root = join(scratchRoot, label);
   const sourcePaths = git(authorRoot, ["ls-files"]).split(/\r?\n/).filter(Boolean);
   const plan = buildCleanDistributionPlan({ paths: sourcePaths, sourceTag: TAG });
@@ -133,6 +138,7 @@ function cleanSource(label: string, readmeSuffix: string): string {
   }
   const readme = join(root, "README.md");
   writeFileSync(readme, `${readFileSync(readme, "utf8")}\n${readmeSuffix}\n`, "utf8");
+  for (const [path, text] of Object.entries(extra)) write(root, path, text);
   git(root, ["init", "-q", "-b", "main"]);
   git(root, ["config", "core.autocrlf", "false"]);
   git(root, ["config", "user.email", mail("test", "example.invalid")]);
@@ -359,6 +365,43 @@ describe("privacy scan candidate oracles (distribution)", () => {
     expect(result.stdout).toContain("path-sha256:");
     const evidence = [...changedFiles(evidenceBefore, walkFiles(join(source, ".ut-tdd"))).values()];
     expect(evidence.length).toBeGreaterThan(0);
+    for (const text of [result.stdout, result.stderr, ...evidence]) {
+      expect(text).not.toContain(D);
+    }
+  }, 400_000);
+
+  // #1454 r3 (L6 §8 / §12): both scans always run, and once the privacy scan rejects, the secret
+  // scan's path is masked as well. The file below is hit by both scans at once.
+  it.each([
+    { label: "package-json", args: ["package", "--tag", TAG, "--json"] },
+    { label: "package-text", args: ["package", "--tag", TAG] },
+    { label: "sync-pack-json", args: ["sync-pack", "--json"] },
+    { label: "sync-pack-text", args: ["sync-pack"] },
+  ])("U-PRIVSCAN-018 (regression): reports both scans and no secret-scan path ($label)", ({
+    label,
+    args,
+  }) => {
+    const home = makeHome(`b-home-${label}`, `${D}\n`);
+    const hitPath = `skills/${D}-note.md`;
+    const source = cleanSource(`b-source-${label}`, "plain line", {
+      [hitPath]: `${LEAK_LINE}\n`,
+    });
+    const outDir = join(scratchRoot, `b-out-${label}`);
+    mkdirSync(outDir, { recursive: true });
+    const target = args[0] === "package" ? "--out" : "--repo-dir";
+    const evidenceBefore = walkFiles(join(source, ".ut-tdd"));
+    const result = runDistribution(source, home, [...args, target, outDir]);
+    expect(result.status).toBe(1);
+    expect(readdirSync(outDir)).toEqual([]);
+    expect(result.stdout).toContain("path-sha256:");
+    if (args.includes("--json")) {
+      expect(kinds(privacyJson(result.stdout))).toContain("privacy-denylist-hit");
+      expect(result.stdout).toContain("secret-assignment");
+    } else {
+      expect(result.stdout).toContain("secret-scan — violation");
+      expect(result.stdout).toContain("privacy-denylist-hit");
+    }
+    const evidence = [...changedFiles(evidenceBefore, walkFiles(join(source, ".ut-tdd"))).values()];
     for (const text of [result.stdout, result.stderr, ...evidence]) {
       expect(text).not.toContain(D);
     }
