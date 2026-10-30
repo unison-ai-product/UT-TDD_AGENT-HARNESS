@@ -644,7 +644,7 @@ interface L7CompletionResult { checked: number; violations: L7CompletionViolatio
 
 | 関数 (実 export) | signature | pre | post | doctor 配線 |
 |---|---|---|---|---|
-| `analyzeDriveDbRegistration` | `(stats: DriveDbRegistrationStats \| null) => DriveDbRegistrationResult` | `stats` は `.ut-tdd/harness.db` から呼び出し元が事前に取得したもの; `null` = DB 不在 or 読み取り失敗; 純粋関数 | `null` のとき `violations=[{reason:"missing_db"}]`, `ok=false`; stats が供給された場合は plan 登録数・drive runs・workflow/model/skill runs・hook events・必須 mode 5 種 (`Discovery/Forward/Recovery/Reverse/Verification`) の各存在を検査し、1 件でも欠落があれば `ok=false` | `checkDriveDbRegistration` → `runDoctor` |
+| `analyzeDriveDbRegistration` | `(stats: DriveDbRegistrationStats \| null) => DriveDbRegistrationResult` | `stats` は `.ut-tdd/harness.db` から呼び出し元が事前に取得したもの; `null` = DB 不在 or 読み取り失敗; 純粋関数 | `null` のとき `violations=[{reason:"missing_db"}]`, `ok=false`; stats が供給された場合は plan 登録数・drive/model/skill runs・hook events・必須 mode 5 種 (`Discovery/Forward/Recovery/Reverse/Verification`) の各存在を検査し、workflow 行は件数を要求せず routine-gate 以外の orphan のみ検査する。これらの検査で1 件でも欠落があれば `ok=false` | `checkDriveDbRegistration` → `runDoctor` |
 | `driveDbRegistrationMessages` | `(result: DriveDbRegistrationResult) => string[]` | `result` は `analyzeDriveDbRegistration` の返り値 | `ok=false` のとき最大 8 件の違反理由サンプル (`reason[:mode][=count]`) を含む違反メッセージを返す; `ok=true` のとき全 stats を含む合格メッセージを返す | `checkDriveDbRegistration` → `runDoctor.messages` |
 
 型定義:
@@ -686,7 +686,7 @@ interface DriveDbRegistrationResult {
 | `empty_plan_registry` | `plan_registry` の行数。PLAN ファイル由来 | `src/lint/drive-db-registration.ts:73`, `src/state-db/drive-registration.ts:100` | 退役 |
 | `stale_plan_registry` / `stale_plan_registry_fingerprint` | `docs/plans/*.md` の件数と frontmatter hash | `drive-db-registration.ts:74-85`, `drive-registration.ts:34-59,173-174,206-207` | 退役 (0 件同士は一致するが、検査自体を置かない) |
 | `missing_drive_runs` / `plans_without_drive_run` | `drive_runs` は projectPlans が返した PLAN ごとに投入する | `drive-db-registration.ts:86-89`, `src/state-db/projection-writer.ts:440-470` | 退役 |
-| `missing_workflow_runs` | `workflow_runs` は PLAN ID を持つ gate 実行と固定の検証帯 PLAN から投入する | `drive-db-registration.ts:90`, `projection-writer.ts:1096,1242-1252` | 退役 |
+| `missing_workflow_runs` | workflow 行は現行 gate 証跡に対応して投影するが、その総件数は必須でない。§2.2 の A-132 は履歴 gate 行だけで workflow 行を作らず、現行 gate 証跡が無い状態も正常 | `drive-db-registration.ts:90`, `projection-writer.ts:1096,1242-1252` | `planCount` を問わず件数を要求しない |
 | `workflow_orphans` | `workflow_runs` → `drive_runs` の JOIN。式は `plan_registry` を経由しないが、`workflow_runs` は PLAN ID を持つ gate 証跡から作られ、`drive_runs` は PLAN のループ内でしか作られないため、PLAN を撤去すると orphan が残る(実質 PLAN 由来) | `drive-db-registration.ts:91-93`, `drive-registration.ts:110-116`, `projection-writer.ts:443,475-477,1225-1253` | `planCount` が 1 以上なら routine-gate 以外を維持 (下記 c)。0 件のときは評価しない |
 | `missing_model_runs` | レビュー証跡のある PLAN の `crossEntries` から投入 (token 計測の session 行は別経路で、fallback rebuild は `skipTokenTelemetry`) | `drive-db-registration.ts:94`, `projection-writer.ts:663-690,705,203` | 退役 |
 | `model_orphans` | `plan_registry` への JOIN (PLAN の所属に依存)。`role='session'` の行は除外済み | `drive-db-registration.ts:95-97`, `drive-registration.ts:123-129` | `planCount` が 1 以上のときだけ維持 (下記 c) |
@@ -700,7 +700,7 @@ interface DriveDbRegistrationResult {
 
 (a) 退役する検査: 入力が PLAN 由来のものは、`docs/plans/` が無い・空のときに違反にしてはならない。`stats.planCount` が 0 の入力に対して、上の「退役」の行は違反を返さない。
 
-(b) 変更しない検査: `missing_db` と `mode_catalog_unmapped`。どちらも PLAN の有無に関係しない。`planCount` が 0 のときに残る違反はこの 2 つだけである。`planCount` が 1 以上の検査は、routine-gate の除外を除き現行の振る舞いを変えない。
+(b) 変更しない検査: `missing_db` と `mode_catalog_unmapped`。どちらも PLAN の有無に関係しない。`planCount` が 0 のときに残る違反はこの 2 つだけである。例外として `missing_workflow_runs` は全 `planCount` で要求しない。§2.2 の A-132 は workflow 行を作らず、現行 gate 証跡が無い状態も正常だからである。`planCount` が 1 以上ではこの例外と routine-gate の orphan 除外だけを適用し、他の検査は現行の振る舞いを変えない。
 
 routine-gate の `workflow_runs` 行は §2.2 の gate 証跡と実行単位の照合で守るため、`workflow_orphans` の drive JOIN 検査から PLAN の有無にかかわらず常に除外する。`planCount >= 1` でも routine-gate 以外の既存 JOIN 評価を維持する。
 
@@ -708,7 +708,7 @@ routine-gate の `workflow_runs` 行は §2.2 の gate 証跡と実行単位の�
 
 - **PLAN 由来の orphan (`workflow_orphans` / `model_orphans` / `skill_recommendation_orphans` / `skill_invocation_orphans`)**: `plan_registry` に所属する行かどうかを見る検査で、orphan 検査を一括で残すことはしない。`planCount` が 1 以上のときは JOIN を維持し、routine-gate 行を除いて現行どおり評価する。`planCount` が 0 のときは所属先が存在しないので評価しない (違反にしない)。`model_orphans` で `role='session'` を除外する条件は変えない。
 - **期待 mode**: `expectedModes` は `plan_registry` から導出する。`planCount` が 0 なら空集合となり `missing_required_mode` は出ない。`expectedModes` が未提供 (legacy DB) のときの `LEGACY_REQUIRED_MODES` 照合は、`planCount` が 0 のときは行わない。
-- **必須統計の件数 (`missing_*`)**: PLAN 非依存の源 (session の token 計測、hook の生ログ) だけで数えた値で「1 件以上」を要求する検査は置かない。現行の件数は PLAN に紐づく投入のみを数えており、PLAN 非依存の件数を要求すると、計測が無い clone で恒常的に赤くなるため。
+- **必須統計の件数 (`missing_*`)**: `missing_workflow_runs` は (b) のとおり全 `planCount` で要求しない。その他は PLAN 非依存の源 (session の token 計測、hook の生ログ) だけで数えた値で「1 件以上」を要求する検査は置かない。現行の件数は PLAN に紐づく投入のみを数えており、PLAN 非依存の件数を要求すると、計測が無い clone で恒常的に赤くなるため。
 
 `planCount` が 0 のときの期待動作 (`analyzeDriveDbRegistration`):
 
@@ -716,7 +716,7 @@ routine-gate の `workflow_runs` 行は §2.2 の gate 証跡と実行単位の�
 - `stats.planCount === 0` かつ `unmappedCatalogDocs` が空なら `violations=[]`, `ok=true`。`driveRuns` / `workflowRuns` / `modelRuns` / `skillRecommendations` / `skillInvocations` / `registeredHookEvents` / `modes` が全て 0・空でも同じ。
 - `stats.planCount === 0` でも `unmappedCatalogDocs` があれば `mode_catalog_unmapped` だけを返し `ok=false`。
 - 合格メッセージ (`driveDbRegistrationMessages`) は `plans=0` を含めて出す。
-- 実装は PLAN 撤去前でも成立する: `planCount` が 1 以上では routine-gate 行の orphan 除外だけを変え、他の検査結果は変えない。`planCount` が 0 では PLAN 由来の検査を退役する。
+- 実装は PLAN 撤去前でも成立する: `missing_workflow_runs` は §2.2 の A-132 が workflow 行を作らず現行 gate 証跡も無い状態が正常なため、全 `planCount` で要求しない。`planCount` が 1 以上では routine-gate 行の orphan 除外も適用するが、routine-gate 以外の JOIN と他の検査結果は変えない。`planCount` が 0 では PLAN 由来の検査を退役する。
 
 この変更は既存の検査の撤去・限定であり、routine-gate は §2.2 の独立照合で守る。PLAN ID を要件にしない (#1166)。
 
