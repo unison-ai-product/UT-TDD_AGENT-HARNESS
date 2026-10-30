@@ -219,7 +219,7 @@ describe("U-GATE-010 gate-run identity and path", () => {
     }
   });
 
-  it.fails("U-GATE-010 derives the ID from the specified runSeed only", () => {
+  it("U-GATE-010 derives the ID from the specified runSeed only", () => {
     const input = {
       repoRoot: "/repo",
       gateId: "G4",
@@ -242,7 +242,7 @@ describe("U-GATE-010 gate-run identity and path", () => {
     expect(actualId).toBe(expectedId);
   });
 
-  it.fails("U-GATE-010 hashes path from UTF-8 ID", () => {
+  it("U-GATE-010 hashes path from UTF-8 ID", () => {
     let fixture: Fixture | undefined;
     let observation: { path: string; expectedPath: string; digestFilename: boolean } | undefined;
     let setupReady = false;
@@ -285,7 +285,7 @@ describe("U-GATE-010 gate-run identity and path", () => {
     });
   });
 
-  it.fails("U-GATE-010 rejects hash-address ID mismatch", () => {
+  it("U-GATE-010 rejects hash-address ID mismatch", () => {
     let fixture: Fixture | undefined;
     let actual: { threw: boolean; bytes: string; names: string[] } | undefined;
     let expected: { threw: boolean; bytes: string; names: string[] } | undefined;
@@ -434,7 +434,7 @@ describe("U-GATE-010 gate-run identity and path", () => {
     expect(control.value.result.ok).toBe(true);
   });
 
-  it.fails("U-GATE-010 rejects new/legacy duplicates via checkGateRunCoverage", () => {
+  it("U-GATE-010 rejects new/legacy duplicates via checkGateRunCoverage", () => {
     const duplicate = observeIsolatedFixture((fixture) => {
       const planId = "PLAN-GATE-IDENTITY-READER-DUPLICATE";
       const runId = "gate-run:G4:reader-duplicate";
@@ -468,7 +468,7 @@ describe("U-GATE-010 gate-run identity and path", () => {
     expect(duplicate.value.result.ok).toBe(false);
   });
 
-  it.fails("U-GATE-010 rejects existing legacy ID on write", () => {
+  it("U-GATE-010 rejects existing legacy ID on write", () => {
     let fixture: Fixture | undefined;
     let actual: { threw: boolean; bytes: string; names: string[] } | undefined;
     let expected: { threw: boolean; bytes: string; names: string[] } | undefined;

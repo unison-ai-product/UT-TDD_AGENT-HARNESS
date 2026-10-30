@@ -1,5 +1,6 @@
 import type { HarnessDb } from "../state-db/index.ts";
 import { upsertRow } from "../state-db/index.ts";
+import { stableId } from "../stable-id.ts";
 
 export interface AutomationReadinessRow {
   workflow_run_id: string;
@@ -30,6 +31,25 @@ function passedGateCount(db: HarnessDb, planId: string): number {
   return Number(row?.n ?? 0);
 }
 
+function hasMatchingPassedRoutineGate(db: HarnessDb, workflowRow: Record<string, unknown>): boolean {
+  const workflowRunId = String(workflowRow.workflow_run_id ?? "");
+  const planId = String(workflowRow.plan_id ?? "");
+  const phase = String(workflowRow.phase ?? "");
+  const rows = db
+    .prepare("SELECT gate_run_id, gate_id, plan_id, status FROM gate_runs")
+    .all();
+  return rows.some((gate) => {
+    const gateRunId = String(gate.gate_run_id ?? "");
+    return (
+      gateRunId !== "" &&
+      stableId("gate-workflow", gateRunId) === workflowRunId &&
+      String(gate.gate_id ?? "") === phase &&
+      String(gate.plan_id ?? "") === planId &&
+      String(gate.status ?? "") === "passed"
+    );
+  });
+}
+
 function humanBlockCount(db: HarnessDb, planId: string): number {
   const row = db
     .prepare(
@@ -46,12 +66,16 @@ export function evaluateAutomationReadiness(db: HarnessDb): AutomationReadinessR
   for (const row of rows) {
     const planId = String(row.plan_id ?? "");
     const openFindings = planId ? openFindingCount(db, planId) : 0;
-    const gates = planId ? passedGateCount(db, planId) : 0;
+    const workflow = String(row.workflow ?? "");
+    const hasGateEvidence =
+      workflow === "routine-gate"
+        ? hasMatchingPassedRoutineGate(db, row)
+        : planId !== "" && passedGateCount(db, planId) > 0;
     const humanBlocks = planId ? humanBlockCount(db, planId) : 0;
     let readyStatus: AutomationReadinessRow["ready_status"] = "ready";
     let blockedReason = "";
     let humanRequired = 0;
-    if (!planId || gates === 0) {
+    if (!hasGateEvidence) {
       readyStatus = "blocked";
       blockedReason = "missing evidence: passed gate evidence is required";
     }
