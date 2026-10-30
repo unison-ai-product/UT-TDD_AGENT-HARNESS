@@ -121,7 +121,7 @@
   "tests/plan-asset/sealed-lineage-local-migration.test.ts": { "lines": 1316, "functionExcess": null },
   "tests/plan-lint.test.ts": { "lines": 1660, "functionExcess": null },
   "tests/plan-revision-digest-query.test.ts": { "lines": 1006, "functionExcess": null },
-  "tests/projection-writer.test.ts": { "lines": 2682, "functionExcess": null },
+  "tests/projection-writer.test.ts": { "lines": 2632, "functionExcess": null },
   "tests/provider-judgment-composition.test.ts": { "lines": 934, "functionExcess": null },
   "tests/rechain-verifier.test.ts": { "lines": 1513, "functionExcess": null },
   "tests/relation-graph-loader.test.ts": { "lines": 843, "functionExcess": null },
