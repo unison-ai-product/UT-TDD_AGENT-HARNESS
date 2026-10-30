@@ -100,6 +100,20 @@ const SUPPORTED_ARGUMENT_CASES: readonly SupportedArgumentCase[] = [
   { name: "--browser as a standalone option", key: "browser-standalone", args: ["--browser"] },
   { name: "a positional test path", key: "positional-path", args: ["tests/one.test.ts"] },
   {
+    name: "repeated excludes and mixed option order",
+    key: "repeated-excludes-mixed-order",
+    args: [
+      "tests/one.test.ts",
+      "--exclude",
+      "tests/skip-one.test.ts",
+      "--reporter=dot",
+      "tests/two.test.ts",
+      "--exclude=tests/skip-two.test.ts",
+      "-t",
+      "mixed name pattern",
+    ],
+  },
+  {
     name: "unknown options after -- pass through",
     key: "separator-tail",
     args: ["--", UNKNOWN_OPTION, "opaque positional value"],
