@@ -1074,7 +1074,7 @@ export function registerDistributionCommands(program: Command): void {
             authoringSmoke.ok &&
             unmanagedExistingPaths.length === 0,
           export: shown.plan,
-          secretScan: privacy.secretScanJson(secretScan),
+          secretScan: privacy.secretScanJson(secretScan, privacyScan),
           authoringSmoke,
           sync: shown.sync,
           pack: {

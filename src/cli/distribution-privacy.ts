@@ -112,10 +112,9 @@ type SecretScanResult = ReturnType<typeof analyzeSecretScan>;
 export class DistributionPrivacyScanError extends Error {
   readonly privacyScan: PrivacyScanResult;
 
-  constructor(privacyScan: PrivacyScanResult) {
-    super(
-      `distribution package source preflight failed: ${privacyScanTextLines(privacyScan).join("; ")}`,
-    );
+  constructor(privacyScan: PrivacyScanResult, leading: readonly string[] = []) {
+    const lines = [...leading, ...privacyScanTextLines(privacyScan)];
+    super(`distribution package source preflight failed: ${lines.join("; ")}`);
     this.privacyScan = privacyScan;
   }
 }
@@ -167,7 +166,7 @@ function secretScanOf(source: PreDistributionSource, sourceRoot: string): Secret
   });
 }
 
-/** `distribution sync-pack`: the secret scan, then the privacy scan, both always run. */
+/** `sync-pack` / `package`: the secret scan, then the privacy scan, both always run. */
 export function runPreDistributionScans(source: PreDistributionSource) {
   const sourceRoot = source.sourceRoot ?? source.repoRoot;
   const secretScan = secretScanOf(source, sourceRoot);
@@ -176,20 +175,28 @@ export function runPreDistributionScans(source: PreDistributionSource) {
   return { secretScan, privacyScan, ok: secretScan.ok && privacyScan.ok };
 }
 
-/** `distribution package`: stops before anything is written, the secret scan and plan first. */
+/** `distribution package`: stops before anything is written, judging both scans together. */
 export function assertPreDistributionScans(source: PreDistributionSource): void {
-  const sourceRoot = source.sourceRoot ?? source.repoRoot;
-  const secretScan = secretScanOf(source, sourceRoot);
-  if (!source.exportPlan.ok || !secretScan.ok)
-    throw new Error(
-      `distribution package source preflight failed: ${secretScanMessages(secretScan)[0] ?? "plan"}`,
-    );
-  const homeDirectory = source.homeDirectory ?? homedir();
-  const result = scanPack({ ...source, sourceRoot, homeDirectory });
-  if (!result.ok) throw new DistributionPrivacyScanError(result);
+  const { secretScan, privacyScan } = runPreDistributionScans(source);
+  const blocked = !source.exportPlan.ok || !secretScan.ok;
+  const shown = reportedSecretScan(secretScan, privacyScan);
+  const leading = blocked ? [secretScanMessages(shown)[0] ?? "plan"] : [];
+  if (!privacyScan.ok) throw new DistributionPrivacyScanError(privacyScan, leading);
+  if (blocked) throw new Error(`distribution package source preflight failed: ${leading[0]}`);
 }
 
-export function secretScanJson(result: SecretScanResult) {
+/** L6 §8 / §12: once the privacy scan rejects, the secret scan reports no path either. */
+function reportedSecretScan(leakScan: SecretScanResult, privacy: PrivacyScanResult) {
+  if (privacy.ok) return leakScan;
+  const violations = leakScan.violations.map((item) => ({
+    ...item,
+    path: maskedPath(item.path),
+  }));
+  return { ...leakScan, violations };
+}
+
+export function secretScanJson(leakScan: SecretScanResult, privacy: PrivacyScanResult) {
+  const result = reportedSecretScan(leakScan, privacy);
   return { ok: result.ok, checked: result.checked, violations: result.violations };
 }
 
@@ -219,7 +226,7 @@ export function privacyScanTextLines(result: PrivacyScanResult): string[] {
 /** The sync-pack text-mode lines of the rejected scans (none when both passed). */
 export function scanFailureLines(leakScan: SecretScanResult, privacy: PrivacyScanResult): string[] {
   return [
-    ...(leakScan.ok ? [] : [`${secretScanMessages(leakScan)[0]}`]),
+    ...(leakScan.ok ? [] : secretScanMessages(reportedSecretScan(leakScan, privacy))),
     ...(privacy.ok ? [] : privacyScanTextLines(privacy)),
   ];
 }
