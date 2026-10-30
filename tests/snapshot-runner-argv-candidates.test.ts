@@ -469,7 +469,10 @@ describe("snapshot runner argv candidates (#1469)", () => {
     it.fails(`CANDIDATE-U-SNAPARG-002 lists accepted options for ${testCase.name}`, () => {
       const probe = unknownOptionProbes.get(testCase.key);
       if (!probe) throw new Error(`missing ${testCase.key} precondition probe`);
-      const tokens = outputOf(probe).match(/--[A-Za-z][\w-]*|-[A-Za-z]/g) ?? [];
+      const tokens =
+        outputOf(probe).match(
+          /(?<![\w-])--[A-Za-z][\w-]*(?![\w-])|(?<![\w-])-[A-Za-z](?![\w-])/g,
+        ) ?? [];
       for (const option of ACCEPTED_OPTION_TOKENS) expect(tokens).toContain(option);
     });
     it.fails(`CANDIDATE-U-SNAPARG-002 explains the separator for ${testCase.name}`, () => {
