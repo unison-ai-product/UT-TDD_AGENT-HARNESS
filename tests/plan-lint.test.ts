@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -21,7 +21,6 @@ import {
 } from "../src/plan/lint-policy.ts";
 import type { LintResult as SidecarLintResult } from "../src/plan/lint-types.ts";
 import { PARENT_DRIVE_MISMATCH_BASELINE } from "../src/plan/parent-drive-mismatch-baseline.ts";
-import { removeTestTree } from "./support/temp-tree.ts";
 
 const compliant = `---
 plan_id: PLAN-X
@@ -401,7 +400,7 @@ describe("plan schedule lint (IMP-081)", () => {
       expect(reasons).toContain("requires_missing");
       expect(reasons).toContain("parent_design_missing");
     } finally {
-      removeTestTree(root);
+      rmSync(root, { recursive: true, force: true });
     }
   });
 
@@ -459,7 +458,7 @@ describe("plan schedule lint (IMP-081)", () => {
       expect(reasons).not.toContain("parent_missing");
       expect(reasons).not.toContain("parent_drive_mismatch");
     } finally {
-      removeTestTree(root);
+      rmSync(root, { recursive: true, force: true });
     }
   });
 
@@ -524,7 +523,7 @@ describe("plan schedule lint (IMP-081)", () => {
       expect(r.violations.filter((v) => v.reason === "requires_missing")).toEqual([]);
       expect(r.violations.filter((v) => v.reason === "requires_not_ready")).toEqual([]);
     } finally {
-      removeTestTree(root);
+      rmSync(root, { recursive: true, force: true });
     }
   });
 
@@ -639,7 +638,7 @@ dependencies:
       expect(r.ok).toBe(false);
       expect(r.messages[0]).toContain("plan-governance - violation");
     } finally {
-      removeTestTree(root);
+      rmSync(root, { recursive: true, force: true });
     }
   });
 
@@ -665,7 +664,7 @@ dependencies:
         true,
       );
     } finally {
-      removeTestTree(root);
+      rmSync(root, { recursive: true, force: true });
     }
   });
 
@@ -695,7 +694,7 @@ dependencies:
       expect(result.messages.some((message) => message.includes("parent_missing"))).toBe(false);
       expect(result.messages.some((message) => message.includes("requires_missing"))).toBe(false);
     } finally {
-      removeTestTree(root);
+      rmSync(root, { recursive: true, force: true });
     }
   });
 
@@ -724,7 +723,7 @@ dependencies:
         );
       }
     } finally {
-      removeTestTree(root);
+      rmSync(root, { recursive: true, force: true });
     }
   });
 
@@ -762,7 +761,7 @@ dependencies:
         );
       }
     } finally {
-      removeTestTree(root);
+      rmSync(root, { recursive: true, force: true });
     }
   });
 
@@ -1804,7 +1803,7 @@ dependencies:
       ]);
       expect(result.findings.every((finding) => finding.file.includes("PLAN-DRAFT"))).toBe(true);
     } finally {
-      removeTestTree(root);
+      rmSync(root, { recursive: true, force: true });
     }
   });
 

@@ -4,7 +4,6 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import * as rightArmStatic from "../src/gate/right-arm-static.ts";
 import { evaluateStaticGate } from "../src/gate/static.ts";
-import { removeTestTree } from "./support/temp-tree.ts";
 
 const roots: string[] = [];
 
@@ -159,7 +158,7 @@ function requiredRecordAt(value: unknown, index: number): MutableJsonRecord {
 }
 
 afterEach(() => {
-  for (const root of roots.splice(0)) removeTestTree(root);
+  for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
   vi.restoreAllMocks();
 });
 
