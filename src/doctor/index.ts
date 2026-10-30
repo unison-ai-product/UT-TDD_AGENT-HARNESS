@@ -74,7 +74,6 @@ export {
   checkL7Completion,
   checkL14CloseAudit,
   checkPlaceholderDeps,
-  checkPlanDod,
   checkPlanTraceGate,
   checkRuleAutomationClosure,
   checkScreenImplPairFreeze,
@@ -133,7 +132,6 @@ export {
   checkImprovementBacklog,
   checkLintWiring,
   checkProposalDocumentCoverage,
-  checkRightArmGatePlanning,
   checkRightLungDocGovernance,
 } from "./workflow-quality.ts";
 export {
