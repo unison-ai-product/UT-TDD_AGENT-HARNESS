@@ -14,12 +14,12 @@ applies_to:
     - Discovery
 decision_points:
   - when: "a subtask is multi-source web research or doc summarisation with no repository-state judgement required"
-    choose: "delegate to pmo-haiku"
+    choose: "delegate to docs"
     over: "running it on the primary session model"
     because: "it is parallelisable, needs no repo-state judgement, and the cost saving outweighs verification overhead"
   - when: "a subtask requires answering whether a PLAN or repository state is complete/correct"
     choose: "keep it on the primary model, not a lightweight role"
-    over: "delegating repository-state judgement to pmo-haiku or another lightweight role"
+    over: "delegating repository-state judgement to docs or another lightweight role"
     because: "lightweight roles cannot reliably read .ut-tdd/ state — this is a named anti-pattern"
   - when: "spawning any subagent via ut-tdd claude/codex/team run"
     choose: "pass the model field explicitly"
@@ -59,11 +59,11 @@ orchestration so expensive model capacity is used only where it is needed
 
 | Task type | Assign to |
 |---|---|
-| Multi-source web research, doc summarisation | `pmo-haiku` |
-| Hypothesis generation from collected facts | `pmo-haiku` |
+| Multi-source web research, doc summarisation | `docs` |
+| Hypothesis generation from collected facts | `docs` |
 | ADR authoring, gate review, design judgement | primary session model |
 | Security / adversarial review | primary model or `security-audit` / `code-reviewer` |
-| Routine status / handover formatting | `pmo-haiku` |
+| Routine status / handover formatting | `docs` |
 
 Delegation is justified when the subtask is parallelisable, needs no
 repository-state judgement, and the cost saving outweighs the verification
@@ -73,8 +73,8 @@ model inherits the expensive parent model and burns budget.
 ## Delegation via ut-tdd
 
 ```
-ut-tdd claude --role pmo-haiku --task "..."            # execute
-ut-tdd claude --role pmo-haiku --task "..." --dry-run  # inspect the prompt first
+ut-tdd claude --role docs --task "..."            # execute
+ut-tdd claude --role docs --task "..." --dry-run  # inspect the prompt first
 ```
 
 Route subagent calls through `ut-tdd claude` / `ut-tdd codex` / `ut-tdd team

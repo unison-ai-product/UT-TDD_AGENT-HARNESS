@@ -34,7 +34,7 @@ decision_points:
     over: "Recording CONDITIONAL alone without a linked follow-up."
     because: "The skill states a CONDITIONAL outcome without a follow-up PLAN reference is treated as FAIL — unlinked conditions have no enforcement path."
   - when: "Running in hybrid mode versus single-runtime mode for the review step."
-    choose: "Dispatch to a separate code-reviewer subagent via `ut-tdd claude --role code-reviewer` in hybrid mode."
+    choose: "Dispatch to a separate code-reviewer subagent via `ut-tdd claude --role reviewer` in hybrid mode."
     over: "Performing the five-axis review in the same session/runtime that implemented the change."
     because: "Cross-agent review evidence (FR-L1-21) requires an independent check; single-runtime mode is only the fallback, recorded explicitly as `intra_runtime_subagent`."
 ---
@@ -56,7 +56,7 @@ responsibilities; load both when a PLAN needs both.
 - Entering the trace-freeze gate of any Forward or Add-feature PLAN.
 - A Recovery or Refactor PLAN requires evidence that the change does not
   introduce new defects.
-- A code-reviewer subagent is dispatched via `ut-tdd claude --role code-reviewer`.
+- A code-reviewer subagent is dispatched via `ut-tdd claude --role reviewer`.
 
 ## Pre-review checklist
 
@@ -133,7 +133,7 @@ treated as FAIL.
 In hybrid mode, dispatch to a separate subagent family:
 
 ```
-ut-tdd claude --role code-reviewer --task "review PLAN-<id> at trace-freeze" --execute
+ut-tdd claude --role reviewer --task "review PLAN-<id> at trace-freeze" --execute
 ```
 
 In single-runtime mode, record `intra_runtime_subagent` as the reviewer

@@ -1,15 +1,12 @@
 import { spawnSync } from "node:child_process";
-import {
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  writeFileSync,
-  writeSync,
-} from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
+import {
+  CandidatePreconditionFailure,
+  verifySnapshotCandidate,
+} from "./support/snapshot-candidate.ts";
 import { removeTestTree } from "./support/temp-tree.ts";
 
 /*
@@ -98,56 +95,8 @@ interface SnapshotRunnerCapture {
   snapshotStages: SnapshotStageObservation[];
 }
 
-class CandidatePreconditionFailure extends Error {}
-
 function rejectCandidatePrecondition(reason: string): never {
   throw new CandidatePreconditionFailure(reason);
-}
-
-function candidateDiagnostic(candidate: string, outcome: string, details?: unknown): void {
-  try {
-    const suffix = details === undefined ? "" : ` ${JSON.stringify(details)}`;
-    writeSync(2, `[snapshot-lifecycle ${candidate}] ${outcome}${suffix}\n`);
-  } catch {
-    // Diagnostic I/O must not affect whether the contract assertions run.
-  }
-}
-
-async function verifySnapshotCandidate(
-  candidate: string,
-  cleanup: () => void,
-  action: (assertionsReached: () => void) => Promise<void>,
-): Promise<void> {
-  let reachedAssertions = false;
-  let assertionFailure: unknown;
-  try {
-    await action(() => {
-      reachedAssertions = true;
-      candidateDiagnostic(candidate, "contract-assertions-reached");
-    });
-    if (reachedAssertions) candidateDiagnostic(candidate, "contract-assertions-completed");
-  } catch (error) {
-    if (error instanceof CandidatePreconditionFailure) {
-      candidateDiagnostic(candidate, "precondition-not-met", error.message);
-    } else if (reachedAssertions) {
-      assertionFailure = error;
-    } else {
-      candidateDiagnostic(candidate, "pre-assertion-exception", String(error));
-    }
-  }
-
-  try {
-    cleanup();
-  } catch (error) {
-    candidateDiagnostic(candidate, "cleanup-failed", String(error));
-    return;
-  }
-
-  if (assertionFailure !== undefined) {
-    candidateDiagnostic(candidate, "contract-assertions-failed", String(assertionFailure));
-    throw assertionFailure;
-  }
-  if (!reachedAssertions) candidateDiagnostic(candidate, "completed-without-contract-assertions");
 }
 
 function gitOk(cwd: string, args: string[]): boolean {
@@ -520,7 +469,7 @@ describe("snapshot runner lifecycle L7 candidate Red (issue #1129 / #1415)", () 
     expect(at(owner, 15)).toBe("continue");
   });
 
-  it.fails("CANDIDATE-U-SNAPLC-022: dirty Git runner warns and continues on the committed snapshot", async () => {
+  it("U-SNAPLC-022: dirty Git runner warns and continues on the committed snapshot", async () => {
     let fixture: GitSourceFixture | null = null;
     await verifySnapshotCandidate(
       "022",
@@ -561,17 +510,11 @@ describe("snapshot runner lifecycle L7 candidate Red (issue #1129 / #1415)", () 
         const executionSnapshot = captured.snapshotStages[0];
         if (!executionSnapshot)
           rejectCandidatePrecondition("npm stage has no snapshot observation");
-        if (
-          executionSnapshot.staged !== "base staged\n" ||
-          executionSnapshot.unstaged !== "base unstaged\n" ||
-          executionSnapshot.untracked ||
-          executionSnapshot.ignored
-        )
-          rejectCandidatePrecondition(
-            `execution snapshot does not match committed fixture: ${JSON.stringify(executionSnapshot)}`,
-          );
-
         assertionsReached();
+        expect(executionSnapshot.staged).toBe("base staged\n");
+        expect(executionSnapshot.unstaged).toBe("base unstaged\n");
+        expect(executionSnapshot.untracked).toBe(false);
+        expect(executionSnapshot.ignored).toBe(false);
         expect(captured.stderr).toContain(fixture.head);
         expect(captured.stderr).toMatch(/(?:作業\s*(?:tree|ツリー)|working tree)/i);
         expect(captured.stderr).toMatch(
@@ -585,7 +528,7 @@ describe("snapshot runner lifecycle L7 candidate Red (issue #1129 / #1415)", () 
     );
   });
 
-  it.fails("CANDIDATE-U-SNAPLC-023: non-Git Pack runner names copy source and path", async () => {
+  it("U-SNAPLC-023: non-Git Pack runner names copy source and path", async () => {
     let parent: string | null = null;
     let pack: string | null = null;
     await verifySnapshotCandidate(
@@ -630,7 +573,7 @@ describe("snapshot runner lifecycle L7 candidate Red (issue #1129 / #1415)", () 
     );
   });
 
-  it.fails("CANDIDATE-U-SNAPLC-024: clean Git runner output identifies the commit SHA", async () => {
+  it("U-SNAPLC-024: clean Git runner output identifies the commit SHA", async () => {
     let fixture: GitSourceFixture | null = null;
     await verifySnapshotCandidate(
       "024",
@@ -654,12 +597,11 @@ describe("snapshot runner lifecycle L7 candidate Red (issue #1129 / #1415)", () 
         const completionFailure = snapshotRunnerCompletionFailure(captured);
         if (completionFailure) rejectCandidatePrecondition(completionFailure);
         const executionSnapshot = captured.snapshotStages[0];
-        if (!executionSnapshot || executionSnapshot.staged !== "base staged\n")
-          rejectCandidatePrecondition(
-            `clean execution snapshot mismatch: ${JSON.stringify(executionSnapshot)}`,
-          );
+        if (!executionSnapshot)
+          rejectCandidatePrecondition("npm stage has no snapshot observation");
 
         assertionsReached();
+        expect(executionSnapshot.staged).toBe("base staged\n");
         expect(`${captured.stdout}${captured.stderr}`).toContain(fixture.head);
       },
     );

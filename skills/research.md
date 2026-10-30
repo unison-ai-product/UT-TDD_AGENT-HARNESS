@@ -29,7 +29,7 @@ decision_points:
     choose: "Re-fetch it and re-confirm the claim before continuing to cite it"
     over: "Keeping the old citation because it was valid at an earlier point"
     because: "Content behind a URL can change; an unconfirmed stale citation is unverifiable evidence"
-  - when: "A multi-source research sweep is delegated to pmo-haiku"
+  - when: "A multi-source research sweep is delegated to docs"
     choose: "Verify at least one returned source yourself before recording it as authoritative"
     over: "Recording the delegated output directly as authoritative research"
     because: "Delegated output is a claim, not evidence, until independently checked"
@@ -98,7 +98,7 @@ Unresolved / requires-further-investigation:
 ## Cost-aware delegation
 
 For multi-source sweeps, delegate to the lightweight research role via
-`ut-tdd claude --role pmo-haiku --task "..."` (inspect the prompt first with
+`ut-tdd claude --role docs --task "..."` (inspect the prompt first with
 `--dry-run`). Require: objective, minimum 2 primary sources, the output format
 above, and WebFetch confirmation per URL. Verify at least one returned source
 yourself before recording it as authoritative — delegated output is a claim, not

@@ -208,9 +208,9 @@ describe("forced-stop (PLAN-L7-02 add-impl / U-FSF)", () => {
     expect(pendingRecoveryProposals(mockDeps())).toEqual([]);
   });
 
-  it("U-FSF-006: emitClassifyRequest は pmo-haiku 契約 (role/text/output_schema) を含む", () => {
+  it("U-FSF-006: emitClassifyRequest は docs role の分類リクエスト契約 (role/text/output_schema) を含む", () => {
     const req = JSON.parse(emitClassifyRequest("やめろ"));
-    expect(req.role).toBe("pmo-haiku");
+    expect(req.role).toBe("docs");
     expect(req.text).toBe("やめろ");
     expect(req.output_schema.category).toContain("mistake");
     expect(req.output_schema.attention).toContain("high");
