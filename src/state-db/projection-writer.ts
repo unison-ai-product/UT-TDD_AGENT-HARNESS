@@ -1116,6 +1116,7 @@ export function collectGateRunEvidenceProjection(repoRoot: string): GateRunEvide
     let parsed: ProjectedGateRunEvidence;
     try {
       parsed = JSON.parse(readFileSync(file, "utf8")) as ProjectedGateRunEvidence;
+      if (!parsed || Array.isArray(parsed) || typeof parsed !== "object") throw new TypeError();
     } catch {
       result.findings.push({
         kind: "invalid-gate-run-evidence",
@@ -1169,8 +1170,7 @@ export function collectGateRunEvidenceProjection(repoRoot: string): GateRunEvide
     const status = parsed.status as "passed" | "failed";
     const checkedAt = String(parsed.checked_at);
     const rawPlanId = asString(parsed.plan_id ?? undefined) ?? "";
-    // Gate plan ids use the same exact/unique-short-alias resolution as other DB
-    // projections. Unresolved and ambiguous legacy values are intentionally blank.
+    // Resolve exact/unique legacy PLAN aliases; unresolved or ambiguous values stay blank.
     const alias = rawPlanId ? resolveLegacyPlanAlias(rawPlanId, [...plans.keys()]) : null;
     const planId = alias?.ok ? alias.value : "";
     result.gateRuns.push({
