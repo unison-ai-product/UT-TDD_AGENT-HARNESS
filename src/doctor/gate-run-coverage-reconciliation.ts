@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { type GateRunCoverageStats } from "../lint/gate-run-coverage.ts";
 import { stableId } from "../stable-id.ts";
 import { defaultHarnessDbPath, type HarnessDb, openHarnessDb } from "../state-db/index.ts";
+import { migrate } from "../state-db/migration.ts";
 import {
   collectGateRunEvidenceProjection,
   rebuildHarnessDb,
@@ -356,9 +357,14 @@ export function loadGateRunCoverageStats(repoRoot: string): GateRunCoverageStats
   const needsRebuild = !existsSync(dbPath);
   const db = openHarnessDb(dbPath, { repoRoot });
   try {
-    if (needsRebuild) rebuildHarnessDb({ repoRoot, db, skipTokenTelemetry: true });
+    // Keep the empty schema available for fail-closed diagnostics after a fresh
+    // projection rollback; all projection rows still belong to the outer transaction.
+    if (needsRebuild) migrate(db);
     try {
-      return runSqliteTransaction(db, () => reconcile(db, repoRoot));
+      return runSqliteTransaction(db, () => {
+        if (needsRebuild) rebuildHarnessDb({ repoRoot, db, skipTokenTelemetry: true });
+        return reconcile(db, repoRoot);
+      });
     } catch (error) {
       if (error instanceof GateRunCoverageMismatch) return currentStats(db, error.failure);
       throw error;
