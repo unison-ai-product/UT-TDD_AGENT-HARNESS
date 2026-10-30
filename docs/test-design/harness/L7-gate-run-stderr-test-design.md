@@ -16,4 +16,4 @@ issue: 1359
 
 | U-ID | 対象関数 | DbC oracle |
 |---|---|---|
-| CANDIDATE-U-GATE-011 | `ut-tdd gate G0.5` human-readable output / `writeGateRunEvidence` failure | **fixture 前提:** 一時 cwd を分離し、`.ut-tdd` を通常ファイル (directory ではない) にして gate 評価は実行可能なまま `.ut-tdd/gate_runs` の証跡永続化を確実に失敗させる。`--json` なしで `gate G0.5 --mode standalone --review-kind human --human-approved` を実行する。**意図する negative oracle:** 永続化 warning の stderr 出力と stdout 非混入を独立して確かめる。stdout には通常の `gate G0.5: passed` summary が残り、永続化失敗は gate verdict / exit code を変えない (passed / exit 0)。 |
+| U-GATE-011 | `ut-tdd gate G0.5` human-readable output / `writeGateRunEvidence` failure | **fixture 前提:** 一時 cwd を分離し、`.ut-tdd` を通常ファイル (directory ではない) にして gate 評価は実行可能なまま `.ut-tdd/gate_runs` の証跡永続化を確実に失敗させる。`--json` なしで `gate G0.5 --mode standalone --review-kind human --human-approved` を実行する。**意図する negative oracle:** 永続化 warning の stderr 出力と stdout 非混入を独立して確かめる。stdout には通常の `gate G0.5: passed` summary が残り、永続化失敗は gate verdict / exit code を変えない (passed / exit 0)。 |
