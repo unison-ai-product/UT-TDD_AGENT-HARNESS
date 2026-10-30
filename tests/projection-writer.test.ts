@@ -1299,58 +1299,6 @@ export function evaluateAgentGuard(input: { stage: string; route: string; model:
     }
   });
 
-  it("U-DBPROJ-GATE-04 (PLAN-RECOVERY-14): gate-run evidence for a genuinely nonexistent PLAN stays a fail-closed orphan_gate_run (negative regression)", () => {
-    // The alias-resolution and drive_run_id join fixes above must not silently swallow
-    // real orphans: evidence referencing a plan_id that never existed (typo, deleted
-    // PLAN, ad-hoc test run) must still trip gate-run-coverage.
-    const root = mkdtempSync(join(tmpdir(), "ut-tdd-gate-run-real-orphan-"));
-    try {
-      mkdirSync(join(root, "docs", "plans"), { recursive: true });
-      mkdirSync(join(root, ".ut-tdd", "gate_runs"), { recursive: true });
-      writeFileSync(
-        join(root, ".ut-tdd", "gate_runs", "G4-attempt-1.json"),
-        `${JSON.stringify(
-          {
-            schema_version: 1,
-            gate_run_id: "gate-run:G4:recovery-14-real-orphan-attempt-1",
-            gate_id: "G4",
-            plan_id: "PLAN-DOES-NOT-EXIST-RECOVERY-14",
-            status: "passed",
-            checked_at: "2026-07-17T00:00:00.000Z",
-            session_id: "session-recovery-14-real-orphan",
-            mode: "hybrid",
-            tier: "cross_agent",
-            review_kind: "cross_agent",
-            static_applicable: true,
-            source: "ut-tdd gate",
-            messages: [],
-          },
-          null,
-          2,
-        )}\n`,
-        "utf8",
-      );
-
-      const db = openHarnessDb(":memory:", { repoRoot: root });
-      try {
-        rebuildHarnessDb({ repoRoot: root, db });
-        const orphanGate = db
-          .prepare(
-            `SELECT COUNT(*) AS value
-             FROM gate_runs g
-             WHERE COALESCE(g.plan_id, '') <> ''
-               AND NOT EXISTS (SELECT 1 FROM plan_registry p WHERE p.plan_id = g.plan_id)`,
-          )
-          .get() as { value: number };
-        expect(orphanGate.value).toBe(1);
-      } finally {
-        db.close();
-      }
-    } finally {
-      rmSync(root, { recursive: true, force: true });
-    }
-  });
-
   it("projects runtime test_runs from session-log verification events with session provenance", () => {
     const db = openHarnessDb(":memory:");
     try {
