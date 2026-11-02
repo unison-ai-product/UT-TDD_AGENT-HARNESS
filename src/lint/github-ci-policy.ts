@@ -267,6 +267,8 @@ const RUNTIME_LEGS = [...HARNESS_LEGS, ...NODE_GENERATION_LEGS] as const;
 const LANE_REFERENCE_NEEDLE = "steps.classify.outputs.lane";
 const LANE_FULL_ONLY_IF = "$" + "{{ steps.classify.outputs.lane == 'full' }}";
 const LANE_DOC_ONLY_IF = "$" + "{{ steps.classify.outputs.lane == 'doc' }}";
+const DOC_LANE_DOCTOR = "node src/cli.ts doctor --profile source-doc-lane";
+const DB_REBUILD = "node src/cli.ts db rebuild --json";
 // 注意: 素朴な部分文字列一致だと "npm run test" が doc lane 専用の
 // "npm run test:doc-lane" を誤って full-only allowlist に混入させる (substring collision)。
 // `\b...\b(?!:)` で script suffix (`:fast` 等) 付き script 名との衝突を避ける。
@@ -311,7 +313,7 @@ function isFailCloseStep(step: WorkflowStep): boolean {
 function hasCanonicalDocLaneDoctor(step: WorkflowStep): boolean {
   return (
     step.if === LANE_DOC_ONLY_IF &&
-    normalizedRun(step.run) === "node src/cli.ts doctor --profile source-doc-lane" &&
+    normalizedRun(step.run) === DOC_LANE_DOCTOR &&
     step.shell === undefined &&
     step.env === undefined &&
     isFailCloseStep(step)
@@ -480,12 +482,19 @@ node src/cli.ts github guard --head-ref "$HEAD_REF" --base-ref "$BASE_REF" --pr-
       env: { BASE_SHA: `${githubExpression("github.sha")}^1` },
       run: `node src/cli.ts github design-protection --base "$BASE_SHA" --head "${githubExpression("github.sha")}"`,
     }),
+    step("privacy scan (email の形、fail-close)", {
+      env: {
+        EVENT_NAME: githubExpression("github.event_name"),
+        BASE_SHA: githubExpression("github.event.pull_request.base.sha"),
+        HEAD_SHA: githubExpression("github.event.pull_request.head.sha"),
+      },
+      run: `node src/cli.ts privacy-scan check --mode tree --fail-close
+if [ "$EVENT_NAME" = "pull_request" ]; then
+  node src/cli.ts privacy-scan check --mode diff --base "$BASE_SHA" --head "$HEAD_SHA" --fail-close
+fi`,
+    }),
     run("typecheck (tsc --noEmit)", "npm run typecheck", LANE_FULL_ONLY_IF),
-    run(
-      "db rebuild (deterministic projection)",
-      "node src/cli.ts db rebuild --json",
-      LANE_FULL_ONLY_IF,
-    ),
+    run("db rebuild (deterministic projection)", DB_REBUILD, LANE_FULL_ONLY_IF),
     step("doctor (governance hard gates)", {
       if: LANE_FULL_ONLY_IF,
       env: {
@@ -503,11 +512,7 @@ node src/cli.ts github guard --head-ref "$HEAD_REF" --base-ref "$BASE_REF" --pr-
       run: "npm run test",
     }),
     run("doc lane checks (readability / rule-drift)", "npm run test:doc-lane", LANE_DOC_ONLY_IF),
-    run(
-      "doc lane source doctor",
-      "node src/cli.ts doctor --profile source-doc-lane",
-      LANE_DOC_ONLY_IF,
-    ),
+    run("doc lane source doctor", DOC_LANE_DOCTOR, LANE_DOC_ONLY_IF),
     run("lint (biome)", "npm run lint"),
     run(
       "audit quality (gate findings)",
@@ -527,21 +532,13 @@ node src/cli.ts github guard --head-ref "$HEAD_REF" --base-ref "$BASE_REF" --pr-
       shell: "bash",
     }),
     run("typecheck (tsc --noEmit)", "npm run typecheck", LANE_FULL_ONLY_IF),
-    run(
-      "db rebuild (deterministic projection on Windows SQLite)",
-      "node src/cli.ts db rebuild --json",
-      LANE_FULL_ONLY_IF,
-    ),
+    run("db rebuild (deterministic projection on Windows SQLite)", DB_REBUILD, LANE_FULL_ONLY_IF),
     run(
       "test — Windows full 回帰 (vitest run, windows leg)",
       "npm run test:windows",
       LANE_FULL_ONLY_IF,
     ),
-    run(
-      "doc lane source checks",
-      "node src/cli.ts doctor --profile source-doc-lane",
-      LANE_DOC_ONLY_IF,
-    ),
+    run("doc lane source checks", DOC_LANE_DOCTOR, LANE_DOC_ONLY_IF),
     run("doctor (toolchain scope)", "node src/cli.ts doctor --scope toolchain", LANE_FULL_ONLY_IF),
   ],
   "node-generation-linux": [
