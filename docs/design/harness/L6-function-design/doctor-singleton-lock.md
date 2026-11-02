@@ -47,6 +47,8 @@ TTL を残している理由は、pid の再利用 (同じ pid の別プロセ�
 
 プローブ (`deps.processStartTime`) は、手順 4 の「pid が生きている」場合にだけ、かつ TTL を超えている record に限って呼ぶ。新しい record では呼ばない。Windows で 1 回 4 秒かかるため、通常の起動経路に載せない。
 
+回収判定の oracle は `docs/test-design/harness/L7-doctor-singleton-lock-test-design.md` の U-DOCLOCK-014〜018 が固定する。
+
 ## 4. 記録 (`acquireDoctorLock`)
 
 取得時に作る claim record へ `proc_start` を追加する。値は `deps.ownProcessStart()` (既定は `process.uptime()` から求めた自プロセスの開始時刻) の結果とし、null のときは field を書かない (読み出し側は旧 record として扱う)。`readLockRecord` は `proc_start` が文字列のときだけ保持し、それ以外は無視する。
