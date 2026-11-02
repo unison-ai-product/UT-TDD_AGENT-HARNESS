@@ -7,6 +7,7 @@ Consumer-owned Claude instructions can be added outside this managed block.
 - Session evidence: `ut-tdd status` and `ut-tdd handover`
 - Health check: `ut-tdd doctor --profile consumer-setup-smoke`
 - Toolchain check: `ut-tdd doctor --profile consumer-toolchain`
+- Setup troubleshooting: https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS-Pack/blob/main/docs/reference/setup-guide.md
 - Review separation: use another runtime/model family when feasible
 
 ## Claude subagent defaults
