@@ -107,7 +107,7 @@ UT-TDD-agent-harness/
 │   │   └── archive/plans/           旧 PLAN 1,004 本 (凍結・読み取り専用、#533)
 │   ├── tests/                       product/ のテスト
 │   ├── scripts/                     開発用のスクリプト
-│   ├── records/                     規律の証跡の正本 (JSON / JSONL: review receipt・memory・決定の記録)。追跡する
+│   ├── records/                     規律の証跡の正本 (JSON / JSONL: memory・決定の記録。review receipt を除く)。追跡する
 │   └── release/                     リリース工場 (Pack の生成・公開のうち、consumer の入口から import で到達しないものだけ。§4)
 │
 ├── .claude/  .codex/                ▲ 生成物: 内部デプロイが product/parts/adapters から作る。手で編集しない
@@ -125,6 +125,7 @@ root の規則:
 2. ▲ 生成物は手で編集しない。内部デプロイ (§7) で作り直される。
 3. ● ツールが root を強制する物は、最小限にする。
 4. それ以外は root に置かせない (§5 の guard が止める)。`.vscode/` は個人の設定なので追跡をやめ、ignore する。
+5. review receipt の正本は origin の `refs/ut-tdd/receipts/` (commit 内の記録別 JSON、Issue #530・V4D-102) で、`dev/records/` には置かない。
 
 ### §3.2 規律を守らせる場所
 
@@ -149,7 +150,7 @@ root の規則:
 ├── dev/
 │   ├── docs/           その project の設計・テスト設計・governance (雛形は parts/templates から)
 │   ├── tests/
-│   └── records/        規律の証跡の正本 (追跡する)
+│   └── records/        規律の証跡の正本 (追跡する。review receipt は除く: 正本は origin の `refs/ut-tdd/receipts/`、V4D-102)
 ├── .ut-tdd/            インストールした harness と実行状態・索引 (追跡しない)
 ├── .claude/ .codex/ .github/ CLAUDE.md AGENTS.md    生成物
 └── package.json など    ツール都合の root 必須物

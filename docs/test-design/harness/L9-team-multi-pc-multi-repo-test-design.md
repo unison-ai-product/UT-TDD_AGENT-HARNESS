@@ -6,7 +6,7 @@ status: confirmed
 pair_artifact: docs/design/harness/L4-basic-design/team-multi-pc-multi-repo.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 created: 2026-10-26
-updated: 2026-10-26
+updated: 2026-11-02
 issue: 1327
 related_issues: [1330, 593]
 ---
@@ -44,6 +44,7 @@ related_issues: [1330, 593]
 | CANDIDATE-ST-TEAM-011 | guard の repo 昇格 (§5) | 個人の `~/.claude` を持たない新しい clone で、`node_modules` への junction の作成や、`node_modules` の残る worktree の削除が通る | repo の hook だけで両方が拒否される。Codex 側は同じ拒否、または明記した非対称と補う検査の記録がある。`.claude/CLAUDE.md` の Hooks 一覧と `.claude/settings.json` が一致する |
 | CANDIDATE-ST-TEAM-012 | 同時実行数の表示 (§3) — A の事例「PC をまたいで数えられない」 | provider ごとの claim 中の数を、PC をまたいで数えられない | 同じ `principal` の claim を provider ごとに PC をまたいで数えて表示する (止めはしない)。上限 8 は PC 単位で従来どおり |
 | CANDIDATE-ST-TEAM-013 | PC 喪失後の review request の引き取り (§4.2) — PC1 が request を出し receipt の前に停止、PC2 が `reason` と `head` 付きで引き取り同じ head を再レビュー (PASS)、その後 PC1 が復帰 | PC1 の旧 pending request が残っているために PC2 の merge が `pending_request_for_head` で止まる。PC1 の merge が通る。`reason` / `head` / `previous` の無い引き取りや、先頭以外を期待値にした CAS が通る。鎖に無い出所不明の pending request があっても merge が通る | 欠けた引き取りと古い期待値の CAS は deny。PC1 の merge は `review_custody_on_other_machine` で拒否され、PC1 の旧 request とその receipt は merge の根拠にならない。PC2 は PC1 の旧 request が残っていても merge できる。PC2 のローカル custody の digest が ref の先頭と違えば `review_request_superseded` で拒否。鎖に無い request が同じ head にあれば拒否 |
+| CANDIDATE-ST-TEAM-014 | review receipt の正本 ref (§4.2、Issue #530、V4D-102) — GitHub 実機で導入先相当の資格情報を使う | custom ref の作成・競合・別 PC 取得が確かめられないまま、複数 PC 対応と表示される。ローカル custody と harness.db が空の新規 clone で再構築できず、merge gate が通る (または古いローカル PASS へ fallback する)。receipt の差替え、別 repo・別 head への流用、旧 request、公開途中で止まった custody が通る。request の transfer と merge が競合しても通る。導入先で custom ref が拒否されるのに複数 PC 対応と表示される merge と transfer の割込みを barrier で決定的に再現し、API 呼び出し回数・最終 ref・監査の鎖を確かめる: 検証後 `merging` の CAS 前の transfer (merge 側の CAS が負け、API 呼び出し 0)、`merging` の後の transfer (拒否し、request を維持)、API 送信直前の停止と OPEN の観測 (解除も transfer もしない)、同じ request での別 PC の再実行と元の PC の再開 (MERGED を照合して CAS で収束)、merge 受理後の応答喪失 (巻き戻さず収束)、`merged` 追記前の停止 (別 PC が追記)、結果不明・origin 不通・古い oid (解除せず、transfer と古い CAS を拒否)。 | 専用 ref の作成は create-only で、競合した 2 本目は拒否され、別 PC が明示 refspec で取得できる。空の clone で ref だけから再構築して merge gate が成功する。差替え・流用・旧 request・不完全公開・欠落は fail-close で拒否され、origin 不通でも古いローカル PASS を根拠にしない。公開途中のクラッシュは再実行で回復する。ref が拒否される環境では同一 PC 制約が残り、複数 PC 対応の表示が出ない |
 
 ## oracle 候補: repo とプロダクト (#1330)
 

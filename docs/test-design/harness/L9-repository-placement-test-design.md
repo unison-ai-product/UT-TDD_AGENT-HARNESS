@@ -26,6 +26,7 @@ plan: pending (PLAN-L4-35 は issue 596 の ledger 取り込み後に plan draft
 | CANDIDATE-PLACE-008 | Pack の構造化 (§3.4、段階 3) | Pack に `dev/` 配下のファイルが入る。`product/` の中身と、registry が列挙した追加 path (`release/manifest.yaml`、再現確認の CI workflow 1 本) 以外の path が入る。再現確認の CI workflow が入っていない。Pack 単体の checkout に、製品の npm manifest・lock・Node の版のどれかが無く、固定した Node / npm と lock から compiled ESM を再現できない | Pack の inventory が「`product/` の中身 + registry が列挙した追加 path」に完全に一致する。Pack 単体の checkout で、固定した Node / npm と lock から作った compiled ESM の digest が、公開した asset と一致する |
 | CANDIDATE-PLACE-009 | 内部デプロイ (§7) | この repo の hook が、開発中の `src/cli.ts` を直接起動している | hook が、インストールしたリリース済みの `ut-tdd.mjs` を経由して起動する |
 | CANDIDATE-PLACE-010 | 配る物の判定 (§4 component ルール) | ファイル名のパターンで配る物と配らない物を分ける。consumer の入口から import で到達するファイルが `dev/` に置かれる | 配る物の判定が import graph の到達性で決まる。到達するファイルはすべて `product/` 側にあり、`dev/release/` には到達しないファイルだけがある |
+| CANDIDATE-PLACE-011 | review receipt の置き場 (§3.1、Issue #530、V4D-102) | review receipt が `dev/records/` に置かれても registry が通す。`dev/records/` の説明に receipt が残り、`refs/ut-tdd/receipts/` が正本だという記述と食い違う | `dev/records/` には memory・決定の記録だけが置かれ、receipt の正本は origin の `refs/ut-tdd/receipts/` にあると registry と文書が一致する。`dev/records/` 配下の receipt は誤配置として検知される |
 
 ## 実行環境
 
