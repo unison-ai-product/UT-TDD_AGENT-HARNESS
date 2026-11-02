@@ -32,7 +32,6 @@ export interface DriveDbRegistrationViolation {
     | "stale_plan_registry_fingerprint"
     | "missing_drive_runs"
     | "plans_without_drive_run"
-    | "missing_workflow_runs"
     | "workflow_orphans"
     | "missing_model_runs"
     | "model_orphans"
@@ -94,7 +93,6 @@ export function analyzeDriveDbRegistration(
   if (stats.plansWithoutDriveRun > 0) {
     violations.push({ reason: "plans_without_drive_run", count: stats.plansWithoutDriveRun });
   }
-  if (stats.workflowRuns <= 0) violations.push({ reason: "missing_workflow_runs" });
   if (stats.workflowOrphans > 0) {
     violations.push({ reason: "workflow_orphans", count: stats.workflowOrphans });
   }

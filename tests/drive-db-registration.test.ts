@@ -359,7 +359,7 @@ describe("drive DB registration lint", () => {
     }
   });
 
-  it.fails("U-DOCTOR-GATE-04 A4: excludes routine-gate rows without documented drive runs but keeps other workflow orphans", () => {
+  it("U-DOCTOR-GATE-04 A4: excludes routine-gate rows without documented drive runs but keeps other workflow orphans", () => {
     let fixture: ReturnType<typeof buildRoutineGateOrphanFixture>;
     try {
       fixture = buildRoutineGateOrphanFixture();

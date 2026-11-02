@@ -112,7 +112,8 @@ export function collectDriveDbRegistrationStats(
       `SELECT COUNT(*) AS value
        FROM workflow_runs w
        LEFT JOIN drive_runs d ON d.drive_run_id = w.drive_run_id
-       WHERE d.drive_run_id IS NULL`,
+       WHERE d.drive_run_id IS NULL
+         AND COALESCE(w.workflow, '') <> 'routine-gate'`,
     ),
     modelRuns: count(db, "SELECT COUNT(*) AS value FROM model_runs"),
     // session-scoped token telemetry rows (role='session', plan_id='', written by projectTokenUsage

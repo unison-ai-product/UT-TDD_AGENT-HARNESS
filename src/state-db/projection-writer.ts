@@ -84,6 +84,10 @@ import {
   projectVerificationDefectRoutingRefactorCandidates,
   reconcileFeedbackLifecycle,
 } from "./feedback-projections.ts";
+import {
+  collectGateRunEvidenceProjection as collectGateRunEvidenceProjectionCore,
+  type GateRunEvidenceProjection,
+} from "./gate-run-evidence-projection.ts";
 import { rebuildExecutionReadiness } from "./github-forward-projection.ts";
 import { type GuardrailDecisionInput, inspectGuardrailInvariants } from "./guardrail-invariants.ts";
 import { defaultHarnessDbPath, type HarnessDb, openHarnessDb } from "./index.ts";
@@ -113,6 +117,11 @@ import {
 import { hasVmodelAuthoring, projectVmodelAuthoring } from "./vmodel-projections.ts";
 
 export type { ProjectionEvent } from "../projection/contracts/projection-store.ts";
+export type {
+  GateRunEvidenceProjection,
+  GateRunEvidenceProjectionRow,
+  GateRunWorkflowProjectionRow,
+} from "./gate-run-evidence-projection.ts";
 
 export interface RebuildHarnessDbInput {
   repoRoot?: string;
@@ -170,14 +179,6 @@ interface SessionLogProjection {
   outcome?: string;
 }
 
-interface ProjectedGateRunEvidence {
-  gate_run_id?: unknown;
-  gate_id?: unknown;
-  plan_id?: unknown;
-  status?: unknown;
-  checked_at?: unknown;
-}
-
 interface ProviderHandoverProjection {
   handover_id?: string;
   from?: string;
@@ -188,10 +189,6 @@ interface ProviderHandoverProjection {
     summary?: string;
   };
 }
-
-const VERIFY_CUTOVER_PLAN_ID = "PLAN-M-00-verify-cutover";
-const VERIFY_CUTOVER_AUDIT_PATH = ".ut-tdd/audit/A-132-l8-l14-verification-band-execution.md";
-const VERIFICATION_BAND_LAYERS = ["L8", "L9", "L10", "L11", "L12", "L13", "L14"] as const;
 
 function nowIso(): string {
   return new Date().toISOString();
@@ -213,10 +210,6 @@ function scalarNumber(db: HarnessDb, sql: string, params: unknown[] = []): numbe
   const row = db.prepare(sql).get(...params) as Record<string, unknown> | undefined;
   const value = row?.value;
   return typeof value === "number" ? value : Number(value ?? 0);
-}
-
-function planExists(db: HarnessDb, planId: string): boolean {
-  return new SqliteProjectionStore(db).planExists(planId);
 }
 
 function recordFinding(db: HarnessDb, input: ProjectionFindingInput): void {
@@ -1049,216 +1042,20 @@ function projectDescentObligations(repoRoot: string, db: HarnessDb): void {
   }
 }
 
-function projectVerificationBandExecution(db: HarnessDb): void {
-  if (!planExists(db, VERIFY_CUTOVER_PLAN_ID)) return;
-
-  const programCoveredBands = scalarNumber(
-    db,
-    "SELECT covered_bands AS value FROM roadmap_rollups WHERE rollup_id = ?",
-    ["program"],
-  );
-  const programTotalBands = scalarNumber(
-    db,
-    "SELECT total_bands AS value FROM roadmap_rollups WHERE rollup_id = ?",
-    ["program"],
-  );
-  const reachedGates = scalarNumber(
-    db,
-    "SELECT reached_gates AS value FROM roadmap_rollups WHERE rollup_id = ?",
-    ["program"],
-  );
-  const totalGates = scalarNumber(
-    db,
-    "SELECT total_gates AS value FROM roadmap_rollups WHERE rollup_id = ?",
-    ["program"],
-  );
-  const passingReviewEvidence = scalarNumber(
-    db,
-    "SELECT COUNT(*) AS value FROM review_evidence_registry WHERE plan_id IN (?, ?) AND has_evidence = 1 AND verdict = ?",
-    [VERIFY_CUTOVER_PLAN_ID, "PLAN-M-01-cutover-backfill", "pass"],
-  );
-  const checkedAt = nowIso();
-  const driveRunId = stableId("drive-run", `${VERIFY_CUTOVER_PLAN_ID}:documented`);
-  const localPass =
-    programTotalBands > 0 &&
-    programCoveredBands === programTotalBands &&
-    totalGates > 0 &&
-    reachedGates === totalGates &&
-    passingReviewEvidence >= 2;
-
-  for (const layer of VERIFICATION_BAND_LAYERS) {
-    const humanRequired = layer === "L12" || layer === "L13" ? 1 : 0;
-    const blockedReason =
-      humanRequired === 1
-        ? "production deploy, post-deploy observation, and PO signoff are explicitly outside this local execution band"
-        : "";
-    recordProjectionEvent(db, {
-      table: "workflow_runs",
-      id: stableId("verification-band-workflow", layer),
-      row: {
-        workflow_run_id: stableId("verification-band-workflow", layer),
-        plan_id: VERIFY_CUTOVER_PLAN_ID,
-        drive_run_id: driveRunId,
-        workflow: "L8-L14-verification-band",
-        phase: layer,
-        ready_status: localPass ? "passed_local" : "blocked",
-        blocked_reason: localPass
-          ? blockedReason
-          : "roadmap, gate, or review evidence projection is incomplete",
-        human_required: humanRequired,
-        checked_at: checkedAt,
-      },
-    });
-    recordProjectionEvent(db, {
-      table: "gate_runs",
-      id: stableId("verification-band-gate", layer),
-      row: {
-        gate_run_id: stableId("verification-band-gate", layer),
-        gate_id: `G-VERIFY.${layer}`,
-        plan_id: VERIFY_CUTOVER_PLAN_ID,
-        status: localPass ? "passed" : "blocked",
-        checked_at: checkedAt,
-        evidence_path: VERIFY_CUTOVER_AUDIT_PATH,
-      },
-    });
-    recordProjectionEvent(db, {
-      table: "coverage",
-      id: stableId("verification-band-coverage", `${layer}:local_check_passed`),
-      row: {
-        coverage_id: stableId("verification-band-coverage", `${layer}:local_check_passed`),
-        scope: "verification-band",
-        subject_id: layer,
-        metric: "local_check_passed",
-        value: localPass ? 1 : 0,
-        threshold: 1,
-        status: localPass ? "passed" : "blocked",
-      },
-    });
-  }
-
-  for (const metric of [
-    {
-      subject_id: "program",
-      metric: "covered_program_bands",
-      value: programCoveredBands,
-      threshold: programTotalBands,
-    },
-    {
-      subject_id: "program",
-      metric: "reached_roadmap_gates",
-      value: reachedGates,
-      threshold: totalGates,
-    },
-    {
-      subject_id: "review",
-      metric: "passing_review_evidence",
-      value: passingReviewEvidence,
-      threshold: 2,
-    },
-  ]) {
-    const passed = metric.threshold > 0 && metric.value >= metric.threshold;
-    recordProjectionEvent(db, {
-      table: "coverage",
-      id: stableId("verification-band-coverage", `${metric.subject_id}:${metric.metric}`),
-      row: {
-        coverage_id: stableId(
-          "verification-band-coverage",
-          `${metric.subject_id}:${metric.metric}`,
-        ),
-        scope: "verification-band",
-        subject_id: metric.subject_id,
-        metric: metric.metric,
-        value: metric.value,
-        threshold: metric.threshold,
-        status: passed ? "passed" : "blocked",
-      },
-    });
-  }
+// Gate coverage reconciliation shares this pure reader with rebuild and doctor so both
+// compare the same evidence-backed six-column rows without writing through one another.
+export function collectGateRunEvidenceProjection(repoRoot: string): GateRunEvidenceProjection {
+  return collectGateRunEvidenceProjectionCore(repoRoot, { hash: stableHash, asString });
 }
 
-// PLAN-RECOVERY-14: gate 証跡 (.ut-tdd/gate_runs/*.json) は projectHookEvents /
-// projectReviewModelRuns 等と異なり legacy plan alias (PLAN rename でファイル名に説明的
-// suffix が付いた旧 short-id 参照) を解決していなかった。これが orphan_gate_run の主因の
-// 一つ (alias 解決可能な行が恒久 orphan として残り続ける)。他 projection と同じ
-// resolveProjectedPlanId で揃える。
-function projectGateRunEvidence(
-  repoRoot: string,
-  db: HarnessDb,
-  plans: Map<string, ProjectedPlan>,
-): void {
-  const dir = join(repoRoot, ".ut-tdd", "gate_runs");
-  if (!existsSync(dir)) return;
-  const files = readdirSync(dir)
-    .filter((name) => name.endsWith(".json"))
-    .map((name) => join(dir, name))
-    .sort();
-  for (const file of files) {
-    const evidencePath = normalizePath(relative(repoRoot, file));
-    let parsed: ProjectedGateRunEvidence;
-    try {
-      parsed = JSON.parse(readFileSync(file, "utf8")) as ProjectedGateRunEvidence;
-    } catch {
-      recordFinding(db, {
-        kind: "invalid-gate-run-evidence",
-        severity: "warn",
-        subjectId: evidencePath,
-        source: "gate-run-projection",
-        evidencePath,
-      });
-      continue;
-    }
-    const gateRunId = asString(parsed.gate_run_id);
-    const gateId = asString(parsed.gate_id);
-    const status =
-      parsed.status === "passed" ? "passed" : parsed.status === "failed" ? "failed" : null;
-    const checkedAt = asString(parsed.checked_at);
-    if (!gateRunId || !gateId || !status || !checkedAt) {
-      recordFinding(db, {
-        kind: "invalid-gate-run-evidence",
-        severity: "warn",
-        subjectId: evidencePath,
-        source: "gate-run-projection",
-        evidencePath,
-      });
-      continue;
-    }
-    const rawPlanId = asString(parsed.plan_id ?? undefined) ?? "";
-    const planId = rawPlanId ? resolveProjectedPlanId(plans, rawPlanId) : "";
-    recordProjectionEvent(db, {
-      table: "gate_runs",
-      id: gateRunId,
-      row: {
-        gate_run_id: gateRunId,
-        gate_id: gateId,
-        plan_id: planId,
-        status,
-        checked_at: checkedAt,
-        evidence_path: evidencePath,
-      },
-    });
-    if (!planId) continue;
-    const workflowRunId = stableId("gate-workflow", gateRunId);
-    recordProjectionEvent(db, {
-      table: "workflow_runs",
-      id: workflowRunId,
-      row: {
-        workflow_run_id: workflowRunId,
-        plan_id: planId,
-        // Must match the "documented" (session_id="") drive_runs row id that
-        // projectDriveRuns always creates for every projected plan
-        // (`stableId("drive-run", `${planId}:documented`)`). The previous
-        // `stableId("gate-drive", planId)` used a different id prefix, so it could
-        // never join drive_runs — every gate-derived workflow_runs row was a
-        // guaranteed false-positive workflow_orphans hit (PLAN-RECOVERY-14 root cause).
-        drive_run_id: stableId("drive-run", `${planId}:documented`),
-        workflow: "routine-gate",
-        phase: gateId,
-        ready_status: status === "passed" ? "passed" : "blocked",
-        blocked_reason: status === "passed" ? "" : "gate run status failed",
-        human_required: 0,
-        checked_at: checkedAt,
-      },
-    });
+function projectGateRunEvidence(repoRoot: string, db: HarnessDb): void {
+  const projection = collectGateRunEvidenceProjection(repoRoot);
+  for (const finding of projection.findings) recordFinding(db, finding);
+  for (const row of projection.gateRuns) {
+    recordProjectionEvent(db, { table: "gate_runs", id: row.gate_run_id, row });
+  }
+  for (const row of projection.workflowRuns) {
+    recordProjectionEvent(db, { table: "workflow_runs", id: row.workflow_run_id, row });
   }
 }
 
@@ -2665,8 +2462,7 @@ export function rebuildHarnessDb(input: RebuildHarnessDbInput = {}): RebuildHarn
         projectDescentObligations(repoRoot, db);
         projectDesignPairFreezeFindings(repoRoot, db);
         projectDesignQualityCoverage(repoRoot, db);
-        projectVerificationBandExecution(db);
-        projectGateRunEvidence(repoRoot, db, plans);
+        projectGateRunEvidence(repoRoot, db);
       });
       time("automation-memory", () => {
         projectAutomationAssets(repoRoot, db);

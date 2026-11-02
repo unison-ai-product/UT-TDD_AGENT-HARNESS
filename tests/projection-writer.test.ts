@@ -820,7 +820,7 @@ export function evaluateAgentGuard(input: { stage: string; route: string; model:
     }
   });
 
-  it.fails("U-DBPROJ-GATE-01 projects each persisted gate run without treating repeated routine gates as retries", () => {
+  it("U-DBPROJ-GATE-01 projects each persisted gate run without treating repeated routine gates as retries", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-gate-run-projection-"));
     const planId = "PLAN-L7-363-routine-gate-run-projection";
     try {
@@ -932,7 +932,7 @@ export function evaluateAgentGuard(input: { stage: string; route: string; model:
     }
   });
 
-  it.fails("U-DBPROJ-GATE-01 projects planless gate runs to workflow rows and excludes retry groups", () => {
+  it("U-DBPROJ-GATE-01 projects planless gate runs to workflow rows and excludes retry groups", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-planless-gate-run-projection-"));
     const runs = [
       { gate_run_id: "gate-run:G7:planless-attempt-1", status: "failed" },
@@ -1051,7 +1051,7 @@ export function evaluateAgentGuard(input: { stage: string; route: string; model:
     }
   });
 
-  it.fails.each([
+  it.each([
     false,
     true,
   ])("U-DBPROJ-GATE-01 keeps A-132 seeds historical and ownerless with PLAN present=%s", (planPresent) => {

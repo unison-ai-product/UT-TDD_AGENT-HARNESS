@@ -309,7 +309,7 @@ describe("U-GATE-009 independent publish Reds", () => {
     );
   }, 120_000);
 
-  it.fails("U-GATE-009: races two OS processes publishing one synthetic run ID", async () => {
+  it("U-GATE-009: races two OS processes publishing one synthetic run ID", async () => {
     let observation: PublishObservation;
     try {
       observation = await runPublishers(2);

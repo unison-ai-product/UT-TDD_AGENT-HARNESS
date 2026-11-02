@@ -145,6 +145,7 @@ export class SqliteProjectionStore
                 (SELECT COUNT(*) FROM (
                   SELECT plan_id, workflow, phase
                     FROM workflow_runs
+                   WHERE COALESCE(workflow, '') <> 'routine-gate'
                    GROUP BY plan_id, workflow, phase
                   HAVING COUNT(*) > 1
                 )) AS retry_groups
