@@ -7,7 +7,7 @@ pair_artifact: docs/test-design/harness/L9-team-multi-pc-multi-repo-test-design.
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 next_pair_freeze: L9
 created: 2026-10-26
-updated: 2026-10-26
+updated: 2026-11-02
 issue: 1327
 related_issues: [1330, 593]
 ---
@@ -127,9 +127,22 @@ L9 の受入 oracle (CANDIDATE-ST-TEAM-004) で確かめる。
   依頼者の `principal`・`machine_id` と、ローカル custody に置いた request の digest である。
 - 同じ head に 2 本目の request を出すと deny し、既存の依頼者と PC を返す。これで、2 つの PC から同じ head に request を
   出して merge gate が詰まる事態 (#700 と同じ形) を防ぐ。
-- review の receipt と verdict は、今は PC ローカルの custody にある (表 §2 #6)。receipt を git の中に置くか外に置くかは
-  v4 要件の未確定事項 U-1 であり、本書では決めない。U-1 が決まるまでは、merge は request の `machine_id` の PC で行う。
-  別の PC の `ut-tdd pr merge` は `review_custody_on_other_machine` で拒否し、custody のある PC の `label` を返す。
+- review の receipt と verdict は、今は PC ローカルの custody にある (表 §2 #6)。v4 の未確定事項 U-1 の決定 (Issue #530、V4D-102)
+  により、正本は origin の専用 ref `refs/ut-tdd/receipts/pr-<number>/<head sha>/<request digest>` が指す commit 内の、記録別の
+  JSON ファイル (request・verdict・receipt・実行証跡。1 記録 1 ファイル) とする。`machine_id` は発行元の識別として残し、
+  レビューの有効性の条件にはしない。完成した custody を公開してから merge を許可し、公開失敗は拒否する。同じ記録 ID の別内容への
+  置換、欠落、競合、digest 不一致、失効した request は fail-close とする。`.ut-tdd/` と harness.db は取得キャッシュ・索引で、
+  新規 clone から ref だけで再構築できなければならない。create-only と CAS は協調するクライアントの競合対策であり、書き込み権限を
+  持つ人による削除・改変は防げない (§4.1 と同じ限界)。
+- 公開と別 PC の merge gate: `ut-tdd pr merge` は origin から現行 request と対応する custody を明示 fetch し、repo・PR・
+  exact head・request digest・発行元・非著者 family・verdict・失効を照合する。現行 request のレビューと CI が揃ったときだけ、
+  head 条件付きで merge する。origin に届かないとき、または共有証跡が欠けているときは、古いローカル PASS へ fallback しない。
+  標準の clone / fetch は `refs/ut-tdd/*` を取らないので、明示 refspec (`+refs/ut-tdd/receipts/*:refs/ut-tdd/receipts/*`) と、
+  専用 ref を含むバックアップが要る。
+- 実装と実機確認 (#530 の項目。custom ref の作成・競合・別 PC 取得、空の clone での再構築、差替え・流用・旧 request・不完全公開の
+  拒否) が済むまでは、現行の同一 PC 制約を保つ: merge は request の `machine_id` の PC で行い、別の PC の `ut-tdd pr merge` は
+  `review_custody_on_other_machine` で拒否して custody のある PC の `label` を返す。導入先で custom ref の作成・取得が拒否される
+  場合も同一 PC 制約を残し、複数 PC 対応と表示しない。
 - custody のある PC が失われた場合の引き取り (transfer) は、次の契約に従う。前提として、現行の merge gate は同じ head の
   request を全件判定し、verdict の無い request が 1 件でもあれば `pending_request_for_head` で拒否する
   (`src/feedback/review-merge-gate.ts:230-242`)。PC の一致だけでは、どの request が現行かを選べない。
@@ -240,7 +253,7 @@ advisor との相談は 2 回行った (`ut-tdd advisor --decision design --curr
 | claim と lease の関係 | lease を作らない | advisor の 1 回目は「V4D-056 の path lease と二重機構になる」と反論したが、V4D-056 は lease を撤回した決定である (requests / acceptance の撤回表)。この実測を突き返し、2 回目で advisor が撤回した |
 | claim の監査 | ref の commit の鎖に記録し、ref を削除しない | 投影コメントにだけ監査を残す案: 投影は正本へ読み戻さない (UTV4-FR-004) ので、記録の無い引き取りを deny する判定 (UTV4-FR-030) の入力にならない (advisor 2 回目の指摘を採択) |
 | claim の期限 | 期限を持たない。解放は release と transfer | TTL・heartbeat: 期限切れ lease の受入 (旧 AC-009) は行ごと廃止されている |
-| review の custody | U-1 が決まるまで PC ローカルのまま、request ref に `machine_id` を記録して merge の PC を束縛する | custody の共有をここで決める案: v4 要件の未確定事項 U-1 を本書が先取りすることになる |
+| review の custody | 正本は `refs/ut-tdd/receipts/` の commit 内 JSON (V4D-102)。実装と実機確認までは PC ローカルのまま、`machine_id` で merge の PC を束縛する | main への bookkeeping commit や dev/records/ への収録: exact head を動かすか、main の保護を変える必要が出る |
 | merge gate のネットワーク依存 | 許す (fail-close) | advisor の 1 回目は「merge gate が新たにネットワーク依存になる」と反論したが、`review-merge-gate.ts:566` がすでに `gh pr view` を呼んでいる。突き返し、2 回目で advisor が撤回した |
 | member の登録先 | 新しい `ut-tdd.product.json` | `ut-tdd.project.json` に key を足す案: strict v1 decoder (`project-identity.ts:228`) が読めなくなる。GitHub Projects v2 をプロダクトにする案: 投影を正本にすることになる (UTV4-FR-004 / FR-006) |
 | 契約の置き場 | home が登録する所有 repo (契約だけの repo も可) | 契約専用 repo を必須にする案: repo が 1 つ増えるだけで、検知の仕組みは同じ |
