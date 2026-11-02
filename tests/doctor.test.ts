@@ -395,7 +395,7 @@ describe("gate-run-coverage doctor", () => {
     expect(gateRunCoverageMessages(result).join("\n")).toContain("gate-run-coverage - OK");
   });
 
-  it.fails("analyzer accepts one blank-plan gate when the reciprocal projection is complete", () => {
+  it("analyzer accepts one blank-plan gate when the reciprocal projection is complete", () => {
     const result = analyzeGateRunCoverage({
       gateRuns: 1,
       workflowRuns: 1,
@@ -442,7 +442,7 @@ describe("gate-run-coverage doctor", () => {
     }
   });
 
-  it.fails("U-DOCTOR-GATE-01 accepts a planless run only with its matching workflow projection", () => {
+  it("U-DOCTOR-GATE-01 accepts a planless run only with its matching workflow projection", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-doctor-gate-run-planless-"));
     const gateRunId = "gate-run:planless-1";
     try {
@@ -476,7 +476,7 @@ describe("gate-run-coverage doctor", () => {
     }
   });
 
-  it.fails("U-DOCTOR-GATE-01 accepts a valid gate/workflow pair whose plan is not registered", () => {
+  it("U-DOCTOR-GATE-01 accepts a valid gate/workflow pair whose plan is not registered", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-doctor-gate-run-unregistered-plan-"));
     const planId = "PLAN-NOT-REGISTERED-GATE-COVERAGE";
     try {
@@ -504,7 +504,7 @@ describe("gate-run-coverage doctor", () => {
     }
   });
 
-  it.fails("U-DOCTOR-GATE-01 detects a same-plan workflow that has no gate-run counterpart", () => {
+  it("U-DOCTOR-GATE-01 detects a same-plan workflow that has no gate-run counterpart", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-doctor-gate-run-workflow-extra-"));
     const planId = "PLAN-GATE-COVERAGE-RECIPROCAL";
     try {
@@ -541,7 +541,7 @@ describe("gate-run-coverage doctor", () => {
     }
   });
 
-  it.fails("U-DOCTOR-GATE-01 detects a gate run whose reciprocal workflow row is missing", () => {
+  it("U-DOCTOR-GATE-01 detects a gate run whose reciprocal workflow row is missing", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-doctor-gate-run-workflow-missing-"));
     const planId = "PLAN-GATE-COVERAGE-MISSING-WORKFLOW";
     try {
@@ -568,7 +568,7 @@ describe("gate-run-coverage doctor", () => {
     }
   });
 
-  it.fails.each([
+  it.each([
     ["phase drift", "UPDATE workflow_runs SET phase = ? WHERE workflow_run_id = ?", "G2"],
     [
       "derived id drift",
@@ -601,7 +601,7 @@ describe("gate-run-coverage doctor", () => {
     }
   });
 
-  it.fails.each([
+  it.each([
     {
       field: "gate_run_id",
       gateSql: "UPDATE gate_runs SET gate_run_id = ? WHERE gate_run_id = ?",
@@ -700,7 +700,7 @@ describe("gate-run-coverage doctor", () => {
     expect(fixture.value.result.ok).toBe(false);
   });
 
-  it.fails("U-DOCTOR-GATE-02 treats null evidence plan_id and empty DB plan_id as equal", () => {
+  it("U-DOCTOR-GATE-02 treats null evidence plan_id and empty DB plan_id as equal", () => {
     const fixture = observeIsolatedFixture("ut-tdd-doctor-gate-run-empty-plan-equal-", (root) => {
       writeGateRunEvidence(root, { gateRunId: "gate-run:empty-plan-equal", planId: null });
       const result = checkGateRunCoverage(root);
@@ -722,7 +722,7 @@ describe("gate-run-coverage doctor", () => {
     ]);
   });
 
-  it.fails("U-DOCTOR-GATE-04 rolls back additions and deletions when an existing row mismatches", () => {
+  it("U-DOCTOR-GATE-04 rolls back additions and deletions when an existing row mismatches", () => {
     const mismatchedGateRunId = "gate-run:rollback-mismatched-existing";
     const removedEvidenceGateRunId = "gate-run:rollback-removed-evidence";
     const addedEvidenceGateRunId = "gate-run:rollback-added-evidence";
@@ -803,7 +803,7 @@ describe("gate-run-coverage doctor", () => {
     );
   });
 
-  it.fails("U-DOCTOR-GATE-03 removes the DB-only gate/workflow pair after evidence disappears", () => {
+  it("U-DOCTOR-GATE-03 removes the DB-only gate/workflow pair after evidence disappears", () => {
     const fixture = observeIsolatedFixture("ut-tdd-doctor-gate-run-missing-evidence-", (root) => {
       const planId = "PLAN-GATE-COVERAGE-MISSING-EVIDENCE";
       writePlanFixture(root, planId);
@@ -833,7 +833,7 @@ describe("gate-run-coverage doctor", () => {
     expect(fixture.value.afterSecondCheck).toEqual(fixture.value.afterFirstCheck);
   });
 
-  it.fails("U-DOCTOR-GATE-01 projects only the seven canonical A-132 rows as historical", () => {
+  it("U-DOCTOR-GATE-01 projects only the seven canonical A-132 rows as historical", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-doctor-gate-run-seed-"));
     try {
       writeVerificationBandAudit(root);
@@ -843,7 +843,7 @@ describe("gate-run-coverage doctor", () => {
 
       expect(result.ok).toBe(true);
       expect(projection.gateRuns).toEqual(
-        VERIFICATION_BAND_LAYERS.map((layer) => ({
+        [...VERIFICATION_BAND_LAYERS].sort().map((layer) => ({
           gate_run_id: stableId("verification-band-gate", layer),
           gate_id: `G-VERIFY.${layer}`,
           plan_id: "",
@@ -858,7 +858,7 @@ describe("gate-run-coverage doctor", () => {
     }
   });
 
-  it.fails("U-DOCTOR-GATE-01 does not let canonical seeds mask an unmatched planless workflow", () => {
+  it("U-DOCTOR-GATE-01 does not let canonical seeds mask an unmatched planless workflow", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-doctor-gate-run-seed-workflow-gap-"));
     try {
       writeVerificationBandAudit(root);
@@ -904,7 +904,7 @@ describe("gate-run-coverage doctor", () => {
     }
   });
 
-  it.fails.each([
+  it.each([
     {
       label: "gate outside L8-L14 with its matching derived id",
       sql: "UPDATE gate_runs SET gate_id = ?, gate_run_id = ? WHERE gate_run_id = ?",
@@ -950,7 +950,7 @@ describe("gate-run-coverage doctor", () => {
     }
   });
 
-  it.fails("U-DOCTOR-GATE-01 rejects duplicate canonical seed rows for one gate", () => {
+  it("U-DOCTOR-GATE-01 rejects duplicate canonical seed rows for one gate", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-doctor-gate-run-duplicate-seed-"));
     try {
       writeVerificationBandAudit(root);
@@ -978,7 +978,7 @@ describe("gate-run-coverage doctor", () => {
     }
   });
 
-  it.fails("U-DOCTOR-GATE-01 requires the A-132 artifact to remain present for historical rows", () => {
+  it("U-DOCTOR-GATE-01 requires the A-132 artifact to remain present for historical rows", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-doctor-gate-run-seed-missing-audit-"));
     try {
       writeVerificationBandAudit(root);

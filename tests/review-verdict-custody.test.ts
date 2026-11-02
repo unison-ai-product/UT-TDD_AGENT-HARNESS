@@ -758,9 +758,8 @@ function measureMerge(root: string, head: string) {
         state: "OPEN",
         checksGreen: true,
       }),
-      mergePullRequest: () => {
-        mutations += 1;
-      },
+      mergePullRequest: () => void mutations++,
+      checkBaselineConflict: () => null,
     },
   });
   return { result, mutations };

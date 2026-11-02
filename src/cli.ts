@@ -23,17 +23,16 @@ import { parse as parseYaml } from "yaml";
 import { catalogAutomationAssets } from "./assets/catalog.ts";
 import { loadBranchAudit, renderBranchAudit } from "./audit/branches.ts";
 import { renderQualityAudit, runQualityAudit } from "./audit/quality.ts";
-import { registerCodeSizeCommands } from "./cli/code-size.ts";
 import {
   adapterExecutionEnv,
   executeAdapterPlanForCli,
   registerDelegationCommands,
 } from "./cli/delegation.ts";
 import { registerDistributionCommands } from "./cli/distribution.ts";
-import { registerDocSplitCommands } from "./cli/doc-split.ts";
 import { registerFeedbackCommands } from "./cli/feedback.ts";
 import { registerGuardrailCommands } from "./cli/guardrail.ts";
 import { registerIssueCommands } from "./cli/issue.ts";
+import { registerLintGateCommands } from "./cli/lint-gates.ts";
 import { registerPlanAdmissionCommands } from "./cli/plan-admission.ts";
 import { registerPlanAssetCommands } from "./cli/plan-asset.ts";
 import { registerPlanDraftCommand } from "./cli/plan-draft.ts";
@@ -2359,8 +2358,7 @@ automation
   });
 
 registerGuardrailCommands(program);
-registerDocSplitCommands(program);
-registerCodeSizeCommands(program);
+registerLintGateCommands(program);
 registerIssueCommands(program);
 
 const trouble = program.command("trouble").description("trouble taxonomy events");
@@ -2955,7 +2953,7 @@ program
           `gate ${id}: ${result.passed ? "passed" : "failed"} mode=${result.mode} review=${result.review_kind ?? "-"} cross_agent_review=${result.cross_agent_review} static=${staticGate.applicable ? (staticGate.passed ? "passed" : "failed") : "n-a"}\n`,
         );
         if (gateRunEvidence) process.stdout.write(`  - evidence: ${gateRunEvidence.path}\n`);
-        if (gateRunEvidenceWarning) process.stdout.write(`  - ${gateRunEvidenceWarning}\n`);
+        if (gateRunEvidenceWarning) process.stderr.write(`  - ${gateRunEvidenceWarning}\n`);
         for (const m of result.messages) process.stdout.write(`  - ${m}\n`);
       }
       process.exitCode = result.passed ? 0 : 1;

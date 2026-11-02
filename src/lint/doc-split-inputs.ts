@@ -21,7 +21,7 @@ import {
 } from "./doc-split.ts";
 
 const SOURCE_ROOTS = ["docs/design/harness", "docs/test-design/harness"] as const;
-const BASELINE_PATH = "docs/governance/doc-split-baseline.json";
+export const DOC_SPLIT_BASELINE_PATH = "docs/governance/doc-split-baseline.json";
 
 function git(repoRoot: string, args: readonly string[]): string | null {
   try {
@@ -87,7 +87,7 @@ export function loadPreviousDocSplitBaseline(
 ): { kind: "found"; baseline: DocSplitBaseline } | { kind: "absent" } | { kind: "unreadable" } {
   const commit = mergeBaseCommit(repoRoot);
   if (commit === null) return { kind: "unreadable" };
-  const text = showAtCommit(repoRoot, commit, BASELINE_PATH);
+  const text = showAtCommit(repoRoot, commit, DOC_SPLIT_BASELINE_PATH);
   if (text === "absent") return { kind: "absent" };
   const baseline = text === null ? null : parseDocSplitBaseline(text);
   return baseline === null ? { kind: "unreadable" } : { kind: "found", baseline };
@@ -135,11 +135,11 @@ export function loadRenamedDocs(
 }
 
 const baseUnreadable = (reason: string): DocSplitFinding =>
-  docSplitFinding(BASELINE_PATH, "doc-split-baseline-base-unreadable", reason);
+  docSplitFinding(DOC_SPLIT_BASELINE_PATH, "doc-split-baseline-base-unreadable", reason);
 
 /** 作業木の baseline。ファイルが無ければ空、読めない・解釈できなければ null。 */
 function loadCurrentBaseline(repoRoot: string): DocSplitBaseline | null {
-  const path = join(repoRoot, BASELINE_PATH);
+  const path = join(repoRoot, DOC_SPLIT_BASELINE_PATH);
   if (!existsSync(path)) return {};
   try {
     return parseDocSplitBaseline(readFileSync(path, "utf8"));
@@ -156,7 +156,9 @@ export function checkDocSplit(repoRoot: string): { messages: string[]; ok: boole
   }
   const current = loadCurrentBaseline(repoRoot);
   if (current === null) {
-    adapterFindings.push(docSplitFinding(BASELINE_PATH, "doc-split-input-unreadable", "baseline"));
+    adapterFindings.push(
+      docSplitFinding(DOC_SPLIT_BASELINE_PATH, "doc-split-input-unreadable", "baseline"),
+    );
   }
   const baseline = current ?? {};
   const previous = loadPreviousDocSplitBaseline(repoRoot);

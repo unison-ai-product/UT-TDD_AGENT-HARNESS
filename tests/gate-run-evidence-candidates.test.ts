@@ -42,7 +42,7 @@ function observeIsolatedFixture<T>(
 }
 
 describe("gate run evidence candidates", () => {
-  it.fails("U-GATE-010 derives new run IDs independently of PLAN values", () => {
+  it("U-GATE-010 derives new run IDs independently of PLAN values", () => {
     const input = {
       repoRoot: "/repo",
       gateId: "G4",
@@ -73,7 +73,7 @@ describe("gate run evidence candidates", () => {
     expect(withPlan.gate_run_id).toBe(withoutPlan.gate_run_id);
   });
 
-  it.fails("U-GATE-009 refuses to overwrite a colliding evidence path", () => {
+  it("U-GATE-009 refuses to overwrite a colliding evidence path", () => {
     const fixture = observeIsolatedFixture("ut-tdd-gate-run-evidence-exclusive-", (root) => {
       const input = {
         repoRoot: root,
