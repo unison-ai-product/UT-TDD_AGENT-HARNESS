@@ -12,7 +12,7 @@ issue: 1456
 
 ## 1. 位置付け
 
-対になるL6契約は `docs/design/harness/L6-function-design/test-title-modifier.md`。本書は正式 oracle `U-CODE-011` を定義する。登録 Red は PR #1489 で実証済みであり、production Green は未実装である。
+対になるL6契約は `docs/design/harness/L6-function-design/test-title-modifier.md`。本書は正式 oracle `U-CODE-011` を定義する。登録 Red は PR #1489 で実証済みであり、production Green は PR #1497 で merge 済みである。
 
 ## 2. 正式 oracle
 
