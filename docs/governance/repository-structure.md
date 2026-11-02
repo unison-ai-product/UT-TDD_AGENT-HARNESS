@@ -136,7 +136,7 @@ UT-TDD-agent-harness/
 | `docs/design/` | §3 の ① 設計 |
 | `docs/test-design/` | §3 の ③ テスト設計 |
 
-`.claude/hooks/`、`.claude/settings.json`、`.codex/`、`.github/workflows/` などの実行系の設定は、判定 path に入っていない。広げるかどうかは issue #973 で決める。
+`.claude/hooks/`、`.claude/settings.json`、`.codex/`、`.github/workflows/` の実行系の設定は、判定 path に入っていない。広げないと決めた (issue #973、2026-11-02)。理由と再開の条件は `docs/design/harness/L6-function-design/design-protection-diff-gate.md` §3 に書く。
 
 ## 4. 命名規約
 

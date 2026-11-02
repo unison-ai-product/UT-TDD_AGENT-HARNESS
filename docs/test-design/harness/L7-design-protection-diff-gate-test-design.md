@@ -84,7 +84,7 @@ temp の実 git repository で共通 commit O に既存の設計 x.md と実装 
 - 開発 repo を読むテストファイル (`test-repository-isolation` が読取ありと判定するもの) の Red は、その登録行と一緒に入れる。順序は L6 §10.3 に従い、(1) 候補 ID で引用する Red と登録行、(2) 昇格 (全件) とテストの引用の正式 ID への書き換え、(3) 実装 PR とする。昇格を Red より先に入れない (未引用の正式 ID は `oracle-test-trace` が拒否する)。
 - candidate の存在だけを Green の証跡にしない。
 - 契約 PR + Red で、`src/github/design-protection.ts` がまだ無いために import が失敗して `it.fails` が成立しても、それは各 guard の Red の証拠にならない。実装 PR は、候補ごとに L6 の規則を 1 本だけ殺す mutation を入れて Red になることを確かめ、そのログを §5 の証跡に残す (issue #898 の契約確認、2026-10-13)。
-- 009(b)(c) は L6 §3 / §9 の初版の非保証境界を固定する。workflow 内容の CI policy 検査016/024〜026とは別である。issue #973 で分類対象を広げると決めた場合は、その契約改訂で009(b)(c)の期待を `implementation` / `BLOCK` に反転する。
+- 009(b)(c) は L6 §3 / §9 の非保証境界を固定する。workflow 内容の CI policy 検査016/024〜026とは別である。issue #973 で分類対象を広げないと決めたので (2026-11-02)、009(b)(c) の期待は変えない。L6 §3 の再開条件で広げることになったら、その契約改訂で期待を `implementation` / `BLOCK` に反転する。
 - 027〜030 は L6 §3.1 の単一定義点と、表と定数を据え置いた移動の検出を固定する (issue #913)。工程 ④ の移動 PR は repository-structure.md §3.1 の表と定数を同時に直し、027 を Green のまま通す。移動後の実際の path で実装 PR が BLOCK になる Red→Green は、その移動 PR が自分の差分で示す。現行001〜026を移動後の証明へ流用しない。
 
 ## 5. Required evidence
