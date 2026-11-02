@@ -1,7 +1,7 @@
 ---
 layer: L6
 artifact_type: design_doc
-status: draft
+status: confirmed
 sub_doc: function-spec
 artifact_role: topic_doctor_singleton_lock
 pair_artifact: docs/test-design/harness/L7-doctor-singleton-lock-test-design.md
