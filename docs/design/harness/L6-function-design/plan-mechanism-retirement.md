@@ -205,7 +205,7 @@ Pack の PLAN 運用は Issue 参照に置き換える (PO 判断)。**互換性
 **S4・S5・S7 の補足**: 3 本とも、`src` を含まない前段の PR を置く。型は「S2・S3 の前段と同期」の節と同じで、実装 PR は `src` を含むので `docs/design/`・`docs/test-design/` を変更できず (`protected-modified`)、宣言だけ・テストだけを片側で消すと未宣言 citation か未 citation の宣言になる。
 
 - **S5 の前段**: 機械強制ではなく契約整合のためである。実際の oracle 関数で測ると、S5 のテスト削除による orphan は 0 件で (範囲表記の行は宣言として収集されない)、stale citation の baseline の 27 件は baseline から除くと通る。したがって S5 の前段が無くても gate は落ちないが、書き手 8 export の削除、provider の起動点の数と post 条件、`tests/github-forward-store.test.ts` の扱いを実装前に契約へ揃える。
-- **S4 の前段**: `CANDIDATE-U-PLANRET-020` の再作成の検証を退役契約の検証へ改訂し (§3)、テスト設計 §4 の Red の手順を合わせる。custody v2 の oracle (006・007・016) は変えない。
+- **S4 の前段**: `CANDIDATE-U-PLANRET-020` の再作成の検証を退役契約の検証へ改訂し (§3)、テスト設計 §4 で Red にしない維持確認として扱う。custody v2 の oracle (006・007・016) は変えない。
 - **S7 の前段**: 削除集合 (消す module・test・宣言) を確定した後に、実際の oracle 関数 (`loadOracleTestTraceInput`・`analyzeOracleTestTrace`) で orphan と stale citation を測り、その件数を前段 PR に記録する。件数は本書に書かない (確定前の数字は再現できていない)。
 
 **S4・S7 の共用機能と SQL 読み手の補足** (advisor `gpt-6.1-sol` の回答を実物で確かめて採った):

@@ -21,7 +21,8 @@ issue: 1364
 
 ## 2. fixture
 
-- 純粋関数の行 (001〜007、010〜013) は、入力を直接渡す。実 repo のファイルは読まない。`docs/plans` を持たない temp directory を repo root として使う。
+- 純粋関数の行 (001〜007、010・011) は、入力を直接渡す。実 repo のファイルは読まない。`docs/plans` を持たない temp directory を repo root として使う。
+- 走査の行 (012・013) は、§3 の各行が指定する `docs/plans/` と design root の文書だけを置いた temp directory を repo root として使う。`docs/plans/` を置くのは、PLAN を走査しなくなったことを確かめるためである。実 repo のファイルは読まない。
 - DB の行 (008) は temp directory に harness.db を作り、registry に登録の無い表を手で作ってから `migrate` と rebuild の truncate を流す。実際の `.ut-tdd/harness.db` と台帳 DB には触れない。
 - 移行の行 (019) は、旧版の DDL を手で書き直さない。その段の base commit で `schemaDdl()` が出す文字列をそのまま fixture に保存し、temp の harness.db をそれで作る。実際の `.ut-tdd/harness.db` には触れない。
 - 静的な行 (009、014〜018) は実 repo の tracked file を読むので、`src/doctor/test-repository-isolation.ts` の登録が要る。
@@ -57,7 +58,7 @@ issue: 1364
 - 各段の Red PR は、その段の行 (表の「段」の列) の候補 ID をテスト名に引用する。1 本の PR が別の段の行を引用しない。
 - S1・S5・S8 のように振る舞いを足さない段の行 (015、014 の S5 部分) は、退役の PR で `it` として入れてよい (退役前の main では成り立たないので `it.fails` の Red にしない)。
 - 019 は S3 の PR が Red (`it.fails`) として先に入れる。S7 の前の中間段で rebuild が通ることを確かめる行である。
-- 020 は再作成の検証ではなく退役契約の検証であり、現行の main で成り立つ部分 (DDL と行の保存) は `it`、S4 の後で成り立つ部分 (custody v2 が表に投影されないこと) だけを Red (`it.fails`) にする。
+- 020 は再作成の検証ではなく退役契約の維持確認であり、Red (`it.fails`) にしない。custody の receipt を `github_review_lane_receipts` へ投影する経路は現行の main にも無い (`projectGithubReviewLaneReceipts` は PLAN の `review_evidence` だけを投影する) ので、(1)〜(3) は S4 の前から成り立つ。S4 の PR が `it` として入れ、S4 の変更でこの性質が崩れないことを確かめる。S4 で新しく成り立つ振る舞い (custody v2 の受理) の Red は 007 が持つ。
 - S4・S5・S7 の前段 PR (L6 §8 の「S4・S5・S7 の補足」) は `src` を含まず、宣言とテストの同時整理だけを行う。S5 は機械強制ではなく契約整合のための前段である (S5 のテスト削除による orphan は 0 件、stale citation の baseline は baseline から除くと通る)。S7 の orphan と stale citation の件数は、削除集合を確定した後に実際の oracle 関数で測り、その結果を前段 PR に記録する (本書に数字は書かない)。
 - 009 は S2 の退役確認である。退役前の main では成り立たないので `it.fails` の Red にせず、退役の PR が `it` として入れる。
 - S2・S3 の宣言済み oracle の整理 (L6 §8 の「S2・S3 の前段と同期」に列挙した宣言、function-spec D.4、DISPPTR 001〜008 の処分) と baseline JSON の同時更新は、`src` を含まない昇格 PR に同居させてよい (L6 §8 の「S2・S3 の前段と同期」)。baseline を変える PR は直列にする。
