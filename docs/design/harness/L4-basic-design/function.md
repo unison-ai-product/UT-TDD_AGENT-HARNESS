@@ -406,4 +406,4 @@ E3/E4 outbox 境界だけ)。
   集計し、同一原因の再発率を下げる。PoC は S4 decision・採否・再合流先まで閉じなければ完了扱いにしない。telemetry は
   設計変更を自動承認せず、PLAN / ADR へ戻す入力に留める。
 
-移行元: docs/plans/PLAN-L4-30-execution-ledger-github-architecture.md (issue #648)
+移行元: plans-archive-20261102:docs/plans/PLAN-L4-30-execution-ledger-github-architecture.md (issue #648)

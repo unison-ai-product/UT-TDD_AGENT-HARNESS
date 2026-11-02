@@ -547,7 +547,7 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 | U-DOCLOCK-001 | `acquireDoctorLock` | 初回取得が成功し pid/started_at/host/lock_id を owner 固有claimへ記録する |
 | U-DOCLOCK-002 | `acquireDoctorLock` / `doctorLockBlockedMessage` | 保持者生存中の 2 本目は acquired=false で保持者情報付きメッセージを返す |
 | U-DOCLOCK-003 | `acquireDoctorLock` | 保持 pid 死亡の lock は自動回収して取得する (再試行嵐残骸の除去) |
-| U-DOCLOCK-004 | `isStaleDoctorLock` / `acquireDoctorLock` | 45 分超過の lock は保持 pid 生存でも stale として回収する |
+| U-DOCLOCK-004 | `isStaleDoctorLock` / `acquireDoctorLock` | `proc_start` が無い旧 record では、45 分超過の lock は保持 pid 生存でも stale として回収する (#1460: 照合可能な場合は U-DOCLOCK-014 が上書き) |
 | U-DOCLOCK-005 | `acquireDoctorLock` | 破損 lock file は crash せず stale 扱いで回収する |
 | U-DOCLOCK-006 | `release` | 取得者自身のowner固有claimだけを削除し、通常経路で冪等に動作する |
 | U-DOCLOCK-007 | `isStaleDoctorLock` / `acquireDoctorLock` | 別 host の fresh lock はローカル pid probe を行わず保持し、TTL 超過までは二重取得しない |
