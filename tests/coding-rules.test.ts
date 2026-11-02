@@ -273,14 +273,28 @@ describe("CANDIDATE-U-CODE-011 test-title literal recognition", () => {
       const value = literal(kind, machineText);
       return [
         { name: `unknown receiver ${kind}`, text: `unknownReceiver(${value});` },
+        {
+          name: `unknown receiver modifier chain ${kind}`,
+          text: `unknownReceiver.skip(${value});`,
+        },
+        {
+          name: `unknown receiver each chain ${kind}`,
+          text: `unknownReceiver.each(data)(${value});`,
+        },
         { name: `unlisted modifier ${kind}`, text: `it.concurrent(${value});` },
         { name: `other chain ${kind}`, text: `it.each(data).skip(${value});` },
         { name: `namespace receiver ${kind}`, text: `vitest.it(${value});` },
+        { name: `namespace modifier chain ${kind}`, text: `vitest.it.skip(${value});` },
         { name: `test fails each chain ${kind}`, text: `test.fails.each(data)(${value});` },
         { name: `describe fails each chain ${kind}`, text: `describe.fails.each(data)(${value});` },
         { name: `it only each chain ${kind}`, text: `it.only.each(data)(${value});` },
         { name: `title outside call ${kind}`, text: `const message = ${value}; it("neutral");` },
         { name: `second argument ${kind}`, text: `it("neutral", ${value});` },
+        { name: `modifier second argument ${kind}`, text: `it.skip("neutral", ${value});` },
+        {
+          name: `each returned-call second argument ${kind}`,
+          text: `it.each(data)("neutral", ${value});`,
+        },
       ];
     }),
   ];
