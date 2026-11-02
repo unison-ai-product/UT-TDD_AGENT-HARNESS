@@ -35,7 +35,6 @@ import { headSnapshotRoot } from "./support/workspace-roots.ts";
 const RESULT = { ok: true, messages: ["doctor: rule-drift — OK"] };
 const REF_MAP = { "refs/remotes/origin/main": "b155171cf23d619751c01f11a2630334adb74f9c" };
 const OPTIONS = {
-  strict_green_command_digest: true,
   strict_telemetry_provenance: false,
   timing: false,
 };
@@ -100,8 +99,7 @@ describe("doctor result envelope (PLAN-L7-461)", () => {
     expect(
       usability({
         expectedOptions: {
-          strict_green_command_digest: false,
-          strict_telemetry_provenance: false,
+          strict_telemetry_provenance: true,
           timing: false,
         },
       }),
@@ -197,7 +195,6 @@ describe("doctor result envelope (PLAN-L7-461)", () => {
     };
     const timed = envelope({
       options: {
-        strict_green_command_digest: true,
         strict_telemetry_provenance: false,
         timing: true,
       },
@@ -221,7 +218,6 @@ describe("doctor result envelope (PLAN-L7-461)", () => {
       usability({
         envelope: parseDoctorResultEnvelope(JSON.stringify(tampered)),
         expectedOptions: {
-          strict_green_command_digest: true,
           strict_telemetry_provenance: false,
           timing: true,
         },
@@ -275,7 +271,6 @@ describe("doctor envelope consumption (PLAN-L7-461)", () => {
     CI: "true",
     UT_TDD_DOCTOR_RESULT_FILE: "/tmp/ut-tdd-doctor-result.json",
     UT_TDD_DOCTOR_RESULT_ROOT: snapshotRoot,
-    UT_TDD_DOCTOR_RESULT_STRICT: "1",
     ...overrides,
   });
 
@@ -297,10 +292,12 @@ describe("doctor envelope consumption (PLAN-L7-461)", () => {
     expect(consumeDoctorResultEnvelopeWithReason(env({ CI: "false" }), reader(json)).reason).toBe(
       "not-ci-context",
     );
-    expect(
-      consumeDoctorResultEnvelopeWithReason(env({ UT_TDD_DOCTOR_RESULT_STRICT: "0" }), reader(json))
-        .reason,
-    ).toBe("options-mismatch");
+    const telemetryMismatch = envelopeJson({
+      options: { ...OPTIONS, strict_telemetry_provenance: true },
+    });
+    expect(consumeDoctorResultEnvelopeWithReason(env(), reader(telemetryMismatch)).reason).toBe(
+      "options-mismatch",
+    );
     expect(
       consumeDoctorResultEnvelopeWithReason(
         env({ UT_TDD_DOCTOR_RESULT_ROOT: "/tmp/other-root" }),

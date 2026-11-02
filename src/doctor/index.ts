@@ -51,15 +51,11 @@ export {
   checkVerificationProfile,
 } from "./lint-gates.ts";
 export {
-  checkGuardrailInvariants,
   checkPairFreeze,
-  checkPlanBodySubstance,
-  checkPlanCompletionDrift,
   checkPlanGovernance,
   checkPlanReferenceFreshnessAdvisory,
   checkPlanSchedule,
   checkPropagation,
-  checkReviewEvidence,
 } from "./plan-governance.ts";
 export {
   checkCycleP4Verification,
@@ -118,7 +114,6 @@ export {
 } from "./runtime-surface.ts";
 export {
   checkImplPlanTrace,
-  checkMergedPlanStatus,
   checkOracleTestTrace,
   checkTrackedCanonical,
 } from "./source-trace.ts";

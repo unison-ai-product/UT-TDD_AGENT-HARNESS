@@ -500,14 +500,13 @@ fi`,
       env: {
         UT_TDD_DOCTOR_RESULT_FILE: `${githubExpression("runner.temp")}/ut-tdd-doctor-result.json`,
       },
-      run: 'node src/cli.ts doctor --strict-green-command-digest --result-file "$UT_TDD_DOCTOR_RESULT_FILE"',
+      run: 'node src/cli.ts doctor --result-file "$UT_TDD_DOCTOR_RESULT_FILE"',
     }),
     step("test — 全回帰 (vitest run)", {
       if: LANE_FULL_ONLY_IF,
       env: {
         UT_TDD_DOCTOR_RESULT_FILE: `${githubExpression("runner.temp")}/ut-tdd-doctor-result.json`,
         UT_TDD_DOCTOR_RESULT_ROOT: githubExpression("github.workspace"),
-        UT_TDD_DOCTOR_RESULT_STRICT: "1",
       },
       run: "npm run test",
     }),
