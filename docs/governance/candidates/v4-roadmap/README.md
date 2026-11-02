@@ -108,7 +108,7 @@
 | #517へ渡す短い差し込み指示 | [execution/02_PR517_INTEGRATION.md](execution/02_PR517_INTEGRATION.md) |
 | 実装前に採択する16契約判断 | [execution/03_CONTRACT_DECISIONS.md](execution/03_CONTRACT_DECISIONS.md) |
 | open issue を閉じる工程 | [execution/04_ISSUE_INTAKE.md](execution/04_ISSUE_INTAKE.md) |
-| 旧候補 (32BR・59FR・72AC) をどの版で閉じるか。現行の候補は 49BR・76FR・89AC (release 必須 41) で、対応表の再計算は ⑥ | [trace/REQUIREMENT_COVERAGE.md](trace/REQUIREMENT_COVERAGE.md) / [AC_COVERAGE.md](trace/AC_COVERAGE.md) |
+| 旧候補 (32BR・59FR・72AC) をどの版で閉じるか。現行の候補は 50BR・78FR・93AC (release 必須 45) で、対応表の再計算は ⑥ | [trace/REQUIREMENT_COVERAGE.md](trace/REQUIREMENT_COVERAGE.md) / [AC_COVERAGE.md](trace/AC_COVERAGE.md) |
 | 今回までの追加13要求 | [trace/ADDITIONS.md](trace/ADDITIONS.md) |
 | 出典と、行った資料検査の範囲 | [SOURCES.md](SOURCES.md) / [VALIDATION.md](VALIDATION.md) |
 

@@ -2,7 +2,7 @@
 document_id: UT-TDD-CONCEPT-V4-REQUESTS
 status: draft_candidate
 concept: docs/governance/candidates/ut-tdd-concept-v4.0.md
-plan: docs/plans/PLAN-L1-09-ut-tdd-concept-v4-candidates.md
+issue: 530
 revision_base_artifact: docs/design/harness/L1-requirements/business-requirements.md
 decision_ledger: docs/governance/candidates/v4-decision-ledger.json
 ---
@@ -11,14 +11,14 @@ decision_ledger: docs/governance/candidates/v4-decision-ledger.json
 
 ## Authority 境界
 
-本書は PLAN-L1-09 の未承認候補である。current の L1 業務要求 (BR-01〜08 / BR-22 / UX-01〜03) ではない。
+本書は #530 の未承認候補である。current の L1 業務要求 (BR-01〜08 / BR-22 / UX-01〜03) ではない。
 承認後は `docs/design/harness/L1-requirements/business-requirements.md` §1.2 へ未使用の番号で合流する。
 合流した後、本書は候補から昇格記録へ役割を変える。
 
 ただし、v4 の決定は current の BR-04 (PoC の契約化) と BR-05 (PLAN 単位のフェーズ管理) と衝突する
 (V4D-054 Scrum / PoC 撤廃、V4D-078 PLAN 全面廃止)。昇格するときは、この 2 件を additive に残さず改訂する。
 
-PLAN の廃止は v4 への切り替えのときに行う (V4D-078)。それまでは本書も PLAN-L1-09 を正規の受け皿とする。
+PLAN は廃止済みである (V4D-078)。本書の正規の受け皿は #530 とする。
 
 ## 決定台帳との関係
 
