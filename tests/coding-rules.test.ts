@@ -184,7 +184,7 @@ export function parse(): never {
   });
 });
 
-describe("CANDIDATE-U-CODE-011 test-title literal recognition", () => {
+describe("U-CODE-011 test-title literal recognition", () => {
   const fixturePath = "src/candidate-title.ts";
   const machineText = ["bad-rule", " — ", "警告", ": ", "日本語だけ", "の判定語"].join("");
   const literalKinds = ["string", "template"] as const;
@@ -238,28 +238,28 @@ describe("CANDIDATE-U-CODE-011 test-title literal recognition", () => {
   ];
 
   for (const candidate of missingPositiveCases) {
-    it.fails(`CANDIDATE-U-CODE-011: candidate exemption ${candidate.name}`, () => {
+    it.fails(`U-CODE-011: candidate exemption ${candidate.name}`, () => {
       expectExempt(candidate.text);
     });
   }
 
   for (const receiver of ["describe", "it", "test"]) {
     for (const kind of literalKinds) {
-      it(`CANDIDATE-U-CODE-011: existing bare ${receiver} title ${kind}`, () => {
+      it(`U-CODE-011: existing bare ${receiver} title ${kind}`, () => {
         expectExempt(`${receiver}(${literal(kind, machineText)});`);
       });
     }
   }
 
   for (const candidate of missingPositiveCases) {
-    it(`CANDIDATE-U-CODE-011: fixture prerequisite ${candidate.name}`, () => {
+    it(`U-CODE-011: fixture prerequisite ${candidate.name}`, () => {
       expectLanguageViolation(`const message = ${literal(candidate.kind, machineText)};`);
     });
   }
 
   for (const { name, expression } of eachCalls) {
     for (const kind of literalKinds) {
-      it(`CANDIDATE-U-CODE-011: data is not a ${name} title (${kind})`, () => {
+      it(`U-CODE-011: data is not a ${name} title (${kind})`, () => {
         const fixture = expression
           .replace("(data)", `(${literal(kind, machineText)})`)
           .replace("(TITLE)", '("neutral")');
@@ -299,18 +299,18 @@ describe("CANDIDATE-U-CODE-011 test-title literal recognition", () => {
     }),
   ];
   for (const candidate of negativeLiteralCases) {
-    it(`CANDIDATE-U-CODE-011: negative boundary ${candidate.name}`, () => {
+    it(`U-CODE-011: negative boundary ${candidate.name}`, () => {
       expectLanguageViolation(candidate.text);
     });
   }
 
   for (const kind of literalKinds) {
-    it(`CANDIDATE-U-CODE-011: dynamic title expression remains checked (${kind})`, () => {
+    it(`U-CODE-011: dynamic title expression remains checked (${kind})`, () => {
       expectLanguageViolation(`it(${literal(kind, machineText)} + suffix);`);
     });
   }
 
-  it(`CANDIDATE-U-CODE-011: template expression remains checked`, () => {
+  it(`U-CODE-011: template expression remains checked`, () => {
     const expression = ["bad-rule — ", "警告", ": $", "{value}"].join("");
     expectLanguageViolation(`it(\`${expression}\`);`);
   });
