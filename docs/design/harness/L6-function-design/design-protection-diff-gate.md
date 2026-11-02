@@ -87,9 +87,10 @@ PR の種別は変更 path の集合だけで決める。PLAN の kind、branch 
 src も docs も含まない PR も非実装 PR で、この gate の対象外である。
 
 初版の分類対象は、PO が採用した `src/` と `scripts/` に限る。
-`.claude/hooks/` や `.github/workflows/` だけの実行系変更は、設計文書の変更を伴っても、この分類では非実装 PR となる。
+`.claude/hooks/`、`.claude/settings.json`、`.codex/`、`.github/workflows/` だけの実行系変更は、設計文書の変更を伴っても、この分類では非実装 PR となる。
 この gate は、それらの単独変更による設計書の書き換えを防ぐ保証を持たない。workflow の内容を検査する §7 の CI policy とは別の境界である。
-分類対象を実行系の設定へ広げるかは issue #973 で決める。それまで初版の分類対象を変更しない。
+分類対象は実行系の設定へ広げない (issue #973、2026-11-02 決定)。理由は 2 点ある。設計文書だけの PR は正規に通るので、広げても安全性は増えない。工程 ④ で path の配置が動く前に判定表を増やすと、移動 PR の差分が膨らむ。
+再開するのは、工程 ④ の移動 PR で判定表を触るとき、または実行系の設定だけの PR で設計文書を変える例を実際に観測したときとする。
 
 ### 3.1 判定 path と保護 path の単一定義点 (issue #913)
 
@@ -221,7 +222,7 @@ workflow と manifest の片方だけを直す PR は、`missing_runtime_leg` �
 - `docs/governance/` や `docs/plans/` の保護。PLAN の編集の検査は、PLAN 機構の撤去(#1168、方針は #1078 issuecomment-6265568869)に伴い CI の契約から外した。
 - clean Pack の consumer workflow (`docs/templates/github/common/pack-harness-check.yml`) への展開。
 - main への push event での検査。保護は PR の時点で効かせる (理由は §7)。
-- `.claude/hooks/` / `.github/workflows/` 単独変更を実装 PR として分類すること。初版は #898 の PO 決定どおり `src/` / `scripts/` に限る。これらの変更を含めた全実行系の保護は保証しない。広げるかどうかは issue #973 で決める。
+- `.claude/hooks/`、`.claude/settings.json`、`.codex/`、`.github/workflows/` の単独変更を実装 PR として分類すること。#898 の PO 決定どおり `src/` / `scripts/` に限る。これらの変更を含めた全実行系の保護は保証しない。広げないことと再開の条件は §3 に書く (issue #973)。
 - 判定 path の一部だけを、git が rename と検出しない形 (削除 + 内容を大きく変えた追加) で判定 path の外へ動かす PR。§3.1 の 2 つの仕組みはどちらも反応しない。全部を動かした時点で置き場が空になり、§3.1 のテストが赤になる。
 - 工程 ④ の移動 PR そのものの検証。§3.1 は、移動 PR が表と定数を同時に直すこと、定数を差し替えれば別の構成でも gate が効くことまでを固定する。移動後の実際の path で実装 PR が BLOCK になる Red→Green は、その移動 PR が自分の差分で示す (#913 の完了条件 2)。
 
