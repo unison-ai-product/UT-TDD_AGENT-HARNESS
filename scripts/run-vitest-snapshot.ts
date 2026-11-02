@@ -309,6 +309,67 @@ export function assertBatchVitestArgs(args: readonly string[]): void {
     throw new Error("vitest snapshot runner is batch-only; watch mode would observe a stale snapshot");
 }
 
+const SNAPSHOT_VALUE_OPTIONS = [
+  "-t",
+  "--testNamePattern",
+  "--reporter",
+  "--maxWorkers",
+  "--minWorkers",
+  "--shard",
+  "--exclude",
+  "--pool",
+] as const;
+const SNAPSHOT_FLAG_OPTIONS = ["--browser"] as const;
+const SNAPSHOT_ALLOWED_OPTIONS = [
+  ...SNAPSHOT_VALUE_OPTIONS,
+  ...SNAPSHOT_FLAG_OPTIONS,
+].join(", ");
+
+export type SnapshotRunnerArgs =
+  | { kind: "help"; args: readonly string[] }
+  | { kind: "unknown-option"; args: readonly string[]; token: string; message: string }
+  | { kind: "run"; args: readonly string[] };
+
+export function parseSnapshotRunnerArgs(args: readonly string[]): SnapshotRunnerArgs {
+  assertBatchVitestArgs(args);
+  const separatorIndex = args.indexOf("--");
+  const wrapperArgs = separatorIndex < 0 ? args : args.slice(0, separatorIndex);
+
+  for (let index = 0; index < wrapperArgs.length; index += 1) {
+    const token = wrapperArgs[index];
+    if (token === "-h" || token === "--help") return { kind: "help", args };
+    if (!token.startsWith("-")) continue;
+
+    if (SNAPSHOT_VALUE_OPTIONS.includes(token as (typeof SNAPSHOT_VALUE_OPTIONS)[number])) {
+      index += 1;
+      continue;
+    }
+    if (
+      SNAPSHOT_VALUE_OPTIONS.some((option) =>
+        token.startsWith(`${option}=`),
+      ) || SNAPSHOT_FLAG_OPTIONS.includes(token as (typeof SNAPSHOT_FLAG_OPTIONS)[number])
+    ) {
+      continue;
+    }
+
+    return {
+      kind: "unknown-option",
+      args,
+      token,
+      message:
+        `Unknown snapshot runner option ${JSON.stringify(token)}. ` +
+        `Allowed options: ${SNAPSHOT_ALLOWED_OPTIONS}. ` +
+        "To pass other Vitest arguments, use -- as a standalone token before them.",
+    };
+  }
+
+  return { kind: "run", args };
+}
+
+const SNAPSHOT_RUNNER_USAGE =
+  `Usage: node scripts/run-vitest-snapshot.ts [options] [test paths] [-- <Vitest arguments>]\n` +
+  `Options: ${SNAPSHOT_ALLOWED_OPTIONS}, --help, -h\n`;
+
 export function assertNotRoot(getuid = process.getuid): void {
   if (!getuid || getuid() !== 0) return;
   throw new Error(
@@ -428,7 +489,13 @@ export function runSnapshotTests(
   repoRoot = process.cwd(),
   getuid = process.getuid,
 ): void {
-  assertBatchVitestArgs(args);
+  const parsedArgs = parseSnapshotRunnerArgs(args);
+  if (parsedArgs.kind === "help") {
+    process.stdout.write(SNAPSHOT_RUNNER_USAGE);
+    return;
+  }
+  if (parsedArgs.kind === "unknown-option") throw new Error(parsedArgs.message);
+  args = [...parsedArgs.args];
   assertNotRoot(getuid);
   const snapshotRoot = join(
     tmpdir(),
