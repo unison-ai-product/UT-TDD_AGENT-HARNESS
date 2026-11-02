@@ -1,24 +1,9 @@
 import { existsSync } from "node:fs";
 import {
-  analyzePlanBodySubstance,
-  loadPlanBodySubstanceInput,
-  planBodySubstanceMessages,
-} from "../lint/plan-body-substance.ts";
-import {
-  analyzePlanCompletionDrift,
-  loadPlanCompletionDriftInput,
-  planCompletionDriftMessages,
-} from "../lint/plan-completion-drift.ts";
-import {
   analyzePropagation,
   loadPropagationDocs,
   propagationMessages,
 } from "../lint/propagation.ts";
-import {
-  analyzeReviewEvidence,
-  loadReviewPlans,
-  reviewEvidenceMessages,
-} from "../lint/review-evidence.ts";
 import {
   analyzeTestDesignNaming,
   loadTestDesignDocs,
@@ -31,39 +16,7 @@ import {
   loadPlanGovernanceDocs,
   planReferenceFreshnessMessages,
 } from "../plan/lint.ts";
-import type { GuardrailDecisionInput } from "../state-db/guardrail-invariants.ts";
-import { inspectGuardrailInvariants } from "../state-db/guardrail-invariants.ts";
 import { analyzePairFreeze, loadPairDocs, pairFreezeMessages } from "../vmodel/lint.ts";
-
-export function checkPlanBodySubstance(repoRoot: string): { messages: string[]; ok: boolean } {
-  if (!existsSync(repoRoot)) {
-    return {
-      messages: ["plan-body-substance - violation: repo root could not be read"],
-      ok: false,
-    };
-  }
-  try {
-    const r = analyzePlanBodySubstance(loadPlanBodySubstanceInput(repoRoot));
-    return { messages: planBodySubstanceMessages(r), ok: r.ok };
-  } catch {
-    return { messages: ["plan-body-substance - violation: PLAN could not be read"], ok: false };
-  }
-}
-
-export function checkPlanCompletionDrift(repoRoot: string): { messages: string[]; ok: boolean } {
-  if (!existsSync(repoRoot)) {
-    return {
-      messages: ["plan-completion-drift - violation: repo root could not be read"],
-      ok: false,
-    };
-  }
-  try {
-    const r = analyzePlanCompletionDrift(loadPlanCompletionDriftInput(repoRoot));
-    return { messages: planCompletionDriftMessages(r), ok: r.ok };
-  } catch {
-    return { messages: ["plan-completion-drift - violation: PLAN could not be read"], ok: false };
-  }
-}
 
 export function checkPlanSchedule(repoRoot: string): { messages: string[]; ok: boolean } {
   if (!existsSync(repoRoot)) {
@@ -138,86 +91,6 @@ export function checkTestDesignNaming(repoRoot: string): { messages: string[]; o
   } catch {
     return {
       messages: ["test-design-naming - violation: test-design docs could not be read"],
-      ok: false,
-    };
-  }
-}
-
-export function checkReviewEvidence(repoRoot: string): { messages: string[]; ok: boolean } {
-  if (!existsSync(repoRoot)) {
-    return { messages: ["review-evidence - violation: repo root could not be read"], ok: false };
-  }
-  try {
-    const r = analyzeReviewEvidence(loadReviewPlans(repoRoot));
-    return { messages: reviewEvidenceMessages(r), ok: r.ok };
-  } catch {
-    return { messages: ["review-evidence - violation: PLAN could not be read"], ok: false };
-  }
-}
-
-export function checkGuardrailInvariants(repoRoot: string): { messages: string[]; ok: boolean } {
-  if (!existsSync(repoRoot)) {
-    return {
-      messages: ["guardrail-invariants - violation: repo root could not be read"],
-      ok: false,
-    };
-  }
-  try {
-    const plans = loadReviewPlans(repoRoot);
-    const violations: {
-      rule: string;
-      planId: string;
-      reviewerModel?: string;
-      workerModel?: string;
-    }[] = [];
-    for (const plan of plans) {
-      if (plan.status === "archived") continue;
-      for (const entry of plan.crossEntries) {
-        const reviewerModel = entry.reviewer_model?.trim() || undefined;
-        const workerModel = entry.worker_model?.trim() || undefined;
-        const input: GuardrailDecisionInput = {
-          plan_id: plan.plan_id,
-          session_id: "",
-          guardrail: "review-evidence",
-          decision: "allow",
-          mode: "review",
-          evidence_path: plan.file,
-          reviewer_model: reviewerModel,
-          worker_model: workerModel,
-        };
-        const inspection = inspectGuardrailInvariants(input);
-        for (const v of inspection.violations) {
-          if (
-            (v.rule === "same-model-self-review" || v.rule === "same-provider-cross-review") &&
-            entry.review_kind !== "cross_agent"
-          ) {
-            continue;
-          }
-          violations.push({
-            rule: v.rule,
-            planId: plan.plan_id,
-            reviewerModel,
-            workerModel,
-          });
-        }
-      }
-    }
-    if (violations.length === 0) {
-      return {
-        messages: ["guardrail-invariants — OK (review_evidence 全 entry でインバリアント違反なし)"],
-        ok: true,
-      };
-    }
-    return {
-      messages: violations.map(
-        (v) =>
-          `guardrail-invariants - violation: rule=${v.rule} plan_id=${v.planId} reviewer=${v.reviewerModel ?? "(none)"} worker=${v.workerModel ?? "(none)"}`,
-      ),
-      ok: false,
-    };
-  } catch {
-    return {
-      messages: ["guardrail-invariants - violation: PLAN review_evidence could not be read"],
       ok: false,
     };
   }

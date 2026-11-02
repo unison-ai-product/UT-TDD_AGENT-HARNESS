@@ -2,7 +2,6 @@ import { checkAdvisoryGateAging } from "../lint/advisory-strict-gate-aging.ts";
 import { checkCodeSize } from "../lint/code-size-inputs.ts";
 import { checkDocSplit } from "../lint/doc-split-inputs.ts";
 import { checkErasableSyntax } from "../lint/erasable-syntax.ts";
-import { checkGreenCommandDigests } from "../lint/green-command-digest.ts";
 import { checkImportSpecifiers } from "../lint/import-specifier.ts";
 import type { LintResult } from "../plan/lint.ts";
 import {
@@ -35,14 +34,10 @@ import {
   checkVerificationProfile,
 } from "./lint-gates.ts";
 import {
-  checkGuardrailInvariants,
   checkPairFreeze,
-  checkPlanBodySubstance,
-  checkPlanCompletionDrift,
   checkPlanGovernance,
   checkPlanSchedule,
   checkPropagation,
-  checkReviewEvidence,
   checkTestDesignNaming,
 } from "./plan-governance.ts";
 import {
@@ -97,7 +92,6 @@ import {
 import {
   checkImplPlanTrace,
   checkMemorySync,
-  checkMergedPlanStatus,
   checkOracleTestTrace,
   checkTrackedCanonical,
 } from "./source-trace.ts";
@@ -139,14 +133,6 @@ function fullAndToolchain(id: string, run: () => LintResult): DoctorCheckDefinit
   return { id, profiles: fullAndToolchainProfiles, run };
 }
 
-function greenCommandDigestCheck(repoRoot: string, options: DoctorOptions) {
-  const result = checkGreenCommandDigests(repoRoot);
-  return {
-    ...result,
-    ok: options.strictGreenCommandDigest === true ? result.mismatches.length === 0 : true,
-  };
-}
-
 export function buildDoctorCheckDefinitionGroups(
   deps: DoctorDeps,
   options: DoctorOptions = {},
@@ -157,14 +143,10 @@ export function buildDoctorCheckDefinitionGroups(
     {
       id: "plan-governance",
       definitions: [
-        full("plan-body-substance", () => checkPlanBodySubstance(deps.repoRoot)),
-        full("plan-completion-drift", () => checkPlanCompletionDrift(deps.repoRoot)),
         full("propagation", () => checkPropagation(deps.repoRoot)),
-        full("review-evidence", () => checkReviewEvidence(deps.repoRoot)),
         full("pair-freeze", () => checkPairFreeze(deps.repoRoot)),
         full("test-design-naming", () => checkTestDesignNaming(deps.repoRoot)),
         full("module-drift", () => checkModuleDrift(deps.repoRoot)),
-        full("merged-plan-status", () => checkMergedPlanStatus(deps.repoRoot)),
         full("memory-sync", () => checkMemorySync(deps.repoRoot)),
         full("asset-drift", () => checkAssetDrift(deps.repoRoot)),
         full("skill-assignment", () => checkSkillAssignment(deps.repoRoot)),
@@ -262,7 +244,6 @@ export function buildDoctorCheckDefinitionGroups(
           () => checkRegressionExpansion(deps.repoRoot, state.dependencyDriftResult),
           ["dependency-drift"],
         ),
-        full("guardrail-invariants", () => checkGuardrailInvariants(deps.repoRoot)),
         full("db-projection-coverage", () => checkDbProjectionCoverage(deps.repoRoot)),
         full("db-projection-ingestion", () => checkDbProjectionIngestion(deps.repoRoot, options)),
         full("design-detection", () => checkDesignDetection(deps.repoRoot)),
@@ -297,7 +278,6 @@ export function buildDoctorCheckDefinitionGroups(
         full("proposal-document-coverage", () => checkProposalDocumentCoverage(deps.repoRoot)),
         full("frontend-design-coverage", () => checkFrontendDesignCoverage(deps.repoRoot)),
         full("handover-prose", () => checkHandoverProse(deps)),
-        full("green-command-digest", () => greenCommandDigestCheck(deps.repoRoot, options)),
         full("advisory-strict-gate-aging", () =>
           checkAdvisoryGateAging({ repoRoot: deps.repoRoot }),
         ),

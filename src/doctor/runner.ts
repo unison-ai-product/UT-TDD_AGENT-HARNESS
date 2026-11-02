@@ -12,7 +12,6 @@ import type { DoctorDeps } from "./runtime-state.ts";
 
 export interface DoctorOptions {
   strictTelemetryProvenance?: boolean;
-  strictGreenCommandDigest?: boolean;
   setupSmoke?: boolean;
   timing?: boolean;
   scope?: DoctorScope;

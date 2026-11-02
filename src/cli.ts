@@ -98,11 +98,6 @@ import {
   runNodeBanAudit,
 } from "./lint/bun-permanent-ban.ts";
 import { loadChangedFiles, loadStagedFiles } from "./lint/change-impact.ts";
-import {
-  applyDigestAnchorCandidatesToContent,
-  nodeHistoryScanDeps,
-  planDigestMigration,
-} from "./lint/green-command-digest.ts";
 import { parseNodeGenerationCiEvidence } from "./lint/node-generation-ci-policy.ts";
 import { writeVModelTemplates } from "./setup/vmodel-template-writer.ts";
 import { materializeSkillAssets } from "./shared/embedded-skills.ts";
@@ -120,7 +115,6 @@ import {
   exportRelationDiagram,
   type RelationDiagramAdapter,
 } from "./lint/relation-graph.ts";
-import { loadReviewPlans } from "./lint/review-evidence.ts";
 import {
   inspectMcpProfile,
   listVerificationProfiles,
@@ -751,10 +745,6 @@ program
     "fail closed when populated telemetry tables have only projection provenance",
   )
   .option(
-    "--strict-green-command-digest",
-    "fail closed when green command digests do not match their evidence files",
-  )
-  .option(
     "--setup-smoke",
     "run only the fresh-consumer setup smoke checks for wrapper and adapter hooks",
   )
@@ -770,7 +760,6 @@ program
   .action(
     async (opts: {
       strictTelemetryProvenance?: boolean;
-      strictGreenCommandDigest?: boolean;
       setupSmoke?: boolean;
       profile?: string;
       profiles?: boolean;
@@ -832,7 +821,6 @@ program
       try {
         measured = runDoctorMeasured(undefined, {
           strictTelemetryProvenance: opts.strictTelemetryProvenance === true,
-          strictGreenCommandDigest: opts.strictGreenCommandDigest === true,
           setupSmoke: opts.setupSmoke === true,
           ...(profile ? { profile: profile as DoctorRunProfileId } : {}),
           scope,
@@ -856,7 +844,6 @@ program
                 ? measured.profile.id
                 : null,
             options: {
-              strict_green_command_digest: opts.strictGreenCommandDigest === true,
               strict_telemetry_provenance: opts.strictTelemetryProvenance === true,
               timing: opts.timing === true,
             },
@@ -1512,71 +1499,6 @@ plan
     const r = lintPlanWithGate(path, process.cwd(), opts?.gate);
     for (const m of r.messages) process.stdout.write(`${m}\n`);
     process.exitCode = r.ok ? 0 : 1;
-  });
-
-plan
-  .command("digest-migrate")
-  .description(
-    "green_command digest を記録時点 commit へ anchor 化する計画 (PLAN-L7-303、dry-run 既定)。" +
-      "履歴から claimed digest 一致 commit を特定し recoverable/suspect に分類する。",
-  )
-  .option("--json", "JSON 出力")
-  .option(
-    "--execute",
-    "recoverable entry に anchor_commit を追記する (既存 output_digest は変更しない)",
-  )
-  .action((opts: { json?: boolean; execute?: boolean }) => {
-    const repoRoot = process.cwd();
-    const plans = loadReviewPlans(repoRoot);
-    const candidates = planDigestMigration(plans, nodeHistoryScanDeps(repoRoot));
-    if (opts.json) {
-      process.stdout.write(`${JSON.stringify(candidates, null, 2)}\n`);
-      return;
-    }
-    const counts = { recoverable: 0, suspect: 0, "already-anchored": 0 } as Record<string, number>;
-    for (const c of candidates) counts[c.disposition] = (counts[c.disposition] ?? 0) + 1;
-    if (opts.execute) {
-      const byFile = new Map<string, typeof candidates>();
-      for (const c of candidates.filter((x) => x.disposition === "recoverable")) {
-        byFile.set(c.file, [...(byFile.get(c.file) ?? []), c]);
-      }
-      let touchedFiles = 0;
-      let applied = 0;
-      let skippedAlreadyAnchored = 0;
-      for (const [file, fileCandidates] of byFile) {
-        const path = join(repoRoot, "docs", "plans", file);
-        const before = readFileSync(path, "utf8");
-        const result = applyDigestAnchorCandidatesToContent(before, fileCandidates);
-        applied += result.applied;
-        skippedAlreadyAnchored += result.skippedAlreadyAnchored;
-        if (result.content !== before) {
-          writeFileSync(path, result.content, "utf8");
-          touchedFiles += 1;
-        }
-      }
-      process.stdout.write(
-        `plan digest-migrate --execute — applied=${applied} files=${touchedFiles} ` +
-          `skipped_already_anchored=${skippedAlreadyAnchored} suspect=${counts.suspect}\n`,
-      );
-      process.stdout.write(
-        "既存 output_digest は変更していない。suspect は履歴に claimed 一致 blob が無いため未更新。\n",
-      );
-      return;
-    }
-    process.stdout.write(
-      `plan digest-migrate (dry-run) — ${candidates.length} green_command: ` +
-        `recoverable=${counts.recoverable} suspect=${counts.suspect} already-anchored=${counts["already-anchored"]}\n`,
-    );
-    for (const c of candidates.filter((x) => x.disposition !== "already-anchored")) {
-      const anchor = c.anchor_candidate
-        ? `anchor=${c.anchor_candidate.slice(0, 12)}`
-        : "anchor=none";
-      process.stdout.write(`  [${c.disposition}] ${c.plan_id} ${c.evidence_path} ${anchor}\n`);
-    }
-    process.stdout.write(
-      "\nsuspect = どの commit にも claimed 一致 blob 無し (捏造/回復不能疑い、A-18x 台帳化)。" +
-        "\n書き込みは --execute で recoverable に anchor_commit のみ追記する。\n",
-    );
   });
 
 plan

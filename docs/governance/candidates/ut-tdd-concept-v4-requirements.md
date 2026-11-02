@@ -4,7 +4,7 @@ status: draft_candidate
 concept: docs/governance/candidates/ut-tdd-concept-v4.0.md
 requests: docs/governance/candidates/ut-tdd-concept-v4-requests.md
 decision_ledger: docs/governance/candidates/v4-decision-ledger.json
-plan: docs/plans/PLAN-L1-09-ut-tdd-concept-v4-candidates.md
+issue: 530
 revision_base_artifact: docs/design/harness/L1-requirements/vmodel-engine-swap-requirements-delta.md
 ---
 
@@ -12,11 +12,11 @@ revision_base_artifact: docs/design/harness/L1-requirements/vmodel-engine-swap-r
 
 ## Authority 境界
 
-本書は PLAN-L1-09 の未承認候補である。current requirements (要件定義書 v1.2、VUP-REQ-01〜10)、Requirement IR、
+本書は #530 の未承認候補である。current requirements (要件定義書 v1.2、VUP-REQ-01〜10)、Requirement IR、
 runtime、DB へ投影しない。承認後は VUP-REQ-11〜 として `vmodel-engine-swap-requirements-delta.md` と同じ
 additive 方式の L1 delta 文書へ写す。既存 VUP-REQ-01〜10 は変えない。
 
-PLAN の廃止は v4 への切り替えのときに行う (V4D-078)。それまでは本書も PLAN-L1-09 を正規の受け皿とする。
+PLAN は廃止済みである (方針は V4D-078、本文の削除は #1078)。本書の正規の受け皿は #530 とする。
 
 ## 決定台帳・要求との関係
 
@@ -38,7 +38,7 @@ node docs/governance/candidates/v4-ledger-check.mjs
 
 区分の意味: 維持 = 文言をそのまま残した。既存を更新 = 同じ ID のまま決定に合わせて書き直した。新規 = どの既存の要件にも無い論点。
 
-集計: 維持 24 件 / 既存を更新 35 件 / 新規 17 件 (計 76 件)。
+集計: 維持 23 件 / 既存を更新 37 件 / 新規 18 件 (計 78 件)。
 
 ## 要件候補
 

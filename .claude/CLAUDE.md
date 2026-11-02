@@ -200,7 +200,8 @@ Sonnet 自身が worker tier なので、通常の作業は自分で行う (「�
 - Agent tool の subagent は手を動かす層 (草稿・調査・並列作業) であり、closing の権限を持たない。レビューの verdict・merge の根拠は
   委譲経路 (`ut-tdd claude|codex --role <role>`) と review custody だけが持つ (`../CLAUDE.md` §Model / Effort Routing の 2 層)。
 - 「通常の作業」は文書作成・決まった型での issue / PR 返信・決まった UI デザインの実装、「軽い作業」は
-  gh の状態確認・grep・CI の見張り・ログの要約。
+  gh の状態確認・grep・CI の見張り・ログの要約。基準が明示できる読み取りと編集は Haiku に任せてよいが、
+  意味・完了の判定は任せない (`../CLAUDE.md` §Model / Effort Routing)。
 - どの行でも変えないもの: モデル割当は Model / Effort Routing (`../CLAUDE.md`) と
   `src/team/delegation-routing.ts` の機械強制に従う。review の族分離 (Codex 著 → Claude Opus、
   Claude 著 → Codex Sol) は指揮モデルに依らない。PO へ上げてよい条件は `../CLAUDE.md`

@@ -211,13 +211,7 @@ jobs:
         run: node src/cli.ts db rebuild --json
 
       - name: doctor (governance hard gates)
-        # PLAN-L7-420 Step 2: green-command-digest は L7-132/L7-194/L7-303 で opt-in strict として
-        # 設計されたが、CI がこのフラグ無しで doctor を回していたため strict gate がどの自動経路でも
-        # 走っていなかった (G-1)。PLAN-L7-420 Step 1 で不一致 49 件 (30 PLAN) を rerun-bound correction
-        # で是正し尽くしたことを前提に、ここで CI へ hard 投入する。
-        # telemetry-provenance (L7-192) は現状 runtime capture gap が残るため、投入は期限付き deferral
-        # (PLAN-L7-420 §telemetry-provenance strict deferral 参照)。
-        # PLAN-L7-455 lane 判定 (doc-only lane では skip) と PLAN-L7-420 strict flag を両立させる。
+        # Full doctor is required for the source lane; the doc-only lane skips it.
         if: ${{ steps.classify.outputs.lane == 'full' }}
         # PLAN-L7-461: 実測結果を envelope として書き出し、同一 job の vitest fence が
         # doctor を二重実行せず消費できるようにする。消費は宣言済み portable surface
@@ -227,17 +221,16 @@ jobs:
         env:
           UT_TDD_DOCTOR_RESULT_FILE: ${{ runner.temp }}/ut-tdd-doctor-result.json
         run: >-
-          node src/cli.ts doctor --strict-green-command-digest
+          node src/cli.ts doctor
           --result-file "$UT_TDD_DOCTOR_RESULT_FILE"
 
       - name: test — 全回帰 (vitest run)
         if: ${{ steps.classify.outputs.lane == 'full' }}
         # PLAN-L7-461: fence は上の doctor step の envelope を消費する。宣言した surface
-        # (root / strict flag) と一致しなければ従来どおり自走する (fail-close)。
+        # (root / options) と一致しなければ従来どおり自走する (fail-close)。
         env:
           UT_TDD_DOCTOR_RESULT_FILE: ${{ runner.temp }}/ut-tdd-doctor-result.json
           UT_TDD_DOCTOR_RESULT_ROOT: ${{ github.workspace }}
-          UT_TDD_DOCTOR_RESULT_STRICT: "1"
         run: npm run test
 
       # doc lane では全回帰の代わりに doc 系 check (readability / rule-drift) のみ実行する。
