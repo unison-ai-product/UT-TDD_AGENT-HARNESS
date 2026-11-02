@@ -16,7 +16,7 @@ issue: 1456
 
 ## 1. 目的と状態
 
-本書は `src/lint/coding-rules.ts` の `isTestTitleLiteral` を拡張する契約である。現行実装が満たすのは bare `describe` / `it` / `test` の直接呼出しだけであり、modifier / data-provider 呼出しは未実装である。正式 oracle `U-CODE-011` の登録 Red は PR #1489 で実証済みであり、production Green は未実装である。
+本書は `src/lint/coding-rules.ts` の `isTestTitleLiteral` を拡張する契約である。実装は PR #1497 で merge 済みであり、bare `describe` / `it` / `test` の直接呼出しに加えて modifier / data-provider 呼出しも認識する。正式 oracle `U-CODE-011` の登録 Red は PR #1489 で実証済みであり、production Green は PR #1497 で merge 済みである。
 
 ## 2. 契約
 
