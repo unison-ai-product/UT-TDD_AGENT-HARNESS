@@ -1,4 +1,5 @@
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import {
   chmodSync,
   existsSync,
@@ -30,14 +31,15 @@ import { digestMaterializedReleaseEntries } from "../src/setup/release-materiali
 import { defaultHarnessDbPath, openHarnessDb, upsertRow } from "../src/state-db/index.ts";
 import { migrate } from "../src/state-db/migration.ts";
 import { MODEL_IDS } from "../src/team/model-policy.ts";
+import { stubSyntheticPrivacyHome } from "./support/privacy-denylist-home.ts";
 import { removeTestTree } from "./support/temp-tree.ts";
 
 const repoRoot = process.cwd();
 const cliPath = join(repoRoot, "src", "cli.ts");
 const legacyEnvPrefix = ["HE", "LIX"].join("");
 
-function runCli(args: string[]) {
-  return runCliIn(repoRoot, args);
+function runCli(args: string[], env?: NodeJS.ProcessEnv) {
+  return runCliIn(repoRoot, args, env);
 }
 
 function runCliIn(cwd: string, args: string[], env: NodeJS.ProcessEnv = process.env) {
@@ -192,15 +194,14 @@ describe("L7 CLI surface closure", () => {
         "session-gate-test",
         "--json",
       ]);
-      expect(run.status, `stderr:\n${run.stderr}\nstdout:\n${run.stdout}`).toBe(0);
-      const payload = JSON.parse(run.stdout);
+      const payload = parseCliJson(run);
       expect(payload.passed).toBe(true);
-      expect(payload.gate_run_evidence.path).toMatch(/^\.ut-tdd\/gate_runs\/G0\.5-/);
       const files = readdirSync(join(root, ".ut-tdd", "gate_runs"));
       expect(files).toHaveLength(1);
-      const evidence = JSON.parse(
-        readFileSync(join(root, ".ut-tdd", "gate_runs", files[0]), "utf8"),
-      );
+      const evidence = JSON.parse(readFileSync(join(root, ".ut-tdd/gate_runs", files[0]), "utf8"));
+      const expectedFileName = `${createHash("sha256").update(evidence.gate_run_id, "utf8").digest("hex")}.json`;
+      expect(files).toEqual([expectedFileName]);
+      expect(payload.gate_run_evidence.path).toBe(`.ut-tdd/gate_runs/${expectedFileName}`);
       expect(evidence).toMatchObject({
         gate_id: "G0.5",
         plan_id: "PLAN-L7-363-routine-gate-run-projection",
@@ -917,7 +918,7 @@ describe("L7 CLI surface closure", () => {
       );
       const fakeCodex = writeFakeProvider(binDir, "codex");
       writeFakeUtTdd(binDir);
-      const run = runCliIn(repoRoot, ["distribution", "plan", "--tag", "v0.1.0", "--json"], {
+      const run = runCli(["distribution", "plan", "--tag", "v0.1.0", "--json"], {
         ...process.env,
         UT_TDD_CODEX_BIN: fakeCodex,
         UT_TDD_TEST_PROVIDER_OUTPUT_DIR: binDir,
@@ -959,15 +960,7 @@ describe("L7 CLI surface closure", () => {
   it("fails closed when the distribution source tag is unavailable", () => {
     const outDir = mkdtempSync(join(tmpdir(), "ut-tdd-package-out-"));
     try {
-      const run = runCliIn(repoRoot, [
-        "distribution",
-        "package",
-        "--tag",
-        "v0.1.0",
-        "--out",
-        outDir,
-        "--json",
-      ]);
+      const run = runCli(["distribution", "package", "--tag", "v0.1.0", "--out", outDir, "--json"]);
       const payload = JSON.parse(run.stdout);
 
       expect(run.status, run.stderr || run.stdout).toBe(1);
@@ -985,7 +978,7 @@ describe("L7 CLI surface closure", () => {
     const traceRoot = mkdtempSync(join(tmpdir(), "ut-tdd-cli-git-trace-"));
     const tracePath = join(traceRoot, "git-trace.log");
     try {
-      const run = runCliIn(repoRoot, ["--version"], {
+      const run = runCli(["--version"], {
         ...process.env,
         GIT_TRACE: tracePath,
       });
@@ -1020,14 +1013,14 @@ describe("L7 CLI surface closure", () => {
       });
       expect(head.status).toBe(0);
       const omittedTrace = join(traceRoot, "omitted.log");
-      const omitted = runCliIn(repoRoot, ["distribution", "sync-plan", "--json"], {
+      const omitted = runCli(["distribution", "sync-plan", "--json"], {
         ...process.env,
         GIT_TRACE: omittedTrace,
       });
       expect(parseCliJson(omitted).export.sourceTag).toBe(head.stdout.trim());
       expect(readFileSync(omittedTrace, "utf8")).toMatch(/rev-parse --short HEAD/);
 
-      const omittedPlan = parseCliJson(runCliIn(repoRoot, ["distribution", "plan", "--json"]));
+      const omittedPlan = parseCliJson(runCli(["distribution", "plan", "--json"]));
       expect(omittedPlan.export.sourceTag).toBe(head.stdout.trim());
       expect(omittedPlan.readiness.contracts.tagPin).toBe(
         `github:unison-ai-product/UT-TDD_AGENT-HARNESS-Pack#${head.stdout.trim()}`,
@@ -1039,7 +1032,7 @@ describe("L7 CLI surface closure", () => {
   });
 
   it("exposes a non-destructive Pack repository sync plan", () => {
-    const run = runCliIn(repoRoot, [
+    const run = runCli([
       "distribution",
       "sync-plan",
       "--tag",
@@ -1087,7 +1080,7 @@ describe("L7 CLI surface closure", () => {
   it("U-DOCSECRET-006: materializes clean Pack artifacts into a local staging directory without publishing", () => {
     const outDir = mkdtempSync(join(tmpdir(), "ut-tdd-pack-stage-"));
     try {
-      const run = runCliIn(repoRoot, [
+      const run = runCli([
         "distribution",
         "sync-stage",
         "--tag",
@@ -1127,6 +1120,7 @@ describe("L7 CLI surface closure", () => {
   }, 30_000);
 
   it("U-DOCSECRET-006: updates a local Pack checkout and prunes non-Pack files only when requested", () => {
+    stubSyntheticPrivacyHome();
     const packDir = mkdtempSync(join(tmpdir(), "ut-tdd-pack-repo-"));
     let manifest: string | null = null;
     try {
@@ -1134,15 +1128,8 @@ describe("L7 CLI surface closure", () => {
       mkdirSync(join(packDir, "docs", "plans"), { recursive: true });
       writeFileSync(stalePlan, "dogfood plan should not ship\n", "utf8");
 
-      const blocked = runCliIn(repoRoot, [
-        "distribution",
-        "sync-pack",
-        "--tag",
-        "v0.1.0",
-        "--repo-dir",
-        packDir,
-        "--json",
-      ]);
+      const syncPack = ["distribution", "sync-pack", "--tag", "v0.1.0", "--repo-dir", packDir];
+      const blocked = runCli([...syncPack, "--json"]);
       const blockedPayload = JSON.parse(blocked.stdout);
       manifest = blockedPayload.pack.manifest;
 
@@ -1164,16 +1151,7 @@ describe("L7 CLI surface closure", () => {
       });
       expect(existsSync(stalePlan)).toBe(true);
 
-      const pruned = runCliIn(repoRoot, [
-        "distribution",
-        "sync-pack",
-        "--tag",
-        "v0.1.0",
-        "--repo-dir",
-        packDir,
-        "--prune-local",
-        "--json",
-      ]);
+      const pruned = runCli([...syncPack, "--prune-local", "--json"]);
       const prunedPayload = JSON.parse(pruned.stdout);
       manifest = prunedPayload.pack.manifest;
 
@@ -1214,7 +1192,7 @@ describe("L7 CLI surface closure", () => {
   }, 40_000);
 
   it("exposes non-destructive release publication planning", () => {
-    const run = runCliIn(repoRoot, [
+    const run = runCli([
       "distribution",
       "release-plan",
       "--tag",
@@ -1252,7 +1230,7 @@ describe("L7 CLI surface closure", () => {
     writeFileSync(body, "## Summary\nPatch only.\n", "utf8");
     writeFileSync(commits, "fix: patch production regression\n", "utf8");
     try {
-      const run = runCliIn(repoRoot, [
+      const run = runCli([
         "github",
         "guard",
         "--head-ref",

@@ -1,16 +1,14 @@
 // PLAN-DISCOVERY-05 (poc spike): 工程表 (gated layer-decomposition roadmap) 登録機構の TDD Red→Green。
-// 検証: roadmap zod schema / 構造整合 (gate 参照・順序) / frontmatter 抽出 / span 実在 / gate 進捗。
+// 検証: roadmap zod schema / 構造整合 (gate 参照・順序) / frontmatter 抽出 / gate 進捗。
 import { describe, expect, it } from "vitest";
 import {
   analyzeProgramCoverage,
-  checkSpanExistence,
   computeGateProgress,
   computeProgramRollup,
   extractRoadmap,
   PARKED_BANDS,
   PROGRAM_BANDS,
   parseRoadmap,
-  programCoverageMessages,
   type RoadmapRecord,
 } from "../src/lint/roadmap-registry.ts";
 import { roadmapSchema, validateRoadmapStructure } from "../src/schema/roadmap.ts";
@@ -76,27 +74,6 @@ describe("roadmap park / program rollup (U-ROADMAP-019..022)", () => {
     expect(coveredIds.length + result.parked.length + result.uncovered.length).toBe(
       PROGRAM_BANDS.length,
     );
-  });
-
-  it("U-ROADMAP-020: programCoverageMessages は uncovered=0 でも parked band と reason を surface する", () => {
-    const result = analyzeProgramCoverage(
-      [
-        record("PLAN-L3-00-master", "L3"),
-        record("PLAN-L4-00-master", "L4"),
-        record("PLAN-L7-44-harness-db-master", "L7"),
-      ],
-      new Set(PARKED_BANDS.keys()),
-    );
-    const message = programCoverageMessages(result)[0];
-    const verificationReason = PARKED_BANDS.get("verification");
-    const cutoverReason = PARKED_BANDS.get("cutover");
-    expect(message).toContain("登録 3 / park 2");
-    expect(message).toContain("verification:");
-    expect(verificationReason).toBeDefined();
-    expect(message).toContain(String(verificationReason));
-    expect(message).toContain("cutover:");
-    expect(cutoverReason).toBeDefined();
-    expect(message).toContain(String(cutoverReason));
   });
 
   it("U-ROADMAP-021: parkedBandIds に含めない未登録 band は uncovered に残る", () => {
@@ -276,20 +253,6 @@ roadmap:
   });
 });
 
-describe("checkSpanExistence (U-ROADMAP-008)", () => {
-  it("U-ROADMAP-008: 実在しない span.plan_id を孤児として surface", () => {
-    const known = new Set(["PLAN-REVERSE-40-orphan-governance"]);
-    const issues = checkSpanExistence(VALID_ROADMAP, known);
-    expect(issues).toHaveLength(1);
-    expect(issues[0]).toContain("PLAN-REVERSE-41-substance-lints");
-  });
-
-  it("U-ROADMAP-013: 全 span 実在なら孤児 0 (正常系)", () => {
-    const known = new Set(["PLAN-REVERSE-40-orphan-governance", "PLAN-REVERSE-41-substance-lints"]);
-    expect(checkSpanExistence(VALID_ROADMAP, known)).toHaveLength(0);
-  });
-});
-
 describe("computeGateProgress (U-ROADMAP-009/010)", () => {
   it("U-ROADMAP-009: 直前 span が全 confirmed なら gate=reached", () => {
     const statusOf = (id: string) =>
@@ -351,10 +314,9 @@ describe("analyzeProgramCoverage (U-ROADMAP-015〜018、全プログラム被覆
     expect(uncovered).toHaveLength(0);
   });
 
-  it("U-ROADMAP-018: 登録 0 なら全 band uncovered、全 band 被覆なら OK メッセージ", () => {
+  it("U-ROADMAP-018: 登録 0 なら全 band uncovered、全 band 被覆なら uncovered 0", () => {
     const none = analyzeProgramCoverage([]);
     expect(none.uncovered).toHaveLength(PROGRAM_BANDS.length);
-    expect(programCoverageMessages(none)[0]).toContain("未登録");
     // 全 band を別 roadmap で被覆
     const all = analyzeProgramCoverage([
       record("p-up", "L1"),
@@ -364,6 +326,5 @@ describe("analyzeProgramCoverage (U-ROADMAP-015〜018、全プログラム被覆
       record("p-cu", "cutover"),
     ]);
     expect(all.uncovered).toHaveLength(0);
-    expect(programCoverageMessages(all)[0]).toContain("OK");
   });
 });

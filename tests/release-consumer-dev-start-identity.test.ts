@@ -6,13 +6,13 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
-  rmSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { resolveRuntimeRepoRoot } from "../src/runtime/repo-root.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 
 const cliPath = resolve("src/cli.ts");
 const fixtures: string[] = [];
@@ -88,7 +88,7 @@ function writtenPaths(stdout: string): string[] {
 }
 
 afterEach(() => {
-  for (const root of fixtures.splice(0)) rmSync(root, { recursive: true, force: true });
+  for (const root of fixtures.splice(0)) removeTestTree(root);
 });
 
 describe("U-RCDEV PR-1: identity / repo-root", () => {

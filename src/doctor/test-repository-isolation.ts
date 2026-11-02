@@ -17,9 +17,9 @@ asset-catalog:2 asset-drift:1 backfill-pairing:1 cited-command-existence:1 cli-s
 advisory-strict-gate-aging:4
 codex-hook-adapter:5 coding-rules:1 context-doc-router:2 cycle-p4-verification:3 db-currency:1 db-projection-coverage:1 db-projection-ingestion:3
 dependency-drift:4 descent-obligation:3 distribution-acceptance:1 distribution-scratch-ignore:1 doctor-runtime-surface:2 doctor:25
-drive-model-passage:2 fr-roadmap-coverage:4 frontend-design-coverage:1 g10-ux-workflow:5 g8-integration-workflow:6 g9-system-workflow:7
+drive-model-passage:1 fr-roadmap-coverage:4 frontend-design-coverage:1 g10-ux-workflow:5 g8-integration-workflow:6 g9-system-workflow:7
 erasable-syntax:1 gate-static:10 import-specifier:2 l6-completion:2 l6-fr-coverage:2 mode-catalog:1 model-id-ssot:1 model-id-ssot-drift:1 module-drift:2 oracle-test-trace:13
-plan-lint:8 projection-writer:13 proposal-document-coverage:2 readability:5 relation-graph-loader:1 review-green-command-projection:1
+plan-lint:8 projection-writer:9 proposal-document-coverage:2 readability:5 relation-graph-loader:1
 release-artifact-resolver:1 release-consumer-skills:4
 right-lung-doc-governance:1 rule-drift:4 runtime-hook-entrypoints:1
 review-live-cli:4
@@ -35,17 +35,17 @@ doctor-test-repository-isolation:1 persistent-db-cleanup-contract:1 memory-clean
 secret-scan-diff:1
 feedback-log:2
 github-repository-policy:3
-github-ci-policy:1
+gate-run-publish-candidate:3 gate-run-stderr-candidate:1 github-ci-policy:1
 github-forward-store:2
 node-self-host-bootstrap:1 node-slice-admission:3 node-plan-revision-runner:3
 global-setup.ts:1 support/workspace-roots.ts:3
-global-setup-fence:1 vitest-snapshot-runner:3
+global-setup-fence:1 vitest-snapshot-runner:3 snapshot-runner-argv-candidates:2
 hook-native-launcher:1 claude-memory-terminal-gc:1 release-version-identity:2 windows-ci-single-snapshot:2 pack-authoring-template-scope:2
 profile/tracked-loader:2
 plan-asset/ledger-schema:4 plan-asset/project-identity-loader:1
 disposition/git-authoring-provenance:3 disposition/projection:6 disposition/tracked-target-registry:2
   forward-escape-issue-contract:2
-  pack-consumer-runtime-release:4 release-consumer-vmodel-template:1
+  pack-consumer-runtime-release:3 release-consumer-vmodel-template:1
   release-consumer-setup-artifacts:1
   pack-internal-canary-boundary:1 support/pack-internal-canary.ts:1
   pack-canary-acceptance:3
@@ -186,7 +186,7 @@ repositoryReadContracts["tests/support/pack-consumer-runtime.ts"] = {
 };
 repositoryReadContracts["tests/pack-consumer-runtime-release.test.ts"] = {
   mode: "isolated_fixture",
-  calls: 4,
+  calls: 3,
   reason:
     "clean Pack producer fixture copies tracked assets into a temporary Git repository and installer CLI runs only from the detached execution snapshot",
 };

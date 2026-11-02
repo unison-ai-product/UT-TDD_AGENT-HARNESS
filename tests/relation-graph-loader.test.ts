@@ -648,13 +648,10 @@ describe("loadRelationGraphSourceSet", () => {
   });
 });
 
-// PLAN-L7-142: real-repo regression fence for the relation-graph loader coverage gap.
-// 合成 fixture ではなく実 loadRelationGraphSourceSet(process.cwd()) を通し、derives-from
-// (plan→requirement) / pairs (design→test-design) / generates (plan→source) の端点 node が
-// すべて実在し stale-edge == 0 であることを機械保証する (coverage≠substance、PLAN-L7-32 の
-// loader が requirement node を一切 materialize しなかった回帰の再発防止)。
+// 実 repo の regression fence: 実 loadRelationGraphSourceSet(process.cwd()) の edge の端点が全て実在し
+// stale-edge == 0 であること、PLAN に依らない node / edge が空でないことを保証する (#1430)。
 describe("relation graph real-repo loader (PLAN-L7-142 stale-edge fence)", () => {
-  it("has zero stale-edge findings through the real loader and materializes requirement nodes", () => {
+  it("CANDIDATE-U-PLANRET-024: has zero stale-edge findings through the real loader and materializes requirement nodes", () => {
     const projection = collectRelationGraphProjection(loadRelationGraphSourceSet(process.cwd()));
     const result = analyzeRelationImpact({ changedPaths: [], projection });
     const staleEdges = result.findings.filter((f) => f.code === "stale-edge");
@@ -662,6 +659,9 @@ describe("relation graph real-repo loader (PLAN-L7-142 stale-edge fence)", () =>
     expect(staleEdges.map((f) => f.message)).toEqual([]);
     const requirementNodes = projection.nodes.filter((n) => n.kind === "requirement");
     expect(requirementNodes.length).toBeGreaterThan(0);
+    for (const kind of ["pairs", "covered-by"]) {
+      expect(projection.edges.filter((e) => e.kind === kind).length).toBeGreaterThan(0);
+    }
     const agentImpact = analyzeRelationImpact({
       changedPaths: [".claude/commands/build.md"],
       projection,

@@ -36,6 +36,7 @@ import {
   resolveReleaseArtifacts,
 } from "../../src/setup/release-artifact-resolver.ts";
 import { materializeReleaseArtifacts } from "../../src/setup/release-materializer.ts";
+import { writeSyntheticPrivacyDenylist } from "./privacy-denylist-home.ts";
 import { removeTestTree } from "./temp-tree.ts";
 
 export const CANARY_FIXTURE_TAG = "v0.0.0-canary.0";
@@ -210,10 +211,9 @@ function assertFixtureTree(root: string): void {
   const visit = (path: string): void => {
     for (const entry of readdirSync(path, { withFileTypes: true })) {
       const child = join(path, entry.name);
-      const info = lstatSync(child);
       // Do not follow a symlink/junction while checking our owned tree. `rmSync` unlinks it as
       // an entry; it never recursively traverses the target.
-      if (info.isSymbolicLink()) continue;
+      if (lstatSync(child).isSymbolicLink()) continue;
       if (entry.isDirectory()) visit(child);
     }
   };
@@ -224,8 +224,7 @@ function makeFixtureDirectoriesWritable(root: string): void {
   if (process.platform === "win32") return;
   const visit = (path: string): void => {
     const info = lstatSync(path);
-    if (info.isSymbolicLink()) return;
-    if (!info.isDirectory()) return;
+    if (info.isSymbolicLink() || !info.isDirectory()) return;
     chmodSync(path, info.mode | 0o700);
     for (const entry of readdirSync(path, { withFileTypes: true }))
       if (entry.isDirectory()) visit(join(path, entry.name));
@@ -449,10 +448,8 @@ export async function createCanaryFixture(): Promise<CanaryFixture> {
     const releaseDir = join(root, "release");
     const consumerRoot = join(root, "consumer");
     const alternateCwd = join(root, "alternate-cwd");
-    mkdirSync(producerRoot, { recursive: true });
-    mkdirSync(releaseDir, { recursive: true });
-    mkdirSync(consumerRoot, { recursive: true });
-    mkdirSync(alternateCwd, { recursive: true });
+    for (const dir of [producerRoot, releaseDir, consumerRoot, alternateCwd])
+      mkdirSync(dir, { recursive: true });
 
     materializeProducerRoot(producerRoot);
     git(producerRoot, ["init", "--quiet"]);
@@ -468,6 +465,7 @@ export async function createCanaryFixture(): Promise<CanaryFixture> {
     git(producerRoot, ["tag", CANARY_FIXTURE_TAG]);
 
     runNpmCi(producerRoot);
+    const producerHome = writeSyntheticPrivacyDenylist(join(root, "producer-home"));
     const producer = runNode(
       producerRoot,
       [
@@ -480,7 +478,7 @@ export async function createCanaryFixture(): Promise<CanaryFixture> {
         releaseDir,
         "--json",
       ],
-      isolatedCanaryEnv(root),
+      { ...isolatedCanaryEnv(root), HOME: producerHome, USERPROFILE: producerHome },
       undefined,
       // The real producer performs a second isolated npm ci from the tagged Git tree.
       // Keep a finite bound, but do not apply the short CLI bound to that nested build.

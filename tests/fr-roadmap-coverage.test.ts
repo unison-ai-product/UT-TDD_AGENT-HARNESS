@@ -80,13 +80,29 @@ describe("fr-roadmap-coverage lint", () => {
     });
   });
 
-  it("U-FRC-003: passes only when closed rows have PLAN/source/test/gate evidence", () => {
-    const r = analyzeFrRoadmapCoverageWithRoot([{ file: "A.md", content: closed }], process.cwd());
+  it("U-FRC-003: passes only when closed rows have source/test/gate evidence", () => {
+    const root = process.cwd();
+    const r = analyzeFrRoadmapCoverageWithRoot([{ file: "A.md", content: closed }], root);
 
     expect(r.ok).toBe(true);
     expect(r.rows).toHaveLength(9);
     expect(r.closureRows).toHaveLength(9);
     expect(frRoadmapCoverageMessages(r)[0]).toContain("closure=9");
+
+    // PLAN / WBS 列は任意の文脈情報であり、空欄でも実在しない path でも違反にしない。
+    const blank = closed.replace(
+      "| R1 | docs/design/harness/L3-functional/functional-requirements.md#§3 |",
+      "| R1 | |",
+    );
+    const missing = closed.replace(
+      "| R2 | docs/design/harness/L3-functional/functional-requirements.md#§3 |",
+      "| R2 | docs/plans/PLAN-L7-99-missing.md |",
+    );
+    for (const content of [blank, missing]) {
+      const optional = analyzeFrRoadmapCoverageWithRoot([{ file: "A.md", content }], root);
+      expect(optional.violations).toEqual([]);
+      expect(optional.ok).toBe(true);
+    }
   });
 
   it("U-FRC-004: fails closed rows without closure evidence", () => {

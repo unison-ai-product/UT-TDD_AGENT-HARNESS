@@ -163,6 +163,7 @@ function ports(
   return {
     getPullRequest: input.getFacts ?? (() => facts()),
     mergePullRequest: input.merge ?? (() => undefined),
+    checkBaselineConflict: () => null,
   };
 }
 
@@ -218,10 +219,8 @@ function refactorPorts(
 function receipt(root: string): Record<string, unknown> {
   const log = readdirSync(join(root, ".ut-tdd", "logs")).find((name) => name.endsWith(".jsonl"));
   if (!log) throw new Error("merge receipt not written");
-  const lines = readFileSync(join(root, ".ut-tdd", "logs", log), "utf8")
-    .trim()
-    .split("\n");
-  return JSON.parse(lines.at(-1) ?? "") as Record<string, unknown>;
+  const text = readFileSync(join(root, ".ut-tdd", "logs", log), "utf8").trim();
+  return JSON.parse(text.split("\n").at(-1) ?? "") as Record<string, unknown>;
 }
 
 describe("D2-B PR merge gate", () => {

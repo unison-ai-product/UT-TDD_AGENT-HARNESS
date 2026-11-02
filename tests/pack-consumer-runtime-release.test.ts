@@ -65,6 +65,9 @@ import {
   resolveReleaseArtifacts,
 } from "../src/setup/release-artifact-resolver.ts";
 import { materializeReleaseArtifacts } from "../src/setup/release-materializer.ts";
+import { useSyntheticPrivacyHome } from "./support/privacy-denylist-home.ts";
+
+const privacyHome = useSyntheticPrivacyHome();
 
 const revision = "a".repeat(40);
 const digest = digestMaterializedReleaseEntries([
@@ -299,10 +302,7 @@ function releaseManifestForFixture(artifactSourceCommit: string): Record<string,
   };
 }
 
-function createReleaseBindingFixture(
-  variant: "normal" | "tag-at-c1" | "side-branch" | "second-parent" | "src-mutation" | "schema",
-): { root: string; tag: string; c1: string; c2: string | null; side?: string } {
-  const root = mkdtempSync(join(tmpdir(), "ut-tdd-packrt-011-"));
+function commitFixtureArtifact(root: string): void {
   mkdirSync(join(root, "src"), { recursive: true });
   writeFileSync(join(root, "src", "artifact.ts"), "export const fixture = true;\n", "utf8");
   fixtureGit(root, ["init", "--quiet"]);
@@ -310,6 +310,13 @@ function createReleaseBindingFixture(
   fixtureGit(root, ["config", "user.name", "UT test"]);
   fixtureGit(root, ["add", "--", "."]);
   fixtureGit(root, ["commit", "--quiet", "-m", "fixture artifact"]);
+}
+
+function createReleaseBindingFixture(
+  variant: "normal" | "tag-at-c1" | "side-branch" | "second-parent" | "src-mutation" | "schema",
+): { root: string; tag: string; c1: string; c2: string | null; side?: string } {
+  const root = mkdtempSync(join(tmpdir(), "ut-tdd-packrt-011-"));
+  commitFixtureArtifact(root);
   const c1 = fixtureGit(root, ["rev-parse", "HEAD"]);
   const tag = "v0.2.0-canary.2";
   if (variant === "tag-at-c1") {
@@ -421,13 +428,7 @@ async function createProducerFixture(
     cpSync(from, to, { recursive: true });
   }
   rmSync(join(root, ".github", "workflows", "harness-check.yml"), { force: true });
-  mkdirSync(join(root, "src"), { recursive: true });
-  writeFileSync(join(root, "src", "artifact.ts"), "export const fixture = true;\n", "utf8");
-  fixtureGit(root, ["init", "--quiet"]);
-  fixtureGit(root, ["config", "user.email", "test@example.invalid"]);
-  fixtureGit(root, ["config", "user.name", "UT test"]);
-  fixtureGit(root, ["add", "--", "."]);
-  fixtureGit(root, ["commit", "--quiet", "-m", "fixture artifact"]);
+  commitFixtureArtifact(root);
   const fixturePlan = buildCleanDistributionPlan({
     paths: collectDistributionCandidatePaths(root),
     sourceTag: "fixture",
@@ -1084,7 +1085,7 @@ describe("Pack consumer runtime release producer contract", () => {
             repoRoot: fixture.root,
             tag: fixture.tag,
             outDir,
-            homeDirectory: join(fixture.root, "synthetic-home"),
+            homeDirectory: privacyHome.path,
             installDependencies: () => {
               throw new Error("must fail before dependency installation");
             },
@@ -1144,7 +1145,7 @@ describe("Pack consumer runtime release producer contract", () => {
           repoRoot: sharedFixture.root,
           tag: expected.tag,
           outDir,
-          homeDirectory: join(sharedFixture.root, "synthetic-home"),
+          homeDirectory: privacyHome.path,
           installDependencies: () => undefined,
           buildGeneration: fakeGenerationBuilder(),
         });
@@ -1191,7 +1192,7 @@ describe("Pack consumer runtime release producer contract", () => {
             repoRoot: v1Fixture.root,
             tag: v1Fixture.tags[0],
             outDir,
-            homeDirectory: join(v1Fixture.root, "synthetic-home"),
+            homeDirectory: privacyHome.path,
             installDependencies: () => {
               dependencyInstallCalls += 1;
             },
@@ -1335,7 +1336,7 @@ describe("Pack consumer runtime release producer byte and fail-close oracles", (
       repoRoot: fixture.root,
       tag: fixture.tag,
       outDir,
-      homeDirectory: join(fixture.root, "synthetic-home"),
+      homeDirectory: privacyHome.path,
       installDependencies: () => undefined,
       buildGeneration: options.buildGeneration ?? fakeGenerationBuilder(),
       ...(options.moveStagedAssets ? { moveStagedAssets: options.moveStagedAssets } : {}),
@@ -1391,7 +1392,7 @@ describe("Pack consumer runtime release producer byte and fail-close oracles", (
           repoRoot: packrt013.root,
           tag: packrt013.tag,
           outDir,
-          homeDirectory: join(packrt013.root, "synthetic-home"),
+          homeDirectory: privacyHome.path,
           installDependencies: () => undefined,
           buildGeneration: async (input) => {
             if (typeof input === "string")
@@ -1508,12 +1509,10 @@ describe("Pack consumer runtime release producer byte and fail-close oracles", (
       const userHome = process.env.USERPROFILE ?? process.env.HOME ?? "";
       const username = process.env.USERNAME ?? process.env.USER ?? "";
       const forbidden = [
-        fixture.root,
-        fixture.root.replaceAll("\\", "/"),
-        process.cwd(),
-        process.cwd().replaceAll("\\", "/"),
-        join(fixture.root, "synthetic-home"),
-        join(fixture.root, "synthetic-home").replaceAll("\\", "/"),
+        ...[fixture.root, process.cwd(), privacyHome.path].flatMap((path) => [
+          path,
+          path.replaceAll("\\", "/"),
+        ]),
         userHome,
         userHome.replaceAll("\\", "/"),
         username,
@@ -1611,7 +1610,7 @@ describe("Pack consumer runtime release installer", () => {
           repoRoot: producer.root,
           tag: producer.tag,
           outDir: testCase.releaseDir,
-          homeDirectory: join(producer.root, "synthetic-home"),
+          homeDirectory: privacyHome.path,
           installDependencies: () => undefined,
           buildGeneration: fakeGenerationBuilder({ compiledBytes: fixture.compiledBytes }),
         });

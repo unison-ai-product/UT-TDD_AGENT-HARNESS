@@ -36,6 +36,7 @@ import {
   createLocalGitObjectReader,
   resolveReleaseArtifacts,
 } from "../src/setup/release-artifact-resolver.ts";
+import * as privacyHome from "./support/privacy-denylist-home.ts";
 import { removeTestTree } from "./support/temp-tree.ts";
 
 const repoRoot = process.cwd();
@@ -313,22 +314,16 @@ describe("clean distribution local acceptance smoke", () => {
   });
 
   it("PLAN-L7-413 D-4: a blocked export neither packages nor prunes", () => {
+    privacyHome.stubSyntheticPrivacyHome();
     const cleanRoot = createCleanDistributionFixture();
     const releaseDir = join(cleanRoot, ".release");
     try {
       // blocked は missingRequired で誘発する (denied 入力は D-2 followup により通常除外で
       // あって blocked にならないため)。
       rmSync(join(cleanRoot, "LICENSE"), { force: true });
-      const result = runNode(cleanRoot, [
-        join(repoRoot, "src", "cli.ts"),
-        "distribution",
-        "package",
-        "--tag",
-        "v0.0.0-blocked",
-        "--out",
-        releaseDir,
-        "--json",
-      ]);
+      const cli = (...args: string[]) =>
+        runNode(cleanRoot, [join(repoRoot, "src", "cli.ts"), "distribution", ...args]);
+      const result = cli("package", "--tag", "v0.0.0-blocked", "--out", releaseDir, "--json");
       expect(result.status).toBe(1);
       expect(JSON.parse(result.stdout).ok).toBe(false);
       expect(existsSync(join(releaseDir, "v0.0.0-blocked.tar.gz"))).toBe(false);
@@ -337,15 +332,7 @@ describe("clean distribution local acceptance smoke", () => {
       mkdirSync(packDir, { recursive: true });
       const obsolete = join(packDir, "obsolete.txt");
       writeFileSync(obsolete, "must not be pruned\n", "utf8");
-      const pack = runNode(cleanRoot, [
-        join(repoRoot, "src", "cli.ts"),
-        "distribution",
-        "sync-pack",
-        "--repo-dir",
-        packDir,
-        "--prune-local",
-        "--json",
-      ]);
+      const pack = cli("sync-pack", "--repo-dir", packDir, "--prune-local", "--json");
       expect(pack.status).toBe(1);
       expect(JSON.parse(pack.stdout).pack.prunedPaths).toEqual([]);
       expect(existsSync(obsolete)).toBe(true);
@@ -392,6 +379,7 @@ describe("clean distribution local acceptance smoke", () => {
 
     const cleanRoot = mkdtempSync(join(tmpdir(), "ut-tdd-clean-acceptance-"));
     const injectedHome = mkdtempSync(join(tmpdir(), "ut-tdd-acceptance-home-"));
+    privacyHome.writeSyntheticPrivacyDenylist(injectedHome);
     try {
       const sourcePaths = walkCandidatePaths(repoRoot);
       for (const rel of plan.artifactPaths) {
@@ -841,20 +829,23 @@ describe("U-OIDBASE-009 packaged default baseline authority", () => {
         encoding: "utf8",
       }).trim();
       const artifactInventoryDigest = deriveArtifactInventoryDigest(artifacts);
+      const zeroAssetInventoryDigest = `sha256:${"0".repeat(64)}`;
+      const recordDigestFor = (releaseAssetInventoryDigest: string) =>
+        deriveReleaseRecordDigest({
+          materializerVersion: "1",
+          artifactSourceCommit,
+          artifactSetDigest: materialized.digest,
+          artifactInventoryDigest,
+          releaseAssetInventoryDigest,
+        });
       const provisionalRelease = {
         releaseId: deriveReleaseId("1", artifactSourceCommit, materialized.digest),
         materializerVersion: "1",
         artifactSourceCommit,
         artifactSetDigest: materialized.digest,
         artifactInventoryDigest,
-        releaseAssetInventoryDigest: `sha256:${"0".repeat(64)}`,
-        releaseRecordDigest: deriveReleaseRecordDigest({
-          materializerVersion: "1",
-          artifactSourceCommit,
-          artifactSetDigest: materialized.digest,
-          artifactInventoryDigest,
-          releaseAssetInventoryDigest: `sha256:${"0".repeat(64)}`,
-        }),
+        releaseAssetInventoryDigest: zeroAssetInventoryDigest,
+        releaseRecordDigest: recordDigestFor(zeroAssetInventoryDigest),
         artifacts,
       };
       const provisionalPack = derivePackPublicationAssets({
@@ -867,13 +858,7 @@ describe("U-OIDBASE-009 packaged default baseline authority", () => {
       const release = {
         ...provisionalRelease,
         releaseAssetInventoryDigest: provisionalPack.value.releaseAssetInventoryDigest,
-        releaseRecordDigest: deriveReleaseRecordDigest({
-          materializerVersion: provisionalRelease.materializerVersion,
-          artifactSourceCommit: provisionalRelease.artifactSourceCommit,
-          artifactSetDigest: provisionalRelease.artifactSetDigest,
-          artifactInventoryDigest: provisionalRelease.artifactInventoryDigest,
-          releaseAssetInventoryDigest: provisionalPack.value.releaseAssetInventoryDigest,
-        }),
+        releaseRecordDigest: recordDigestFor(provisionalPack.value.releaseAssetInventoryDigest),
       };
       const packed = derivePackPublicationAssets({ release, entries: publicationEntries });
       expect(packed.ok, packed.ok ? undefined : packed.error).toBe(true);

@@ -128,6 +128,56 @@ export function resolveSnapshotSource(repoRoot: string): SnapshotSource {
   return { kind: "git", revision };
 }
 
+export function parseSnapshotDirtyPaths(status: string): string[] | null {
+  const fields = status.split("\0");
+  const paths: string[] = [];
+  for (let index = 0; index < fields.length; index += 1) {
+    const field = fields[index];
+    if (!field) continue;
+    if (field.length < 4 || field[2] !== " ") return null;
+    paths.push(field.slice(3));
+    if (field[0] === "R" || field[0] === "C" || field[1] === "R" || field[1] === "C") {
+      const sourcePath = fields[index + 1];
+      if (!sourcePath) return null;
+      paths.push(sourcePath);
+      index += 1;
+    }
+  }
+  return paths.sort();
+}
+
+function snapshotDirtyPaths(repoRoot: string): string[] | null {
+  const result = spawnSync("git", ["status", "--porcelain=v1", "-z", "--untracked-files=all"], {
+    cwd: repoRoot,
+    encoding: "utf8",
+    windowsHide: true,
+  });
+  if (result.error || result.status !== 0)
+    return null;
+  return parseSnapshotDirtyPaths(result.stdout);
+}
+
+export function reportSnapshotSource(source: SnapshotSource, repoRoot: string): void {
+  if (source.kind === "copy") {
+    process.stdout.write(`source: copy (commit なし)\nsource path: ${repoRoot}\n`);
+    return;
+  }
+
+  process.stdout.write(`snapshot source: git commit ${source.revision}\n`);
+  const dirtyPaths = snapshotDirtyPaths(repoRoot);
+  if (dirtyPaths === null) {
+    process.stderr.write(
+      `warning: working-tree status is unavailable; validating commit ${source.revision}, but uncommitted paths could not be enumerated.\n`,
+    );
+    return;
+  }
+  if (dirtyPaths.length === 0) return;
+
+  process.stderr.write(
+    `warning: uncommitted working-tree differences are excluded; validating commit ${source.revision}, not the working tree. Paths:\n${dirtyPaths.map((path) => `  ${JSON.stringify(path)}`).join("\n")}\n`,
+  );
+}
+
 /**
  * snapshot 内で default branch の ref を解決できるようにするための注入情報 (PLAN-L7-461)。
  *
@@ -400,6 +450,7 @@ export function runSnapshotTests(
     const source = measureSnapshotStage("resolve-source", () =>
       resolveSnapshotSource(repoRoot),
     );
+    measureSnapshotStage("report-source", () => reportSnapshotSource(source, repoRoot));
     measureSnapshotStage("create-execution-snapshot", () =>
       createSnapshot(repoRoot, snapshotRoot, source),
     );

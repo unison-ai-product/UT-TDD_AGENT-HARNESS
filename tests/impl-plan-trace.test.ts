@@ -10,7 +10,6 @@ import {
   mkdirSync,
   mkdtempSync,
   readdirSync,
-  rmSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -21,6 +20,7 @@ import {
   IMPL_PLAN_TRACE_BASELINE,
   loadImplPlanTraceInput,
 } from "../src/lint/impl-plan-trace.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 import { headSnapshotRoot } from "./support/workspace-roots.ts";
 
 function makeOwnerWritableTree(root: string): void {
@@ -131,7 +131,7 @@ describe("U-IPT-006: loadImplPlanTraceInput design-source trace", () => {
     expect(existsSync(join(root, "docs/design/harness/L6-function-design/fixture.md"))).toBe(true);
   });
 
-  afterAll(() => rmSync(root, { recursive: true, force: true }));
+  afterAll(() => removeTestTree(root));
 
   it("the isolated fixture has both source files and their design references", () => {
     expect([...loadImplPlanTraceInput(root).srcFiles].sort()).toEqual([
@@ -162,7 +162,7 @@ describe("U-IPT-006: loadImplPlanTraceInput design-source trace", () => {
       expect(result.orphans).toEqual(["src/unowned.ts"]);
       expect(result.ok).toBe(false);
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 });
@@ -235,11 +235,11 @@ describe("Impl-Plan-Trace module ownership candidates (U-IPT-007..011)", () => {
 
   afterAll(() => {
     for (const root of [moduleOwnerRoot, unownedModuleRoot, planOnlyRoot, topLevelRoot]) {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
     if (mutationRoot) {
       makeOwnerWritableTree(join(mutationRoot, "docs", "design"));
-      rmSync(mutationRoot, { recursive: true, force: true });
+      removeTestTree(mutationRoot);
     }
   });
 
