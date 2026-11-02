@@ -9,14 +9,12 @@ import {
 } from "../src/doctor/check-registry.ts";
 import {
   checkImplPlanTrace,
-  checkMergedPlanStatus,
   checkOracleTestTrace,
   checkTrackedCanonical,
 } from "../src/doctor/index.ts";
 import type { DoctorDeps } from "../src/doctor/runtime-state.ts";
 import {
   checkImplPlanTrace as checkImplPlanTraceAdapter,
-  checkMergedPlanStatus as checkMergedPlanStatusAdapter,
   checkOracleTestTrace as checkOracleTestTraceAdapter,
   checkTrackedCanonical as checkTrackedCanonicalAdapter,
 } from "../src/doctor/source-trace.ts";
@@ -25,20 +23,18 @@ describe("doctor source trace adapters", () => {
   it("keeps source/artifact trace gates fail-closed through the extracted module", () => {
     const missingRoot = join(tmpdir(), `ut-tdd-source-trace-missing-${Date.now()}-nope`);
     const checks = [
-      checkMergedPlanStatusAdapter(missingRoot),
       checkImplPlanTraceAdapter(missingRoot),
       checkTrackedCanonicalAdapter(missingRoot),
       checkOracleTestTraceAdapter(missingRoot),
     ];
 
-    expect(checks.map((result) => result.ok)).toEqual([false, false, false, false]);
+    expect(checks.map((result) => result.ok)).toEqual([false, false, false]);
     for (const result of checks) {
       expect(result.messages.join("\n")).toMatch(/violation/i);
     }
   });
 
   it("preserves the public doctor/index re-export surface", () => {
-    expect(checkMergedPlanStatus).toBe(checkMergedPlanStatusAdapter);
     expect(checkImplPlanTrace).toBe(checkImplPlanTraceAdapter);
     expect(checkTrackedCanonical).toBe(checkTrackedCanonicalAdapter);
     expect(checkOracleTestTrace).toBe(checkOracleTestTraceAdapter);

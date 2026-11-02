@@ -934,7 +934,7 @@ describe("github-ci-policy lint", () => {
         replaceRequired(
           SOURCE_WORKFLOW,
           // PLAN-L7-461 で doctor step は envelope 書き出し付きの folded scalar になった。
-          "        run: >-\n          node src/cli.ts doctor --strict-green-command-digest\n",
+          '        run: >-\n          node src/cli.ts doctor\n          --result-file "$UT_TDD_DOCTOR_RESULT_FILE"\n',
           "        run: echo doctor omitted\n",
         ),
       ),

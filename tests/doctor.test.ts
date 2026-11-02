@@ -42,14 +42,12 @@ import {
   checkFrRoadmapCoverage,
   checkGateConfirm,
   checkGateIdFormat,
-  checkGuardrailInvariants,
   checkHandover,
   checkHandoverDisciplineMessages,
   checkImplPlanTrace,
   checkL6Completion,
   checkL6FrCoverage,
   checkL7Completion,
-  checkMergedPlanStatus,
   checkModuleDrift,
   checkOracleTestTrace,
   checkPairFreeze,
@@ -62,7 +60,6 @@ import {
   checkPropagation,
   checkReadability,
   checkRegressionExpansion,
-  checkReviewEvidence,
   checkRoadmap,
   checkRuleAutomationClosure,
   checkRuleDrift,
@@ -2005,139 +2002,6 @@ describe("runDoctor", () => {
     }
   });
 
-  // Guardrail invariant helper for review evidence fixtures.
-  function planWithReview(
-    planId: string,
-    reviewKind: string,
-    reviewer: string,
-    worker: string,
-  ): string {
-    return [
-      "---",
-      `plan_id: ${planId}`,
-      "status: confirmed",
-      "kind: impl",
-      "review_evidence:",
-      "  - reviewer: code-reviewer",
-      `    review_kind: ${reviewKind}`,
-      `    worker_model: ${worker}`,
-      `    reviewer_model: ${reviewer}`,
-      '    tests_green_at: "2026-06-15"',
-      '    reviewed_at: "2026-06-15"',
-      "    verdict: pass",
-      "---",
-      "",
-      "## body",
-      "",
-    ].join("\n");
-  }
-
-  it("passes guardrail-invariants when cross_agent review uses distinct models", () => {
-    const root = mkdtempSync(join(tmpdir(), "ut-tdd-doctor-guardrail-ok-"));
-    try {
-      const planDir = join(root, "docs", "plans");
-      mkdirSync(planDir, { recursive: true });
-      writeFileSync(
-        join(planDir, "PLAN-TEST-01-crossmodel.md"),
-        planWithReview("PLAN-TEST-01-crossmodel", "cross_agent", "gpt-5.4", "claude-opus-4-8"),
-        "utf8",
-      );
-
-      const result = checkGuardrailInvariants(root);
-
-      expect(result.ok).toBe(true);
-      expect(result.messages.join("\n")).toContain("guardrail-invariants");
-    } finally {
-      removeTestTree(root);
-    }
-  });
-
-  it("fails guardrail-invariants on cross_agent same-model self-review (reviewer == worker)", () => {
-    const root = mkdtempSync(join(tmpdir(), "ut-tdd-doctor-guardrail-same-"));
-    try {
-      const planDir = join(root, "docs", "plans");
-      mkdirSync(planDir, { recursive: true });
-      writeFileSync(
-        join(planDir, "PLAN-TEST-02-selfreview.md"),
-        planWithReview(
-          "PLAN-TEST-02-selfreview",
-          "cross_agent",
-          "claude-opus-4-8",
-          "claude-opus-4-8",
-        ),
-        "utf8",
-      );
-
-      const result = checkGuardrailInvariants(root);
-
-      expect(result.ok).toBe(false);
-      expect(result.messages.join("\n")).toContain("guardrail-invariants - violation");
-      expect(result.messages.join("\n")).toContain("same-model-self-review");
-      expect(result.messages.join("\n")).toContain("PLAN-TEST-02-selfreview");
-    } finally {
-      removeTestTree(root);
-    }
-  });
-
-  it("permits intra_runtime_subagent same-model review in single-runtime fallback", () => {
-    const root = mkdtempSync(join(tmpdir(), "ut-tdd-doctor-guardrail-intra-"));
-    try {
-      const planDir = join(root, "docs", "plans");
-      mkdirSync(planDir, { recursive: true });
-      writeFileSync(
-        join(planDir, "PLAN-TEST-04-intra.md"),
-        planWithReview("PLAN-TEST-04-intra", "intra_runtime_subagent", "gpt-5.4", "gpt-5.4"),
-        "utf8",
-      );
-
-      const result = checkGuardrailInvariants(root);
-
-      expect(result.ok).toBe(true);
-    } finally {
-      removeTestTree(root);
-    }
-  });
-
-  it("does not false-positive guardrail-invariants when one model is omitted", () => {
-    const root = mkdtempSync(join(tmpdir(), "ut-tdd-doctor-guardrail-partial-"));
-    try {
-      const planDir = join(root, "docs", "plans");
-      mkdirSync(planDir, { recursive: true });
-      // Missing worker_model should not trigger a same-model violation.
-      writeFileSync(
-        join(planDir, "PLAN-TEST-03-partial.md"),
-        [
-          "---",
-          "plan_id: PLAN-TEST-03-partial",
-          "status: confirmed",
-          "kind: impl",
-          "review_evidence:",
-          "  - reviewer: code-reviewer",
-          "    review_kind: intra_runtime_subagent",
-          "    reviewer_model: claude-sonnet-4-6",
-          '    tests_green_at: "2026-06-15"',
-          '    reviewed_at: "2026-06-15"',
-          "    verdict: pass",
-          "---",
-          "",
-        ].join("\n"),
-        "utf8",
-      );
-
-      const result = checkGuardrailInvariants(root);
-
-      expect(result.ok).toBe(true);
-    } finally {
-      removeTestTree(root);
-    }
-  });
-
-  it("fails closed when guardrail-invariants repo root cannot be read", () => {
-    const missingRoot = join(tmpdir(), `ut-tdd-doctor-guardrail-missing-${NOW}-nope`);
-    const result = checkGuardrailInvariants(missingRoot);
-    expect(result.ok).toBe(false);
-  });
-
   it("fails active design/test-design docs with unresolved L7 placeholder_deps", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-doctor-placeholder-deps-"));
     try {
@@ -2236,9 +2100,6 @@ describe("runDoctor", () => {
       ["propagation", checkPropagation(missingRoot)],
       ["pair-freeze", checkPairFreeze(missingRoot)],
       ["module-drift", checkModuleDrift(missingRoot)],
-      ["merged-plan-status", checkMergedPlanStatus(missingRoot)],
-      ["review-evidence", checkReviewEvidence(missingRoot)],
-      ["guardrail-invariants", checkGuardrailInvariants(missingRoot)],
       ["asset-drift", checkAssetDrift(missingRoot)],
       ["skill-assignment", checkSkillAssignment(missingRoot)],
       ["descent-obligation", checkDescentObligation(missingRoot)],
@@ -2387,10 +2248,7 @@ describe("runDoctor", () => {
       "propagation",
       "pair-freeze",
       "module-drift",
-      "merged-plan-status",
       "memory-sync",
-      "review-evidence",
-      "guardrail-invariants",
       "asset-drift",
       "skill-assignment",
       "descent-obligation",
@@ -2439,7 +2297,6 @@ describe("runDoctor", () => {
       "dependency-drift",
       "regression-expansion",
       "agent-contract-detection",
-      "green-command-digest",
     ];
 
     expect(new Set(checkIds).size).toBe(checkIds.length);
@@ -2452,6 +2309,18 @@ describe("runDoctor", () => {
     ).toEqual(checkIds);
     expect(doctorOutputIdsForScope("full")).toEqual(outputIds);
     expect(outputIds).toEqual(expect.arrayContaining(expectedHardGates));
+    const retiredPlanDoctorIds = [
+      "merged-plan-status",
+      "plan-body-substance",
+      "plan-completion-drift",
+      "green-command-digest",
+      "review-evidence",
+      "guardrail-invariants",
+    ];
+    for (const id of retiredPlanDoctorIds) {
+      expect(checkIds).not.toContain(id);
+      expect(outputIds).not.toContain(id);
+    }
     expect(checkIds).not.toContain("plan-reference-freshness");
     expect(outputIds).not.toContain("plan-reference-freshness");
     expect(registrySource).not.toContain("checkPlanReferenceFreshnessAdvisory");
@@ -2464,14 +2333,6 @@ describe("runDoctor", () => {
         expect(required?.profiles).toEqual(expect.arrayContaining([...definition.profiles]));
       }
     }
-    expect(checkIds.indexOf("review-evidence")).toBeLessThan(checkIds.indexOf("pair-freeze"));
-    expect(outputIds.indexOf("l7-completion")).toBeLessThan(outputIds.indexOf("review-evidence"));
-    expect(checkIds.indexOf("guardrail-invariants")).toBeGreaterThan(
-      checkIds.indexOf("regression-expansion"),
-    );
-    expect(outputIds.indexOf("guardrail-invariants")).toBeLessThan(
-      outputIds.indexOf("verification-groups"),
-    );
     expect(
       definitions.find((definition) => definition.id === "regression-expansion"),
     ).toMatchObject({

@@ -108,6 +108,7 @@ for (const [path, calls] of Object.entries({
   "tests/model-id-ssot-drift.test.ts": 1,
   "tests/model-id-ssot.test.ts": 1,
   "tests/setup-project-identity-bootstrap.test.ts": 2,
+  "tests/plan-mechanism-retirement.test.ts": 1,
   "tests/sub-doc-schema-integrity.test.ts": 3,
 }))
   repositoryReadContracts[path] = {
@@ -122,8 +123,7 @@ repositoryReadContracts["tests/disposition/projection.test.ts"] = {
     "disposition projection reads canonical authoring docs from immutable HEAD and uses isolated Git fixtures",
 };
 
-// PLAN-L7-461: doctor envelope の consumer は「検証対象 = detached HEAD snapshot」を
-// 前提に観測面を突き合わせるため、HEAD snapshot 読みを契約として明示する。
+// PLAN-L7-461: doctor envelope の consumer は detached HEAD snapshot の観測面を検証する。
 repositoryReadContracts["tests/support/doctor-envelope.ts"] = {
   mode: "head_snapshot",
   calls: 1,

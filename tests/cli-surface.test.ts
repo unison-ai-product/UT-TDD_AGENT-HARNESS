@@ -256,21 +256,6 @@ describe("L7 CLI surface closure", () => {
     }
   }, 15_000);
 
-  it("exposes green command digest migration as a non-destructive plan dry-run surface", () => {
-    const run = runCli(["plan", "--help"]);
-
-    expect(run.status).toBe(0);
-    expect(run.stdout).toContain("digest-migrate");
-  }, 15_000);
-
-  it("exposes green command digest migration execute as an explicit opt-in surface", () => {
-    const run = runCli(["plan", "digest-migrate", "--help"]);
-
-    expect(run.status).toBe(0);
-    expect(run.stdout).toContain("--execute");
-    expect(run.stdout).toContain("--json");
-  }, 15_000);
-
   it("exposes skill suggest as a JSON command surface", () => {
     const run = runCli(["skill", "suggest", "--plan", "PLAN-NO-SUCH", "--json"]);
 
@@ -289,7 +274,6 @@ describe("L7 CLI surface closure", () => {
     expect(run.stdout).toContain("--scope");
     expect(run.stdout).toContain("--timing");
     expect(run.stdout).toContain("--strict-telemetry-provenance");
-    expect(run.stdout).toContain("--strict-green-command-digest");
   }, 15_000);
 
   it("lists doctor profiles as a machine-readable public surface", () => {
@@ -403,7 +387,6 @@ describe("L7 CLI surface closure", () => {
       });
       expect(envelope.check_ids).toEqual(["setup-smoke"]);
       expect(Object.keys(envelope.options).sort()).toEqual([
-        "strict_green_command_digest",
         "strict_telemetry_provenance",
         "timing",
       ]);

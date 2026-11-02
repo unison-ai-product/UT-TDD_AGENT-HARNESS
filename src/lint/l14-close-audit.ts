@@ -149,11 +149,7 @@ const REQUIRED_EVIDENCE_BY_ITEM: Partial<Record<(typeof EXPECTED_ITEMS)[number],
     "tests/forward-convergence.test.ts",
     "src/lint/drive-model-passage.ts",
   ],
-  "green-evidence-integrity": [
-    "src/lint/green-command-digest.ts",
-    "tests/green-command-digest.test.ts",
-    ".ut-tdd/audit/A-155-green-command-digest-rebind-2026-07-01.md",
-  ],
+  "green-evidence-integrity": [".ut-tdd/audit/A-155-green-command-digest-rebind-2026-07-01.md"],
 };
 
 const REQUIRED_BOUNDARY_MARKERS_BY_ITEM: Partial<

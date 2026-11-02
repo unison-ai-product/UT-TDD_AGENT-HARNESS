@@ -61,13 +61,10 @@ export interface DoctorRunProfileResolutionOptions {
 }
 
 export const FULL_DOCTOR_OUTPUT_IDS = [
-  "plan-body-substance",
-  "plan-completion-drift",
   "propagation",
   "pair-freeze",
   "test-design-naming",
   "module-drift",
-  "merged-plan-status",
   "memory-sync",
   "asset-drift",
   "skill-assignment",
@@ -117,8 +114,6 @@ export const FULL_DOCTOR_OUTPUT_IDS = [
   "doc-split",
   "code-size",
   "l7-completion",
-  "review-evidence",
-  "guardrail-invariants",
   "verification-groups",
   "forward-freeze-contracts",
   "refactor-qa-release-contracts",
@@ -155,7 +150,6 @@ export const FULL_DOCTOR_OUTPUT_IDS = [
   "proposal-document-coverage",
   "frontend-design-coverage",
   "handover-prose",
-  "green-command-digest",
   "advisory-strict-gate-aging",
 ] as const;
 

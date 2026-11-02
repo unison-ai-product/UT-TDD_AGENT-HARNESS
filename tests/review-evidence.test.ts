@@ -284,8 +284,8 @@ describe("green command evidence (IMP-108)", () => {
  *
  * 「新規 entry だけ必須」を `completed_at` で判定する初版は、その値が **書き手の自己申告** なので
  * 過去日時を書くだけで迂回できた (PR #361 Codex FLAG B-1)。時間軸を判定から外し、**全 entry で
- * anchor を必須**にする。既存の anchor 無し 8 件は `plan digest-migrate --execute` で実 anchor を
- * backfill 済みなので、grandfather 集合そのものが不要になった。
+ * anchor を必須**にする。既存の anchor 無し 8 件は過去に `plan digest-migrate --execute` で
+ * 実 anchor を backfill 済みなので、grandfather 集合そのものが不要になった。
  *
  * anchor の **実在**検査は本 gate では行わない。squash merge 運用では PR head で記録した正当な
  * anchor が merge 後の main から到達不能になり (実測: CI で 29 件が false positive)、捏造と

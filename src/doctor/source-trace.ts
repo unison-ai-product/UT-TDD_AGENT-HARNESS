@@ -6,11 +6,6 @@ import {
 } from "../lint/impl-plan-trace.ts";
 import { analyzeMemorySync, loadMemorySyncInput, memorySyncMessages } from "../lint/memory-sync.ts";
 import {
-  analyzeMergedPlanStatus,
-  loadMergedPlanStatusInput,
-  mergedPlanStatusMessages,
-} from "../lint/merged-plan-status.ts";
-import {
   analyzeOracleTestTrace,
   loadOracleTestTraceInput,
   oracleTestTraceMessages,
@@ -20,27 +15,6 @@ import {
   loadTrackedCanonicalInput,
   trackedCanonicalMessages,
 } from "../lint/tracked-canonical.ts";
-
-/**
- * merged-plan-status hard gate (PO 指摘 2026-06-15): generated src が merge 済みなのに owning PLAN が
- * draft / 未 confirm のまま放置される V-model state 不整合を fail-close 検出する。review-evidence gate が
- * confirmed PLAN にのみ証跡を要求し draft を素通りさせる absence-blindness を補完する (柱3 = state DB が
- * フィードバック機構)。
- */
-export function checkMergedPlanStatus(repoRoot: string): { messages: string[]; ok: boolean } {
-  if (!existsSync(repoRoot)) {
-    return { messages: ["merged-plan-status - violation: repo root could not be read"], ok: false };
-  }
-  try {
-    const r = analyzeMergedPlanStatus(loadMergedPlanStatusInput(repoRoot));
-    return { messages: mergedPlanStatusMessages(r), ok: r.ok };
-  } catch {
-    return {
-      messages: ["merged-plan-status - violation: PLAN generates could not be read"],
-      ok: false,
-    };
-  }
-}
 
 /** impl→PLAN トレーサビリティ (src ⊆ PLAN generates ∪ baseline) を hard gate として検査する。 */
 export function checkImplPlanTrace(repoRoot: string): { messages: string[]; ok: boolean } {
