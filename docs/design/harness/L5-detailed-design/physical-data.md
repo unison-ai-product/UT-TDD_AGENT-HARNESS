@@ -798,7 +798,7 @@ bytes を解析する既存 `loadTrackedCatalogInput` の成功だけでこの�
 観測に必要な情報が欠けた場合も fail-close し、行を無言で除外しない。finding は対象の item / edge identity と
 違反した path 軸を識別できるものとする。検査を通った行は、既存の全 authoring 値と identity 集合を保持する。
 
-候補 002 は、他の制約を満たす同一 defer 行で、実在する設計 path の受理と、PLAN だけ／設計 path 欠落の拒否を比較する。
+候補 002 は、他の制約を満たす同一 defer 行で、有効な Issue URL の `issue` の受理と、`issue` 未設定・PLAN ID・Issue 番号だけの値の拒否を比較する。
 候補 003 は path の各違反軸を一つずつ変異させ、header 不一致や provenance 不備で先に落ちる fixture を使わない。
 Git mode と親 junction / reparse point を含む実体境界は実際の repository / filesystem 観測を通して検証する。
 純粋な path 文字列検査の成功を、物理境界まで検証した証拠にしない。
@@ -813,7 +813,7 @@ loader や fixture 準備の失敗を projection の拒否証拠に数えない�
 更新である。`materializeSkillAssets` など SQLite transaction より前に行うファイル生成は、この DB rollback 保証に含めない。
 現行の v29 から同じ v29 への no-op migration は正例として保持するが、schema rollback の証拠には使わない。
 実 migration を伴う検査では、固定した旧 v29 schema と正常な adopt 行、NULL の legacy `plan_id` を用意し、
-外側の test transaction を作らずに実 rebuild を呼ぶ。旧 defer 行の不足で早期拒否される fixture は候補 004 に属する。
+外側の test transaction を作らずに実 rebuild を呼ぶ。旧行は新しい表へコピーせず再投影で入れ直し (退役契約 §3)、`migrate()` 単独でも旧版の DB から再作成は成功する。
 候補 008 は実 item-target insert 到達後の最後の COMMIT だけを故障させ、旧 schema / 制約 / version と全既存 projection の
 行・digest が保持されることを確認する。migration の先行 COMMIT と後続 projection の別 transaction が残る場合、
 この検査は schema / version の残存で Red となる。同一 transaction へまとめる実装は後続 Green の責務である。
@@ -826,12 +826,12 @@ composite PKを追加し、raw SQLを受け取らないDDL生成とSQLite実強�
 projection上の導出は次に限定する。source-item `edge_id`はlength-prefixed frame
 `[source_ref,item_id]`のSHA-256、各`row_digest`はauthoring rowの全column名+値、`manifest_digest`はprovenance表全体から作る。
 source-targetのreasonやcategory ordinalのようにauthoringにない意味fieldは生成しない。source disposition rowとsource-target rowは
-`source_id/disposition`をexact比較し、targetはtyped resolver後のcanonical identityで比較する。`plan_alias`はPLAN Asset alias、
+`source_id/disposition`をexact比較し、targetはtyped resolver後のcanonical identityで比較する。
 `artifact_path`はrepo-relative normalized path、`artifact_family`はtracked member集合、`target_slot`はdocument catalog IDへ解決する。
 `artifact_path`のdisposition表示だけはbasenameを許し、git tracked path集合で一意に解決できる場合だけcanonical pathへ写す。
 同basename複数は多義として拒否する。display aliasとcanonical refの文字列不一致だけで拒否せず、未解決/多義だけを
 `catalog-target-unresolved`で拒否する。source target typeは
-`plan_alias|artifact_family|artifact_path|target_slot`であり、item target kind enumとは別型にする。
+`artifact_family|artifact_path|target_slot`であり、item target kind enumとは別型にする。`plan_alias` は source target からも退役し (退役契約 §5.2)、入力に現れたら未知の type として拒否して、他の type へ黙って変換しない。
 
 event/revision/receiptはappend-onlyとし、UPDATE/DELETEで履歴を上書きしない。schema追加は`SCHEMA_VERSION`をbumpし、
 旧DBをin-place真実化せず、authoring sourceからtransactional rebuildする。migration前後でPK集合、FK orphan、
