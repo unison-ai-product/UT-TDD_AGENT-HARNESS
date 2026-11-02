@@ -106,7 +106,7 @@
   "tests/memory-clean-cut-non-read.test.ts": { "lines": 503, "functionExcess": null },
   "tests/memory-episode-retirement-archive.test.ts": { "lines": 650, "functionExcess": null },
   "tests/memory-service.test.ts": { "lines": 738, "functionExcess": null },
-  "tests/merged-plan-status.test.ts": { "lines": 647, "functionExcess": null },
+  "tests/merged-plan-status.test.ts": { "lines": 564, "functionExcess": null },
   "tests/node-plan-revision-runner.test.ts": { "lines": 1299, "functionExcess": null },
   "tests/node-self-host-bootstrap.test.ts": { "lines": 726, "functionExcess": null },
   "tests/oracle-test-trace.test.ts": { "lines": 1769, "functionExcess": null },
