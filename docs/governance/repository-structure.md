@@ -211,25 +211,27 @@ PLAN 機構の撤去 (#1078) に先立ち、撤去前の PLAN 全文を Git tag 
 
 | 項目 | 値 |
 |------|----|
-| tag 名 | `plans-archive-20261021` (annotated tag) |
-| tag object SHA | `fa18faa788ef2eb3de7b9fbecc59a4432263068d` |
-| 対象 commit SHA | `57611b422f228c2c4464c60615c60d02a1f17e10` |
-| 作成日 | 2026-10-21 |
+| tag 名 | `plans-archive-20261102` (annotated tag) |
+| tag object SHA | `eac0a9453081504b6121bc418aee71e9d8dc6f98` |
+| 対象 commit SHA | `2126ce73acad9a3a1ad7501d762578979cecd91b` |
+| 作成日 | 2026-11-02 |
 | PLAN 件数 | 1,008 件 |
 
-件数は次のコマンドで数える (`git fetch origin tag plans-archive-20261021` の後に実行する)。
+当初の tag `plans-archive-20261021` (`fa18faa7`) は移動せず残している。以降に 21 ファイル変わったので、#1486 の merge 後に打ち直した。
+
+件数は次のコマンドで数える (`git fetch origin tag plans-archive-20261102` の後に実行する)。
 
 ```bash
-git ls-tree -r --name-only plans-archive-20261021 docs/plans | grep -c '^docs/plans/PLAN-.*\.md$'
+git ls-tree -r --name-only plans-archive-20261102 docs/plans | grep -c '^docs/plans/PLAN-.*\.md$'
 ```
 
 ### 読み方
 
-- 一覧: `git ls-tree -r --name-only plans-archive-20261021 docs/plans`
-- 本文: `git show plans-archive-20261021:docs/plans/<file>`
+- 一覧: `git ls-tree -r --name-only plans-archive-20261102 docs/plans`
+- 本文: `git show plans-archive-20261102:docs/plans/<file>`
 
 ### 物理削除との関係
 
-`docs/plans/` の物理削除 (#1170、A6) の後は、この tag が PLAN 本文を参照できる唯一の手段になる。削除 PR を出す前に、`git diff plans-archive-20261021 <削除の base> -- docs/plans` が空であることを確かめる。差分が残る場合は、その時点の commit に tag を付け直してから削除する。この確認が「撤去の直前に tag を打つ」ことの代わりの条件である。
+`docs/plans/` の物理削除 (#1170、A6) の後は、この tag が PLAN 本文を参照できる唯一の手段になる。削除 PR を出す前に、`git diff plans-archive-20261102 <削除の base> -- docs/plans` が空であることを確かめる。差分が残る場合は、その時点の commit に tag を付け直してから削除する。この確認が「撤去の直前に tag を打つ」ことの代わりの条件である。
 
 関連: #1165 / #1078 / #1166。

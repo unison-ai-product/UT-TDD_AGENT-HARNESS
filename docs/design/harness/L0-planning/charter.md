@@ -9,7 +9,7 @@ related_concept: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 # L0 企画書 (UT-TDD Agent Harness)
 
 テンプレート `docs/templates/vmodel/L0-charter.md` の章立てに沿った、ハーネス自身の企画書である。
-中身の正本は `docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md` (バージョンアップ企画) と
+中身の正本は `plans-archive-20261102:docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md` (バージョンアップ企画) と
 `docs/governance/ut-tdd-agent-harness-concept_v3.1.md` (目的・柱)。ここでは要約だけを置く。
 社内システム / 開発基盤のため、ROI・KPI の定量化は企画書で強制しない (concept v3.1: 定量指標は L1 / L3 で定義)。
 

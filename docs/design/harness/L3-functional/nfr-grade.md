@@ -234,4 +234,4 @@ NFR-01〜17 + 新規 KPI を以下 3 tier に分類:
 - L3 business-detail (BR-21 + telemetry): `docs/design/harness/L3-functional/business-detail.md`
 - L12 受入テスト: `docs/test-design/harness/L12-acceptance-test-design.md`
 - IPA 非機能要求グレード 2018: https://www.ipa.go.jp/sec/softwareengineering/std/ent03-b.html (公式 sample 参考)
-- PLAN: `docs/plans/PLAN-L3-03-nfr-grade.md`
+- PLAN: `plans-archive-20261102:docs/plans/PLAN-L3-03-nfr-grade.md`

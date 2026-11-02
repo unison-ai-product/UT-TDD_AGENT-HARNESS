@@ -3,7 +3,7 @@ layer: L1
 sub_doc: technical
 status: confirmed
 pair_artifact: docs/test-design/harness/L14-operational-test-design.md
-related_l0: docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md
+related_l0: plans-archive-20261102:docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md
 related_br: docs/design/harness/L1-requirements/business-requirements.md
 next_pair_freeze: L4
 ---

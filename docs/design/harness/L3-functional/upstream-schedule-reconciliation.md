@@ -5,7 +5,7 @@ artifact_role: topic_upstream_schedule_reconciliation
 status: confirmed
 pair_artifact: docs/test-design/harness/L12-acceptance-test-design.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
-related_plan: docs/plans/PLAN-L3-04-upstream-schedule-reconciliation.md
+related_plan: plans-archive-20261102:docs/plans/PLAN-L3-04-upstream-schedule-reconciliation.md
 next_pair_freeze: L12
 created: 2026-10-14
 updated: 2026-10-15
