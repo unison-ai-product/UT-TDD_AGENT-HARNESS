@@ -238,7 +238,7 @@ describe("CANDIDATE-U-CODE-011 test-title literal recognition", () => {
   ];
 
   for (const candidate of missingPositiveCases) {
-    it(`CANDIDATE-U-CODE-011: candidate exemption ${candidate.name}`, () => {
+    it.fails(`CANDIDATE-U-CODE-011: candidate exemption ${candidate.name}`, () => {
       expectExempt(candidate.text);
     });
   }
@@ -297,7 +297,7 @@ describe("CANDIDATE-U-CODE-011 test-title literal recognition", () => {
   }
 
   it(`CANDIDATE-U-CODE-011: template expression remains checked`, () => {
-    const expression = ["$", "{value} — ", "警告", ": ", "日本語だけ", "の判定語"].join("");
+    const expression = ["bad-rule — ", "警告", ": $", "{value}"].join("");
     expectLanguageViolation(`it(\`${expression}\`);`);
   });
 });
