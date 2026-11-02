@@ -8,7 +8,7 @@ related_br: docs/design/harness/L1-requirements/business-requirements.md
 next_pair_freeze: L8
 plan: docs/plans/PLAN-L5-26-node-generation-activation.md
 replacement_issue: 152
-predecessor_plan: docs/plans/PLAN-L5-03-internal-processing.md
+predecessor_plan: plans-archive-20261102:docs/plans/PLAN-L5-03-internal-processing.md
 v2_import: docs/migration/v2-import-ledger.md
 ---
 
@@ -1406,7 +1406,7 @@ E.3〜E.5 の各項目について、1 bit 改変で write 0 となる負系を�
 
 ## 付録 F: `plan revise` の route-owned optional field の省略と clear (PLAN-L6-832、Issue #832)
 
-移行元: `docs/plans/PLAN-L6-832-plan-revise-omission-preserve-contract.md` (issue #648)
+移行元: `plans-archive-20261102:docs/plans/PLAN-L6-832-plan-revise-omission-preserve-contract.md` (issue #648)
 
 ### F.1 現行の実装の振る舞い (2026-10-13 origin/main 時点)
 

@@ -132,7 +132,7 @@ AI runtime / 外部ツール (Claude Code / Codex CLI / gh ...)  ← いずれ�
 
 ## §9 CLI shell completion 契約 (CLI user boundary の詳細、未実装)
 
-> 移行元: `docs/plans/PLAN-L6-64-cli-shell-completion.md` (issue #648)。実装の所有は `docs/plans/PLAN-L7-449-cli-shell-completion-impl.md` (draft)。2026-10-13 時点で `src/cli.ts` に `completion` command は存在しない。本節は **未実装の計画契約** である。
+> 移行元: `plans-archive-20261102:docs/plans/PLAN-L6-64-cli-shell-completion.md` (issue #648)。実装の所有は `plans-archive-20261102:docs/plans/PLAN-L7-449-cli-shell-completion-impl.md` (draft)。2026-10-13 時点で `src/cli.ts` に `completion` command は存在しない。本節は **未実装の計画契約** である。
 
 §2 (g) / §4 の不変条件 (completion は command catalog を入力とし、存在しない subcommand を候補に出さない) を前提に、次を固定する。
 
@@ -157,7 +157,7 @@ AI runtime / 外部ツール (Claude Code / Codex CLI / gh ...)  ← いずれ�
 
 ## §10 GitHub 運用 policy (VCS・CI 境界の詳細、PO 採択 2026-07-17)
 
-> 移行元: `docs/plans/PLAN-L7-451-github-ops-phase1-visibility-and-policy.md` (issue #648)。実装: `src/github/{job-summary,pr-trace,repository-policy}.ts`、`src/cli.ts` の `github summary|pr|policy`、`docs/governance/github-repository-policy.yaml`、`.github/ISSUE_TEMPLATE/`。
+> 移行元: `plans-archive-20261102:docs/plans/PLAN-L7-451-github-ops-phase1-visibility-and-policy.md` (issue #648)。実装: `src/github/{job-summary,pr-trace,repository-policy}.ts`、`src/cli.ts` の `github summary|pr|policy`、`docs/governance/github-repository-policy.yaml`、`.github/ISSUE_TEMPLATE/`。
 
 §2 (b) / §3 (b) の VCS・CI 境界について、採択済みの運用 policy と CLI 面を固定する。
 

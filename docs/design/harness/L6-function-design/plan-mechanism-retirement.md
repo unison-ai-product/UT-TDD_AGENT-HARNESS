@@ -31,7 +31,7 @@ PLAN 機構は撤去の方針である (#1078、凍結は #1166)。`docs/plans` 
 | 状態表示の `missingTables` と `rowCounts` も registry の表だけを見る | `src/state-db/migration.ts:153-168` |
 | PLAN の台帳 DB は harness.db とは別のファイル (`.ut-tdd/ledger/harness-ledger.db`) で、開くコードは `src/plan-asset/ledger/` にしか無い。台帳の migration には旧表の `DROP` がある | `src/plan-asset/ledger/schema.ts:1605`、`:966-967` |
 | `docs/plans` が無いとき、DB 鮮度の期待値は空の fingerprint と 0 件になる。削除後の rebuild で DB 側も 0 件になれば、`db-currency` は両辺が一致して通る | `src/state-db/drive-registration.ts:34-36`、`:172-175`、`src/lint/db-currency.ts:29-40` |
-| PLAN の原本は tag `plans-archive-20261021` (`fa18faa7`) に残る | `git ls-remote --tags origin plans-archive-20261021` |
+| PLAN の原本は tag `plans-archive-20261102` (`eac0a945`) に残る | `git ls-remote --tags origin plans-archive-20261102` |
 | `src/plan-asset/` の一部は PLAN 以外から使われている (Forward FSM の evidence 型、project identity の読み込み) | `src/forward/application/forward-evidence-policy.ts:1-3`、`src/forward/domain/reducer.ts:2`、`src/forward/domain/transition-policy.ts:6`、`src/forward/domain/types.ts:1`、`src/setup/project-identity-bootstrap.ts:8` |
 | PLAN を除いた隔離計測 (#1167) で非 OK になった check は 15 個で、§4 の fail-open の check と §5 の right-arm static は含まれない | #1170 issuecomment-6409156615 (計測は #1167 issuecomment-6408738672) |
 
@@ -46,7 +46,7 @@ PLAN 機構は撤去の方針である (#1078、凍結は #1166)。`docs/plans` 
 | Project V2 用の永続表: `github_object_bindings`、`github_project_item_projection`、`github_projection_outbox` | 行も表も残す (rebuild の対象外、`sqlite-projection-rebuild.ts:4-9`)。S5 で書き手が無くなり、S7 で registry から外す |
 | 残る表の `plan_id` 系の列 (`drive_runs`、`model_runs`、`feedback_events` など) | 列は残し、新しい行には値を書かない (NULL)。列の削除 (`ALTER TABLE ... DROP COLUMN`) はしない |
 
-**行の扱い (advisor の反証を経て採った案)**: harness.db の PLAN 用の表は `docs/plans` からの投影であり、原本は tag `plans-archive-20261021` に残る。削除後の rebuild で行が 0 件になるのは既存の投影の動きであり、新しい削除操作を足すものではない。行を凍結して残す案は、原本の無い投影を鮮度の保証なしに残すことになり、`db-currency` の比較も外す必要がある (§2 の 6 行目) ので採らない。行が要るときは、tag を checkout して rebuild すれば再生成できる。
+**行の扱い (advisor の反証を経て採った案)**: harness.db の PLAN 用の表は `docs/plans` からの投影であり、原本は tag `plans-archive-20261102` (`eac0a945`) に残る。削除後の rebuild で行が 0 件になるのは既存の投影の動きであり、新しい削除操作を足すものではない。行を凍結して残す案は、原本の無い投影を鮮度の保証なしに残すことになり、`db-currency` の比較も外す必要がある (§2 の 6 行目) ので採らない。行が要るときは、tag を checkout して rebuild すれば再生成できる。
 
 **registry から外したときの既存 DB の表** (S7): 次の 4 点を不変条件とする。
 - 読まない: registry から外した表を参照する SQL を src に残さない (§9 の不変条件、静的に検査する)。

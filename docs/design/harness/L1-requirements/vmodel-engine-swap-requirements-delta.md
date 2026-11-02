@@ -5,7 +5,7 @@ status: confirmed
 revision_track: additive
 revision_base_artifact: docs/design/harness/L1-requirements/vmodel-upgrade-requirements.md
 pair_artifact: docs/test-design/harness/L14-vmodel-engine-swap-operational-test-design.md
-related_l0: docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md
+related_l0: plans-archive-20261102:docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md
 related_br: docs/design/harness/L1-requirements/vmodel-upgrade-requirements.md
 next_pair_freeze: L4
 plan: docs/plans/PLAN-L1-07-vmodel-engine-swap-requirements-delta.md

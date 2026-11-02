@@ -849,7 +849,7 @@ screen §5 G1-trace マトリクスを継承し、L3 FR-* × 15 画面 (PM/HM/GD
 - L3 nfr-grade (NFR 閾値): `docs/design/harness/L3-functional/nfr-grade.md`
 - L12 受入テスト設計 (W pair): `docs/test-design/harness/L12-acceptance-test-design.md`
 - L0 概念層: `docs/governance/ut-tdd-agent-harness-concept_v3.1.md`
-- PLAN: `docs/plans/PLAN-L3-01-functional-detail.md`
+- PLAN: `plans-archive-20261102:docs/plans/PLAN-L3-01-functional-detail.md`
 
 ## §7 carry / 次工程 (L4) への引き継ぎ
 

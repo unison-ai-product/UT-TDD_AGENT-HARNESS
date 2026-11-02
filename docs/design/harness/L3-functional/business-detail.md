@@ -231,7 +231,7 @@ priority: P1」
 - L3 functional (P0 FR-01〜18): `docs/design/harness/L3-functional/functional-requirements.md`
 - L3 nfr-grade (NFR 閾値): `docs/design/harness/L3-functional/nfr-grade.md`
 - L12 受入テスト: `docs/test-design/harness/L12-acceptance-test-design.md`
-- PLAN: `docs/plans/PLAN-L3-02-business-detail.md`
+- PLAN: `plans-archive-20261102:docs/plans/PLAN-L3-02-business-detail.md`
 
 ## §9 carry / 次工程 (L4 / Phase B) への引き継ぎ
 

@@ -900,7 +900,7 @@ attemptを加算し、retry可能な`pending`を維持する。
 | `drive_model_selections` | `episode_id`, selection revision, model, 適合結果, 根拠digest, override有無・actor・reason・evidence | episodeごとのactive revisionは一意。overrideは元選択を更新せず新revisionをappend |
 | `execution_evidence_refs` | `episode_id`, `event_id`, evidence種別 (test run / CI run / review / artifact), 参照, digest | evidence種別間の代用を禁止。別episode・別revision・別headのevidenceをFKとpolicyで拒否 |
 
-上表の追加契約 (未実装、移行元: docs/plans/PLAN-L5-23-execution-ledger-github-physical-data.md (issue #648)):
+上表の追加契約 (未実装、移行元: plans-archive-20261102:docs/plans/PLAN-L5-23-execution-ledger-github-physical-data.md (issue #648)):
 
 - Issue / branch / PR の create operation の冪等keyは`(repository, episode_id, object_kind, intent_revision)`とし、HTTP timeout後も
   同一keyで外部照会(reconcile)してから再送する。webhook delivery IDだけに依存せず、provider event identityとobject/head identityで重複を吸収する。

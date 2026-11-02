@@ -8,7 +8,7 @@ related_br: docs/design/harness/L1-requirements/business-requirements.md
 next_pair_freeze: L9
 plan: docs/plans/PLAN-L4-33-node-control-plane-redesign.md
 replacement_issue: 152
-predecessor_plan: docs/plans/PLAN-L4-02-architecture.md
+predecessor_plan: plans-archive-20261102:docs/plans/PLAN-L4-02-architecture.md
 v2_import: docs/migration/v2-import-ledger.md
 ---
 
@@ -203,7 +203,7 @@ data.md の 5 集約 (構造) を src/ building block (実行) に配置する�
   (Codex はこれ以外の field を無音で無視するため。PLAN-L7-668 §3.1)。
 - top-level の key (`hooks` 以外) は検査しない。Codex CLI の binary や実 schema を呼んで検証する経路は持たない。
 
-移行元: `docs/plans/PLAN-L7-426-codex-native-subagents.md` (issue #648)。PLAN は「Codex の schema で実 parse する
+移行元: `plans-archive-20261102:docs/plans/PLAN-L7-426-codex-native-subagents.md` (issue #648)。PLAN は「Codex の schema で実 parse する
 fence」を掲げるが、実装は上記の JSON parse + field allowlist である (差分は移行証跡 g5 に記録)。
 
 ## §7 ADR 仕組み (arc42 §9、IMP-023)
@@ -422,4 +422,4 @@ recoverable outbox) で確定し、片肺を許さない。receipt の success �
 `broker_external_deadline_owner`、`non_inheritable_custody_handle`。不足を warning・PID polling・soft limit へ縮退させない。
 macOS は Linux 同等を自己申告せず、証明できる capability だけを公開する。
 
-移行元: docs/plans/PLAN-L4-32-resource-governed-execution-kernel.md (issue #648)
+移行元: plans-archive-20261102:docs/plans/PLAN-L4-32-resource-governed-execution-kernel.md (issue #648)
