@@ -18,7 +18,7 @@ decision_ledger: docs/governance/candidates/v4-decision-ledger.json
 ただし、v4 の決定は current の BR-04 (PoC の契約化) と BR-05 (PLAN 単位のフェーズ管理) と衝突する
 (V4D-054 Scrum / PoC 撤廃、V4D-078 PLAN 全面廃止)。昇格するときは、この 2 件を additive に残さず改訂する。
 
-PLAN は廃止済みである (V4D-078)。本書の正規の受け皿は #530 とする。
+PLAN は廃止済みである (方針は V4D-078、本文の削除は #1078)。本書の正規の受け皿は #530 とする。
 
 ## 決定台帳との関係
 

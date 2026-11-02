@@ -16,7 +16,7 @@ revision_base_artifact: docs/design/harness/L1-requirements/vmodel-engine-swap-r
 runtime、DB へ投影しない。承認後は VUP-REQ-11〜 として `vmodel-engine-swap-requirements-delta.md` と同じ
 additive 方式の L1 delta 文書へ写す。既存 VUP-REQ-01〜10 は変えない。
 
-PLAN は廃止済みである (V4D-078)。本書の正規の受け皿は #530 とする。
+PLAN は廃止済みである (方針は V4D-078、本文の削除は #1078)。本書の正規の受け皿は #530 とする。
 
 ## 決定台帳・要求との関係
 
