@@ -239,4 +239,4 @@ PO 指示「要件定義の後に検証/改善ロードマップ構築フェー�
 - `docs/design/harness/L3-functional/` (本書が属する L3 設計層 sub-doc 群)
 - `docs/process/forward/overview.md` (V-model 概要、PROVISIONAL spike)
 - `docs/improvement-backlog.md` (機能一覧 = 改善サイクルの sink)
-- `docs/plans/PLAN-DISCOVERY-01-workflow-metamodel.md` (観点 A workflow 検証の正本)
+- `plans-archive-20261102:docs/plans/PLAN-DISCOVERY-01-workflow-metamodel.md` (観点 A workflow 検証の正本)
