@@ -161,6 +161,12 @@ Pack の PLAN 運用は Issue 参照に置き換える (PO 判断)。**互換性
 | S7 | PLAN の CLI・台帳・投影コードの退役と registry からの除外 (§3)。`src/plan/`、`src/plan-admission/`、`src/plan-asset/` を消す。PLAN 以外が使う部分 (§2 の 8 行目) は消さずに `src/forward/` と `src/setup/` の側へ移す。`model_evaluations` の成功判定 (`plan_registry.status` との結合、`src/schema/harness-db-tables-evaluation.ts:31`) の退役 (列は残して NULL)、`src/doctor/test-repository-isolation.ts:45` の登録行の削除 | 上記 3 dir、`src/state-db/**`、`src/schema/harness-db*.ts`、`src/cli.ts` | 直列 4 (S1〜S5 の後) |
 | S8 | 規範文書と rule-drift の marker の掃除 (`CLAUDE.md`、`AGENTS.md`、`.claude/CLAUDE.md`、`skills/`、`docs/governance/`) | 規範文書 | S7 の後 |
 
+**S1 の前段と同期 (#1373)**: S1 の退役は、次の 2 系統が既存の gate に触れるので、範囲をここで固定する。
+
+- **S1-0 (`src` を含まない前段の PR)**: `tests/merged-plan-status.test.ts` の `U-MPSTATUS-506-001`〜`004` の 4 件の `it` と、`docs/test-design/harness/L7-unit-test-design.md` の「PLAN-L7-506 merged-plan-status landing guidance oracle」の節を、同じ PR で消す。実装 PR は `docs/test-design/` を変更できず (`src/github/design-protection.ts` の `protected-modified`)、宣言だけを先に消すと未宣言の citation になり (`undeclaredCitations`)、テストだけを消すと未 citation の宣言になる。`src` を含まない 1 本の PR なら、どの gate にも触れない。baseline は増やさない。この PR が merge されてから S1 に着手する。
+- **S1 本体のテスト**: `tests/{merged-plan-target-evidence,merged-plan-status,green-command-digest,plan-body-substance,plan-completion-drift}.test.ts` をファイルごと退役させる。5 本とも退役する module を import している。`U-TESTHYGIENE-053` は他のテストと baseline にも残るので変えない。
+- **S1 本体の L14 close audit**: `src/lint/l14-close-audit.ts` の `REQUIRED_EVIDENCE_BY_ITEM["green-evidence-integrity"]` から `src/lint/green-command-digest.ts` と `tests/green-command-digest.test.ts` を外す。`.ut-tdd/audit/A-143-l14-close-system-foundation-audit.md` の同じ行の 2 path は `plans-archive-20261102:<path>` の表記に替える (`evidencePaths` の対象外になり、実在検査を受けない。#1356 と同じ表記である)。next action は、`green-command-digest` と strict flag が S1 で退役し、review の green 証跡を custody receipt と merge gate が持つことを書く。項目と `closed` の状態は残し、A-155 / A-156 の参照も残す。`tests/l14-close-audit.test.ts` の fixture は同じ PR で合わせる。
+
 各段は設計書保護 gate の三段階 (契約 → 登録 + Red → src を含まない昇格 → 実装) に従う。本書が (0) の契約にあたる。退役だけで新しい振る舞いを持たない段 (S1、S5、S8) は Red を持たず、削除と、消えたことを確かめるテストの差分だけにする。
 
 ## 9. 不変条件 (DbC)
