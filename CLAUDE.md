@@ -577,7 +577,11 @@ Task-kind ベースの割当 (PO rule 2026-07-14、旧 tier 記述を supersede)
 - Claude: フロントデザイン/UI デザインの判断・レビュー/設計ドキュメント作成 = Opus (`claude-opus-5-5`);
   決まった UI デザインの実装/ドキュメント修正 = Sonnet (`claude-sonnet-5-5`)
   (指揮モデル別の相談先と委譲先は `.claude/CLAUDE.md` §委譲と判断層 の「あなたが○○なら」の表);
-  web 検索/doc パッチ = Haiku (`claude-haiku-5-5`)。
+  web 検索/doc パッチ = Haiku (`claude-haiku-5-5`)。Haiku は「基準が明示できる読み取りと編集」
+  (行番号・引用の確認、対象行が明示された文書編集) の標準 worker にしてよい。意味の判定と完了の判定は上位モデルか
+  control が確定し、成果物は非著者 review を通す。コードの worker 標準にする根拠はまだ無い
+  (実測 2026-11-02: 読み取り 3 本で誤り 0、実編集は対象 10 行を正解し誤書き換え 0。一方、前段の棚卸しは 7 行を誤分類し、
+  Issue 完了判定 68 件は 3 件誤り)。
 - 作業の守り方は 2 層に分ける (契約: `docs/design/harness/L6-function-design/agent-guard-delegation-boundary.md` §9)。
   **判断する層** (closing review・advisor・merge) は委譲経路 (`ut-tdd claude|codex --role <role>`)・
   review-guard・review custody・`ut-tdd pr merge` だけが持つ。**手を動かす層** (レーン内の並列、草稿・調査・編集)

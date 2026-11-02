@@ -4,14 +4,14 @@ status: draft_candidate
 concept: docs/governance/candidates/ut-tdd-concept-v4.0.md
 requirements: docs/governance/candidates/ut-tdd-concept-v4-requirements.md
 decision_ledger: docs/governance/candidates/v4-decision-ledger.json
-plan: docs/plans/PLAN-L1-09-ut-tdd-concept-v4-candidates.md
+issue: 530
 ---
 
 # UT-TDD 構想書 v4.0 受入候補 (L12 受入、UAT を含む)
 
 ## Authority 境界
 
-本書は PLAN-L1-09 の未承認候補である。test-design でも実装の oracle でもない。
+本書は #530 の未承認候補である。test-design でも実装の oracle でもない。
 v4 の右腕では、受入は L12 (UAT を含む) の工程である (V4D-073)。
 承認後、各行は該当する test-design の AT 宣言へ降りる。受入 catalog (JSON) はその test-design から生成する (V4D-070)。
 本書は「何を観測できれば受入とみなすか」を宣言する。実行主体と実装方式は固定しない。
@@ -35,7 +35,7 @@ node docs/governance/candidates/v4-ledger-check.mjs
 
 区分の意味: 維持 = 判定の中身を変えていない。既存を更新 = 同じ ID のまま要件に合わせて書き直した。新規 = どの既存の受入にも無い論点。
 
-集計: 維持 38 件 / 既存を更新 33 件 / 新規 18 件 (計 89 件)。行ごと廃止 1 件 (UTV4-AC-009)。
+集計: 維持 38 件 / 既存を更新 34 件 / 新規 21 件 (計 93 件)。行ごと廃止 1 件 (UTV4-AC-009)。
 
 ## release 必須の判定基準
 
@@ -51,7 +51,7 @@ yes にするのは、失敗すると次のどれかが起きる受入である�
 
 それ以外は no とする。no の受入も、該当する工程の gate では検査する。
 
-集計: release 必須 yes 41 件 / no 48 件。
+集計: release 必須 yes 45 件 / no 48 件。
 
 ## 受入候補
 

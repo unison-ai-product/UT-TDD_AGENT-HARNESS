@@ -5,7 +5,7 @@ status: draft_candidate
 supersedes_after_approval: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 source_concept: 参照元の個人開発ハーネス構想 v4.0 候補 (非公開、PO 提示 2026-09-04)
 evidence_baseline: b27720644a7589dc568c76cad7eb5e068654c824
-plan: docs/plans/PLAN-L1-09-ut-tdd-concept-v4-candidates.md
+issue: 530
 ---
 
 # UT-TDD Agent Harness 構想書 v4.0 候補 (チーム開発版 Verified Change Harness)
@@ -55,7 +55,7 @@ Python 恒久意味コアは採らない (ADR-001: TypeScript/Node 一本)。
 「1 枚にまとまる要求・要件」は品質を持たない、という前提を採る。
 
 v4 の狙いを一文で言えば **「上流検証型工程のきれいさを保ったまま、人間 orchestrator 型の速度を出す」** である (PO 2026-09-04)。
-新しい工程を発明するのではなく、社内の実録 (PLAN-L1-09 §2.6 / §2.7) で成立している上流検証型工程のうち、人間が手で回している
+新しい工程を発明するのではなく、社内の実録 (`plans-archive-20261102:docs/plans/PLAN-L1-09-ut-tdd-concept-v4-candidates.md` §2.6 / §2.7) で成立している上流検証型工程のうち、人間が手で回している
 統合作業 — 画面ルールと要求の齟齬照合、チケット切り出しと PR 別テスト仕様書、依存の暫定 → 確定と還流、合流順の調停、review の
 全件目視 — を record と compiler と generated view で機械側へ移し、人間の時間を判断 (上流の確定・結合面の review・admission) に
 集める。速度は「要求変更から製本までのリードタイム」「齟齬照合の人手 issue 件数」「close → 載せ直し PR 件数」「人間 review の
@@ -184,7 +184,7 @@ PO は 2 大要求 (A / B) に加えて、参照元の個人開発ハーネス�
 | standalone | 人間または単一 model | 人間 | 人間 review | `human_review` | 全 merge を人間が承認 |
 
 standalone の実態は **人間 orchestrator 型** (社内 project の実録: 人間が仕様を手で詰め、チケット単位で AI に指示し、自走させない。
-PLAN-L1-09 §2.7)。この型でも record・チケット階層・製本点・generated view は同じものを使い、差は「compile と dispatch を人間が
+`plans-archive-20261102:docs/plans/PLAN-L1-09-ut-tdd-concept-v4-candidates.md` §2.7)。この型でも record・チケット階層・製本点・generated view は同じものを使い、差は「compile と dispatch を人間が
 手で行う」ことだけである。したがって v4 の compiler / スプシ同期 / 図生成 / admission チケットは、この型で人間が手で回している作業
 (チケット切り出し・PR ごとのテスト仕様書・シートと実装の齟齬取り・型定義の再生成) をそのまま機械側へ移すものであり、人間 orchestrator 型は
 v4 の移行元プロファイルとして第一級に扱う。
@@ -227,7 +227,7 @@ hybrid 基準比較 (FR-024) で見逃し率を継続計測する。これらは
 
 PLAN の新規発行は止めず、PLAN を **工程間の簡易契約** に絞る。工程内の作業はチケットで許可する (PO: 「工程間をつなぐ plan と
 工程内の作業のチケット」)。全件チケットにすると工程間の依存・所有権の正本が消え、WBS エンジンの入力が無くなるため採らない
-(PO: 「全件チケットだと支えがなくなって崩れそう」)。詳細と advisor 条件は PLAN-L1-09 §3.25。
+(PO: 「全件チケットだと支えがなくなって崩れそう」)。詳細と advisor 条件は `plans-archive-20261102:docs/plans/PLAN-L1-09-ut-tdd-concept-v4-candidates.md` §3.25。
 
 | 層 | 中身 | 書き手 |
 |---|---|---|
@@ -256,7 +256,7 @@ v3.1 資産から新体制への移行は Reverse → ずれの判定 (正解 = 
 
 条件: 順序は 証拠集め → 判定 → 還流とリファクタリング → 検証 → 仕様書 (仕様書には「正解」の振る舞いだけを書く)。右腕で
 変えるのは振る舞い不変のものだけで、機能変更は次周回の Forward へ回す。リファクタリングする family と検証する family を
-分ける。詳細は PLAN-L1-09 §3.26〜§3.27。
+分ける。詳細は `plans-archive-20261102:docs/plans/PLAN-L1-09-ut-tdd-concept-v4-candidates.md` §3.26〜§3.27。
 
 ## 全体影響バグ・改善データ・製本点・実録学習 (PO 指示 2026-09-04)
 
@@ -292,7 +292,7 @@ v3.1 資産から新体制への移行は Reverse → ずれの判定 (正解 = 
 
 製本点 (a)(b) だけでは工程が成立しない。画面プロトは **要求を整理し要件を固めるための検証装置** であり、次の構成要素を
 record と generated view で持つ。ハーネス自身の人間向け面 (スプレッドシート view、digest、ダッシュボード、CLI の対話面) も同じ工程を通す
-(dogfooding)。参考実録: 社内 project の L3-ui-prototype 構成 (PLAN-L1-09 §2.6)。
+(dogfooding)。参考実録: 社内 project の L3-ui-prototype 構成 (`plans-archive-20261102:docs/plans/PLAN-L1-09-ut-tdd-concept-v4-candidates.md` §2.6)。
 
 | 構成要素 | 内容 | record / view |
 |---|---|---|
@@ -373,7 +373,7 @@ subagent ファイル名で allowlist と floor を判定する。同じ「revie
 
 ### PoC の行き過ぎ検知 (PO 提示 2026-09-04、実録 4)
 
-PoC 前提で作った実装が製品規模まで育ち、Reverse R0〜R4 を回して凍結し、L0 から再設計する事例がある (PLAN-L1-09 §2.9)。PoC 軸を
+PoC 前提で作った実装が製品規模まで育ち、Reverse R0〜R4 を回して凍結し、L0 から再設計する事例がある (`plans-archive-20261102:docs/plans/PLAN-L1-09-ut-tdd-concept-v4-candidates.md` §2.9)。PoC 軸を
 production 工程と別 axis に置く (FR-017) だけでは足りず、**PoC には scope / budget record と exit criteria を持たせ、超過を機械が
 検知して S4 decision を強制する**。PoC record = 問い (仮説)・期限・許容規模 (file / test / 外部接続 / 本番設定の有無)・成立 / 不成立の
 oracle・S4 decision 期日。許容規模や期限を超えた PoC は compiler が `poc_overrun` finding を出し、S4 decision (confirmed → Forward
