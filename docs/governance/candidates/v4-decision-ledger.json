@@ -1989,5 +1989,122 @@
       "UTV4-BR-036"
     ],
     "verified": true
+  },
+  {
+    "decision_id": "V4D-102",
+    "source": {
+      "kind": "issue_comment",
+      "issue": 530,
+      "comment_ids": [
+        "6572762440"
+      ]
+    },
+    "date": "2026-11-02",
+    "summary_ja": "PO の決定ではなく、既存契約から導いた技術判断。証跡の置き場 (U-1) は種類で分ける。review receipt / verdict は origin の refs/ut-tdd/receipts/ の commit 内 JSON に置き、生のセッションログは git の外に置く。参照側は証跡の ID と digest だけを持つ。main は required check が admin にも強制され直接 push できず、receipt は exact head に束縛されるので PR にも入れられないためである。refs/ut-tdd/receipts/ の作成・競合・別 PC 取得を実機で確かめるまで、複数 PC の merge は完成扱いにしない。導入先で custom ref が拒否されるときは同一 PC 制約を残す。",
+    "status": "active",
+    "superseded_by": null,
+    "high_impact": false,
+    "maps_to": [
+      "UTV4-BR-005"
+    ],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-103",
+    "source": {
+      "kind": "issue_comment",
+      "issue": 530,
+      "comment_ids": [
+        "6572762440"
+      ]
+    },
+    "date": "2026-11-02",
+    "summary_ja": "PO の決定ではなく、既存契約から導いた技術判断。「消す対象」(U-2) は設計書の成果物所有の差分から機械で出す。「無し」とその理由だけを PR receipt の field に置く。チケットは V4D-056 で 3 field に固定済みなので、4 つ目の field は足さない。",
+    "status": "active",
+    "superseded_by": null,
+    "high_impact": false,
+    "maps_to": [
+      "UTV4-BR-003",
+      "UTV4-BR-014"
+    ],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-104",
+    "source": {
+      "kind": "issue_comment",
+      "issue": 530,
+      "comment_ids": [
+        "6572762440"
+      ]
+    },
+    "date": "2026-11-02",
+    "summary_ja": "PO の決定ではなく、既存契約から導いた技術判断。PoC の規模・期限の上限 (U-3) は、discovery の検収雛形に期限を持たせ、超過は finding (警告) として出す。新規発行は止めない。発行を止める機構は V4D-054 で撤廃済みである。",
+    "status": "active",
+    "superseded_by": null,
+    "high_impact": false,
+    "maps_to": [
+      "UTV4-BR-010"
+    ],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-105",
+    "source": {
+      "kind": "issue_comment",
+      "issue": 530,
+      "comment_ids": [
+        "6572762440"
+      ]
+    },
+    "date": "2026-11-02",
+    "summary_ja": "PO の決定ではなく、既存契約から導いた技術判断。G1 / G3 / G4 に ops の役割は足さない (U-4)。メンバー registry に ops の役割が実在した時に、RACI の C 列へ足す。ops の役割の定義は concept v3.1 / v4.0 のどちらにも無い。",
+    "status": "active",
+    "superseded_by": null,
+    "high_impact": false,
+    "maps_to": [
+      "UTV4-BR-002"
+    ],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-106",
+    "source": {
+      "kind": "issue_comment",
+      "issue": 530,
+      "comment_ids": [
+        "6572762440"
+      ]
+    },
+    "date": "2026-11-02",
+    "summary_ja": "PO の決定ではなく、既存契約から導いた技術判断。チケット正本の置き場 (U-6) は dev/records/tickets/ とし、置き場所の registry に登録する。段階 3 の切替前は現構造の等価 path を使う。.ut-tdd/ は追跡しないので、チケットを tracked ファイルとする UTV4-FR-004 と両立しない。",
+    "status": "active",
+    "superseded_by": null,
+    "high_impact": false,
+    "maps_to": [
+      "UTV4-BR-003",
+      "UTV4-BR-043"
+    ],
+    "verified": true
+  },
+  {
+    "decision_id": "V4D-107",
+    "source": {
+      "kind": "issue_comment",
+      "issue": 530,
+      "comment_ids": [
+        "6572762440"
+      ]
+    },
+    "date": "2026-11-02",
+    "summary_ja": "PO の決定ではなく、既存契約から導いた技術判断。#534 / #535 の扱い。版互換 (schema_id / readable_versions / writable_version / migration_ref) と rollback の限界は、要件 UTV4-FR-079 を新設して受け入れる。readiness の 3 状態 (contract_frozen / artifact_verified / merge_admitted) は UTV4-FR-054 に足し、受入 UTV4-AC-066 で確かめる。共通 JSON の reader / writer / validator は実装方式であって観測できる条件ではなく、1 記録 = 1 ファイルの構造化正本は UTV4-FR-006 が既に求めているので、要件には入れず L5 / L6 設計へ回す (V4D-063)。要件番号は #534 / #535 の起票時の番号を追わない。",
+    "status": "active",
+    "superseded_by": null,
+    "high_impact": false,
+    "maps_to": [
+      "UTV4-BR-014",
+      "UTV4-BR-030"
+    ],
+    "verified": true
   }
 ]
