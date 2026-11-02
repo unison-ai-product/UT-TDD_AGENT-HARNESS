@@ -160,6 +160,19 @@ L9 の受入 oracle (CANDIDATE-ST-TEAM-004) で確かめる。
     `machine_id` と一致すること、(b) 先頭の request の digest が、ローカル custody にある request の digest と一致すること、
     の両方を確かめる。(a) が違えば `review_custody_on_other_machine`、(b) が違えば `review_request_superseded` で拒否する。
     origin に届かなければ拒否する。
+  - **merge 開始の直列化**: 照合と merge の間に transfer が入ると、head が同じまま失効した request の PASS で merge できてしまう。
+    GitHub の merge API の条件は head だけで、request の世代を条件にできない。そこで `ut-tdd pr merge` は、完成した custody を
+    検証した後、検証した先頭の oid を期待値にして、同じ ref を `merging` 状態の commit へ CAS で進める。CAS に負けたら merge API を
+    呼ばない。先頭が `merging` なら transfer は deny する。`merging` は新しい request ではなく同じ request の状態変更なので、PASS を
+    失効させない。merge の結果の確定は `merged` の commit を CAS で追記する形にし、元の oid へは巻き戻さない (監査の鎖を失い、古い
+    期待値が再び成立するため)。
+  - **`merging` のまま PC が失われた場合**: 期限は持たない。PR が MERGED なら、結果と PR・head の対応を確かめて `merged` を追記する。
+    PR が OPEN なら、別の PC が同じ完成済み custody を再検証し、同じ request のまま同じ head の merge を再実行する。timeout・接続断・
+    応答の喪失は merge の失敗ではなく結果不明として扱い、`merging` を解除しない。CLOSED、head の変更、状態の取得失敗では解除も
+    再実行もせず、人が確かめるまで止める。
+  - **限界**: 本方式は協調するクライアントの merge 開始と transfer を同じ ref の CAS で直列化する。PR が OPEN であることや通信失敗
+    だけでは、停止・遅延した merge 呼び出しの不存在を保証できない。merge API は request の世代を条件にできないので、`merging` を
+    解除して transfer した後の旧い呼び出しを本方式だけでは拒否できない。したがって `merging` の解除は契約に持たない。
   - **結果**: PC1 が request を出して停止し、PC2 が引き取って同じ head を再レビューした後に PC1 が戻ってきた場合、
     PC1 の merge は (a) で拒否され、PC1 のローカル custody にある旧 request とその後の receipt は使われない。PC2 は、
     新しい request に PASS の receipt が揃えば、PC1 の旧 request が残っていても merge できる。
