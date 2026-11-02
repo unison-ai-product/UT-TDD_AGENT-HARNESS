@@ -67,7 +67,9 @@ describe("doctor singleton lock liveness (#1460)", () => {
     removeTestTree(repoRoot);
   });
 
-  it.fails("U-DOCLOCK-014: a live same-process holder is kept past the TTL and blocks a 2nd doctor", () => {
+  // 前提は対の通常 it で確かめる。it.fails の本体には oracle だけを置き、
+  // 準備の失敗を期待失敗として隠さない (#1452)。
+  function arrangeLiveHolder() {
     const record = holderRecord(OLD);
     writeClaim(repoRoot, record);
     const probed: number[] = [];
@@ -77,14 +79,28 @@ describe("doctor singleton lock liveness (#1460)", () => {
         return HOLDER_START;
       },
     });
-    // 前提: claim が実在し、pid は生存、TTL は実際に超過している。
+    return { record, probed, d };
+  }
+
+  function acquireOwnClaim(own: string) {
+    const r = acquireDoctorLock(repoRoot, 1111, deps({ ownProcessStart: () => own }));
+    const dir = doctorLockClaimsPath(repoRoot);
+    const names = readdirSync(dir);
+    const claim = JSON.parse(readFileSync(join(dir, names[0] as string), "utf8"));
+    return { r, names, claim };
+  }
+
+  it("U-DOCLOCK-014 prerequisite: the claim exists, the pid is alive and the TTL has passed", () => {
+    const { record, d } = arrangeLiveHolder();
     expect(existsSync(doctorLockClaimPath(repoRoot, "holder"))).toBe(true);
     expect(d.isPidAlive(record.pid)).toBe(true);
     expect(defaultDoctorLockDeps().isPidAlive(process.pid)).toBe(true);
     expect(NOW - Date.parse(record.started_at)).toBeGreaterThan(DOCTOR_LOCK_STALE_MS);
-    // 前提: Green 前でも probe 経路が差し込めること (deps が受け取られる)。
     expect(typeof d.processStartTime).toBe("function");
+  });
 
+  it.fails("U-DOCLOCK-014: a live same-process holder is kept past the TTL and blocks a 2nd doctor", () => {
+    const { record, probed, d } = arrangeLiveHolder();
     expect(isStaleDoctorLock(record, d)).toBe(false);
     const second = acquireDoctorLock(repoRoot, 2222, d);
     expect(second.acquired).toBe(false);
@@ -92,32 +108,24 @@ describe("doctor singleton lock liveness (#1460)", () => {
     expect(probed.length).toBeGreaterThan(0);
   });
 
-  it.fails("U-DOCLOCK-015: a live pid whose start time differs (pid reuse) is stale even when fresh", () => {
-    const record = holderRecord(FRESH);
-    writeClaim(repoRoot, record);
+  it("U-DOCLOCK-015: pid reuse is reclaimed past the TTL and is not probed within it", () => {
     const reusedStart = new Date(Date.parse(HOLDER_START) + 30 * 60 * 1000).toISOString();
     const d = deps({ processStartTime: () => reusedStart });
-    expect(existsSync(doctorLockClaimPath(repoRoot, "holder"))).toBe(true);
-    expect(d.isPidAlive(record.pid)).toBe(true);
-    expect(NOW - Date.parse(record.started_at)).toBeLessThan(DOCTOR_LOCK_STALE_MS);
     expect(Math.abs(Date.parse(reusedStart) - Date.parse(HOLDER_START))).toBeGreaterThan(5000);
+    expect(isStaleDoctorLock(holderRecord(OLD), d)).toBe(true);
+    expect(isStaleDoctorLock(holderRecord(FRESH), d)).toBe(false);
+  });
 
-    expect(isStaleDoctorLock(record, d)).toBe(true);
+  it("U-DOCLOCK-016 prerequisite: acquire writes exactly one readable claim", () => {
+    const { r, names, claim } = acquireOwnClaim("2026-10-29T08:00:00.000Z");
+    expect(r.acquired).toBe(true);
+    expect(names).toHaveLength(1);
+    expect(claim.pid).toBe(1111);
   });
 
   it.fails("U-DOCLOCK-016: acquire records the own process start as proc_start", () => {
     const own = "2026-10-29T08:00:00.000Z";
-    const d = deps({ ownProcessStart: () => own });
-    expect(typeof d.ownProcessStart).toBe("function");
-
-    const r = acquireDoctorLock(repoRoot, 1111, d);
-    expect(r.acquired).toBe(true);
-    const dir = doctorLockClaimsPath(repoRoot);
-    const names = readdirSync(dir);
-    expect(names).toHaveLength(1);
-    const claim = JSON.parse(readFileSync(join(dir, names[0] as string), "utf8"));
-    expect(claim.pid).toBe(1111);
-    expect(claim.proc_start).toBe(own);
+    expect(acquireOwnClaim(own).claim.proc_start).toBe(own);
   });
 
   it("U-DOCLOCK-017: without proc_start or a probe result the TTL fallback still reclaims", () => {

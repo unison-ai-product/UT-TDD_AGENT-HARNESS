@@ -45,7 +45,7 @@ TTL を残している理由は、pid の再利用 (同じ pid の別プロセ�
    - record に `proc_start` があり、`deps.processStartTime(pid)` が値を返すなら、両者の差が許容差以内なら **経過時間にかかわらず保持**、許容差を超えたら pid 再利用とみなして stale。
    - `proc_start` が無い (旧 record)、またはプローブが失敗して null を返すなら、現行どおり TTL で判定する (fail-open の限定的な帰結: プローブ失敗時は、生きている doctor でも TTL 超過で回収されうる)。
 
-プローブ (`deps.processStartTime`) は、手順 4 の「pid が生きている」場合にだけ、かつ TTL を超えている record に限って呼ぶ。新しい record では呼ばない。Windows で 1 回 4 秒かかるため、通常の起動経路に載せない。
+プローブ (`deps.processStartTime`) は、手順 4 の「pid が生きている」場合にだけ、かつ TTL を超えている record に限って呼ぶ。新しい record では呼ばない。したがって TTL 内の pid 再利用は照合せずに保持し、TTL を超えた時点で回収する (#1460 の「これまでどおり回収する」の範囲)。Windows で 1 回 4 秒かかるため、通常の起動経路に載せない。
 
 回収判定の oracle は `docs/test-design/harness/L7-doctor-singleton-lock-test-design.md` の U-DOCLOCK-014〜018 が固定する。
 

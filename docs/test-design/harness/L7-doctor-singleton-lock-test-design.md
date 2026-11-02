@@ -24,9 +24,9 @@ issue: 1460
 | ID | 種別 | 対象 | Oracle |
 |---|---|---|---|
 | U-DOCLOCK-014 | Red | `isStaleDoctorLock` / `acquireDoctorLock` | 同一 host で pid が生存し、`proc_start` がプローブ結果と許容差以内に一致する lock は、45 分を超えても回収されず、2 本目は holder 付きで blocked になる |
-| U-DOCLOCK-015 | Red | `isStaleDoctorLock` | pid が生存していても `proc_start` がプローブ結果と許容差を超えて食い違う (pid 再利用) lock は、経過が新しくても stale になる |
+| U-DOCLOCK-015 | 回帰 | `isStaleDoctorLock` | pid が生存していても `proc_start` がプローブ結果と許容差を超えて食い違う (pid 再利用) lock は、TTL 超過後に stale になる。TTL 内はプローブせず保持する |
 | U-DOCLOCK-016 | Red | `acquireDoctorLock` | 取得した claim に `deps.ownProcessStart()` の値が `proc_start` として記録される |
 | U-DOCLOCK-017 | 回帰 | `isStaleDoctorLock` | `proc_start` が無い旧 record、またはプローブが null を返したとき、45 分超過なら stale (現行の fallback を保つ) |
 | U-DOCLOCK-018 | 回帰 | `isStaleDoctorLock` | 新しい record (TTL 内) ではプローブを呼ばず、pid が死んだ record でもプローブを呼ばない |
 
-各 Red は前提を assertion で確かめる (lock file が実在する、pid が実際に生きている、deps のプローブが差し込まれている)。前提が欠けたまま `it.fails` が通る形にしない (#1452)。
+各 Red の前提 (lock file が実在する、pid が実際に生きている、deps のプローブが差し込まれている、claim を読める) は、同じ準備処理を使う対の通常 `it` (`U-DOCLOCK-014 prerequisite` / `U-DOCLOCK-016 prerequisite`) で確かめる。`it.fails` の本体には oracle だけを置き、準備の失敗が期待失敗として隠れる形にしない (#1452)。
