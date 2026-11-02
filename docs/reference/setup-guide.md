@@ -169,7 +169,7 @@ setup や launcher の標準エラー出力に、`consumer_runtime_...` また�
 
 1. `node -v` が 24 系か、`git --version` が通るか (§0)。
 2. `git rev-parse --show-toplevel` と `git remote -v` — 導入先の repository で、origin があるか。
-3. `ls .ut-tdd .ut-tdd/bin .ut-tdd/runtime` — setup がどこまで書いたか。
+3. `ls .ut-tdd; ls .ut-tdd/bin; ls .ut-tdd/runtime` — setup がどこまで書いたか。bash と PowerShell のどちらでもこの形で実行できます。無いディレクトリがあっても次へ進むので、エラーになった行も控えます。
 4. `node .ut-tdd/bin/ut-tdd.mjs status` — 先頭に `mode:` が出るか。
 5. `git status --short` — setup が作ったファイル以外の変更が混ざっていないか。
 
