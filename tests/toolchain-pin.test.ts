@@ -4,7 +4,7 @@ import { analyzeToolchainPin, toolchainPinMessages } from "../src/lint/toolchain
 
 const direct = {
   "@biomejs/biome": "2.4.15",
-  esbuild: "0.21.5",
+  esbuild: "0.28.2",
 };
 
 const reviewedNodeVersion = "24.22.1";

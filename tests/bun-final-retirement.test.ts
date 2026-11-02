@@ -158,7 +158,7 @@ const documents = (): NodeBanDocuments => ({
       packageManager:
         "npm@11.6.2+sha512-7iKzNfy8lWYs3zq4oFPa8EXZz5xt9gQNKJZau3B1ErLBb6bF7sBJ00x09485DOvRT2l5Gerbl3VlZNT57MxJVA==",
       engines: { node: "24.13.0", npm: "11.6.2" },
-      devDependencies: { "@biomejs/biome": "2.4.15", esbuild: "0.21.5" },
+      devDependencies: { "@biomejs/biome": "2.4.15", esbuild: "0.28.2" },
       utTdd: {
         nodeToolchain: {
           phase: "node_production",
@@ -171,7 +171,7 @@ const documents = (): NodeBanDocuments => ({
     packageLock: JSON.stringify({
       lockfileVersion: 3,
       packages: {
-        "": { devDependencies: { "@biomejs/biome": "2.4.15", esbuild: "0.21.5" } },
+        "": { devDependencies: { "@biomejs/biome": "2.4.15", esbuild: "0.28.2" } },
       },
     }),
     nodeVersion: "24.13.0",
