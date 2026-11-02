@@ -30,6 +30,13 @@ GitHub の正式な親子関係で追跡する。`Related #N` や本文中の `P
 
 - PR は最も具体的な open Issue を `Refs` / `Closes` で参照し、必要なら親 Issue も併記する。
 - 設計 PR は実装 Issue を close しない。設計 freeze と実装完了を別の子 Issue で表す。
+- `Closes #N` と `Refs #N` の使い分けは次のとおりとする (Issue #1463。merge 済みの PR に対応する子 Issue が
+  open のまま残るのを防ぐ)。
+  - 1 本の PR がその Issue の受け入れ条件をすべて満たすときは、PR 本文で `Closes #N` を使う。Forward 系の
+    子 Issue (Red / 昇格 / Green / Refactor) がこれに当たる。
+  - 親 Issue と、複数の PR にまたがる Issue には `Refs #N` を使う。
+  - 同じ Issue に Red と Green の PR が別々にあるときは、最後に受け入れ条件を満たす PR だけが `Closes` を使う。
+  - merge したあとに `Refs` で残った子 Issue は、受け入れ条件を確かめてから手で close する。
 - 親 Issue は子 Issue の単なる close 数では閉じない。親の数値目標・統合検証・受入証跡を確認する。
 - 置換済み Issue は canonical successor を明記して `duplicate` または `not planned` で閉じる。
 - 対応 PR が古い main、失敗 CI、置換済み stack のままなら「対応済み」と数えない。
