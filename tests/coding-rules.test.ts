@@ -238,7 +238,7 @@ describe("U-CODE-011 test-title literal recognition", () => {
   ];
 
   for (const candidate of missingPositiveCases) {
-    it.fails(`U-CODE-011: candidate exemption ${candidate.name}`, () => {
+    it(`U-CODE-011: candidate exemption ${candidate.name}`, () => {
       expectExempt(candidate.text);
     });
   }
