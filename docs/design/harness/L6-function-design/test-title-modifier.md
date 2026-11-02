@@ -10,13 +10,13 @@ next_pair_freeze: L7
 issue: 1456
 ---
 
-> **L6 contract marker**: `isTestTitleLiteral(node: ts.Node) => boolean` は、coding-rules の test-title literal recognition に関する unit-test-granularity contract である。対象は候補 oracle `CANDIDATE-U-CODE-011` のみ。既存 `U-CODE-010` の正式宣言・判定範囲は変更しない。
+> **L6 contract marker**: `isTestTitleLiteral(node: ts.Node) => boolean` は、coding-rules の test-title literal recognition に関する unit-test-granularity contract である。対象は正式 oracle `U-CODE-011` である。既存 `U-CODE-010` の正式宣言・判定範囲は変更しない。
 
 # test-title modifier recognition — 機能設計 (issue #1456)
 
 ## 1. 目的と状態
 
-本書は `src/lint/coding-rules.ts` の `isTestTitleLiteral` を拡張する目標契約である。現行実装が満たすのは bare `describe` / `it` / `test` の直接呼出しだけであり、modifier / data-provider 呼出しは未実装である。Green 実装前の候補契約であり、Red 実証済みとは主張しない。
+本書は `src/lint/coding-rules.ts` の `isTestTitleLiteral` を拡張する契約である。現行実装が満たすのは bare `describe` / `it` / `test` の直接呼出しだけであり、modifier / data-provider 呼出しは未実装である。正式 oracle `U-CODE-011` の登録 Red は PR #1489 で実証済みであり、production Green は未実装である。
 
 ## 2. 契約
 
