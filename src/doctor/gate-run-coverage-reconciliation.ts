@@ -34,6 +34,25 @@ interface ReconciliationFailure {
   readonly invalidEvidenceFindings: number;
 }
 
+type GateRunProjection = ReturnType<typeof collectGateRunEvidenceProjection>;
+type ProjectedWorkflowRow = GateRunProjection["workflowRuns"][number];
+
+function bindWorkflowPlan(workflow: ProjectedWorkflowRow, planId: GateRunRow["plan_id"]) {
+  return { ...workflow, plan_id: planId };
+}
+
+type ExpectedWorkflowRow = ReturnType<typeof bindWorkflowPlan>;
+
+interface ReconciliationPlan {
+  readonly addGateRows: GateRunRow[];
+  readonly addWorkflowRows: ExpectedWorkflowRow[];
+  readonly deleteGateIds: string[];
+  readonly deleteWorkflowIds: string[];
+  readonly matchedGateIds: Set<string>;
+  readonly matchedWorkflowIds: Set<string>;
+  orphanGateRuns: number;
+}
+
 class GateRunCoverageMismatch extends Error {
   readonly failure: ReconciliationFailure;
 
@@ -107,29 +126,17 @@ function expectedSeedRows(
   );
   if (seeds.length === 0) return [];
   if (seeds.length !== VERIFICATION_LAYERS.length) {
-    throw new GateRunCoverageMismatch({
-      orphanGateRuns: 0,
-      workflowPlansWithoutGateRun: 0,
-      invalidEvidenceFindings: 1,
-    });
+    failGateRunCoverage(0, 0, 1);
   }
   for (const seed of seeds) {
     const canonical = expected.get(seed.gate_run_id);
     if (!canonical || !sameGateRun(seed, canonical)) {
-      throw new GateRunCoverageMismatch({
-        orphanGateRuns: 0,
-        workflowPlansWithoutGateRun: 0,
-        invalidEvidenceFindings: 1,
-      });
+      failGateRunCoverage(0, 0, 1);
     }
     expected.delete(seed.gate_run_id);
   }
   if (expected.size > 0) {
-    throw new GateRunCoverageMismatch({
-      orphanGateRuns: 0,
-      workflowPlansWithoutGateRun: 0,
-      invalidEvidenceFindings: 1,
-    });
+    failGateRunCoverage(0, 0, 1);
   }
   return seeds;
 }
@@ -203,10 +210,7 @@ function insertGateRun(db: HarnessDb, row: GateRunRow): void {
   );
 }
 
-function insertRoutineGate(
-  db: HarnessDb,
-  row: ReturnType<typeof collectGateRunEvidenceProjection>["workflowRuns"][number],
-): void {
+function insertRoutineGate(db: HarnessDb, row: ExpectedWorkflowRow): void {
   db.prepare(
     "INSERT INTO workflow_runs (workflow_run_id, plan_id, drive_run_id, workflow, phase, ready_status, blocked_reason, human_required, checked_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
   ).run(
@@ -222,130 +226,177 @@ function insertRoutineGate(
   );
 }
 
-function reconcile(db: HarnessDb, repoRoot: string): GateRunCoverageStats {
-  const projection = collectGateRunEvidenceProjection(repoRoot);
-  if (projection.findings.length > 0) {
-    throw new GateRunCoverageMismatch({
-      orphanGateRuns: 0,
-      workflowPlansWithoutGateRun: 0,
-      invalidEvidenceFindings: projection.findings.length,
-    });
-  }
-
-  const seeds = expectedSeedRows(projection.gateRuns);
-  const sourceRows = projection.gateRuns.filter((row) => !isSeedLike(row));
-  const seedById = new Map(seeds.map((row) => [row.gate_run_id, row]));
-  const existingGateRows = readGateRuns(db);
-  const existingWorkflowRows = readRoutineGateRows(db);
-  const workflowById = new Map(existingWorkflowRows.map((row) => [row.workflow_run_id, row]));
-  const matchedGateIds = new Set<string>();
-  const matchedWorkflowIds = new Set<string>();
-  const addGateRows: GateRunRow[] = [];
-  const addWorkflowRows: Array<
-    ReturnType<typeof collectGateRunEvidenceProjection>["workflowRuns"][number]
-  > = [];
-  const deleteGateIds: string[] = [];
-  const deleteWorkflowIds: string[] = [];
-  let orphanGateRuns = 0;
-
-  if (existingGateRows.some((row) => !row.gate_id.trim())) failGateRunCoverage(1);
-
-  for (const row of existingGateRows) {
+function matchSeedRows(input: {
+  existingGateRows: GateRunRow[];
+  seedsById: Map<string, GateRunRow>;
+  plan: ReconciliationPlan;
+}): void {
+  for (const row of input.existingGateRows) {
     if (!isSeedLike(row)) continue;
-    const canonical = seedById.get(row.gate_run_id);
-    if (!canonical || !sameSeed(row, canonical)) {
-      throw new GateRunCoverageMismatch({
-        orphanGateRuns: 0,
-        workflowPlansWithoutGateRun: 0,
-        invalidEvidenceFindings: 1,
-      });
+    const canonical = input.seedsById.get(row.gate_run_id);
+    if (!canonical || !sameSeed(row, canonical)) failGateRunCoverage(0, 0, 1);
+    input.plan.matchedGateIds.add(row.gate_run_id);
+  }
+  for (const seed of input.seedsById.values()) {
+    if (!input.plan.matchedGateIds.has(seed.gate_run_id)) {
+      input.plan.addGateRows.push(seed);
     }
-    matchedGateIds.add(row.gate_run_id);
   }
+}
 
-  for (const seed of seeds) {
-    if (!matchedGateIds.has(seed.gate_run_id)) addGateRows.push(seed);
-  }
-
-  for (const expected of sourceRows) {
-    const candidateRows = existingGateRows.filter(
+function matchEvidenceRows(input: {
+  projection: GateRunProjection;
+  sourceRows: GateRunRow[];
+  existingGateRows: GateRunRow[];
+  workflowById: Map<string, RoutineGateRow>;
+  plan: ReconciliationPlan;
+}): void {
+  for (const expected of input.sourceRows) {
+    const candidates = input.existingGateRows.filter(
       (row) =>
         row.gate_run_id === expected.gate_run_id || row.evidence_path === expected.evidence_path,
     );
-    if (candidateRows.length > 1) {
-      orphanGateRuns += 1;
+    if (candidates.length > 1) {
+      input.plan.orphanGateRuns += 1;
       continue;
     }
-    const existingGate = candidateRows[0];
-    const projectedWorkflow = projection.workflowRuns.find(
+    const existingGate = candidates[0];
+    const projectedWorkflow = input.projection.workflowRuns.find(
       (row) => row.gate_run_id === expected.gate_run_id,
     );
     const expectedWorkflow = projectedWorkflow
-      ? { ...projectedWorkflow, plan_id: expected.plan_id }
+      ? bindWorkflowPlan(projectedWorkflow, expected.plan_id)
       : undefined;
-    if (
-      !expectedWorkflow ||
-      expectedWorkflow.workflow_run_id !== stableId("gate-workflow", expected.gate_run_id) ||
-      expectedWorkflow.phase !== expected.gate_id ||
-      planValue(expectedWorkflow.plan_id) !== planValue(expected.plan_id)
-    ) {
-      orphanGateRuns += 1;
+    if (!isExpectedWorkflow(expected, expectedWorkflow)) {
+      input.plan.orphanGateRuns += 1;
       continue;
     }
-    const existingWorkflow = workflowById.get(expectedWorkflow.workflow_run_id);
-    if (!existingGate && !existingWorkflow) {
-      addGateRows.push(expected);
-      addWorkflowRows.push(expectedWorkflow);
-      continue;
-    }
-    if (!existingGate || !sameGateRun(existingGate, expected)) {
-      orphanGateRuns += 1;
-      continue;
-    }
-    matchedGateIds.add(existingGate.gate_run_id);
-    if (!verifyWorkflowPair(expected, existingWorkflow, expectedWorkflow.workflow_run_id)) {
-      orphanGateRuns += 1;
-      continue;
-    }
-    matchedWorkflowIds.add(expectedWorkflow.workflow_run_id);
-  }
-
-  for (const row of existingGateRows) {
-    if (matchedGateIds.has(row.gate_run_id) || isSeedLike(row)) continue;
-    const expectedWorkflowId = stableId("gate-workflow", row.gate_run_id);
-    const workflow = workflowById.get(expectedWorkflowId);
-    if (workflow && !verifyWorkflowPair(row, workflow, expectedWorkflowId)) {
-      orphanGateRuns += 1;
-      continue;
-    }
-    deleteGateIds.push(row.gate_run_id);
-    if (workflow) {
-      deleteWorkflowIds.push(workflow.workflow_run_id);
-      matchedWorkflowIds.add(workflow.workflow_run_id);
-    }
-  }
-
-  const unmatchedWorkflows = existingWorkflowRows.filter(
-    (row) => !matchedWorkflowIds.has(row.workflow_run_id),
-  ).length;
-  if (orphanGateRuns > 0 || unmatchedWorkflows > 0) {
-    throw new GateRunCoverageMismatch({
-      orphanGateRuns,
-      workflowPlansWithoutGateRun: unmatchedWorkflows,
-      invalidEvidenceFindings: 0,
+    matchEvidencePair({
+      expected,
+      existingGate,
+      expectedWorkflow,
+      workflowById: input.workflowById,
+      plan: input.plan,
     });
   }
+}
 
-  for (const workflowRunId of deleteWorkflowIds) {
+function isExpectedWorkflow(
+  expected: GateRunRow,
+  workflow: ExpectedWorkflowRow | undefined,
+): workflow is ExpectedWorkflowRow {
+  return Boolean(
+    workflow &&
+      workflow.workflow_run_id === stableId("gate-workflow", expected.gate_run_id) &&
+      workflow.phase === expected.gate_id &&
+      planValue(workflow.plan_id) === planValue(expected.plan_id),
+  );
+}
+
+function matchEvidencePair(input: {
+  expected: GateRunRow;
+  existingGate: GateRunRow | undefined;
+  expectedWorkflow: ExpectedWorkflowRow;
+  workflowById: Map<string, RoutineGateRow>;
+  plan: ReconciliationPlan;
+}): void {
+  const existingWorkflow = input.workflowById.get(input.expectedWorkflow.workflow_run_id);
+  if (!input.existingGate && !existingWorkflow) {
+    input.plan.addGateRows.push(input.expected);
+    input.plan.addWorkflowRows.push(input.expectedWorkflow);
+    return;
+  }
+  if (!input.existingGate || !sameGateRun(input.existingGate, input.expected)) {
+    input.plan.orphanGateRuns += 1;
+    return;
+  }
+  input.plan.matchedGateIds.add(input.existingGate.gate_run_id);
+  if (
+    !verifyWorkflowPair(input.expected, existingWorkflow, input.expectedWorkflow.workflow_run_id)
+  ) {
+    input.plan.orphanGateRuns += 1;
+    return;
+  }
+  input.plan.matchedWorkflowIds.add(input.expectedWorkflow.workflow_run_id);
+}
+
+function excludeDatabaseOnlyRows(input: {
+  existingGateRows: GateRunRow[];
+  workflowById: Map<string, RoutineGateRow>;
+  plan: ReconciliationPlan;
+}): void {
+  for (const row of input.existingGateRows) {
+    if (input.plan.matchedGateIds.has(row.gate_run_id) || isSeedLike(row)) continue;
+    const expectedWorkflowId = stableId("gate-workflow", row.gate_run_id);
+    const workflow = input.workflowById.get(expectedWorkflowId);
+    if (workflow && !verifyWorkflowPair(row, workflow, expectedWorkflowId)) {
+      input.plan.orphanGateRuns += 1;
+      continue;
+    }
+    input.plan.deleteGateIds.push(row.gate_run_id);
+    if (workflow) {
+      input.plan.deleteWorkflowIds.push(workflow.workflow_run_id);
+      input.plan.matchedWorkflowIds.add(workflow.workflow_run_id);
+    }
+  }
+}
+
+function validateMatches(input: {
+  existingWorkflowRows: RoutineGateRow[];
+  plan: ReconciliationPlan;
+}): void {
+  const unmatchedWorkflows = input.existingWorkflowRows.filter(
+    (row) => !input.plan.matchedWorkflowIds.has(row.workflow_run_id),
+  ).length;
+  if (input.plan.orphanGateRuns > 0 || unmatchedWorkflows > 0) {
+    failGateRunCoverage(input.plan.orphanGateRuns, unmatchedWorkflows, 0);
+  }
+}
+
+function applyReconciliation(db: HarnessDb, plan: ReconciliationPlan): void {
+  for (const workflowRunId of plan.deleteWorkflowIds) {
     db.prepare(
       "DELETE FROM workflow_runs WHERE workflow_run_id = ? AND workflow = 'routine-gate'",
     ).run(workflowRunId);
   }
-  for (const gateRunId of deleteGateIds) {
+  for (const gateRunId of plan.deleteGateIds) {
     db.prepare("DELETE FROM gate_runs WHERE gate_run_id = ?").run(gateRunId);
   }
-  for (const row of addGateRows) insertGateRun(db, row);
-  for (const row of addWorkflowRows) insertRoutineGate(db, row);
+  for (const row of plan.addGateRows) insertGateRun(db, row);
+  for (const row of plan.addWorkflowRows) insertRoutineGate(db, row);
+}
+
+function reconcile(db: HarnessDb, repoRoot: string): GateRunCoverageStats {
+  const projection = collectGateRunEvidenceProjection(repoRoot);
+  if (projection.findings.length > 0) {
+    failGateRunCoverage(0, 0, projection.findings.length);
+  }
+
+  const seeds = expectedSeedRows(projection.gateRuns);
+  const sourceRows = projection.gateRuns.filter((row) => !isSeedLike(row));
+  const existingGateRows = readGateRuns(db);
+  const existingWorkflowRows = readRoutineGateRows(db);
+  const workflowById = new Map(existingWorkflowRows.map((row) => [row.workflow_run_id, row]));
+  const plan: ReconciliationPlan = {
+    addGateRows: [],
+    addWorkflowRows: [],
+    deleteGateIds: [],
+    deleteWorkflowIds: [],
+    matchedGateIds: new Set(),
+    matchedWorkflowIds: new Set(),
+    orphanGateRuns: 0,
+  };
+
+  if (existingGateRows.some((row) => !row.gate_id.trim())) failGateRunCoverage(1);
+  matchSeedRows({
+    existingGateRows,
+    seedsById: new Map(seeds.map((row) => [row.gate_run_id, row])),
+    plan,
+  });
+  matchEvidenceRows({ projection, sourceRows, existingGateRows, workflowById, plan });
+  excludeDatabaseOnlyRows({ existingGateRows, workflowById, plan });
+  validateMatches({ existingWorkflowRows, plan });
+  applyReconciliation(db, plan);
 
   return currentStats(db);
 }

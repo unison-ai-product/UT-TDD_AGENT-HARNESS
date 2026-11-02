@@ -84,6 +84,10 @@ import {
   projectVerificationDefectRoutingRefactorCandidates,
   reconcileFeedbackLifecycle,
 } from "./feedback-projections.ts";
+import {
+  collectGateRunEvidenceProjection as collectGateRunEvidenceProjectionCore,
+  type GateRunEvidenceProjection,
+} from "./gate-run-evidence-projection.ts";
 import { rebuildExecutionReadiness } from "./github-forward-projection.ts";
 import { type GuardrailDecisionInput, inspectGuardrailInvariants } from "./guardrail-invariants.ts";
 import { defaultHarnessDbPath, type HarnessDb, openHarnessDb } from "./index.ts";
@@ -113,6 +117,11 @@ import {
 import { hasVmodelAuthoring, projectVmodelAuthoring } from "./vmodel-projections.ts";
 
 export type { ProjectionEvent } from "../projection/contracts/projection-store.ts";
+export type {
+  GateRunEvidenceProjection,
+  GateRunEvidenceProjectionRow,
+  GateRunWorkflowProjectionRow,
+} from "./gate-run-evidence-projection.ts";
 
 export interface RebuildHarnessDbInput {
   repoRoot?: string;
@@ -170,43 +179,6 @@ interface SessionLogProjection {
   outcome?: string;
 }
 
-interface ProjectedGateRunEvidence {
-  gate_run_id?: unknown;
-  gate_id?: unknown;
-  plan_id?: unknown;
-  status?: unknown;
-  checked_at?: unknown;
-}
-
-export interface GateRunEvidenceProjectionRow extends Record<string, unknown> {
-  gate_run_id: string;
-  gate_id: string;
-  plan_id: string;
-  status: "passed" | "failed" | "historical";
-  checked_at: string;
-  evidence_path: string;
-}
-
-export interface GateRunWorkflowProjectionRow extends Record<string, unknown> {
-  workflow_run_id: string;
-  plan_id: string;
-  drive_run_id: string;
-  workflow: "routine-gate";
-  phase: string;
-  ready_status: "passed" | "blocked";
-  blocked_reason: string;
-  human_required: 0;
-  checked_at: string;
-  gate_run_id: string;
-  evidence_path: string;
-}
-
-export interface GateRunEvidenceProjection {
-  gateRuns: GateRunEvidenceProjectionRow[];
-  workflowRuns: GateRunWorkflowProjectionRow[];
-  findings: ProjectionFindingInput[];
-}
-
 interface ProviderHandoverProjection {
   handover_id?: string;
   from?: string;
@@ -217,9 +189,6 @@ interface ProviderHandoverProjection {
     summary?: string;
   };
 }
-
-const VERIFY_CUTOVER_AUDIT_PATH = ".ut-tdd/audit/A-132-l8-l14-verification-band-execution.md";
-const VERIFICATION_BAND_LAYERS = ["L8", "L9", "L10", "L11", "L12", "L13", "L14"] as const;
 
 function nowIso(): string {
   return new Date().toISOString();
@@ -1076,123 +1045,7 @@ function projectDescentObligations(repoRoot: string, db: HarnessDb): void {
 // Gate coverage reconciliation shares this pure reader with rebuild and doctor so both
 // compare the same evidence-backed six-column rows without writing through one another.
 export function collectGateRunEvidenceProjection(repoRoot: string): GateRunEvidenceProjection {
-  const plans = new Map(
-    projectPlanSources(loadRepositoryPlanSources(repoRoot), {
-      stableId,
-      hash: stableHash,
-    }).plans,
-  );
-  const result: GateRunEvidenceProjection = { gateRuns: [], workflowRuns: [], findings: [] };
-  if (existsSync(join(repoRoot, ...VERIFY_CUTOVER_AUDIT_PATH.split("/")))) {
-    for (const layer of VERIFICATION_BAND_LAYERS) {
-      const gateRunId = stableId("verification-band-gate", layer);
-      result.gateRuns.push({
-        gate_run_id: gateRunId,
-        gate_id: `G-VERIFY.${layer}`,
-        plan_id: "",
-        status: "historical",
-        checked_at: "",
-        evidence_path: VERIFY_CUTOVER_AUDIT_PATH,
-      });
-    }
-  }
-  const dir = join(repoRoot, ".ut-tdd", "gate_runs");
-  if (!existsSync(dir)) return result;
-  const files = readdirSync(dir)
-    .filter((name) => name.endsWith(".json"))
-    .map((name) => join(dir, name))
-    .sort();
-  const parsedRows: Array<{
-    evidencePath: string;
-    parsed: ProjectedGateRunEvidence;
-  }> = [];
-  const filesByGateRunId = new Map<string, string[]>();
-  for (const file of files) {
-    const evidencePath = normalizePath(relative(repoRoot, file));
-    let parsed: ProjectedGateRunEvidence;
-    try {
-      parsed = JSON.parse(readFileSync(file, "utf8")) as ProjectedGateRunEvidence;
-      if (!parsed || Array.isArray(parsed) || typeof parsed !== "object") throw new TypeError();
-    } catch {
-      result.findings.push({
-        kind: "invalid-gate-run-evidence",
-        severity: "warn",
-        subjectId: evidencePath,
-        source: "gate-run-projection",
-        evidencePath,
-      });
-      continue;
-    }
-    const gateRunId = asString(parsed.gate_run_id);
-    const gateId = asString(parsed.gate_id);
-    const status =
-      parsed.status === "passed" ? "passed" : parsed.status === "failed" ? "failed" : null;
-    const checkedAt = asString(parsed.checked_at);
-    if (gateRunId) {
-      const occurrences = filesByGateRunId.get(gateRunId) ?? [];
-      occurrences.push(evidencePath);
-      filesByGateRunId.set(gateRunId, occurrences);
-    }
-    if (!gateRunId || !gateId || !status || !checkedAt) {
-      result.findings.push({
-        kind: "invalid-gate-run-evidence",
-        severity: "warn",
-        subjectId: evidencePath,
-        source: "gate-run-projection",
-        evidencePath,
-      });
-      continue;
-    }
-    parsedRows.push({ evidencePath, parsed });
-  }
-  const duplicateIds = new Set<string>();
-  for (const [gateRunId, paths] of filesByGateRunId) {
-    if (paths.length < 2) continue;
-    duplicateIds.add(gateRunId);
-    for (const evidencePath of paths) {
-      result.findings.push({
-        kind: "duplicate-gate-run-evidence",
-        severity: "error",
-        subjectId: gateRunId,
-        source: "gate-run-projection",
-        evidencePath,
-      });
-    }
-  }
-  for (const { evidencePath, parsed } of parsedRows) {
-    const gateRunId = String(parsed.gate_run_id);
-    if (duplicateIds.has(gateRunId)) continue;
-    const gateId = String(parsed.gate_id);
-    const status = parsed.status as "passed" | "failed";
-    const checkedAt = String(parsed.checked_at);
-    const rawPlanId = asString(parsed.plan_id ?? undefined) ?? "";
-    // Resolve exact/unique legacy PLAN aliases; unresolved or ambiguous values stay blank.
-    const alias = rawPlanId ? resolveLegacyPlanAlias(rawPlanId, [...plans.keys()]) : null;
-    const planId = alias?.ok ? alias.value : "";
-    result.gateRuns.push({
-      gate_run_id: gateRunId,
-      gate_id: gateId,
-      plan_id: planId,
-      status,
-      checked_at: checkedAt,
-      evidence_path: evidencePath,
-    });
-    const workflowRunId = stableId("gate-workflow", gateRunId);
-    result.workflowRuns.push({
-      workflow_run_id: workflowRunId,
-      plan_id: planId,
-      drive_run_id: planId ? stableId("drive-run", `${planId}:documented`) : "",
-      workflow: "routine-gate",
-      phase: gateId,
-      ready_status: status === "passed" ? "passed" : "blocked",
-      blocked_reason: status === "passed" ? "" : "gate run status failed",
-      human_required: 0,
-      checked_at: checkedAt,
-      gate_run_id: gateRunId,
-      evidence_path: evidencePath,
-    });
-  }
-  return result;
+  return collectGateRunEvidenceProjectionCore(repoRoot, { hash: stableHash, asString });
 }
 
 function projectGateRunEvidence(repoRoot: string, db: HarnessDb): void {
