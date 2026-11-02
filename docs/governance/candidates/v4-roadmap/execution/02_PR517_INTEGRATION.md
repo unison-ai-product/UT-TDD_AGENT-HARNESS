@@ -16,7 +16,7 @@ M0〜M6を版別capability・旧新移行・依存・受入へ具体化。元BR3
 - `ut-tdd-concept-v4-requests.md`：追加目的を既存BRへrefinementし、真の追加だけ新BR。
 - `ut-tdd-concept-v4-requirements.md`：順序予測、共通JSON、実際のready再検証、CAS/資源/aging/再計画、版互換・移行をFRへ。
 - `ut-tdd-concept-v4-acceptance.md`：SCHED-01〜14、版/移行/コスト/権限の正常・拒否・回復を対応付ける。
-- `PLAN-L1-09`：版別範囲・MIG/SLの依存・旧新対応・保留/未決と出所を整理。
+- `plans-archive-20261102:docs/plans/PLAN-L1-09-ut-tdd-concept-v4-candidates.md`：版別範囲・MIG/SLの依存・旧新対応・保留/未決と出所を整理。
 
 releaseごとの詳細は`docs/governance/candidates/v4-roadmap/`等の候補サブディレクトリへ分割する案。現在の5文書に要約/参照を置き、同じ全文を複製しない。追加fileはPLANのscope/generatesも正規改訂。5文書の整合を維持。
 

@@ -4,7 +4,7 @@
 「UT_V4_RELEASE_ROADMAP_v2.0」を原文のまま収容したものであり、UT-TDD の正本ではない。
 R / SL / MIG / DEC / RM-ADD / SCHED の各 ID は資料内のローカル提案 ID で、正規 PLAN・GitHub Issue・
 承認 receipt を発行したものではない。正本への反映は親 issue #530 の子 issue S1〜S5 (#532〜#536) が
-PLAN-L1-09 と 5 候補文書 (`docs/governance/candidates/ut-tdd-concept-v4*.md`) へ差し込みで行う。
+#530 と 5 候補文書 (`docs/governance/candidates/ut-tdd-concept-v4*.md`) へ差し込みで行う。
 本ディレクトリ側を編集して正本化しない (S0 = issue #531)。
 
 **2026-10-08 から改訂を始めた (版2.1)。** 工程順 ①〜⑪ の PO 決定 (#530 6051336079) に合わせ、README・00・02・execution・trace・
@@ -115,4 +115,4 @@ PO は 2026-09-24 に **Apache-2.0 への統一** を決め、#682 (commit `c332
 
 - 現行のライセンスは Apache-2.0。資料中の MPL-2.0 の記述 (`data/releases.json`・`data/capabilities.json`・`releases/R01_0.2.0-canary.2.md`・`migration/04_LICENSE_BOUNDARY.md` ほか) は、すべてこの決定で置き換わったものとして読む。
 - R01 の目的は「Apache-2.0 での最初の配布と、移行後の開発・公開責任の確定」と読み替える。
-- 正本側の記述は `docs/plans/PLAN-L1-09-ut-tdd-concept-v4-candidates.md` の MIG-01 / R01 行で揃えた (同 PLAN rev 4)。
+- 正本側の記述は `plans-archive-20261102:docs/plans/PLAN-L1-09-ut-tdd-concept-v4-candidates.md` の MIG-01 / R01 行で揃えた (同 PLAN rev 4)。
