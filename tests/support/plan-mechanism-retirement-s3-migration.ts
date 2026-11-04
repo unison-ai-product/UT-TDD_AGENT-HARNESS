@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { GitAuthoringProvenance } from "../../src/disposition/adapters/git-authoring-provenance.ts";
 import { type HarnessDb, openHarnessDb } from "../../src/state-db/index.ts";
-import { removeTestTree } from "./temp-tree.ts";
+import { removeTestTree } from "../support/temp-tree.ts";
 
 export const BASE_COMMIT = "a63b226437297ee0b62ab8bdc0e2c778bbd6c341";
 export const ISSUE_URL = "https://github.com/example/repo/issues/12";
