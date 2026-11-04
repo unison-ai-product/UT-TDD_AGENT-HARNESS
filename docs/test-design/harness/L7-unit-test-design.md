@@ -919,8 +919,8 @@ PR2 (`add-feature`) は昇格 PR merge 後の main から開始し、PLAN-L7-423
 
 ### 2026-06-09 L6 Completion Readiness Addendum
 
-- U-L6COMP-001: `analyzeL6Completion` は、L6設計文書のいずれかがdraftである、正の整数の `issue:` を持たない、選択済みL7 `pair_artifact` がない・不適格である、その選択済みpair内にファイル名の逆参照がない、または最小単体テスト契約の実質 (contract/signature + DbC/oracle + U-* family) を欠く場合にnot-readyを返す。加えて、選択済みpair artifactのいずれかがdraftまたはstatus未記載、あるいはG6がPASSでない場合もnot-readyとする。L6 completionはPLANを入力にせず、PLANの有無・status・review evidenceに由来するfindingは作らない。
-- U-L6COMP-002: `analyzeL6Completion` は、全L6文書がconfirmedであり、各文書が正の整数の `issue:` を持ち (GitHub issueの実在性は検査しない)、各 `pair_artifact` が実在する適格な `L7-*.md` test-designを指し、その同じ文書内にL6文書のファイル名を含み、全L6文書が単体テスト粒度の契約実質を備え、選択済みpair artifactがすべてconfirmedで、かつG6がPASSの場合に限りreadyを返す。L6 completionはPLANを入力にしない。
+- U-L6COMP-001: `analyzeL6Completion` は、L6設計文書のいずれかがdraftである、所有者として正の整数の `issue:` を持たない、選択済みL7 `pair_artifact` がない・不適格である、その選択済みpair内にファイル名の逆参照がない、または最小単体テスト契約の実質 (contract/signature + DbC/oracle + U-* family) を欠く場合にnot-readyを返す。加えて、選択済みpair artifactのいずれかがdraftまたはstatus未記載、あるいはG6がPASSでない場合もnot-readyとする。L6 completionはPLANを入力にせず、PLANの有無・status・review evidenceに由来するfindingは作らない。
+- U-L6COMP-002: `analyzeL6Completion` は、全L6文書がconfirmedであり、各文書が所有者として正の整数の `issue:` を持ち (GitHub issueの実在性は検査しない)、各 `pair_artifact` が実在する適格な `L7-*.md` test-designを指し、その同じ文書内にL6文書のファイル名を含み、全L6文書が単体テスト粒度の契約実質を備え、選択済みpair artifactがすべてconfirmedで、かつG6がPASSの場合に限りreadyを返す。L6 completionはPLANを入力にしない。
 - U-L6COMP-003: `checkL6Completion` surfaces readiness in `doctor` as hard/fail-close (`ok = analyzeL6Completion().ready`; input unreadable も violation で `ok=false`)。実装 `src/doctor/process-quality.ts` に合わせて 2026-10-14 に是正した (旧記述は warn-only、#958)。
 - U-L6COMP-004: `analyzeL6Completion` reports `freezeInputReady=true` when L6 trace/substance inputs are complete even if docs/L7/G6 are still draft before the G6 audit.
 - U-L6COMP-005: L6 completion does not consume `kind=add-design` PLAN drafts, so they do not reopen base L6 completion; add-feature completeness is handled by backfill/pair/review evidence.
