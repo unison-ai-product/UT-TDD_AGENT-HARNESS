@@ -425,6 +425,7 @@ ${source.citations.map((citation) => `      - "${citation}"`).join("\n")}`,
         objectId: "13",
         state: "open",
         headSha: "current",
+        observedAt: "2026-07-29T03:00:00Z",
       });
       const [evidence] = readGithubEvidence(db);
       expect(evidence).toMatchObject({
