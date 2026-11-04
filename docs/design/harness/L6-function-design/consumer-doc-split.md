@@ -1,7 +1,7 @@
 ---
 layer: L6
 artifact_type: design_doc
-status: draft
+status: confirmed
 sub_doc: function-spec
 artifact_role: topic_consumer_doc_split
 pair_artifact: docs/test-design/harness/L7-consumer-doc-split-test-design.md
@@ -96,3 +96,15 @@ consumer 向けの分割の目安と書き方は、Pack に同梱済みの `docs
 - Pre: 入力は repo root と、そこから解決した `roots`。読み取りだけを行い、ファイルを書かない。
 - Post: 本体では現行と同じ結果。consumer では `roots` 配下の `.md` が測られ、超過は §3 の文面になる。baseline が無くても例外にならず `ok` が決まる。
 - Invariant: §7。
+
+## 10. 単位の契約 (DbC)
+
+本書が変える関数は次の 2 つである。
+
+- `classifyDoc(path, roots) => DocClass | null`: 解決済みの `roots` から接頭辞を作り、`l6-topic` / `l7-topic` / `layer-doc` を返す (§2)。現行は `classifyDoc(path)` である。
+- `resolveVModelRoots(repoRoot) => { designRoot, testDesignRoot }`: doc-split が走査する root を決める。既存の関数で、本書は呼び出し側を揃えるだけである (§2)。
+
+- pre: 入力は repo root と、そこから解決した `roots` である。読み取りだけを行いファイルを書かない (§9)。
+- post: 本体では現行と同じ結果になる。consumer では `roots` 配下の `.md` が測られ、baseline が無くても例外にならず `ok` が決まる (§9)。
+- invariant: 閾値を変える入力は存在せず、baseline の有無で上限が緩まない (§7)。
+- oracle: CANDIDATE-U-CDSPLIT-001〜010 が上記を固定する。
