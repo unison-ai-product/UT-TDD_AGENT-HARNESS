@@ -20,6 +20,7 @@ dependency-drift:4 descent-obligation:3 distribution-acceptance:1 distribution-s
 drive-model-passage:1 fr-roadmap-coverage:4 frontend-design-coverage:1 g10-ux-workflow:5 g8-integration-workflow:6 g9-system-workflow:7
 erasable-syntax:1 gate-static:10 import-specifier:2 l6-completion:2 l6-fr-coverage:2 mode-catalog:1 model-id-ssot:1 model-id-ssot-drift:1 module-drift:2 oracle-test-trace:13
 plan-lint:8 projection-writer:9 proposal-document-coverage:2 readability:5 relation-graph-loader:1
+plan-mechanism-retirement-s3-g13:1 plan-mechanism-retirement-s3:1
 release-artifact-resolver:1 release-consumer-skills:4
 right-lung-doc-governance:1 rule-drift:4 runtime-hook-entrypoints:1
 review-live-cli:4
@@ -116,6 +117,13 @@ for (const [path, calls] of Object.entries({
     calls,
     reason: "repository contract read is fixed to detached HEAD",
   };
+
+repositoryReadContracts["tests/support/plan-mechanism-retirement-s3-migration.ts"] = {
+  mode: "isolated_fixture",
+  calls: 1,
+  reason:
+    "frozen v29 schema bytes are read from the execution snapshot and all generated databases and catalog repositories are temporary fixtures",
+};
 
 repositoryReadContracts["tests/disposition/projection.test.ts"] = {
   mode_calls: { head_snapshot: 1 },
