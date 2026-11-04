@@ -188,3 +188,36 @@ Codex hook は同じ `HookInvocation` を入力にするが、Codex の構造化
 Claude serializer を流用しない。Codex 固有 serializer と doctor policy を独立させ、Claude の
 shell-free 化を理由に Codex config schema を推測で変更しない。setup preview、実生成物、clean Pack
 fixture のすべてで Claude 6 hook の exec form と argv 完全一致を `U-HOOKEXEC-003..006` が検証する。
+
+## 2026-11-04 consumer CI workflow の fail-close 化と guard 範囲導出 (Issue #1522 / #1523)
+
+setup が `.github/workflows/harness-check.yml` として生成する consumer CI には欠陥が 2 つあった (consumer の実運用で観測)。
+(#1522) consumer は runtime を commit しないため CI の checkout に `.ut-tdd/runtime/activation/active.json` が無く、
+workflow は notice を出して全 harness step を `hashFiles(...)` で飛ばし、検査 0 件で green になる。
+(#1523) `actions/checkout` の既定が shallow で、guard へ渡す `git log -n 20` は pull_request イベントでは
+GitHub の合成 merge commit 1 件だけになり、guard が `Merge` で始まる subject を飛ばすため PR の実 commit が検査されない。
+
+契約 (control 決定済み)。
+
+1. **activation 不在は fail-close**。生成 workflow は activation が無いとき `::error::` を出して非 0 で終了する。
+   notice して成功する経路を持たない。harness step を `hashFiles(...)` で条件付けしない。
+2. **runtime は CI で Pack release から導入する**。標準 step として、pin した version の release asset を取得し、
+   `setup --consumer-runtime-release <dir> --expected-consumer-digest <digest>` を実行する。
+   version と digest は workflow 先頭の **単一の `env:` block だけ**に置く (他の step へ値を複製しない)。
+   setup 後に `git status --porcelain` が空でなければ job を fail させる。
+3. **再実行時の再生成規則**。setup はこのファイルを丸ごと書き直すが、既存ファイルの `env:` block の version / digest が
+   あればその値を保持して書き戻す。consumer が pin を上げても setup の再実行で巻き戻らない。block が無い初回だけ
+   既定値を書く。env block 以外の consumer 編集は保持しない。
+4. **checkout は `fetch-depth: 0`**。生成 workflow の `actions/checkout` に指定する。
+5. **branch-type guard の範囲導出** (guard 仕様の正本は本節。L4 `architecture.md` の github 行は責務の要約のみ)。
+   `github guard` は `--base-ref` から自分で `git log --format=%s <base>..HEAD` を実行して commit subject を得る。
+   caller が渡すファイルを範囲の根拠にしない。`<base>` は `origin/<base-ref>` を優先し、無ければ `<base-ref>` を使う。
+   範囲が解決できない (ref 不在) 場合は fail-close とする。
+   `Merge` で始まる subject の skip は commit subject にだけ適用し、PR title には適用しない。
+   生成 workflow は `--commit-file` を渡さず、`git log` の事前ファイル化もしない。`--commit-file` option は
+   後方互換のため残し、指定された場合に限りその内容を commit subject として使う (範囲導出より優先)。
+   本体の `.github/workflows/harness-check.yml` も同じ guard を `git log --format=%s -n 20` と `--commit-file` で呼び、その形を
+   `src/lint/github-ci-policy.ts` が固定している。本体の checkout は `fetch-depth: 0` だが、`-n 20` は PR の範囲ではなく直近 20 件を見るので、
+   PR の commit が 20 件を超えると漏れ、main 側の commit を混ぜる。実装 PR は本体の workflow と CI policy も同じ呼び方 (`--base-ref` から範囲を導出し、`--commit-file` を渡さない) に揃える。
+
+テスト oracle は `docs/test-design/harness/L7-consumer-ci-workflow-test-design.md` (`CANDIDATE-U-CICONS-001..`)。
