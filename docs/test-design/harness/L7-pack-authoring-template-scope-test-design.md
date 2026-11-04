@@ -18,12 +18,11 @@ template scopeだけを検証する。docs-only pair-freeze時点では producti
 ## 2. 単一 inventory
 
 テスト fixture、clean plan、materializer、tar、Pack smokeは同じ expected inventoryを入力にする。
-テスト側で allowlistを複製しない。required artifactは次の6件で、teamの source pathは artifact集合に
+テスト側で allowlistを複製しない。required artifactは次の4件で、teamの source pathは artifact集合に
 現れてはならない。
 
 | family | source path / glob | artifact path | count |
 | --- | --- | --- | ---: |
-| PLAN | `docs/templates/plan/**` | `docs/templates/plan/design/template.md`、`docs/templates/plan/impl/template.md` | 2 |
 | design | `docs/templates/design/**` | `docs/templates/design/L6-function-spec-template.md` | 1 |
 | state | `docs/templates/state/**` | `docs/templates/state/vmodel.json` | 1 |
 | prompt | `docs/templates/prompts/**` | `docs/templates/prompts/effort-classify.md` | 1 |
@@ -43,11 +42,11 @@ destination 重複・bytes／mode drift は fail-close とする。
 
 | candidate | 単軸変異 / 実行 | 必須 oracle |
 | --- | --- | --- |
-| `CANDIDATE-PACKTPL-001` | `git ls-files` を clean planへ渡し、同一 inventoryで source/artifactを解決 | 6件が各 exactly once、unknown extra/duplicate/missing は `ok=false`、skills baselineは不変 |
+| `CANDIDATE-PACKTPL-001` | `git ls-files` を clean planへ渡し、同一 inventoryで source/artifactを解決 | 4件が各 exactly once、unknown extra/duplicate/missing は `ok=false`、skills baselineは不変 |
 | `CANDIDATE-PACKTPL-002` | `distribution sync-stage --json` 相当の materializerを実行 | explicit projectionを先に解決した後、source→artifact projectionが表と一致し、UTF-8/LF、mode、content bytesが保持され、`.ut-tdd` source pathを出力しない |
 | `CANDIDATE-PACKTPL-003` | materialized setをrelease materializerとdeterministic tarへ通す | tar manifest、gzip、checksum、artifact digestが同じ集合を指し、順序違い・別名・重複・暗黙補完を拒否 |
-| `CANDIDATE-PACKTPL-004` | clean Pack treeだけで templateを読み、source/worktree/local Pack checkoutを除去して starterを開始 | PLAN/design/state/promptの読込と team YAML の `teamDefinitionSchema` parse が成功し、source外read/writeとremote mutationは0 |
-| `CANDIDATE-PACKTPL-005` | required familyを1つずつ inventoryから除去（PLAN design、PLAN impl、design、state、prompt、team） | 対応する clean plan/materializer/tar/Pack smokeが各々 Red。別familyの存在で補完しない |
+| `CANDIDATE-PACKTPL-004` | clean Pack treeだけで templateを読み、source/worktree/local Pack checkoutを除去して starterを開始 | design/state/promptの読込と team YAML の `teamDefinitionSchema` parse が成功し、source外read/writeとremote mutationは0 |
+| `CANDIDATE-PACKTPL-005` | required familyを1つずつ inventoryから除去（design、state、prompt、team） | 対応する clean plan/materializer/tar/Pack smokeが各々 Red。別familyの存在で補完しない |
 | `CANDIDATE-PACKTPL-006` | `docs/templates/**` 全体許可、または `.ut-tdd/**` 直接許可へ一軸変更 | source-only corpus、runtime state、明示 projection 外の `.ut-tdd/teams` source、unmanaged templateがartifact setへ入るため deny findingで Red |
 | `CANDIDATE-PACKTPL-007` | artifact/template contentへ personal/source path、Bun実行形、legacy-HELIX command/env/pathを各1軸注入 | 対応 markerだけを typed denyし、他の正常templateの parse/bytesを混同しない。vmodelの歴史的 metadata文字列は実行経路でない限り誤検出しない |
 
