@@ -75,7 +75,7 @@ function-spec §1/§2 の各関数に **正常/異常/境界/throws の 4 観点
 |---|---|---|
 | `pair-exists` | pair doc 不在 → violation | 新規 doc 追加直後 (auto-enroll 前) |
 | `ref-resolves` | path 参照先不在 → violation | 相対 path / シンボリックリンク |
-| `trace-bidir` | 片方向のみ (孤児) → violation | 自己参照 |
+| `trace-bidir` | 片方向のみ (孤児) → violation。左の文書を指す右の文書が無い (`design-uncovered`)、右の `pair_artifact` が実在しない (`ref-unresolved`) も violation (`vmodel-pair-freeze.md` §8) | 自己参照、basename が衝突する文書 (`functional-requirements.md`) |
 | `upstream-coverage` | 下流 ID が上流 ID に未接続 → violation | optional upstream が明示 defer |
 | `count-matches` | 宣言 ≠ 実カウント (ドリフト) → violation | 件数 0 宣言 |
 | `id-format` | PlanId / FR-ID / U-ID が正規式に不一致 → violation | legacy ID は明示 alias がある場合のみ許容 |
