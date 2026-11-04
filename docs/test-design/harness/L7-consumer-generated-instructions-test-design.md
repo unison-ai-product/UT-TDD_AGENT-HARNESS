@@ -4,7 +4,7 @@ layer: L7
 executed_at_layer: L7
 artifact_type: test_design
 pair_artifact: docs/design/harness/L6-function-design/consumer-generated-instructions.md
-status: draft
+status: confirmed
 updated: 2026-11-04
 issue: 1524
 ---
@@ -15,7 +15,7 @@ issue: 1524
 
 ## 1. 共通 fixture
 
-§2 の fixture は、生成器の出力をメモリ上または一時 dir で検査する。実リポジトリの working tree を対象にしない。
+§2 の fixture は、`consumer-generated-instructions.md` の契約に対し、生成器の出力をメモリ上または一時 dir で検査する。実リポジトリの working tree を対象にしない。
 
 - F1: `package.json` が無い consumer の setup 出力。
 - F2: `package.json` に `typecheck` と `lint` script がある consumer の setup 出力。

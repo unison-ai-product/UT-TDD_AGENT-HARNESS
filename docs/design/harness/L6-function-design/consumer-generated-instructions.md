@@ -1,7 +1,7 @@
 ---
 layer: L6
 artifact_type: design_doc
-status: draft
+status: confirmed
 sub_doc: function-spec
 artifact_role: topic_consumer_generated_instructions
 pair_artifact: docs/test-design/harness/L7-consumer-generated-instructions-test-design.md
@@ -67,3 +67,14 @@ consumer の実運用で、生成された managed block と生成コマンド�
 - このリポジトリ自身の `CLAUDE.md` / `AGENTS.md` の表記は変えない。
 - launcher の生成内容 (`renderConsumerNodeWrapper`) と doctor の profile の振る舞いは変えない。
 - `doctor --profile consumer-toolchain` が `package.json` 無しで赤のままになる件は、本書の範囲外である (別 Issue で扱う)。
+
+## 6. 単位の契約 (DbC)
+
+本書が定める契約上の関数は 1 つである (定数 `CONSUMER_CLI_PREFIX` から文面を組む §3.1 の規則を関数形で表す)。
+
+- `renderConsumerCommand(args) => string`: `${CONSUMER_CLI_PREFIX} <args>` の形の呼び出し文を返す。bare の `ut-tdd <args>` は返さない。
+
+- pre: 渡す consumer の状態は `package.json` の有無と scripts の集合だけである (§4)。
+- post: 生成された全ファイルに bare の `ut-tdd <args>` が現れず、setup doctor の表記は `doctor --profile consumer-setup-smoke` の 1 種類である (§3.3、§4)。
+- invariant: 接頭辞の文字列は生成器の中で 1 か所だけ定義される (§4)。
+- oracle: CANDIDATE-U-CGENI-001〜007 が上記を固定する。
