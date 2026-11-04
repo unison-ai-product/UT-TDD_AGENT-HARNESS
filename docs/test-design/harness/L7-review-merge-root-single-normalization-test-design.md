@@ -3,7 +3,7 @@ artifact_type: test_design
 layer: L6
 executed_at_layer: L7
 status: draft
-pair_artifact: docs/plans/PLAN-L7-504-review-merge-root-single-normalization.md
+pair_artifact: plans-archive-20261102:docs/plans/PLAN-L7-504-review-merge-root-single-normalization.md
 parent_doc: docs/plans/PLAN-L6-101-pack-independent-multi-consumer-acceptance.md
 created: 2026-08-25
 updated: 2026-08-25

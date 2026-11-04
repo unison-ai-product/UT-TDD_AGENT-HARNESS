@@ -288,7 +288,7 @@ L3 sub-doc 本起草 (functional / business-detail / nfr-grade + L12 受入テ�
 | **skill_evaluation** | business-detail §7 FR-BR21-36 (Phase B) | skill 採用率 + 採用後成功率の sprint 末バッチ集計 | Phase B carry |
 | **model_evaluation** | business-detail §7 FR-BR21-38 (Phase B、opt-in) | model 別成功率 / cost 効率、`model-opt-in.yaml` 制御 | Phase B carry |
 | **poc_evaluation** | business-detail §7 FR-BR21-43 (Phase B) | Discovery (S0-S4) decision_outcome 集計 | Phase B carry |
-| **ipa_grade** | nfr-grade §1-§6 (NFR-* 14 件) | IPA 非機能要求グレード 2018 Lv1〜5、業界標準値オブジェクト | 値オブジェクト、IPA 公式 sample 整合 |
+| **ipa_grade** | nfr-grade §1-§6 (NFR-* の件数は `nfr.md` の件数確定の行が正本) | IPA 非機能要求グレード 2018 Lv1〜5、業界標準値オブジェクト | 値オブジェクト、IPA 公式 sample 整合 |
 | **cutover_command** | functional FR-10 (Recovery CLI コピー) | HM-06 で生成する CLI ロールバックコマンド、UI 直接実行禁止 (S5=b) | 値オブジェクト、CLI string + 引数構造 |
 | **kpi_metric** | business §6.5 D-01〜D-09 + nfr-grade KPI integrated | KPI 計測式 + 目標値 + 測定場所の 3 点組 | 値オブジェクト、§9 carry の DORA/SPACE 候補と統合検討 |
 | **evaluation_batch** | business-detail §5 (4 ソース統合) | sprint 末 trigger で 4 state ソース集計 → derived view | 集約 root、Phase B 実装 |
