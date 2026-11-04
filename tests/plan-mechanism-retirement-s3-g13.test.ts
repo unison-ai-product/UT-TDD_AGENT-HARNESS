@@ -184,7 +184,7 @@ describe("CANDIDATE-U-PLANRET-002 right-arm G13 evidence", () => {
     expect(result.passed).toBe(true);
   });
 
-  it("rejects legacy plan_id when docs/plans is empty", () => {
+  it("rejects legacy plan_id when docs/plans lacks PLAN-L9-1-x", () => {
     const root = fixture();
     updateDefer(root, {
       smoke_id: "SMOKE-PLANRET-01",

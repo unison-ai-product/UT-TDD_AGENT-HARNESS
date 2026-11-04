@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -39,6 +39,7 @@ function consumerFixture(): string {
     "docs/design/L0-planning/charter.md",
     "---\nlayer: L0\ndoc_type_id: DOC-L0-CHARTER\n---\n\nConsumer charter.\n",
   );
+  writeFixture(root, "docs/plans/PLAN-L0-01.md", "---\nplan_id: PLAN-L0-01\n---\n");
   const content = [
     "---",
     "doc_type_id: DOC-L14-OPERATIONAL-TEST",
@@ -79,6 +80,7 @@ function consumerFixture(): string {
     "| ケースID | family | 検証内容 | 合否基準 | トレース元 |",
     "|---|---|---|---|---|",
     "| OT-PLANRET-01 | OT | 日常運用の手順 | 失敗 0 | FR-L1-01 |",
+    "| OT-PLANRET-02 | VALUE | 導入価値の検証 | KPI 達成 | BR-01 / PLAN-L0-01 |",
     "",
   ].join("\n");
   writeFixture(root, "docs/test-design/L14-operational-test-design.md", content);
@@ -156,8 +158,8 @@ function evaluateG14(root: string) {
 function makeValueCase(root: string, citations: string): void {
   const slot = join(root, "docs/test-design/L14-operational-test-design.md");
   const content = readFileSync(slot, "utf8").replace(
-    "| OT-PLANRET-01 | OT | 日常運用の手順 | 失敗 0 | FR-L1-01 |",
-    `| OT-PLANRET-01 | VALUE | 導入価値の検証 | KPI 達成 | ${citations} |`,
+    "| OT-PLANRET-02 | VALUE | 導入価値の検証 | KPI 達成 | BR-01 / PLAN-L0-01 |",
+    `| OT-PLANRET-02 | VALUE | 導入価値の検証 | KPI 達成 | ${citations} |`,
   );
   writeFileSync(slot, content, "utf8");
 }
@@ -167,7 +169,11 @@ describe("PLAN mechanism retirement S3 Red", () => {
     const root = consumerFixture();
     const result = evaluateG14(root);
 
-    expect(existsSync(join(root, "docs/plans"))).toBe(false);
+    const planDirectory = join(root, "docs/plans");
+    expect(readdirSync(planDirectory)).toEqual(["PLAN-L0-01.md"]);
+    expect(readFileSync(join(planDirectory, "PLAN-L0-01.md"), "utf8")).toContain(
+      "plan_id: PLAN-L0-01",
+    );
     expect(result.passed, result.messages.join("\n")).toBe(true);
   });
 
@@ -224,7 +230,6 @@ describe("PLAN mechanism retirement S3 Red", () => {
   it.fails("CANDIDATE-U-PLANRET-004(b): a resolvable PLAN-L0 citation is not an L0 citation", () => {
     const root = consumerFixture();
     makeValueCase(root, "BR-01 / PLAN-L0-01");
-    writeFixture(root, "docs/plans/PLAN-L0-01.md", "---\nplan_id: PLAN-L0-01\n---\n");
     const result = evaluateG14(root);
 
     expect(result.messages.join("\n")).toContain("trace target missing PLAN-L0-01");
