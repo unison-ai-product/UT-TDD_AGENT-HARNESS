@@ -40,7 +40,7 @@ consumer の実運用で観測した欠陥は次のとおりである。
 
 - id は `consumer-design-phase`、`audience: "consumer"`、`sourceOnly: false` (consumer-safe) とする。`consumer-toolchain` と同じ `invocation: "registry"` で、`--profile consumer-design-phase` で選べる。`--profiles` の一覧にも出す。
 - 実行する検査は次の 4 つだけである。
-  1. vmodel pair-freeze (doctor check `pair-freeze`)。
+  1. V モデルの対の凍結 (doctor check `pair-freeze`)。
   2. G1 の静的 gate。
   3. G2 の静的 gate。
   4. G3 の静的 gate。
