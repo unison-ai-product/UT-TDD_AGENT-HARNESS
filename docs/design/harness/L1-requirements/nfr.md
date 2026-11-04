@@ -22,7 +22,7 @@ v2_import: docs/migration/v2-import-ledger.md
 | NFR-ID | 非機能要求 | 詳細 |
 |--------|-----------|------|
 | **NFR-01** | **cross-platform native** — Windows / macOS / Linux を全て第一級サポート | Windows = PowerShell entrypoint / macOS・Linux = bash entrypoint。WSL2 は任意互換環境 (必須外)。Git Bash 依存は局所化。**handover 保持期間 30 日 archive + 90 日削除 (B7=a)** で長期 stability 担保 |
-| **NFR-06** | **fail-close** — gate / lint は安全側に倒し、silent pass を許さない。**FE detector 5 軸決定論性適用** (A-52 audit I-03): drive=fe 時は fe-detector-spec.md の 5 軸 (mock-promotion / design-token-drift / a11y-regression / visual-regression / state-transition-drift、axis-15〜19) の pass 証跡を必須化し fail-close 対象とする (FR-L1-22 連動) | subagent guard: blockOnFailure=true / gate-checks.yaml: exit 2 on fail / stdin 読取失敗も block / FE detector 5 軸 fail-close (drive=fe 時、fe-detector-spec.md) |
+| **NFR-06** | **fail-close** — gate / lint は安全側に倒し、silent pass を許さない。**FE detector 5 軸決定論性適用** (A-52 audit I-03): drive=fe 時は fe-detector-spec.md の 5 軸 (mock-promotion / design-token-drift / a11y-regression / visual-regression / state-transition-drift、axis-15〜19) の pass 証跡を必須化し fail-close 対象とする (FR-L1-22 連動) | subagent guard: `onFailure: "block"` / gate-checks.yaml: exit 2 on fail / stdin 読取失敗も block / FE detector 5 軸 fail-close (drive=fe 時、fe-detector-spec.md) |
 | **NFR-16** | **onboarding 互換性** — 既存プロジェクトへの途中導入時、既存 docs / コード / state の不整合を block せず段階移行 | FR-L1-44 連動。既存資産を harness state に段階的に取り込み、初回 import でプロジェクトを止めない |
 
 ## §2 性能・拡張性

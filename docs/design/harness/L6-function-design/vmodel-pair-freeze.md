@@ -33,8 +33,8 @@ issue: 1360
 ### 型
 
 ```
-type PairDoc = { path: string; layer: string | null; pairArtifact: string | null }
-type PairOrphan = { path: string; reason: "pair-missing" | "ref-unresolved" | "trace-orphan"; detail: string }
+type PairDoc = { path: string; layer: string | null; pairArtifact: string | null; pairTargetExists?: boolean }
+type PairOrphan = { path: string; reason: "pair-missing" | "ref-unresolved" | "trace-orphan" | "design-uncovered"; detail: string }
 type PairFreezeResult = { ok: boolean; orphans: PairOrphan[]; pairs: number }
 ```
 
@@ -61,6 +61,7 @@ function analyzePairFreeze(docs):
         else: pairs++
     else: orphans.push({d.path, "ref-unresolved", "未知の pair 形式: "+pa})
         # design→design 参照 (旧 L2 group hub) は非対応 (PLAN-RECOVERY-09 で self-pair 例外と共に撤去)
+  # rule 4 design-uncovered / rule 5 右 pair_artifact の実在: §8
   return { ok: orphans == [], orphans, pairs }
 ```
 
@@ -105,6 +106,8 @@ function analyzePairFreeze(docs):
 
 - `tests/vmodel-pair.test.ts` で **実 repo 完全性回帰** (`analyzePairFreeze(loadPairDocs()) ⇒ orphans == []`) を CI vitest ベクトルに乗せ fail-close。
 - `runDoctor` に `checkPairFreeze` を **hard/fail-close** で配線 (`pairFreeze.ok` を `runDoctor.ok` に連動)。
+- §8 の規則 4・5 も同じ実 repo ガード (`orphans == []`) で締める。
+- §8 の規則 4・5 も同じ実 repo ガード (`orphans == []`) で締める。
 - 純関数 + 実 repo ガードのみ。新 hook 不要 (governance-enforcement / backfill-pairing と同方式)。
 
 ## §7 検証タイミングの機械発火 (IMP-068、PLAN-L6-11 / L7-12)
@@ -141,3 +144,27 @@ function analyzePairFreeze(docs):
 ### §7.4 「機械発火」の範囲
 
 surface まで (doctor が「層群 X freeze 完了 → 検証サイクル発火可」を機械的に告げる)。**検証 PLAN の起票は人間トリガー** (concept §2.6 signal→mode と同じく、機械は提示・人間が起票)。検証サイクルの自動起票は後続 carry。
+
+## §8 被覆と右腕の実在 (#1019 方針 (a)、#1078 の検査漏れ 2 件)
+
+§2 の rule 1〜3 は、左 (設計) の文書から右 (test-design) へ向かう検査だけである。このため、右の `pair_artifact` が実在しない path を指していても、左の文書のどれかがその右の文書を指さない限り検出されない。また、dir を `pair_artifact` に持つ右の文書は「その dir の文書を 1 本も名指ししなくても」成立してしまう。本節は、新しい文書や見出しの規約を作らずに、この 2 つを既存の `analyzePairFreeze` の規則として足す。
+
+**規則 4 (被覆、`design-uncovered`)**: `isDesignSubDoc` を満たす左の文書 D は、次のどちらかで被覆される。どちらも満たさない D は `design-uncovered` 孤児とし、`path` に D、`detail` に期待する右の文書の形 (`pair_artifact: <D>` または `pair_artifact: <dir(D)>` の文書が D を名指しすること) を書く。
+
+- (a) 右の文書で `pair_artifact == D` (path の完全一致、dir 表記の末尾 `/` は無視) のものがある。
+- (b) 右の文書で `pair_artifact == dir(D)` のものがあり、その文書の内容が D を名指しする。名指しは **repo 相対 path の部分文字列一致を優先**する。path が無く basename だけの言及は、その basename が `isDesignSubDoc` を満たす左の文書の中で一意なときに限り、D の名指しとして認める。一意でない basename (`functional-requirements.md` は L1 と L3 にある) は path でしか名指しにならず、basename だけの言及はどちらの D も被覆しない。dir が違う右の文書が名指ししても被覆にならない。
+
+名指しの判定は、既存の `l8-coverage-missing` と同じく、右の文書の内容全体に対する部分文字列一致とする (frontmatter・フェンス・語境界の除外は設けない。frontmatter・フェンス・語境界をすべて除外すると、未被覆が 4 本から 25 本へ増える。実測)。この甘さ (`plan-screen-list.md` が `screen-list.md` を名指しと数えうる) は、本節では許容し、厳格化は別の論点とする。basename の fallback は、既存の右の文書が basename で書かれていることを認める移行措置であり、path 表記への書き換えを妨げない。
+
+**既存の `l8-coverage-missing` の扱い**: `lintForwardFreezeContract` の L8 と L5 の検査 (L8 test-design が `REQUIRED_L5_VERIFICATION_DOCS` の basename を名指しするか) は、規則 4 (b) の特殊ケースである。reason の名前 `l8-coverage-missing` は**変えず残す** (`ForwardFreezeContractViolation` の union、`checkForwardFreezeContract` の出力と既存テストの oracle が参照するため)。検査の実体は規則 4 の判定関数を共有し、入力 (対象の L5 の文書の集合と L8 の文書) と出力 (reason / detail に basename) は従来と同じにする。`REQUIRED_L5_VERIFICATION_DOCS` の固定リストは、規則 4 が L5 全体を被覆するので、固定である必要が無くなった時点で別の PR で外す (本節の範囲外)。
+
+**規則 5 (右の `pair_artifact` の実在、`ref-unresolved`)**: 右の文書 (`docs/test-design/` 配下の全 `.md`) のうち `pair_artifact` を持つものは、その値が次のいずれかを満たす。満たさないものは `ref-unresolved` 孤児とし、`path` に右の文書、`detail` に値を書く (rule 2 の reason を右の文書へ広げる)。
+
+- repo の実在 path (file または dir)。
+- アーカイブ表記 `plans-archive-<YYYYMMDD>:<path>`。git の tag `plans-archive-<YYYYMMDD>` が実在し、その tag の tree に `<path>` の blob が実在すること (`git cat-file -e <tag>:<path>`)。
+
+アーカイブ表記は、**形式の確認だけにせず tag と blob の解決まで確かめる**。形式だけでは、path の綴りの誤りと tag の取り違えという、実在しない path を指す検査漏れと同じ種類の欠陥が通ってしまう。解決の費用は右の文書 1 件につき `git cat-file` 1 回で、現状のアーカイブ参照は 7 件、tag は固定 SHA の不変参照である。tag が取得されていない clone (shallow、`--no-tags`) では解決できず fail-close になる。実装 PR は、`harness-check` が tag を取得する前提を確かめる。`analyzePairFreeze` は純関数のまま保つため、実在の判定 (fs と git) は `loadPairDocs` が行い、結果を `PairDoc.pairTargetExists` に載せて渡す (§1 の型。`pair_artifact` が無い文書は未設定)。
+
+**規則 6 (走査の向き)**: 規則 4 は左から、規則 5 は右からの走査である。規則 5 の対象は、左のどの文書にも指されていない右の文書を含む、`docs/test-design/` 配下の全 `.md` とする (現状 `docs/test-design/` 配下の `.md` は `docs/test-design/harness/**` だけで、`loadPairDocs` が既に読む)。`pair_artifact` を持たない右の文書 (現状 43 本の L7 の topic 文書など) は規則 5 の対象外であり、孤児にしない。右の文書に `pair_artifact` を必須にするかは、本節では決めない。
+
+**実測 (2026-11-04、origin/main `19bd86908`)**: 対象の左の文書 (L1〜L6 の設計 .md、README と roadmap を除く) は 85 本、右の文書は 82 本 (うち `pair_artifact` を持つもの 39 本)。規則 4 で被覆されない左の文書は、basename の fallback を認めると **4 本** (`L1-requirements/vmodel-upgrade-requirements.md`、`L3-functional/screen-functional.md`、`L3-functional/upstream-schedule-reconciliation.md`、`L4-basic-design/ui-standard.md`)、path の一致だけにすると 28 本 (上の 4 本と、L2 の 5 本と L6 の 19 本が basename でしか名指しされていない)。規則 5 で実在しない右の `pair_artifact` は **2 本** (`L7-issue-binding-projection-state-test-design.md` → `docs/plans/PLAN-L7-690-...`、`L7-plan-revision-digest-query-test-design.md` → `docs/plans/PLAN-L7-722-...`。どちらも #1078 A6 の付け替え対象)。アーカイブ表記の 7 本は tag と blob が解決する。
