@@ -101,6 +101,9 @@ describe("project-hook lint", () => {
 
   it.fails("CANDIDATE-U-HOOKEXEC-011: rejects the legacy guard flag when onFailure is absent", () => {
     const settings = teamStandardSettings();
+    const hook = hookAt(settings, "PreToolUse", 0);
+    hook.blockOnFailure = true;
+    delete hook.onFailure;
     const result = analyzeSettings(settings);
 
     expect(result.violations).toContainEqual({
@@ -126,6 +129,7 @@ describe("project-hook lint", () => {
     const settings = teamStandardSettings();
     const hook = hookAt(settings, "PreToolUse", 1);
     delete hook.blockOnFailure;
+    delete hook.onFailure;
     const result = analyzeSettings(settings);
 
     expect(result.violations).toContainEqual({
@@ -149,7 +153,9 @@ describe("project-hook lint", () => {
 
   it.fails("CANDIDATE-U-HOOKEXEC-012: rejects blockOnFailure true beside a valid guard onFailure", () => {
     const settings = teamStandardSettings();
-    hookAt(settings, "PreToolUse", 0).onFailure = "block";
+    const hook = hookAt(settings, "PreToolUse", 0);
+    hook.blockOnFailure = true;
+    hook.onFailure = "block";
     const result = analyzeSettings(settings);
 
     expect(result.violations).toContainEqual({
