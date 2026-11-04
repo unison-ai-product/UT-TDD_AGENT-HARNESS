@@ -201,73 +201,74 @@ Pack の PLAN 運用は Issue 参照に置き換える (PO 判断)。**互換性
 - **S8 の前段** (docs のみの 1 本): `agent-guard-delegation-boundary.md` が「PLAN Filing Rules の `route_signal` / `generates` の記述は書き換えの対象外」と書く節 (`:217`) と、それを実 repo の rule-drift 通過で検証する `U-AGBOUND-033` の記述を、2 語の撤去に合わせて改訂する。S8 の実装 PR は `src` を含むので、この設計文書を同じ PR では変更できない。この PR が S8 の対象ファイルの一覧も表で固定する。
 - **S8 の対象の線引き**: 直す範囲は、現行の運用を規定する規範文書 (`CLAUDE.md`、`AGENTS.md`、`.claude/CLAUDE.md`、`skills/`、`.claude/commands/`、`docs/governance/` のうち運用規則・gate 設計・文書体系・リポジトリ構成を述べるもの) とする。§10 のとおり、履歴的な記録 (`docs/governance/candidates/**`、移行・監査の記録 `*-audit-*.md`、`plan-admission-receipts.json`、機械生成の JSON と MJS) と、要件・概念の版つき文書 (`ut-tdd-agent-harness-requirements_v1.2.md`、`ut-tdd-agent-harness-concept_v3.1.md`) の履歴的な PLAN の言及は書き換えない。ファイル単位の一覧は上の S8 の前段 PR が固定する。
 
-**S8 の対象ファイルの一覧** (S8 の前段 PR が固定した。2026-11-04 の `origin/main` で、`git grep -l -E 'PLAN-|docs/plans|ut-tdd plan|route_signal|generates|plan_id'` を上の線引きの範囲に当て、除外 (`docs/governance/candidates/**`、`*-audit-*.md`、`plan-admission-receipts.json`、機械生成の JSON と MJS、要件 v1.2 と概念 v3.1) を引いた結果)。S8 の実装 PR は、「直す」と「一部を直す」の行だけを書き換える。「履歴として残す」の行は、運用規則の記述が無いことを実装時に再確認するだけで書き換えない。件数は、その語に当たる行の数である。
+**S8 の対象ファイルの一覧** (S8 の前段 PR が固定した。2026-11-04 の `origin/main` で、`git grep -l -i -E 'PLAN-L[0-9]|docs/plans|ut-tdd plan|plan lint|plan draft|plan_id|route_signal|PLAN 凍結|PLAN Filing|PLAN-|generates'` を上の線引きの範囲に当て、除外 (`docs/governance/candidates/**`、`*-audit-*.md`、`plan-admission-receipts.json`、機械生成の JSON と MJS、要件 v1.2 と概念 v3.1) を引いた結果を、各ファイルを開いて PLAN の言及を 1 件ずつ読み、分類を確かめたもの)。S8 の実装 PR は、「直す」の行をすべて書き換え、「一部を直す」の行は運用規則の行だけを書き換えて由来の注記は残し、「履歴として残す」の行は書き換えない。「履歴として残す」の行は、運用規則の記述が無いことを確認済みである。件数は、その行に当たる語 (`PLAN-`、`docs/plans`、`ut-tdd plan`、`plan lint`、`plan_id`、`route_signal`、`generates` など) を含む行の数である。ただし `vmodel-source-target-edges.md` は `plan_alias` と `PLAN registry`、`threat-model.md` と `design-family-security-privacy.md` は `<plan-id>` を含む行の数とした。
 
-結果は 93 ファイルで、内訳は「直す」73、「一部を直す」3、「履歴として残す」17 である。種類の判定は、`ut-tdd plan` の手順・`docs/plans` の参照・`plan_id` / `generates` / `route_signal` の言及があれば運用規則、PLAN の ID だけなら例・由来の注記とし、版つきの schedule と台帳は履歴的な記録とした。行数の多いファイルは件数だけを記し、行ごとの分類は実装 PR が行う。
+精査の結果は 95 ファイルで、内訳は「直す」52、「一部を直す」15、「履歴として残す」28 である。種類の判定は、現行の運用を規定する文 (手順・規則・gate の説明・コマンドの案内・記録の形式) があれば運用規則、過去の判断の由来・過去の記録・移植元の来歴だけなら履歴とし、両方があれば「一部を直す」とした。`generates` が一般語 (「生成する」の意味) のファイル (`skills/design-family-cli-api-platform.md`、`skills/design-principles-pillars.md`) は PLAN の `generates` field を指さないので対象外として外し、`plan-tier limits` だけが当たる `skills/vmodel-stage-integration-acceptance-ops.md` も入れていない。範囲の漏れとして `.claude/CLAUDE.md`、`docs/governance/vmodel-source-target-edges.md`、`skills/design-family-security-privacy.md`、`skills/threat-model.md` を足した。
 
 | path | PLAN の言及の種類 | S8 での扱い | 件数 |
 |---|---|---|---|
+| `.claude/CLAUDE.md` | 運用規則 (PLAN 凍結・PLAN 起票規律・PLAN Rules・委譲の記述) と由来の注記 (見出しと節の PLAN ID) | 一部を直す (運用規則の行だけ。由来の注記は残す) | 16 |
 | `.claude/commands/build.md` | 運用規則 (`ut-tdd plan` の手順) | 直す | 2 |
 | `.claude/commands/sdd-plan.md` | 運用規則 (`ut-tdd plan` の手順) | 直す | 2 |
 | `.claude/commands/spec.md` | 運用規則 (`ut-tdd plan` の手順) | 直す | 1 |
-| `AGENTS.md` | 運用規則 (PLAN 凍結・PLAN 起票規律・PLAN Rules・委譲の記述) | 直す | 17 |
-| `CLAUDE.md` | 運用規則 (PLAN 凍結・PLAN 起票規律・PLAN Rules・委譲の記述) | 直す | 17 |
-| `docs/governance/README.md` | 例・由来の注記 (PLAN ID のみ) | 履歴として残す (実装時に運用規則が無いか再確認) | 2 |
-| `docs/governance/audit-framework.md` | 例・由来の注記 (PLAN ID のみ) | 履歴として残す (実装時に運用規則が無いか再確認) | 1 |
-| `docs/governance/audit-lens-catalog.md` | 運用規則 (`docs/plans` の参照、`plan_id`/`generates`/`route_signal` の言及) | 直す | 10 |
+| `AGENTS.md` | 運用規則 (PLAN 凍結・PLAN 起票規律・PLAN Rules・委譲の記述) と由来の注記 (見出しと節の PLAN ID) | 一部を直す (運用規則の行だけ。由来の注記は残す) | 19 |
+| `CLAUDE.md` | 運用規則 (PLAN 凍結・PLAN 起票規律・PLAN Rules・委譲の記述) と由来の注記 (見出しと節の PLAN ID) | 一部を直す (運用規則の行だけ。由来の注記は残す) | 22 |
+| `docs/governance/README.md` | 来歴の注記 (PLAN ID のみ。運用規則の記述が無いことを確認済み) | 履歴として残す | 2 |
+| `docs/governance/audit-framework.md` | 来歴の注記 (PLAN ID のみ。運用規則の記述が無いことを確認済み) | 履歴として残す | 1 |
+| `docs/governance/audit-lens-catalog.md` | 運用規則 (監査 prompt の `docs/plans` 検索の手順) と履歴 (PLAN-L7-310 などの由来) | 一部を直す (運用規則の行だけ。由来の注記は残す) | 10 |
 | `docs/governance/bun-migration-debt.yaml` | 履歴的な記録 (負債の台帳) | 履歴として残す | 1 |
-| `docs/governance/coding-rules.md` | 運用規則 (`docs/plans` の参照) | 直す | 3 |
-| `docs/governance/design-doc-implementation-readiness.md` | 例・由来の注記 (PLAN ID のみ) | 履歴として残す (実装時に運用規則が無いか再確認) | 3 |
+| `docs/governance/coding-rules.md` | 運用規則 (PLAN 凍結の言及) と履歴 (PLAN-L4-21 の見出し、計測 script の `docs/plans` の分類) | 一部を直す (運用規則の行だけ。由来の注記は残す) | 4 |
+| `docs/governance/design-doc-implementation-readiness.md` | 来歴の注記 (PLAN ID のみ。運用規則の記述が無いことを確認済み) | 履歴として残す | 3 |
 | `docs/governance/document-system-map.md` | 運用規則 (`ut-tdd plan lint` の言及) と履歴注記 (PLAN ID) の混在 | 一部を直す (運用規則の行だけ。履歴注記は残す) | 15 |
 | `docs/governance/forward-convergence-legacy-debt-audit.md` | 履歴的な記録 (監査の台帳) | 履歴として残す | 7 |
 | `docs/governance/gate-design.md` | 運用規則 (gate の表) と履歴注記 (A-100〜A-105 の PLAN ID) の混在 | 一部を直す (運用規則の行だけ。履歴注記は残す) | 14 |
-| `docs/governance/github-repository-policy.yaml` | 例・由来の注記 (PLAN ID のみ) | 履歴として残す (実装時に運用規則が無いか再確認) | 3 |
-| `docs/governance/harness-v2-quality-uplift-strategy.md` | 運用規則 (`plan_id`/`generates`/`route_signal` の言及) | 直す | 3 |
+| `docs/governance/github-repository-policy.yaml` | 来歴の注記 (コメントの PLAN ID のみ。運用規則の記述が無いことを確認済み) | 履歴として残す | 3 |
+| `docs/governance/harness-v2-quality-uplift-strategy.md` | 履歴的な記録 (起票済み PLAN-L7-328〜342 の対応表) | 履歴として残す | 3 |
 | `docs/governance/memory-curation-ledger-2026-09.md` | 履歴的な記録 (棚卸しの台帳) | 履歴として残す | 10 |
-| `docs/governance/recovery-workflow.md` | 運用規則 (`ut-tdd plan` の手順) | 直す | 3 |
-| `docs/governance/repository-structure.md` | 運用規則 (`docs/plans` の参照) | 直す | 11 |
-| `docs/governance/scope-integrity-and-evasion-taxonomy.md` | 例・由来の注記 (PLAN ID のみ) | 履歴として残す (実装時に運用規則が無いか再確認) | 4 |
+| `docs/governance/recovery-workflow.md` | 運用規則 (`ut-tdd plan lint` の機械検証) と履歴 (PLAN-RECOVERY-01 の記録) | 一部を直す (運用規則の行だけ。由来の注記は残す) | 3 |
+| `docs/governance/repository-structure.md` | 運用規則 (ツリーと配置表の `docs/plans`・`plan/`) と由来の注記・撤去の記録 (§11、PLAN ID) | 一部を直す (運用規則の行だけ。由来の注記は残す) | 13 |
+| `docs/governance/scope-integrity-and-evasion-taxonomy.md` | 来歴の注記 (PLAN ID のみ。運用規則の記述が無いことを確認済み) | 履歴として残す | 4 |
 | `docs/governance/ut-tdd-agent-harness-extraction-plan_v0.1.md` | 版つき文書の履歴的な言及 (抽出計画 v0.1、`ut-tdd plan` 1 件) | 履歴として残す | 2 |
 | `docs/governance/version-up-route-debt-2026-07-10.md` | 履歴的な記録 (負債の台帳) | 履歴として残す | 3 |
 | `docs/governance/vmodel-activation-profiles.md` | 履歴注記 (PLAN ID 28 語) と `plan_id` の言及の混在 | 一部を直す (運用規則の行だけ。履歴注記は残す) | 16 |
-| `docs/governance/vmodel-agent-contracts.md` | 例・由来の注記 (PLAN ID のみ) | 履歴として残す (実装時に運用規則が無いか再確認) | 1 |
-| `docs/governance/vmodel-document-disposition-catalog.md` | 例・由来の注記 (PLAN ID のみ) | 履歴として残す (実装時に運用規則が無いか再確認) | 7 |
+| `docs/governance/vmodel-agent-contracts.md` | 来歴の注記 (PLAN ID のみ。運用規則の記述が無いことを確認済み) | 履歴として残す | 1 |
+| `docs/governance/vmodel-document-disposition-catalog.md` | 来歴の注記 (PLAN ID のみ。運用規則の記述が無いことを確認済み) | 履歴として残す | 7 |
 | `docs/governance/vmodel-document-scale-profiles.md` | 運用規則 (`plan_id`/`generates`/`route_signal` の言及) | 直す | 7 |
 | `docs/governance/vmodel-item-target-ledger.md` | 運用規則 (`plan_id`/`generates`/`route_signal` の言及) | 直す | 2 |
 | `docs/governance/vmodel-semantic-item-self-assessment.md` | 運用規則 (`plan_id`/`generates`/`route_signal` の言及) | 直す | 4 |
+| `docs/governance/vmodel-source-target-edges.md` | 運用規則 (`plan_alias` の解決先が PLAN registry であるという規則) | 直す | 2 |
 | `docs/governance/vmodel-typed-spec-definitions.md` | 運用規則 (`docs/plans` の参照) | 直す | 4 |
 | `docs/governance/vmodel-upgrade-schedule.md` | 履歴的な記録 (版つきの schedule、PLAN の ID の列挙) | 履歴として残す | 121 |
-| `skills/SKILL_MAP.md` | 運用規則 (`docs/plans` の参照) | 直す | 4 |
-| `skills/adversarial-review.md` | 運用規則 (`ut-tdd plan` の手順、`docs/plans` の参照) | 直す | 5 |
-| `skills/agent-cost-design.md` | 運用規則 (`plan_id`/`generates`/`route_signal` の言及) | 直す | 1 |
+| `skills/SKILL_MAP.md` | 来歴の注記 (PLAN-L7-277・PLAN-REVERSE-280・PLAN-L7-676 の参照) | 履歴として残す | 4 |
+| `skills/adversarial-review.md` | 運用規則 (`ut-tdd plan lint`、PLAN-linked の根拠) と来歴注記 (PLAN-L7-676) | 一部を直す (運用規則の行だけ。由来の注記は残す) | 5 |
+| `skills/agent-cost-design.md` | 運用規則 (記録する metadata の `plan_id`) | 直す | 1 |
 | `skills/api-and-interface-design.md` | 運用規則 (`ut-tdd plan` の手順、`plan_id`/`generates`/`route_signal` の言及) | 直す | 3 |
 | `skills/api-contract.md` | 運用規則 (`ut-tdd plan` の手順、`plan_id`/`generates`/`route_signal` の言及) | 直す | 3 |
 | `skills/api.md` | 運用規則 (`ut-tdd plan` の手順、`plan_id`/`generates`/`route_signal` の言及) | 直す | 1 |
 | `skills/browser-testing-and-screen-verification.md` | 運用規則 (`ut-tdd plan` の手順) | 直す | 1 |
-| `skills/ci-deploy-and-rollback.md` | 運用規則 (`ut-tdd plan` の手順) | 直す | 2 |
-| `skills/ci-gate-design.md` | 例・由来の注記 (PLAN ID のみ) | 履歴として残す (実装時に運用規則が無いか再確認) | 2 |
-| `skills/code-minimalism.md` | 運用規則 (`docs/plans` の参照) | 直す | 3 |
-| `skills/code-review.md` | 例・由来の注記 (PLAN ID のみ) | 履歴として残す (実装時に運用規則が無いか再確認) | 3 |
+| `skills/ci-deploy-and-rollback.md` | 運用規則 (`ut-tdd plan` の手順) | 直す | 3 |
+| `skills/ci-gate-design.md` | 運用規則 (抑制には PLAN-linked の根拠を要するという規則) | 直す | 2 |
+| `skills/code-minimalism.md` | 運用規則 (「PLAN-scoping」の言い回し) と来歴注記 (PLAN-L7-676) | 一部を直す (運用規則の行だけ。由来の注記は残す) | 3 |
+| `skills/code-review.md` | 運用規則 (PLAN-linked の根拠・TODO の規則と委譲の例) | 直す | 3 |
 | `skills/context-engineering.md` | 運用規則 (`docs/plans` の参照) | 直す | 1 |
 | `skills/context-memory.md` | 運用規則 (`docs/plans` の参照) | 直す | 1 |
 | `skills/db.md` | 運用規則 (`ut-tdd plan` の手順) | 直す | 1 |
 | `skills/debt-register.md` | 運用規則 (`ut-tdd plan` の手順、`plan_id`/`generates`/`route_signal` の言及) | 直す | 5 |
-| `skills/debugging-and-error-recovery.md` | 運用規則 (`ut-tdd plan` の手順) | 直す | 3 |
+| `skills/debugging-and-error-recovery.md` | 運用規則 (`ut-tdd plan lint`) と来歴注記 (PLAN-RECOVERY-05、PLAN-L7-110) | 一部を直す (運用規則の行だけ。由来の注記は残す) | 3 |
 | `skills/dependency-map.md` | 運用規則 (`ut-tdd plan` の手順、`plan_id`/`generates`/`route_signal` の言及) | 直す | 4 |
 | `skills/deprecation-cutover.md` | 運用規則 (`ut-tdd plan` の手順) | 直す | 1 |
-| `skills/design-doc.md` | 運用規則 (`plan_id`/`generates`/`route_signal` の言及) | 直す | 2 |
-| `skills/design-family-cli-api-platform.md` | 運用規則 (`plan_id`/`generates`/`route_signal` の言及) | 直す | 1 |
-| `skills/design-principles-pillars.md` | 運用規則 (`plan_id`/`generates`/`route_signal` の言及) | 直す | 1 |
-| `skills/design-tailoring-and-granularity.md` | 運用規則 (`docs/plans` の参照) | 直す | 4 |
+| `skills/design-doc.md` | 運用規則 (harness.db の ER 例の `PLAN_REGISTRY` と `plan_id`) | 直す | 2 |
+| `skills/design-family-security-privacy.md` | 運用規則 (threat model の出力 path が `<plan-id>` を含む) | 直す | 1 |
+| `skills/design-tailoring-and-granularity.md` | 運用規則 (`docs/plans/PLAN-*` の debt 項目、PLAN-linked の TTL) と来歴注記 (PLAN-L7-676) | 一部を直す (運用規則の行だけ。由来の注記は残す) | 4 |
 | `skills/documentation-and-adrs.md` | 運用規則 (`ut-tdd plan` の手順) | 直す | 2 |
 | `skills/documentation.md` | 運用規則 (`docs/plans` の参照) | 直す | 1 |
 | `skills/estimation.md` | 運用規則 (`ut-tdd plan` の手順) | 直す | 2 |
-| `skills/gate-planning.md` | 運用規則 (`ut-tdd plan` の手順、`plan_id`/`generates`/`route_signal` の言及) | 直す | 8 |
-| `skills/git.md` | 例・由来の注記 (PLAN ID のみ) | 履歴として残す (実装時に運用規則が無いか再確認) | 3 |
+| `skills/gate-planning.md` | 運用規則 (`ut-tdd plan` の手順、`plan_id`/`generates`/`route_signal` の言及) | 直す | 9 |
+| `skills/git.md` | 運用規則 (commit scope を PLAN ID とする規則と例) | 直す | 3 |
 | `skills/harness-observability.md` | 運用規則 (`docs/plans` の参照、`plan_id`/`generates`/`route_signal` の言及) | 直す | 3 |
-| `skills/incident-runbook.md` | 運用規則 (`plan_id`/`generates`/`route_signal` の言及) | 直す | 1 |
+| `skills/incident-runbook.md` | 運用規則 (`generates` list の言及) | 直す | 1 |
 | `skills/incremental-implementation.md` | 運用規則 (`ut-tdd plan` の手順) | 直す | 5 |
-| `skills/planning-and-task-breakdown.md` | 運用規則 (`ut-tdd plan` の手順、`docs/plans` の参照、`plan_id`/`generates`/`route_signal` の言及) | 直す | 15 |
+| `skills/planning-and-task-breakdown.md` | 運用規則 (`ut-tdd plan` の手順、`docs/plans` の参照、`plan_id`/`generates`/`route_signal` の言及) | 直す | 16 |
 | `skills/poc.md` | 運用規則 (`ut-tdd plan` の手順、`plan_id`/`generates`/`route_signal` の言及) | 直す | 5 |
 | `skills/project-management.md` | 運用規則 (`ut-tdd plan` の手順、`plan_id`/`generates`/`route_signal` の言及) | 直す | 11 |
 | `skills/requirements-handover.md` | 運用規則 (`ut-tdd plan` の手順、`docs/plans` の参照) | 直す | 6 |
@@ -283,23 +284,24 @@ Pack の PLAN 運用は Issue 参照に置き換える (PO 判断)。**互換性
 | `skills/spec-driven-development.md` | 運用規則 (`ut-tdd plan` の手順) | 直す | 3 |
 | `skills/system-design-sizing.md` | 運用規則 (`ut-tdd plan` の手順) | 直す | 2 |
 | `skills/tech-selection.md` | 運用規則 (`ut-tdd plan` の手順、`plan_id`/`generates`/`route_signal` の言及) | 直す | 5 |
-| `skills/test-breakage-thinking.md` | 運用規則 (`docs/plans` の参照) | 直す | 2 |
-| `skills/test-driven-development.md` | 例・由来の注記 (PLAN ID のみ) | 履歴として残す (実装時に運用規則が無いか再確認) | 1 |
-| `skills/verification.md` | 運用規則 (`ut-tdd plan` の手順、`plan_id`/`generates`/`route_signal` の言及) | 直す | 4 |
-| `skills/visual-state-verification.md` | 運用規則 (`docs/plans` の参照) | 直す | 2 |
-| `skills/vmodel-authoring.md` | 運用規則 (`docs/plans` の参照) | 直す | 3 |
-| `skills/vmodel-code-minimalism.md` | 運用規則 (`docs/plans` の参照) | 直す | 2 |
-| `skills/vmodel-design-judgement.md` | 運用規則 (`docs/plans` の参照) | 直す | 2 |
-| `skills/vmodel-role-architecture.md` | 運用規則 (`docs/plans` の参照) | 直す | 2 |
-| `skills/vmodel-role-coding.md` | 運用規則 (`docs/plans` の参照) | 直す | 2 |
-| `skills/vmodel-role-design.md` | 運用規則 (`docs/plans` の参照) | 直す | 2 |
-| `skills/vmodel-role-marketing.md` | 運用規則 (`docs/plans` の参照) | 直す | 2 |
-| `skills/vmodel-role-test.md` | 運用規則 (`docs/plans` の参照) | 直す | 2 |
+| `skills/test-breakage-thinking.md` | 移植元の来歴注記 (PLAN-L7-676 と `docs/plans` の参照) | 履歴として残す | 2 |
+| `skills/test-driven-development.md` | 運用規則 (抑制には PLAN-linked の根拠を要するという規則) | 直す | 1 |
+| `skills/threat-model.md` | 運用規則 (threat model の出力 path が `<plan-id>` を含む) | 直す | 2 |
+| `skills/verification.md` | 運用規則 (`ut-tdd plan` の手順、`plan_id`/`generates`/`route_signal` の言及) | 直す | 5 |
+| `skills/visual-state-verification.md` | 移植元の来歴注記 (PLAN-L7-676 と `docs/plans` の参照) | 履歴として残す | 2 |
+| `skills/vmodel-authoring.md` | 移植元の来歴注記 (PLAN-L7-676 と `docs/plans` の参照) | 履歴として残す | 3 |
+| `skills/vmodel-code-minimalism.md` | 移植元の来歴注記 (PLAN-L7-676 と `docs/plans` の参照) | 履歴として残す | 2 |
+| `skills/vmodel-design-judgement.md` | 移植元の来歴注記 (PLAN-L7-676 と `docs/plans` の参照) | 履歴として残す | 2 |
+| `skills/vmodel-role-architecture.md` | 移植元の来歴注記 (PLAN-L7-676 と `docs/plans` の参照) | 履歴として残す | 2 |
+| `skills/vmodel-role-coding.md` | 移植元の来歴注記 (PLAN-L7-676 と `docs/plans` の参照) | 履歴として残す | 2 |
+| `skills/vmodel-role-design.md` | 移植元の来歴注記 (PLAN-L7-676 と `docs/plans` の参照) | 履歴として残す | 2 |
+| `skills/vmodel-role-marketing.md` | 移植元の来歴注記 (PLAN-L7-676 と `docs/plans` の参照) | 履歴として残す | 2 |
+| `skills/vmodel-role-test.md` | 移植元の来歴注記 (PLAN-L7-676 と `docs/plans` の参照) | 履歴として残す | 2 |
 | `skills/vmodel-stage-detailed-design.md` | 運用規則 (`ut-tdd plan` の手順) | 直す | 1 |
-| `skills/vmodel-substance-review.md` | 運用規則 (`docs/plans` の参照) | 直す | 2 |
-| `skills/vmodel-test-thinking.md` | 運用規則 (`docs/plans` の参照) | 直す | 2 |
-| `skills/vmodel-visual-review.md` | 運用規則 (`docs/plans` の参照) | 直す | 2 |
-| `skills/vmodel-workflow.md` | 運用規則 (`ut-tdd plan` の手順、`docs/plans` の参照) | 直す | 4 |
+| `skills/vmodel-substance-review.md` | 移植元の来歴注記 (PLAN-L7-676 と `docs/plans` の参照) | 履歴として残す | 2 |
+| `skills/vmodel-test-thinking.md` | 移植元の来歴注記 (PLAN-L7-676 と `docs/plans` の参照) | 履歴として残す | 2 |
+| `skills/vmodel-visual-review.md` | 移植元の来歴注記 (PLAN-L7-676 と `docs/plans` の参照) | 履歴として残す | 2 |
+| `skills/vmodel-workflow.md` | 運用規則 (`docs/plans`・`ut-tdd plan lint` を置き換えないという言及) と来歴注記 (PLAN-L7-676) | 一部を直す (運用規則の行だけ。由来の注記は残す) | 4 |
 
 - **PLAN 凍結の節の置き換え** (`CLAUDE.md` の §PLAN Filing Rules): S8 で PLAN 凍結の節と PLAN 起票規律・設計系 PLAN の 4 項目の節は、最小の形に置き換える。置き換え後の文言は「新しい作業の正本は設計文書 (`docs/design/` / `docs/test-design/`) と GitHub Issue」とし、PLAN の起票・改訂・参照追加の規則は書かない (PLAN 機構が無いため)。工程 (pair-freeze、改訂の cross-review) の規律はそのまま守る。
 
