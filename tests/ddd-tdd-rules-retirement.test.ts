@@ -109,53 +109,50 @@ describe("CANDIDATE-U-PLANRET-013: red-first evidence retirement", () => {
     removeTestTree(withoutPlanFixture.root);
   });
 
-  it(
-    "precondition: aligned post-retirement policy and invariant fixture has only the target PLAN delta",
-    () => {
-      const withPlan = loadDddTddInputs(withPlanFixture.root);
-      const withoutPlan = loadDddTddInputs(withoutPlanFixture.root);
+  it("precondition: aligned post-retirement policy and invariant fixture has only the target PLAN delta", () => {
+    const withPlan = loadDddTddInputs(withPlanFixture.root);
+    const withoutPlan = loadDddTddInputs(withoutPlanFixture.root);
 
-      expect(existsSync(withPlanFixture.planPath)).toBe(true);
-      expect(existsSync(withoutPlanFixture.planPath)).toBe(false);
-      expect(withPlan.policy?.ruleIds).toEqual([
-        "domain-boundary",
-        "invariant-test-trace",
-        "test-oracle-strength",
-        "integration-gwt",
-        "unit-oracle-substance",
-      ]);
-      expect(withPlan.policy?.text).not.toContain("red-first-evidence");
-      expect(withPlan.policy?.text).not.toContain("DDD-INV-003");
-      expect(withPlan.policy?.text).toContain("DDD-INV-002 oracle: U-DDDTDD-002");
-      expect(withPlan.l7Text).not.toContain("U-DDDTDD-003");
-      expect(withPlan.l7Text).toContain("U-DDDTDD-002");
-      const planText = readFileSync(withPlanFixture.planPath, "utf8");
-      expect(planText).toMatch(/^status: confirmed$/m);
-      expect(planText).toMatch(/^tdd_red_required: true$/m);
-      expect(planText).not.toMatch(/^red_at:/m);
-      expect(planText).not.toMatch(/^green_at:/m);
-      expect(withPlan.workflowDocs.every((doc) => doc.exists)).toBe(true);
-      expect(withPlan.workflowDocs.map((doc) => doc.text)).toEqual(
-        withoutPlan.workflowDocs.map((doc) => doc.text),
-      );
-      expect(withPlan.docs).toEqual(withoutPlan.docs);
-      expect(withPlan.policy).toEqual(withoutPlan.policy);
-      expect(withPlan.l7Text).toBe(withoutPlan.l7Text);
-      expect(withPlan.l8Text).toBe(withoutPlan.l8Text);
-    },
-  );
+    expect(existsSync(withPlanFixture.planPath)).toBe(true);
+    expect(existsSync(withoutPlanFixture.planPath)).toBe(false);
+    expect(withPlan.policy?.ruleIds).toEqual([
+      "domain-boundary",
+      "invariant-test-trace",
+      "test-oracle-strength",
+      "integration-gwt",
+      "unit-oracle-substance",
+    ]);
+    expect(withPlan.policy?.text).not.toContain("red-first-evidence");
+    expect(withPlan.policy?.text).not.toContain("DDD-INV-003");
+    expect(withPlan.policy?.text).toContain("DDD-INV-002 oracle: U-DDDTDD-002");
+    expect(withPlan.l7Text).not.toContain("U-DDDTDD-003");
+    expect(withPlan.l7Text).toContain("U-DDDTDD-002");
+    const planText = readFileSync(withPlanFixture.planPath, "utf8");
+    expect(planText).toMatch(/^status: confirmed$/m);
+    expect(planText).toMatch(/^tdd_red_required: true$/m);
+    expect(planText).not.toMatch(/^red_at:/m);
+    expect(planText).not.toMatch(/^green_at:/m);
+    expect(withPlan.workflowDocs.every((doc) => doc.exists)).toBe(true);
+    expect(withPlan.workflowDocs.map((doc) => doc.text)).toEqual(
+      withoutPlan.workflowDocs.map((doc) => doc.text),
+    );
+    expect(withPlan.docs).toEqual(withoutPlan.docs);
+    expect(withPlan.policy).toEqual(withoutPlan.policy);
+    expect(withPlan.l7Text).toBe(withoutPlan.l7Text);
+    expect(withPlan.l8Text).toBe(withoutPlan.l8Text);
+  });
 
   it("other rule outcomes are stable; DDD-INV-002 remains traced while DDD-INV-003 is retired", () => {
     const withPlan = analyzeDddTddRules(loadDddTddInputs(withPlanFixture.root));
     const withoutPlan = analyzeDddTddRules(loadDddTddInputs(withoutPlanFixture.root));
     const unrelated = (violation: (typeof withPlan.violations)[number]) =>
       violation.rule !== "red-first-evidence" &&
-      !(violation.rule === "ddd-tdd-policy-missing-rule" &&
-        violation.message.includes("red-first-evidence"));
+      !(
+        violation.rule === "ddd-tdd-policy-missing-rule" &&
+        violation.message.includes("red-first-evidence")
+      );
 
-    expect(withPlan.violations.filter(unrelated)).toEqual(
-      withoutPlan.violations.filter(unrelated),
-    );
+    expect(withPlan.violations.filter(unrelated)).toEqual(withoutPlan.violations.filter(unrelated));
     expect(
       withPlan.violations.filter(
         (violation) =>
