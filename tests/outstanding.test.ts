@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -9,6 +9,7 @@ import {
   type OutstandingPlanRow,
   outstandingSummaryLine,
 } from "../src/lint/outstanding.ts";
+import { analyzePlaceholderDeps, loadPlaceholderDepsDocs } from "../src/lint/placeholder-deps.ts";
 import { removeTestTree } from "./support/temp-tree.ts";
 
 // IMP-139: 「未了の正の集計シグナル」(非終端 PLAN 層別 + open defer) の additive surface 回帰。
@@ -101,6 +102,44 @@ describe("loadOutstandingPlanRows + computeOutstandingWork", () => {
     );
   }
 
+  function makeDualRootOutstandingRepo(): {
+    root: string;
+    planPath: string;
+    designPath: string;
+  } {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-planret-012-outstanding-"));
+    const planPath = join(root, "docs", "plans", "x.md");
+    const designPath = join(root, "docs", "design", "harness", "L6-function-design", "y.md");
+    mkdirSync(join(root, "docs", "plans"), { recursive: true });
+    mkdirSync(join(root, "docs", "design", "harness", "L6-function-design"), {
+      recursive: true,
+    });
+    writeFileSync(
+      planPath,
+      [
+        "---",
+        "layer: L7",
+        "status: draft",
+        "---",
+        "PLAN fixture",
+        "- FR-L1-46 explicit_l7_defer waiting_layer:L6 owner:tl",
+      ].join("\n"),
+      "utf8",
+    );
+    writeFileSync(
+      designPath,
+      [
+        "---",
+        "status: confirmed",
+        "---",
+        "- FR-L1-47 explicit_l7_defer waiting_layer:L6 owner:tl",
+        "- placeholder_deps: {waiting_layer:L6, waiting_spec: candidate012 fixture}",
+      ].join("\n"),
+      "utf8",
+    );
+    return { root, planPath, designPath };
+  }
+
   it("docs/plans の frontmatter から layer/status を読み非終端を集計する", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-outstanding-"));
     try {
@@ -129,6 +168,31 @@ describe("loadOutstandingPlanRows + computeOutstandingWork", () => {
       expect(o.openDefers).toBe(0);
     } finally {
       removeTestTree(root);
+    }
+  });
+
+  it("CANDIDATE-U-PLANRET-012 fixture: PLAN row and one design open defer are present", () => {
+    const fixture = makeDualRootOutstandingRepo();
+    try {
+      expect(readFileSync(fixture.planPath, "utf8")).toContain("status: draft");
+      expect(readFileSync(fixture.planPath, "utf8")).toContain("FR-L1-46 explicit_l7_defer");
+      expect(readFileSync(fixture.designPath, "utf8")).toContain("FR-L1-47 explicit_l7_defer");
+      expect(readFileSync(fixture.designPath, "utf8")).toContain("waiting_layer:L6");
+      expect(analyzePlaceholderDeps(loadPlaceholderDepsDocs(fixture.root)).specBackfillWaits).toBe(
+        1,
+      );
+      expect(computeOutstandingWork(fixture.root).openDefers).toBe(1);
+    } finally {
+      removeTestTree(fixture.root);
+    }
+  });
+
+  it.fails("CANDIDATE-U-PLANRET-012(b): computeOutstandingWork exposes only openDefers, not PLAN counts", () => {
+    const fixture = makeDualRootOutstandingRepo();
+    try {
+      expect(computeOutstandingWork(fixture.root)).toEqual({ openDefers: 1 });
+    } finally {
+      removeTestTree(fixture.root);
     }
   });
 });

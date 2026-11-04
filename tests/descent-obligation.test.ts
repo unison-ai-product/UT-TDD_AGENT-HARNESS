@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -36,6 +36,17 @@ const defer = (
   owner: "tl",
   ...over,
 });
+
+function makeDualRootDeferRepo(): { root: string; planPath: string; designPath: string } {
+  const root = mkdtempSync(join(tmpdir(), "ut-tdd-planret-012-defer-"));
+  const planPath = join(root, "docs", "plans", "x.md");
+  const designPath = join(root, "docs", "design", "y.md");
+  mkdirSync(join(root, "docs", "plans"), { recursive: true });
+  mkdirSync(join(root, "docs", "design"), { recursive: true });
+  writeFileSync(planPath, "- FR-L1-46 explicit_l7_defer waiting_layer:L6 owner:tl\n", "utf8");
+  writeFileSync(designPath, "- FR-L1-47 explicit_l7_defer waiting_layer:L6 owner:tl\n", "utf8");
+  return { root, planPath, designPath };
+}
 
 describe("descent-obligation ledger (PLAN-L6-35 / FR-L1-03)", () => {
   it("U-DESC-001: generates obligations from upstream adjacency, not downstream self-declarations", () => {
@@ -391,6 +402,28 @@ describe("descent-obligation ledger (PLAN-L6-35 / FR-L1-03)", () => {
       );
     } finally {
       removeTestTree(root);
+    }
+  });
+
+  it("CANDIDATE-U-PLANRET-012 fixture: PLAN and design defer rows are both present", () => {
+    const fixture = makeDualRootDeferRepo();
+    try {
+      expect(readFileSync(fixture.planPath, "utf8")).toContain("FR-L1-46 explicit_l7_defer");
+      expect(readFileSync(fixture.designPath, "utf8")).toContain("FR-L1-47 explicit_l7_defer");
+      expect(loadDeferLedger(fixture.root).map((row) => row.traceKey)).toContain("FR-L1-47");
+    } finally {
+      removeTestTree(fixture.root);
+    }
+  });
+
+  it.fails("CANDIDATE-U-PLANRET-012(a): loadDeferLedger excludes PLAN-only defer rows", () => {
+    const fixture = makeDualRootDeferRepo();
+    try {
+      const rows = loadDeferLedger(fixture.root);
+
+      expect(rows.map((row) => row.traceKey)).toEqual(["FR-L1-47"]);
+    } finally {
+      removeTestTree(fixture.root);
     }
   });
 

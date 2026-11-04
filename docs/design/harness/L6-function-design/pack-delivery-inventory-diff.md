@@ -86,7 +86,7 @@ source 側検査が Red にする。
     ]
   },
   "template": {
-    "expected": ["authoring:docs/templates/plan/design/template.md", "setup:.claude/agents/qa-test.md", "setup:.github/PULL_REQUEST_TEMPLATE.md", "vmodel-optional:ZIP-DOC-NNN", "vmodel-slot:<doc_type_id>"],
+    "expected": ["authoring:docs/templates/design/L6-function-spec-template.md", "setup:.claude/agents/qa-test.md", "setup:.github/PULL_REQUEST_TEMPLATE.md", "vmodel-optional:ZIP-DOC-NNN", "vmodel-slot:<doc_type_id>"],
     "excluded": [
       { "id": "setup-template:docs/templates/github/common/pack-harness-check.yml", "reason": "Pack repo 自身の CI。setup は consumer へ書かない" },
       { "id": "setup-template:docs/templates/github/team/CODEOWNERS", "reason": "team (0-B) 専用。canary の setup は --solo (0-A)" },
