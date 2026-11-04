@@ -118,7 +118,7 @@ compressPlanDigest(events, planId, prev):
 - 圧縮: `.ut-tdd/logs/plan/<plan_id>.digest.json` (gitignored、durable)
 - hook 実体: `src/cli.ts` session/hook entrypoints (`.claude/hooks/session-log.ts` backward-compatible shim) (project-local Node wrapper 経由、環境非依存)。**variant 分岐 = stdin JSON の `hook_event_name` を正 (SessionStart / PostToolUse / Stop) とし、CLI command (`session start` / `hook post-tool-use` / `session summary`) を fallback** に持つ (m-2)。settings.json は 3 event に対応する UT-TDD CLI command を登録し、Claude Code が渡す `hook_event_name` で handler を選ぶ。
 - `.gitignore` に `.ut-tdd/logs/` を追加。
-- `.claude/settings.json`: `SessionStart` / `PostToolUse(Edit|Write|MultiEdit|Bash|PowerShell)` / `Stop` に登録。**`blockOnFailure` を付けない (fail-open)**。Windows ネイティブ Claude Code の主シェルツール `PowerShell` を matcher に含める (PLAN-RECOVERY-13 / issue #86: 除外時は Windows セッションのシェル操作が session log / hook_events から構造的に欠落する)。
+- `.claude/settings.json`: `SessionStart` / `PostToolUse(Edit|Write|MultiEdit|Bash|PowerShell)` / `Stop` に登録。**`onFailure` を付けない (既定の `"continue"` = fail-open)**。Windows ネイティブ Claude Code の主シェルツール `PowerShell` を matcher に含める (PLAN-RECOVERY-13 / issue #86: 除外時は Windows セッションのシェル操作が session log / hook_events から構造的に欠落する)。
 
 ### consumer記録hookのtimeout予算 (Issue #1057 / U-SLOG-010)
 
@@ -161,7 +161,7 @@ consumer templateは記録hookの30秒で揃えるが、guard等の対象外hook
 
 | 比較項目 | agent-guard | session-log |
 |--|-------------|-------------|
-| 失敗時 | exit 2 (block)、`blockOnFailure: true` | **exit 0 (pass)**、blockOnFailure なし |
+| 失敗時 | exit 2 (block)、`onFailure: "block"` | **exit 0 (pass)**、`onFailure` なし |
 | stdin/JSON 失敗 | block (検証不能を pass させない) | warn して 0 (ログがワークフローを止めない) |
 | 目的 | 安全性の強制 (守り) | 観測の記録 (非侵襲) |
 
@@ -185,3 +185,24 @@ exit 127 で fail-close する。対応する実測 fixture (`tests/hook-native-
 exit code を検証する。wrapper より後で session handler が明示的に起動する子プロセスは別責務であり、この oracle の通過根拠に混同しない。
 対応する L7 oracle は
 `U-HOOKEXEC-001..008` とする。
+
+## 2026-11-04 Claude hook の `onFailure` 追加設計 (Issue #1521)
+
+Claude Code が hook の失敗時にツール呼び出しを止める公式 field は `onFailure` であり、値は `"continue"` (既定) と `"block"` である。
+`blockOnFailure` は Claude Code の field ではなく、書いても効かない。従来はこの無効な key を guard に付けていたため、
+guard が起動不能・例外・timeout (5 秒) になると、tool call がそのまま通っていた (fail-open)。exit 2 を返す guard の block は
+従来どおり成立する。本節はこの齟齬を直す契約である。対象は **Claude Code の hook 面だけ**とする。Codex 側は別 Issue で扱う。
+
+不変条件。
+
+- Claude の PreToolUse guard hook (`agent-guard`、`work-guard`) は `onFailure: "block"` を持つ。`"continue"` は拒否する。
+- 記録 / session hook (SessionStart、PostToolUse、Stop、SubagentStop) は `onFailure` を省略する。既定の fail-open を保つ。
+  Stop / SubagentStop は `onFailure` が効かない event でもあるため、省略を契約とする。
+- 旧 key `blockOnFailure` は Claude 設定 (`.claude/settings.json`、Pack template、setup 生成物) に存在してはならない。
+  保護に見えて効かないため、lint 違反とする。
+- source の `.claude/settings.json`、Pack template、`src/setup/templates.ts` の生成物は同じ guard 配線を持つ。
+
+前提。`onFailure` の利用には Claude Code v2.1.295 以降が必要である。version の検査は本契約に含めず、doctor check も追加しない。
+
+受け入れ注記。実装 PR は、実際の Claude Code で 1 回の手動確認を残す。guard script を起動不能にした状態で Edit が block されること。
+対応するテスト oracle は `docs/test-design/harness/L7-claude-hook-onfailure-test-design.md` の `CANDIDATE-U-HOOKEXEC-011`〜`014` である。

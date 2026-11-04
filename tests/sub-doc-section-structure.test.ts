@@ -154,7 +154,7 @@ describe("loadSubDocSectionStructureInput real repo (U-SDSS-008)", () => {
   });
 });
 
-describe("CANDIDATE-U-PLANRET-012(c): sub_doc は design root だけを読む", () => {
+describe("U-PLANRET-012(c): sub_doc は design root だけを読む", () => {
   let fixture: ReturnType<typeof createPlanAndDesignRootFixture>;
 
   beforeAll(() => {
@@ -176,7 +176,7 @@ describe("CANDIDATE-U-PLANRET-012(c): sub_doc は design root だけを読む", 
     expect(() => loadSubDocSectionStructureInput(fixture.root)).not.toThrow();
   });
 
-  it.fails("CANDIDATE-U-PLANRET-012(c): docs/plans は無視し design root の report だけを検査", () => {
+  it.fails("U-PLANRET-012(c): docs/plans は無視し design root の report だけを検査", () => {
     const loaded = loadSubDocSectionStructureInput(fixture.root);
     expect(loaded.plans.map(({ subDoc, status, h2 }) => ({ subDoc, status, h2 }))).toEqual([
       {

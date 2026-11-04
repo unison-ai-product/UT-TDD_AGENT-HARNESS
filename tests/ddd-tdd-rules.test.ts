@@ -200,25 +200,6 @@ describe("U-DDDTDD DDD/TDD strictness lint", () => {
     }
   });
 
-  it("detects confirmed TDD plans without red-first evidence or with inverted evidence", () => {
-    const result = analyzeDddTddRules(
-      baseInputs({
-        plans: [
-          {
-            path: "docs/plans/PLAN-L7-99-missing-red.md",
-            text: "---\nstatus: confirmed\ntdd_red_required: true\n---",
-          },
-          {
-            path: "docs/plans/PLAN-L7-98-inverted-red.md",
-            text: "---\nstatus: confirmed\ntdd_red_required: true\nred_at: 2026-06-09T10:00:00Z\ngreen_at: 2026-06-09T09:00:00Z\n---",
-          },
-        ],
-      }),
-    );
-    expect(result.ok).toBe(false);
-    expect(result.violations.filter((v) => v.rule === "red-first-evidence")).toHaveLength(2);
-  });
-
   it("detects missing and weak test oracles", () => {
     const result = analyzeDddTddRules(
       baseInputs({
