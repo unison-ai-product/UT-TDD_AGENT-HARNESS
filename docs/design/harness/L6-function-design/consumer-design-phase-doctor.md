@@ -1,7 +1,7 @@
 ---
 layer: L6
 artifact_type: design_doc
-status: draft
+status: confirmed
 sub_doc: function-spec
 artifact_role: topic_consumer_design_phase_doctor
 pair_artifact: docs/test-design/harness/L7-consumer-design-phase-doctor-test-design.md
@@ -89,3 +89,15 @@ consumer の実運用で観測した欠陥は次のとおりである。
 | pre | `repoRoot` が読めること。profile id が `DOCTOR_RUN_PROFILE_IDS` に含まれること |
 | post | 実行した検査と `not-applicable` の検査が、すべて出力に列挙される。fail が 1 件でもあれば exit 1 |
 | invariant | `not-applicable` は pass の件数に入らない。`consumer-design-phase` は `src/` / `package.json` の有無で結果を変えない。`consumer-toolchain` の実装前判定は `repoRoot` 直下の `src/` と `package.json` だけで決まる |
+
+## 9. 単位の契約 (DbC)
+
+本書が定める契約上の関数は次の 2 つである (名前は契約上のもので、実装は `src/doctor/profiles.ts` の既存の profile 定義へ合わせる)。
+
+- `runConsumerDesignPhase(repoRoot) => CheckOutcome[]`: profile `consumer-design-phase` の 4 検査 (pair-freeze、G1、G2、G3) を実行し、各結果を `pass` / `fail` / `not-applicable` で返す (§3、§6)。
+- `isPreImplementation(repoRoot) => boolean`: `repoRoot` 直下に `src/` も `package.json` も無いとき真を返し、`consumer-toolchain` を `not-applicable (実装前)` にする (§4)。
+
+- pre: `repoRoot` が読めること。profile id が `DOCTOR_RUN_PROFILE_IDS` に含まれること (§8)。
+- post: 実行した検査と `not-applicable` の検査がすべて出力に列挙され、fail が 1 件でもあれば exit 1 (§8)。
+- invariant: `not-applicable` は pass の件数に入らない。`consumer-design-phase` は `src/` / `package.json` の有無で結果を変えない (§5、§8)。
+- oracle: CANDIDATE-U-CDPD-001〜012 が上記を固定する。

@@ -4,7 +4,7 @@ layer: L7
 executed_at_layer: L7
 artifact_type: test_design
 pair_artifact: docs/design/harness/L6-function-design/consumer-design-phase-doctor.md
-status: draft
+status: confirmed
 updated: 2026-11-04
 issue: 1527
 ---
