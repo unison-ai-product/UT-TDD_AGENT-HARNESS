@@ -22,7 +22,43 @@ import {
 } from "../src/schema/mode-catalog.ts";
 import { ROUTE_SIGNAL_MAP } from "../src/schema/route-map.ts";
 
-const ORPHAN_INSPECTION_TOKEN = /^(?:workflow|model|skill)[\w-]*orphan[\w-]*$/i;
+const ORPHAN_INSPECTION_TOKEN = /(?:workflow|model|skill)[\w-]*orphan[\w-]*/i;
+
+function orphanInspectionTokens(path: string, source: string): string[] {
+  const findings: string[] = [];
+  if (!/\.(?:ts|tsx|js|mjs|cjs)$/.test(path)) {
+    const withoutYamlComments = source.replace(/^\s*#.*$/gm, "");
+    for (const match of withoutYamlComments.matchAll(
+      /(?:workflow|model|skill)[\w-]*orphan[\w-]*/gi,
+    )) {
+      findings.push(`${path}:${match[0]}`);
+    }
+    return findings;
+  }
+
+  const sourceFile = ts.createSourceFile(path, source, ts.ScriptTarget.Latest, true);
+  const inTestFile = path.startsWith("tests/");
+  const visit = (node: ts.Node): void => {
+    const token = ts.isIdentifier(node) || ts.isStringLiteralLike(node) ? node.text : null;
+    if (token && ORPHAN_INSPECTION_TOKEN.test(token)) {
+      const isTestTitle =
+        inTestFile &&
+        ts.isStringLiteralLike(node) &&
+        ts.isCallExpression(node.parent) &&
+        node.parent.arguments[0] === node &&
+        ((ts.isIdentifier(node.parent.expression) &&
+          ["it", "test", "describe"].includes(node.parent.expression.text)) ||
+          (ts.isPropertyAccessExpression(node.parent.expression) &&
+            ["it", "test", "describe"].includes(
+              node.parent.expression.expression.getText(sourceFile),
+            )));
+      if (!isTestTitle) findings.push(`${path}:${token}`);
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(sourceFile);
+  return findings.sort();
+}
 
 function trackedOrphanInspectionTokens(repoRoot: string): string[] {
   const trackedPaths = execFileSync("git", ["ls-files", "--", "src", "tests", ".github"], {
@@ -32,46 +68,9 @@ function trackedOrphanInspectionTokens(repoRoot: string): string[] {
     .split(/\r?\n/)
     .filter(Boolean);
 
-  const findings: string[] = [];
-  for (const path of trackedPaths) {
-    const source = readFileSync(join(repoRoot, path), "utf8");
-    if (/\.(?:ts|tsx|js|mjs|cjs)$/.test(path)) {
-      const sourceFile = ts.createSourceFile(path, source, ts.ScriptTarget.Latest, true);
-      const inTestFile = path.startsWith("tests/");
-      const visit = (node: ts.Node): void => {
-        const token = ts.isIdentifier(node) || ts.isStringLiteralLike(node) ? node.text : null;
-        const isTestInspection =
-          !inTestFile ||
-          ts.isStringLiteralLike(node) ||
-          (ts.isIdentifier(node) &&
-            ts.isPropertyAccessExpression(node.parent) &&
-            node.parent.name === node);
-        if (token && ORPHAN_INSPECTION_TOKEN.test(token) && isTestInspection) {
-          const isTestTitle =
-            inTestFile &&
-            ts.isStringLiteralLike(node) &&
-            ts.isCallExpression(node.parent) &&
-            node.parent.arguments[0] === node &&
-            ((ts.isIdentifier(node.parent.expression) &&
-              ["it", "test", "describe"].includes(node.parent.expression.text)) ||
-              (ts.isPropertyAccessExpression(node.parent.expression) &&
-                ["it", "test", "describe"].includes(
-                  node.parent.expression.expression.getText(sourceFile),
-                )));
-          if (!isTestTitle) findings.push(`${path}:${token}`);
-        }
-        ts.forEachChild(node, visit);
-      };
-      visit(sourceFile);
-      continue;
-    }
-
-    const withoutYamlComments = source.replace(/^\s*#.*$/gm, "");
-    for (const match of withoutYamlComments.matchAll(/[\w-]*orphan[\w-]*/gi)) {
-      findings.push(`${path}:${match[0]}`);
-    }
-  }
-  return findings.sort();
+  return trackedPaths.flatMap((path) =>
+    orphanInspectionTokens(path, readFileSync(join(repoRoot, path), "utf8")),
+  );
 }
 
 describe("PLAN-L7-243: mode catalog derivation", () => {
@@ -133,6 +132,14 @@ describe("PLAN-L7-243: mode catalog derivation", () => {
     expect(
       unmappedModeCatalogDocs(["README.md", "forward.md", "new-mode.md", "notes.txt"]),
     ).toEqual(["forward.md", "new-mode.md"]);
+  });
+
+  it("orphan scanner detects function declarations and calls in test files", () => {
+    const checkerName = ["check", "Workflow", "Orphans"].join("");
+    const fixturePath = ["tests", "orphan-scanner-fixture.test.ts"].join("/");
+    const source = [`function ${checkerName}() {}`, `${checkerName}();`].join("\n");
+    const finding = `${fixturePath}:${checkerName}`;
+    expect(orphanInspectionTokens(fixturePath, source)).toEqual([finding, finding]);
   });
 
   it("CANDIDATE-U-PLANRET-009: retires drive DB registration and keeps mode catalog coverage", () => {
