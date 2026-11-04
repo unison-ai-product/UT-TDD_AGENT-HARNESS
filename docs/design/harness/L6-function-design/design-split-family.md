@@ -1,7 +1,7 @@
 ---
 layer: L6
 artifact_type: design_doc
-status: draft
+status: confirmed
 sub_doc: function-spec
 artifact_role: topic_design_split_family
 pair_artifact: docs/test-design/harness/L7-design-split-family-test-design.md
@@ -86,3 +86,15 @@ frontmatter に足すキーは 1 つだけである。`split_of: <入口の path
 - test-design 側の分割は扱わない。rule 3 の dir 集合参照が既に受け付ける。
 - `fmValue` の複数行対応、`split_parts` のような一覧キーは作らない。
 - 採らなかった案: 正規表現を全深さに広げる案 (子が 12 か所の全 gate に一斉に入る)、フォルダ 1 つを 1 文書とする案 (入口を移すと consumer の参照 path が壊れ、`README.md` の除外規則とも衝突する)。
+
+## 8. 単位の契約 (DbC)
+
+本書が足す関数の契約名は次の 2 つである (実装時の名前は §4 / §5 の記述に従う)。
+
+- `designSplitChildLayer(path) => string | null`: 深さ 2 以上の設計 `.md` の層を返す。入口と対象外の path は `null`。
+- `splitChildrenOf(entryPath, docs) => Doc[]`: `split_of` が入口を指す子を返す。
+
+- pre: `path` は repo 相対の設計文書 path である。`split_of` は `fmValue` で読める 1 行の値である。
+- post: 違反は `split-orphan` / `split-target-invalid` / `split-child-doc-type` の reason で `ok: false` になる (§6)。
+- invariant: サブフォルダを持たない repo では出力が現行と同一である。子は pair・status・`doc_type_id` を持たず、`split_of` は入口 1 段だけを指す (§6)。
+- oracle: CANDIDATE-U-SPLITFAM-001〜013 が上記の規則を固定する。
