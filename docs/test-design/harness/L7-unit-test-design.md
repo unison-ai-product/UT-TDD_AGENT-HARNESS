@@ -2270,7 +2270,7 @@ cross-provider比較除去、E9/E11いずれかのgate除去を全てkillする�
 | `U-HOOKEXEC-001` | semantic invocation | executable と argv が別 field で保持され、空白・quote を含む token も join/split されない。 |
 | `U-HOOKEXEC-002` | Claude serializer | `command` は `node`、`args` は `.ut-tdd/bin/ut-tdd.mjs` と hook 固有 subcommand の shell-free token 配列になる。旧 `run-bun.ts` や Bun launcher は含めない。 |
 | `U-HOOKEXEC-003` | source Claude hooks | agent/work guards、session start/post-tool-use/summary、subagent-stop の全 6 hook が exec form である。 |
-| `U-HOOKEXEC-004` | policy preservation | guard は `blockOnFailure:true`、観測/session hook は既存 fail-open policy を保持する。 |
+| `U-HOOKEXEC-004` | policy preservation | guard は `onFailure: "block"`、観測/session hook は `onFailure` を省略した既存 fail-open policy を保持する (#1521)。 |
 | `U-HOOKEXEC-005` | Codex separation | Claude exec serializer の変更が Codex JSON shape を暗黙変更せず、両者は semantic invocation で等価比較される。 |
 | `U-HOOKEXEC-006` | setup / Pack parity | source、built-in、docs template、fresh consumer materialization の executable+argv が一致する。 |
 | `U-HOOKEXEC-007` | doctor fail-close | shell-form command、argv 欠落/追加/並替え、command spoofing、argv の shell operator を個別に検出する。 |
