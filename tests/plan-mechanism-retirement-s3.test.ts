@@ -1,22 +1,16 @@
-import { afterEach, describe, expect, it } from "vitest";
-import {
-  mkdirSync,
-  readFileSync,
-  mkdtempSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { afterEach, describe, expect, it } from "vitest";
+import {
+  type CatalogInput,
+  DocumentDispositionCatalog,
+  sourceItemEdgeId,
+} from "../src/disposition/domain/document-disposition-catalog.ts";
 import {
   normalizeDocumentApplicability,
   validateDocumentDisposition,
 } from "../src/document-disposition/domain/document-disposition.ts";
-import {
-  DocumentDispositionCatalog,
-  sourceItemEdgeId,
-  type CatalogInput,
-} from "../src/disposition/domain/document-disposition-catalog.ts";
 import { evaluateStaticGate } from "../src/gate/static.ts";
 import { parseIssueUrl } from "../src/shared/issue-ref.ts";
 
@@ -47,6 +41,7 @@ function consumerFixture(): string {
   );
   writeFixture(root, "docs/plans/PLAN-L0-01.md", "---\nplan_id: PLAN-L0-01\n---\n");
   writeFixture(root, "docs/plans/PLAN-CONSUMER-01.md", "---\nplan_id: PLAN-CONSUMER-01\n---\n");
+  writeFixture(root, "docs/plans/PLAN-L7-1-x.md", "---\nplan_id: PLAN-L7-1-x\n---\n");
   const template = readFileSync(
     join(process.cwd(), "docs/templates/vmodel/L14-operational-test-design.md"),
     "utf8",
@@ -131,6 +126,16 @@ function evaluateG14(root: string) {
 }
 
 describe("PLAN mechanism retirement S3 Red", () => {
+  it("precondition: consumer G14 fixture passes before candidate mutations", () => {
+    const root = consumerFixture();
+    const result = evaluateG14(root);
+
+    expect(readFileSync(join(root, "docs/plans/PLAN-L7-1-x.md"), "utf8")).toContain(
+      "plan_id: PLAN-L7-1-x",
+    );
+    expect(result.passed).toBe(true);
+  });
+
   it.fails("CANDIDATE-U-PLANRET-001: accepts only the canonical GitHub Issue URL", () => {
     const cases = [
       {
@@ -159,19 +164,26 @@ describe("PLAN mechanism retirement S3 Red", () => {
       items: { routed_to: string }[];
     };
     expect(feedback.items[1]?.routed_to).toBe("https://github.com/example/repo/issues/12");
-    feedback.items[0]!.routed_to = "PLAN-L7-1-x";
+    feedback.items = feedback.items.map((item, index) =>
+      index === 0 ? { ...item, routed_to: "PLAN-L7-1-x" } : item,
+    );
     writeFileSync(feedbackPath, json(feedback), "utf8");
 
     const result = evaluateG14(root);
+    const messages = result.messages.join("\n");
 
     expect(result.passed).toBe(false);
-    expect(result.messages.join("\n")).toContain("PLAN-L7-1-x");
+    expect(messages).toContain("PLAN-L7-1-x");
+    expect(messages).not.toContain("does not exist");
   });
 
   it.fails("CANDIDATE-U-PLANRET-004(a): accepts a design-root L0 doc_type_id citation", () => {
     const root = consumerFixture();
     const slot = join(root, "docs/test-design/L14-operational-test-design.md");
-    const content = readFileSync(slot, "utf8").replace("BR-01 / PLAN-L0-01", "BR-01 / DOC-L0-CHARTER");
+    const content = readFileSync(slot, "utf8").replace(
+      "BR-01 / PLAN-L0-01",
+      "BR-01 / DOC-L0-CHARTER",
+    );
     writeFileSync(slot, content, "utf8");
 
     const result = evaluateG14(root);
@@ -182,8 +194,6 @@ describe("PLAN mechanism retirement S3 Red", () => {
   it.fails("CANDIDATE-U-PLANRET-004(b): does not resolve an L0 citation from docs/plans", () => {
     const root = consumerFixture();
     rmSync(join(root, "docs/plans/PLAN-L0-01.md"));
-    const slot = join(root, "docs/test-design/L14-operational-test-design.md");
-
     const result = evaluateG14(root);
 
     expect(result.messages.join("\n")).toContain("trace target missing PLAN-L0-01");
@@ -383,5 +393,4 @@ describe("PLAN mechanism retirement S3 Red", () => {
       );
     }
   });
-
 });

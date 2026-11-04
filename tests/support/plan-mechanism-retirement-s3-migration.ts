@@ -1,9 +1,9 @@
 import { execFileSync } from "node:child_process";
-import { mkdirSync, readFileSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { GitAuthoringProvenance } from "../../src/disposition/adapters/git-authoring-provenance.ts";
-import { openHarnessDb, type HarnessDb } from "../../src/state-db/index.ts";
+import { type HarnessDb, openHarnessDb } from "../../src/state-db/index.ts";
 
 export const BASE_COMMIT = "a63b226437297ee0b62ab8bdc0e2c778bbd6c341";
 export const ISSUE_URL = "https://github.com/example/repo/issues/12";
@@ -75,7 +75,10 @@ export function createLegacyDatabase() {
   return { root, db };
 }
 
-function markdownTable(headers: readonly string[], rows: readonly (readonly string[])[] = []): string {
+function markdownTable(
+  headers: readonly string[],
+  rows: readonly (readonly string[])[] = [],
+): string {
   const line = (cells: readonly string[]) => `| ${cells.join(" | ")} |`;
   return [line(headers), line(headers.map(() => "---")), ...rows.map(line)].join("\n");
 }
@@ -91,14 +94,17 @@ export function createIssueOnlyCatalogFixture(root: string): void {
   writeFixture(
     root,
     CATALOG_PATHS[0],
-    markdownTable(["field", "value"], [
-      ["audited_on", "2026-11-04"],
-      ["sha256", digest],
-      ["numbered_source_documents", "1"],
-      ["semantic_catalog_categories", "1"],
-      ["semantic_catalog_items", "1"],
-      ["source_target_edges", "1"],
-    ]),
+    markdownTable(
+      ["field", "value"],
+      [
+        ["audited_on", "2026-11-04"],
+        ["sha256", digest],
+        ["numbered_source_documents", "1"],
+        ["semantic_catalog_categories", "1"],
+        ["semantic_catalog_items", "1"],
+        ["source_target_edges", "1"],
+      ],
+    ),
   );
   writeFixture(
     root,
@@ -115,7 +121,16 @@ export function createIssueOnlyCatalogFixture(root: string): void {
       markdownTable(["category_id", "category_name"], [["CAT-PLANRET", "fixture"]]),
       markdownTable(
         ["item_id", "item_name", "category_id", "source_status", "source_ref", "source_file"],
-        [["ITEM-PLANRET-019", "fixture item", "CAT-PLANRET", "adopted", "ZIP-DOC-001", "fixture.md"]],
+        [
+          [
+            "ITEM-PLANRET-019",
+            "fixture item",
+            "CAT-PLANRET",
+            "adopted",
+            "ZIP-DOC-001",
+            "fixture.md",
+          ],
+        ],
       ),
       markdownTable(["meta_source_ref", "allowed_source_status", "source_file_policy", "reason"]),
     ].join("\n\n"),
@@ -145,31 +160,36 @@ export function createIssueOnlyCatalogFixture(root: string): void {
         "判断理由",
         "issue",
       ],
-      [[
-        "ITEM-TARGET-019",
-        "ITEM-PLANRET-019",
-        "fixture item",
-        "CAT-PLANRET",
-        "ZIP-DOC-001",
-        digest,
-        "defer",
-        "target_slot",
-        "DOC-L0-CHARTER",
-        "Issue-backed defer fixture",
-        ISSUE_URL,
-      ]],
+      [
+        [
+          "ITEM-TARGET-019",
+          "ITEM-PLANRET-019",
+          "fixture item",
+          "CAT-PLANRET",
+          "ZIP-DOC-001",
+          digest,
+          "defer",
+          "target_slot",
+          "DOC-L0-CHARTER",
+          "Issue-backed defer fixture",
+          ISSUE_URL,
+        ],
+      ],
     ),
   );
   writeFixture(
     root,
     CATALOG_PATHS[5],
     [
-      markdownTable(["field", "value"], [
-        ["size_profile_count", "0"],
-        ["product_profile_count", "0"],
-        ["profile_count", "0"],
-        ["decision_count", "0"],
-      ]),
+      markdownTable(
+        ["field", "value"],
+        [
+          ["size_profile_count", "0"],
+          ["product_profile_count", "0"],
+          ["profile_count", "0"],
+          ["decision_count", "0"],
+        ],
+      ),
       markdownTable([
         "profile_id",
         "profile_axis",
@@ -208,20 +228,22 @@ export function createIssueOnlyCatalogFixture(root: string): void {
         "profile_controlled",
         "skip_reason_required",
       ],
-      [[
-        "DOC-L0-CHARTER",
-        "L0",
-        "charter",
-        "planning",
-        "core",
-        "in_scope",
-        "required",
-        "vmodel-core",
-        "docs/design/L0-planning/charter.md",
-        "spec_defs",
-        "false",
-        "false",
-      ]],
+      [
+        [
+          "DOC-L0-CHARTER",
+          "L0",
+          "charter",
+          "planning",
+          "core",
+          "in_scope",
+          "required",
+          "vmodel-core",
+          "docs/design/L0-planning/charter.md",
+          "spec_defs",
+          "false",
+          "false",
+        ],
+      ],
     ),
   );
   execFileSync("git", ["init", "--quiet"], { cwd: root, stdio: "ignore" });
@@ -299,16 +321,16 @@ export function withDbExec(
 
 export function edgeTableSql(db: HarnessDb): string {
   return String(
-    db
-      .prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = ?")
-      .get(EDGE_TABLE)?.sql,
+    db.prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = ?").get(EDGE_TABLE)
+      ?.sql,
   );
 }
 
 export function isTargetTableDrop(sql: string): boolean {
   const target = EDGE_TABLE.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const identifier = "(?:" + target + "|\\\"" + target + "\\\"|`" + target + "`|\\[" + target + "\\])";
-  const schema = "(?:(?:main|\\\"main\\\"|`main`|\\[main\\])\\s*\\.\\s*)?";
+  const identifier =
+    "(?:" + target + '|\\"' + target + '\\"|`' + target + "`|\\[" + target + "\\])";
+  const schema = '(?:(?:main|\\"main\\"|`main`|\\[main\\])\\s*\\.\\s*)?';
   return new RegExp(
     `^DROP\\s+TABLE(?:\\s+IF\\s+EXISTS)?\\s+${schema}${identifier}\\s*;?$`,
     "i",

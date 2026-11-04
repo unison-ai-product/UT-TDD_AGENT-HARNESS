@@ -7,17 +7,17 @@ import { rebuildHarnessDb } from "../src/state-db/projection-writer.ts";
 import {
   BASE_COMMIT,
   CATALOG_PATHS,
-  DROP_SENTINEL,
-  EDGE_TABLE,
-  ISSUE_LEDGER_PATH,
-  ISSUE_URL,
   cleanupPlanretS3MigrationFixtures,
   createIssueOnlyCatalogFixture,
   createLegacyDatabase,
   createTrackedIssueFixture,
+  DROP_SENTINEL,
   databaseState,
+  EDGE_TABLE,
   edgeTableSql,
   frozenSchema,
+  ISSUE_LEDGER_PATH,
+  ISSUE_URL,
   isTargetTableDrop,
   nonTargetState,
   tableRows,
@@ -110,15 +110,21 @@ describe("CANDIDATE-U-PLANRET-019 frozen v29 migration", () => {
       } catch (error) {
         thrown = error;
       }
-      const columns = db.prepare(`PRAGMA table_info(${EDGE_TABLE})`).all().map((row) => row.name);
+      const columns = db
+        .prepare(`PRAGMA table_info(${EDGE_TABLE})`)
+        .all()
+        .map((row) => row.name);
       const hasIssue = columns.includes("issue");
       const projected = hasIssue
         ? db
-            .prepare(`SELECT edge_id, item_id, target_status, issue FROM ${EDGE_TABLE} ORDER BY edge_id`)
+            .prepare(
+              `SELECT edge_id, item_id, target_status, issue FROM ${EDGE_TABLE} ORDER BY edge_id`,
+            )
             .all()
         : [];
       const observation = {
-        thrown: thrown === undefined ? null : thrown instanceof Error ? thrown.message : String(thrown),
+        thrown:
+          thrown === undefined ? null : thrown instanceof Error ? thrown.message : String(thrown),
         hasIssue,
         hasPlanId: columns.includes("plan_id"),
         projected,
@@ -127,12 +133,14 @@ describe("CANDIDATE-U-PLANRET-019 frozen v29 migration", () => {
         thrown: null,
         hasIssue: true,
         hasPlanId: false,
-        projected: [{
-          edge_id: "ITEM-TARGET-019",
-          item_id: "ITEM-PLANRET-019",
-          target_status: "defer",
-          issue: ISSUE_URL,
-        }],
+        projected: [
+          {
+            edge_id: "ITEM-TARGET-019",
+            item_id: "ITEM-PLANRET-019",
+            target_status: "defer",
+            issue: ISSUE_URL,
+          },
+        ],
       });
     } finally {
       db.close();
@@ -170,16 +178,18 @@ describe("CANDIDATE-U-PLANRET-019 frozen v29 migration", () => {
       db.exec("BEGIN");
       try {
         wrapped.exec("CREATE TABLE exec_wrapper_probe (value TEXT)");
-        expect(db.prepare("SELECT name FROM sqlite_master WHERE name = ?").get("exec_wrapper_probe"))
-          .toEqual({ name: "exec_wrapper_probe" });
+        expect(
+          db.prepare("SELECT name FROM sqlite_master WHERE name = ?").get("exec_wrapper_probe"),
+        ).toEqual({ name: "exec_wrapper_probe" });
         expect(() => wrapped.exec(`DROP TABLE IF EXISTS "${EDGE_TABLE}"`)).toThrow(DROP_SENTINEL);
         expect(dropSentinelFired).toBe(true);
       } finally {
         db.exec("ROLLBACK");
       }
       expect(edgeTableSql(db)).toContain(EDGE_TABLE);
-      expect(db.prepare("SELECT name FROM sqlite_master WHERE name = ?").get("exec_wrapper_probe"))
-        .toBeUndefined();
+      expect(
+        db.prepare("SELECT name FROM sqlite_master WHERE name = ?").get("exec_wrapper_probe"),
+      ).toBeUndefined();
     } finally {
       db.close();
     }
@@ -205,7 +215,8 @@ describe("CANDIDATE-U-PLANRET-019 frozen v29 migration", () => {
       }
       expect({
         dropSentinelFired,
-        thrown: thrown === undefined ? null : thrown instanceof Error ? thrown.message : String(thrown),
+        thrown:
+          thrown === undefined ? null : thrown instanceof Error ? thrown.message : String(thrown),
         sameState: JSON.stringify(databaseState(db)) === JSON.stringify(before),
       }).toEqual({ dropSentinelFired: true, thrown: DROP_SENTINEL, sameState: true });
     } finally {
@@ -224,9 +235,11 @@ describe("CANDIDATE-U-PLANRET-019 frozen v29 migration", () => {
         toVersion: result.toVersion,
         oldRowsRemoved: tableRows(db, EDGE_TABLE).length === 0,
         unrelatedObjectsUnchanged:
-          JSON.stringify(nonTargetState(after).objects) === JSON.stringify(nonTargetState(before).objects),
+          JSON.stringify(nonTargetState(after).objects) ===
+          JSON.stringify(nonTargetState(before).objects),
         unrelatedRowsUnchanged:
-          JSON.stringify(nonTargetState(after).rows) === JSON.stringify(nonTargetState(before).rows),
+          JSON.stringify(nonTargetState(after).rows) ===
+          JSON.stringify(nonTargetState(before).rows),
       };
       expect(observation).toEqual({
         applied: true,
@@ -319,7 +332,8 @@ describe("CANDIDATE-U-PLANRET-019 frozen v29 migration", () => {
         rebuildStarted,
         schemaVersionRaised,
         sentinelFired,
-        thrown: thrown === undefined ? null : thrown instanceof Error ? thrown.message : String(thrown),
+        thrown:
+          thrown === undefined ? null : thrown instanceof Error ? thrown.message : String(thrown),
         sameState: JSON.stringify(databaseState(db)) === JSON.stringify(before),
       }).toEqual({
         rebuildStarted: true,

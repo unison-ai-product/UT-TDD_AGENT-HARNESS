@@ -106,11 +106,46 @@ function updateDefer(root: string, defer: Record<string, string>): void {
   writeFileSync(path, json(manifest), "utf8");
 }
 
+function makeSmokeMandatory(root: string): void {
+  const path = join(root, ".ut-tdd/evidence/g13-post-deploy/ok.json");
+  const manifest = JSON.parse(readFileSync(path, "utf8")) as {
+    mandatory_smoke_ids: string[];
+    deferred_smoke_ids: string[];
+    coverage: {
+      smoke_id: string;
+      status: string;
+      evidence_paths: string[];
+      command_ids: string[];
+    }[];
+    defer: Record<string, string>[];
+  };
+  manifest.mandatory_smoke_ids = ["SMOKE-PLANRET-01"];
+  manifest.deferred_smoke_ids = [];
+  manifest.coverage = [
+    {
+      smoke_id: "SMOKE-PLANRET-01",
+      status: "passed",
+      evidence_paths: ["tests/fixtures/planret-g13/smoke.txt"],
+      command_ids: ["cmd-planret-g13"],
+    },
+  ];
+  manifest.defer = [];
+  writeFileSync(path, json(manifest), "utf8");
+}
+
 afterEach(() => {
   for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
 });
 
 describe("CANDIDATE-U-PLANRET-002 right-arm G13 evidence", () => {
+  it("precondition: G13 fixture passes with a completed mandatory smoke case", () => {
+    const root = fixture();
+    makeSmokeMandatory(root);
+    const result = evaluateStaticGate({ gate: "G13", repoRoot: root });
+
+    expect(result.passed).toBe(true);
+  });
+
   it.fails("accepts a defer reason paired with an Issue URL", () => {
     const root = fixture();
     const result = evaluateStaticGate({ gate: "G13", repoRoot: root });
