@@ -45,13 +45,18 @@ doc-split は `docs/design/harness` と `docs/test-design/harness` だけを走�
 
 ```
 <path>:doc-split-required:<reason> lines=<n>/<limit> responsibilities=<m>/<limit>
-  責務 <名前1>, <名前2> を、入口 <path> を残したまま <層ディレクトリ>/<topic>/<名前>.md へ分ける。
-  子の frontmatter に split_of: <path> を 1 行書く (入口が pair と status を持つ。design-split-family.md, #1530)
+  責務 <名前1>, <名前2> を、入口 <入口> を残したまま <子の dir>/<名前>.md へ分ける。
+  子の frontmatter に split_of: <入口> を 1 行書く (入口が pair と status を持つ。design-split-family.md, #1530)
 ```
+
+- `<入口>` と `<子の dir>` は、超過した文書が入口か子かで決める。`split_of` は `analyzeDocSplit` に渡された本文の frontmatter から 1 行で読む (`fmValue`、`src/lint/shared.ts`)。repo は読まない。
+  - 超過した文書が `split_of` を持たない (入口、または未分割の層ディレクトリ直下の文書): `<入口>` はその文書の path、`<子の dir>` はその path から `.md` を除いた dir である。
+  - 超過した文書が `split_of` を持つ (子): `<入口>` は子の `split_of` の値 (元の入口) のまま、`<子の dir>` は子が置かれた dir である。超過した子を参照先にせず、同じ入口を指す兄弟の子へ分ける。`design-split-family.md` §3 の規則 2 は層ディレクトリ直下の入口だけを `split_of` の参照先として許し、子から子を指す鎖を `split-target-invalid` にするからである。子の `split_of` の値が正しいかは #1530 の検査が見る。本書は値をそのまま使う。
+  - `layer-doc` は責務の名前を持たない (`doc-split-gate.md` §3) ので、2 行目の先頭は `責務ごとに、入口 <入口> を残したまま ...` とする。
 
 - 分ける責務の名前の選び方 (出現順の後ろから `max(1, 超過個数)` 個) は `doc-split-gate.md` §6 のまま。
 - consumer の test-design 側の文書には、「責務ごとのファイルに分け、`pair_artifact` を dir の集合参照にする」と書く。`design-split-family.md` §4 のとおり、rule 3 は dir 集合参照を既に受け付けるので、子の `split_of` は求めない。
-- 子 (`split_of` を持つ文書) は個別に測る。走査は再帰的で (`doc-split-gate.md` §2)、`measureDoc` は 1 文書の本文だけを測る。入口の行数・責務の数に子を足さない。子が上限を超えれば、子が `new-doc-over-limit` になる。
+- 子 (`split_of` を持つ文書) は個別に測る。走査は再帰的で (`doc-split-gate.md` §2)、`measureDoc` は 1 文書の本文だけを測る。入口の行数・責務の数に子を足さない。子が上限を超えれば、子が `new-doc-over-limit` になり、2 行目は上の「子」の場合の文面になる。
 - 分割後の文書が pair と trace の束縛から外れないことは、#1530 の実装が担う。本書は是正の文面でその形を指すだけで、検査を足さない。
 
 ## 4. baseline が無い consumer (決定 5)
@@ -61,7 +66,7 @@ doc-split は `docs/design/harness` と `docs/test-design/harness` だけを走�
 - 全文書は baseline に無い文書として、`DOC_SPLIT_LIMITS` の class の上限で直接判定する (`new-doc-over-limit`)。baseline のファイルは不要で、作らせない。
 - baseline のファイルが作業木に無いときは、git の入力 (`previousBaseline`、`mergeBaseMeasures`) の読み取り失敗を `doc-split-baseline-base-unreadable` にしない。`origin/main` や merge-base を持たない consumer の repo で、検査が常に落ちるのを防ぐためである。`previousBaseline = null`、`mergeBaseMeasures = null` を渡す。baseline が空なので、baseline 由来の finding (`doc-split-baseline-grown`・`doc-split-initial-baseline-*`・`doc-split-stale-baseline`) は出ない。
 - `renames` (`doc-split-class-changed`) は、merge-base を解決できるときだけ従来どおり読む。解決できないときは空で、finding にしない。
-- baseline のファイルが作業木にあるとき (本体、または consumer が自分で置いたとき) は、`doc-split-gate.md` §5 の規則がそのまま働く。読めない・解釈できないときの `doc-split-input-unreadable` も変えない。
+- baseline のファイルが作業木にあるとき (本体、または consumer が自分で置いたとき) は、`doc-split-gate.md` §5 の規則がそのまま働く。`origin/main` が無い、または merge-base を解決できないときは、従来どおり `doc-split-baseline-base-unreadable` で fail-close する (git の読み取り失敗を許すのは、baseline のファイルが無いときだけである)。読めない・解釈できないときの `doc-split-input-unreadable` も変えない。
 - 走査対象が 1 本も無いときの `doc-split-input-unreadable` (`no-sources`) も従来どおり。
 
 ## 5. 閾値は上書きできない (決定 2)
