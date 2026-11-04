@@ -1,7 +1,7 @@
 ---
 layer: L6
 artifact_type: design_doc
-status: draft
+status: confirmed
 sub_doc: function-spec
 artifact_role: topic_consumer_worktree_runtime
 pair_artifact: docs/test-design/harness/L7-consumer-worktree-runtime-test-design.md
@@ -69,3 +69,15 @@ consumer は runtime と launcher (`.ut-tdd/bin/ut-tdd.mjs`) を commit しな�
 - 新しい linked worktree で `setup --worktree` を 1 回流せば、guard hook が動く (候補 001 / 002)。
 - runtime の無い worktree で guard が止まったとき、実行すべきコマンドが block 理由として表示される (候補 007 / 008 / 009)。
 - 実際の Claude Code で、runtime の無い worktree の Edit が案内つきで止まることを 1 回確かめた記録を含める。この確認は自動テストの oracle ではない。
+
+## 8. 単位の契約 (DbC)
+
+本書が定める契約上の関数は次の 2 つである (名前は契約上のもので、実装時に既存の `setup` と guard の構造へ合わせる)。
+
+- `setupWorktree(worktreePath) => WorktreeEntryResult`: `setup --worktree <path>` の本体 (§3)。成功は導入した版と digest、失敗は `worktree_entry_not_linked` / `worktree_entry_main_not_activated` / `worktree_entry_cache_missing` / `worktree_entry_pin_mismatch` の typed error。
+- `renderRuntimeAbsentGuidance(mainWorktree, worktreePath) => string`: runtime が無いときに guard が stderr へ出す案内文 (実行すべきコマンド 1 つ、§4)。
+
+- pre: `worktreePath` は linked worktree の絶対パスである。main の active pointer が有効である (§3 手順 1、2)。
+- post: 成功時は launcher と runtime が揃い、入れた版は main の版と一致する。案内の経路は常に exit 2 で終わる (§4、§5)。
+- invariant: 失敗時は worktree・main・キャッシュのどれにも何も残さない。版を選べる入力は無い。`MODULE_NOT_FOUND` のスタックを block 理由にしない (§5)。
+- oracle: CANDIDATE-U-CWTRT-001〜009 が上記を固定する。
