@@ -122,12 +122,33 @@ describe("CANDIDATE-U-PLANRET-019 frozen v29 migration", () => {
             )
             .all()
         : [];
+      let invalidDeferRejectedByCheck = false;
+      db.prepare(`DELETE FROM ${EDGE_TABLE} WHERE edge_id = ?`).run("ITEM-TARGET-019");
+      try {
+        db.prepare(
+          `INSERT INTO ${EDGE_TABLE}
+            (edge_id, item_id, target_status, target_kind, target_ref, issue, reason, source_digest)
+            VALUES (?, ?, ?, ?, ?, NULL, ?, ?)`,
+        ).run(
+          "INVALID-DEFER-NULL-ISSUE",
+          "ITEM-PLANRET-019",
+          "defer",
+          "target_slot",
+          "DOC-L0-CHARTER",
+          "invalid defer without issue",
+          "digest-invalid-defer",
+        );
+      } catch (error) {
+        invalidDeferRejectedByCheck =
+          error instanceof Error && /CHECK constraint failed/.test(error.message);
+      }
       const observation = {
         thrown:
           thrown === undefined ? null : thrown instanceof Error ? thrown.message : String(thrown),
         hasIssue,
         hasPlanId: columns.includes("plan_id"),
         projected,
+        invalidDeferRejectedByCheck,
       };
       expect(observation).toEqual({
         thrown: null,
@@ -141,6 +162,7 @@ describe("CANDIDATE-U-PLANRET-019 frozen v29 migration", () => {
             issue: ISSUE_URL,
           },
         ],
+        invalidDeferRejectedByCheck: true,
       });
     } finally {
       db.close();
@@ -148,17 +170,38 @@ describe("CANDIDATE-U-PLANRET-019 frozen v29 migration", () => {
   });
 
   it.fails("(3): re-migrate is unapplied and leaves complete state unchanged", () => {
-    const { db } = createLegacyDatabase();
+    const { root, db } = createLegacyDatabase();
     try {
       const first = migrate(db);
-      const afterFirst = databaseState(db);
+      createIssueOnlyCatalogFixture(root);
+      let rebuildThrown: unknown;
+      try {
+        rebuildHarnessDb({ repoRoot: root, db, skipTokenTelemetry: true });
+      } catch (error) {
+        rebuildThrown = error;
+      }
+      const afterRebuild = databaseState(db);
+      const projectedRowCount = tableRows(db, EDGE_TABLE).length;
       const second = migrate(db);
       const afterSecond = databaseState(db);
       expect({
         firstApplied: first.applied,
+        rebuildThrown:
+          rebuildThrown === undefined
+            ? null
+            : rebuildThrown instanceof Error
+              ? rebuildThrown.message
+              : String(rebuildThrown),
+        projectedRowCount,
         secondApplied: second.applied,
-        sameState: JSON.stringify(afterSecond) === JSON.stringify(afterFirst),
-      }).toEqual({ firstApplied: true, secondApplied: false, sameState: true });
+        sameState: JSON.stringify(afterSecond) === JSON.stringify(afterRebuild),
+      }).toEqual({
+        firstApplied: true,
+        rebuildThrown: null,
+        projectedRowCount: 1,
+        secondApplied: false,
+        sameState: true,
+      });
     } finally {
       db.close();
     }

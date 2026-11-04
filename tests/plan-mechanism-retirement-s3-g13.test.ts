@@ -24,17 +24,48 @@ function fixture(): string {
     "docs/test-design/harness/L12-acceptance-test-design.md",
     "---\ndoc_type_id: DOC-L12-ACCEPTANCE\nlayer: L12\nstatus: confirmed\n---\n\n| AT-ID | 対応 AC | 受入条件 | 機械検証 |\n| --- | --- | --- | --- |\n| **AT-FR-01-01** | AC-FR-01-01 | fixture acceptance case | static gate fixture |\n",
   );
-  const template = readFileSync(
-    join(process.cwd(), "docs/templates/vmodel/L13-production-observation.md"),
-    "utf8",
-  );
-  const design = template
-    .replace(/^status: .*$/m, "status: confirmed")
-    .replace(/^plan: .*$/m, "plan: docs/plans/PLAN-CONSUMER-01.md")
-    .replace(
-      "### harness 追補: G13 検証ケース\n\n| ケースID | 観測内容 | 合否基準 | トレース元 |\n| --- | --- | --- | --- |\n| <記入> | <記入> | <記入> | <記入> |",
-      "### harness 追補: G13 検証ケース\n\n| ケースID | 観測内容 | 合否基準 | トレース元 |\n| --- | --- | --- | --- |\n| SMOKE-PLANRET-01 | deploy smoke | exit 0 | AT-FR-01-01 |",
-    );
+  const design = [
+    "---",
+    "doc_type_id: DOC-L13-PRODUCTION-OBSERVATION",
+    "layer: L13",
+    "status: confirmed",
+    "---",
+    "",
+    "# DOC-L13-PRODUCTION-OBSERVATION: 運用設計書 (監視・後検証節) / ログ・トレース設計書",
+    "#### 第1章 運用方針",
+    "#### 第2章 監視設計",
+    "##### 2-1 監視指標(SLI)とアラート",
+    "#### 第3章 SLO/SLA・エラーバジェット",
+    "##### 3-1 SLI/SLO",
+    "##### 3-2 エラーバジェット",
+    "##### 3-3 エラーバジェットポリシー",
+    "##### 3-4 SLA(対顧客)",
+    "#### 第4章 バックアップ/リストア",
+    "##### 4-1 方式",
+    "##### 4-2 リストア運用",
+    "#### 第5章 障害対応・ランブック",
+    "##### 5-1 重大度とエスカレーション",
+    "##### 5-2 ランブック(抜粋)",
+    "#### 第6章 リリース/ロールバック",
+    "##### 6-1 リリース方式",
+    "##### 6-2 ロールバック",
+    "#### 第7章 キャパシティ/コスト",
+    "#### 第1章 ログ方針",
+    "#### 第2章 ログ種別一覧",
+    "#### 第3章 共通ログ項目",
+    "#### 第4章 ログレベル方針",
+    "#### 第5章 構造化フォーマット",
+    "#### 第6章 分散トレース設計",
+    "#### 第7章 保管・マスキング",
+    "#### 第8章 監視連携",
+    "",
+    "### harness 追補: G13 検証ケース",
+    "",
+    "| ケースID | 観測内容 | 合否基準 | トレース元 |",
+    "| --- | --- | --- | --- |",
+    "| SMOKE-PLANRET-01 | deploy smoke | exit 0 | AT-FR-01-01 |",
+    "",
+  ].join("\n");
   write(root, "docs/process/evidence/g13-post-deploy-verification-design.md", design);
   write(root, "tests/fixtures/planret-g13/smoke.txt", "passed\n");
   write(root, "tests/fixtures/planret-g13/command.txt", "passed\n");

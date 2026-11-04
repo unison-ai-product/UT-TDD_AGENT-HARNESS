@@ -1,16 +1,16 @@
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   type CatalogInput,
   DocumentDispositionCatalog,
-  sourceItemEdgeId,
 } from "../src/disposition/domain/document-disposition-catalog.ts";
 import {
   normalizeDocumentApplicability,
   validateDocumentDisposition,
 } from "../src/document-disposition/domain/document-disposition.ts";
+import { documentDeltaDecisionDigest } from "../src/document-disposition/domain/replay-document-deltas.ts";
 import { evaluateStaticGate } from "../src/gate/static.ts";
 import { parseIssueUrl } from "../src/shared/issue-ref.ts";
 
@@ -39,20 +39,48 @@ function consumerFixture(): string {
     "docs/design/L0-planning/charter.md",
     "---\nlayer: L0\ndoc_type_id: DOC-L0-CHARTER\n---\n\nConsumer charter.\n",
   );
-  writeFixture(root, "docs/plans/PLAN-L0-01.md", "---\nplan_id: PLAN-L0-01\n---\n");
-  writeFixture(root, "docs/plans/PLAN-CONSUMER-01.md", "---\nplan_id: PLAN-CONSUMER-01\n---\n");
-  writeFixture(root, "docs/plans/PLAN-L7-1-x.md", "---\nplan_id: PLAN-L7-1-x\n---\n");
-  const template = readFileSync(
-    join(process.cwd(), "docs/templates/vmodel/L14-operational-test-design.md"),
-    "utf8",
-  );
-  const content = template
-    .replace("status: draft", "status: confirmed")
-    .replace("plan: docs/plans/PLAN-<id>.md", "plan: docs/plans/PLAN-CONSUMER-01.md")
-    .replace(
-      "| <記入> | <記入> | <記入> | <記入> | <記入> |",
-      "| OT-PLANRET-01 | OT | 日常運用の手順 | 失敗 0 | FR-L1-01 |\n| OT-PLANRET-02 | VALUE | 導入価値の検証 | KPI 達成 | BR-01 / PLAN-L0-01 |",
-    );
+  const content = [
+    "---",
+    "doc_type_id: DOC-L14-OPERATIONAL-TEST",
+    "layer: L14",
+    "status: confirmed",
+    "---",
+    "",
+    "# DOC-L14-OPERATIONAL-TEST: 運用設計書 / 保守・メンテナンス設計書",
+    "#### 第1章 運用方針",
+    "#### 第2章 監視設計",
+    "##### 2-1 監視指標(SLI)とアラート",
+    "#### 第3章 SLO/SLA・エラーバジェット",
+    "##### 3-1 SLI/SLO",
+    "##### 3-2 エラーバジェット",
+    "##### 3-3 エラーバジェットポリシー",
+    "##### 3-4 SLA(対顧客)",
+    "#### 第4章 バックアップ/リストア",
+    "##### 4-1 方式",
+    "##### 4-2 リストア運用",
+    "#### 第5章 障害対応・ランブック",
+    "##### 5-1 重大度とエスカレーション",
+    "##### 5-2 ランブック(抜粋)",
+    "#### 第6章 リリース/ロールバック",
+    "##### 6-1 リリース方式",
+    "##### 6-2 ロールバック",
+    "#### 第7章 キャパシティ/コスト",
+    "#### 第1章 保守方針・区分",
+    "#### 第2章 パッチ・脆弱性/依存管理",
+    "#### 第3章 定期メンテナンス",
+    "#### 第4章 データライフサイクル",
+    "#### 第5章 バージョン/EOL・サンセット",
+    "#### 第6章 技術的負債管理",
+    "#### 第7章 サポート・SLA保守",
+    "#### 第8章 運用引継ぎ(ハンドオーバー)",
+    "",
+    "### harness 追補: G14 検証ケース",
+    "",
+    "| ケースID | family | 検証内容 | 合否基準 | トレース元 |",
+    "|---|---|---|---|---|",
+    "| OT-PLANRET-01 | OT | 日常運用の手順 | 失敗 0 | FR-L1-01 |",
+    "",
+  ].join("\n");
   writeFixture(root, "docs/test-design/L14-operational-test-design.md", content);
   writeFixture(root, "tests/fixtures/planret/operational.txt", "passed\n");
   writeFixture(root, "tests/fixtures/planret/value.txt", "passed\n");
@@ -62,7 +90,7 @@ function consumerFixture(): string {
     ".ut-tdd/evidence/g14-operational/artifacts/feedback.json",
     json({
       items: [
-        { summary: "operator feedback", routed_to: "PLAN-CONSUMER-01" },
+        { summary: "operator feedback", routed_to: "https://github.com/example/repo/issues/13" },
         { summary: "tool feedback", routed_to: "https://github.com/example/repo/issues/12" },
       ],
     }),
@@ -125,14 +153,21 @@ function evaluateG14(root: string) {
   return evaluateStaticGate({ gate: "G14", repoRoot: root });
 }
 
+function makeValueCase(root: string, citations: string): void {
+  const slot = join(root, "docs/test-design/L14-operational-test-design.md");
+  const content = readFileSync(slot, "utf8").replace(
+    "| OT-PLANRET-01 | OT | 日常運用の手順 | 失敗 0 | FR-L1-01 |",
+    `| OT-PLANRET-01 | VALUE | 導入価値の検証 | KPI 達成 | ${citations} |`,
+  );
+  writeFileSync(slot, content, "utf8");
+}
+
 describe("PLAN mechanism retirement S3 Red", () => {
   it("precondition: consumer G14 fixture passes before candidate mutations", () => {
     const root = consumerFixture();
     const result = evaluateG14(root);
 
-    expect(readFileSync(join(root, "docs/plans/PLAN-L7-1-x.md"), "utf8")).toContain(
-      "plan_id: PLAN-L7-1-x",
-    );
+    expect(existsSync(join(root, "docs/plans"))).toBe(false);
     expect(result.passed, result.messages.join("\n")).toBe(true);
   });
 
@@ -179,12 +214,7 @@ describe("PLAN mechanism retirement S3 Red", () => {
 
   it.fails("CANDIDATE-U-PLANRET-004(a): accepts a design-root L0 doc_type_id citation", () => {
     const root = consumerFixture();
-    const slot = join(root, "docs/test-design/L14-operational-test-design.md");
-    const content = readFileSync(slot, "utf8").replace(
-      "BR-01 / PLAN-L0-01",
-      "BR-01 / DOC-L0-CHARTER",
-    );
-    writeFileSync(slot, content, "utf8");
+    makeValueCase(root, "BR-01 / DOC-L0-CHARTER");
 
     const result = evaluateG14(root);
 
@@ -193,6 +223,8 @@ describe("PLAN mechanism retirement S3 Red", () => {
 
   it.fails("CANDIDATE-U-PLANRET-004(b): a resolvable PLAN-L0 citation is not an L0 citation", () => {
     const root = consumerFixture();
+    makeValueCase(root, "BR-01 / PLAN-L0-01");
+    writeFixture(root, "docs/plans/PLAN-L0-01.md", "---\nplan_id: PLAN-L0-01\n---\n");
     const result = evaluateG14(root);
 
     expect(result.messages.join("\n")).toContain("trace target missing PLAN-L0-01");
@@ -201,9 +233,7 @@ describe("PLAN mechanism retirement S3 Red", () => {
 
   it.fails("CANDIDATE-U-PLANRET-004(c): VALUE error asks for a doc_type_id citation", () => {
     const root = consumerFixture();
-    const slot = join(root, "docs/test-design/L14-operational-test-design.md");
-    const content = readFileSync(slot, "utf8").replace("BR-01 / PLAN-L0-01", "BR-01");
-    writeFileSync(slot, content, "utf8");
+    makeValueCase(root, "BR-01");
 
     const result = evaluateG14(root);
 
@@ -266,87 +296,36 @@ describe("PLAN mechanism retirement S3 Red", () => {
     expect(result).toEqual({ ok: false, missingFields: ["targets_or_issues"] });
   });
 
-  it("CANDIDATE-U-PLANRET-005(d): preserves the digest of a recorded plan_ids row", () => {
-    const sourceId = "ZIP-DOC-001";
-    const itemId = "ITEM-PLANRET-005";
-    const rowDigest = "a".repeat(64);
-    const result = DocumentDispositionCatalog.create({
-      manifestIdentity: { auditedOn: "2026-11-04", zipSha256: "b".repeat(64) },
-      declaredCounts: {
-        sources: 1,
-        items: 1,
-        categories: 1,
-        metaSourceMappings: 0,
-        sourceItemEdges: 1,
-        sourceTargetEdges: 1,
-        itemTargetEdges: 1,
+  it("CANDIDATE-U-PLANRET-005(d): recomputes the digest of a recorded plan_ids decision", () => {
+    const recordedDigest = documentDeltaDecisionDigest({
+      deltaId: "delta:planret-005-d",
+      ledgerId: "ledger:planret-005",
+      fromSnapshotDigest: "sha256:baseline",
+      toSnapshotDigest: "sha256:final",
+      operationKind: "add",
+      after: {
+        path: "docs/legacy.md",
+        blobOid: "blob:recorded",
+        contentDigest: "sha256:recorded",
       },
-      sources: [
-        {
-          sourceId,
-          ordinal: 1,
-          sourceTitle: "fixture",
-          disposition: "defer",
-          targetRef: "PLAN-L6-01",
-          reason: "legacy deferred target",
-          rowDigest,
-          manifestDigest: "c".repeat(64),
-        },
-      ],
-      items: [
-        {
-          itemId,
-          itemName: "fixture item",
-          categoryId: "CAT-PLANRET",
-          sourceStatus: "adopted",
-          sourceRef: sourceId,
-          sourceFile: "fixture.md",
-          rowDigest,
-        },
-      ],
-      categories: [{ categoryId: "CAT-PLANRET", categoryName: "fixture", rowDigest }],
-      metaSourceMappings: [],
-      sourceItemEdges: [
-        {
-          edgeId: sourceItemEdgeId(sourceId, itemId),
-          sourceId,
-          itemId,
-          sourceStatus: "adopted",
-          sourceFile: "fixture.md",
-          rowDigest,
-        },
-      ],
-      sourceTargetEdges: [
-        {
-          edgeId: "SOURCE-TARGET-1",
-          sourceId,
-          targetType: "plan_alias",
-          targetRef: "PLAN-L6-01",
-          disposition: "defer",
-          rowDigest,
-        },
-      ],
-      itemTargetEdges: [
-        {
-          edgeId: "ITEM-TARGET-1",
-          itemId,
-          targetStatus: "defer",
-          reason: "legacy deferred target",
-          sourceDigest: rowDigest,
-          targetKind: "plan_alias",
-          targetRef: "PLAN-L6-01",
+      affectedPath: "docs/legacy.md",
+      record: {
+        baselinePath: "docs/legacy.md",
+        disposition: "retain",
+        reason: "recorded legacy decision",
+        targets: [],
+        planIds: ["PLAN-L6-02", "PLAN-L6-01"],
+        applicationStatus: "verified",
+        applicability: {
+          kind: "deferred",
+          reason: "legacy plan-backed defer",
+          reevaluationTrigger: "legacy record only",
           planId: "PLAN-L6-01",
         },
-      ],
+      },
     });
 
-    expect(result.ok).toBe(true);
-    if (result.ok) {
-      expect(result.value.digest).toBe(
-        "045a2f42b4e095fb7936fbf8b622d86ea58481ae65fd05082326283d9848c519",
-      );
-      expect(result.value.traceSource(sourceId)?.itemTargets[0]?.planId).toBe("PLAN-L6-01");
-    }
+    expect(recordedDigest).toBe("509a09c2bac0cc1d8cc74a8e359fb4de60b63d86a57b9ece992de6bbb060f91f");
   });
 
   it.fails("CANDIDATE-U-PLANRET-005(e): rejects plan_alias as an unknown target kind", () => {
