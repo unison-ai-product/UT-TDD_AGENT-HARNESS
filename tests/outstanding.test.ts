@@ -171,7 +171,7 @@ describe("loadOutstandingPlanRows + computeOutstandingWork", () => {
     }
   });
 
-  it("CANDIDATE-U-PLANRET-012 fixture: PLAN row and one design open defer are present", () => {
+  it("U-PLANRET-012 fixture: PLAN row and one design open defer are present", () => {
     const fixture = makeDualRootOutstandingRepo();
     try {
       expect(readFileSync(fixture.planPath, "utf8")).toContain("status: draft");
@@ -187,7 +187,7 @@ describe("loadOutstandingPlanRows + computeOutstandingWork", () => {
     }
   });
 
-  it.fails("CANDIDATE-U-PLANRET-012(b): computeOutstandingWork exposes only openDefers, not PLAN counts", () => {
+  it.fails("U-PLANRET-012(b): computeOutstandingWork exposes only openDefers, not PLAN counts", () => {
     const fixture = makeDualRootOutstandingRepo();
     try {
       expect(computeOutstandingWork(fixture.root)).toEqual({ openDefers: 1 });

@@ -4,7 +4,7 @@ layer: L7
 executed_at_layer: L7
 status: confirmed
 plan_id: PLAN-L7-514-claude-hook-schema-rolling-upgrade
-pair_artifact: docs/plans/PLAN-L7-514-claude-hook-schema-rolling-upgrade.md
+pair_artifact: plans-archive-20261102:docs/plans/PLAN-L7-514-claude-hook-schema-rolling-upgrade.md
 parent_doc: docs/plans/PLAN-L7-472-claude-memory-async-wake.md
 created: 2026-08-27
 updated: 2026-08-27

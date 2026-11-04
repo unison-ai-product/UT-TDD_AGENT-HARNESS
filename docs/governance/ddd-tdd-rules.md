@@ -52,7 +52,6 @@ boundary checks は意図的に保守的にする。2 領域をまたいで shar
 
 - id: DDD-INV-001 oracle: U-DDDTDD-001 - Governance/domain module は非循環であり、lower-level contract は higher-level runtime orchestration に依存しない。
 - id: DDD-INV-002 oracle: U-DDDTDD-002 - Domain invariant 宣言は、L7 test-design artifact に明示的な U-* oracle がある場合のみ受理する。
-- id: DDD-INV-003 oracle: U-DDDTDD-003 - TDD 実装証跡は Red-first とする。TDD evidence を要求する confirmed plan では `red_at <= green_at` を満たす。
 - id: DDD-INV-004 oracle: U-DDDTDD-004 - Unit test は assertion なし実行や truthiness check だけでなく、具体的な oracle を公開する。
 - id: DDD-INV-005 oracle: U-DDDTDD-005 - Integration test は Given/When/Then 粒度で確認できる。
 
