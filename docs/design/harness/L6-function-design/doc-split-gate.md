@@ -22,7 +22,7 @@ issue: 1032
 
 ## 2. 対象
 
-- **走査対象**: `docs/design/harness/` と `docs/test-design/harness/` 配下の `.md` を再帰的に全て。`docs/archive/` など他の場所は対象外。
+- **走査対象**: `resolveVModelRoots` が返す design root と test-design root (本体は `docs/design/harness/` と `docs/test-design/harness/`) 配下の `.md` を再帰的に全て。consumer の root での動作は `consumer-doc-split.md` (#1531) が定める。`docs/archive/` など他の場所は対象外。
 - **文書の種別 (class)** は path だけで決める。frontmatter は読まない。判定は**再帰的**で、子ディレクトリへ動かしても種別は変わらない。
   - `l6-topic`: `docs/design/harness/L6-function-design/` 配下の `.md` (深さを問わない)。
   - `l7-topic`: `docs/test-design/harness/` 配下 (深さを問わない) で、ファイル名が `L7-` で始まる `.md`。
