@@ -29,8 +29,8 @@ consumer の実運用で、生成された managed block と生成コマンド�
 | consumer の runtime は launcher を生成する (`common/ut-tdd.mjs`) | `src/setup/templates.ts:99`、`:509-511` |
 | 生成 workflow は launcher 経由で、doctor を `--setup-smoke` 形で呼ぶ | `src/setup/templates.ts:433`、`:446`、`:452` |
 | doctor は 2 つの表記を受け付ける。`--setup-smoke` は `--profile consumer-setup-smoke` と同じ profile に解決される | `src/cli.ts:747-750`、`src/doctor/profiles.ts:201-208`、`:234-237` |
-| Pack の CI 方針 lint は workflow に `doctor --setup-smoke` の文字列を要求する | `src/lint/github-ci-policy.ts:150-151`、`:185` |
-| 生成 workflow の `npm run typecheck` / `npm run test` は `package.json` の有無を見ない | `src/setup/templates.ts:437`、`:442` |
+| Pack の CI 方針 lint は、`pack` profile の workflow (role `pack_template`) にだけ `doctor --setup-smoke` の文字列を要求する。生成 workflow (role `setup_builtin`) と `source_template` には Pack の必須段・禁止段を適用しない | `src/lint/github-ci-policy.ts:150-151`、`:185-188`、`:1064-1071`、`:1196` |
+| 生成 workflow の `npm run typecheck` / `npm run test` は、`package.json` があり、かつその script が定義されているときだけ実行される (script ごとの確認を既に持つ) | `src/setup/templates.ts:436-437`、`:441-442` |
 | adapter の文面は `docs/templates/adapter/` にも置かれ、setup の生成と同じ本文を持つ | `docs/templates/adapter/AGENTS.md`、`docs/templates/adapter/CLAUDE.md` |
 
 ## 3. 契約
@@ -43,13 +43,13 @@ consumer の実運用で、生成された managed block と生成コマンド�
 
 ### 3.2 npm script の条件付き案内
 
-`npm run <script>` は、consumer の `package.json` がその script を定義しているときだけ案内する。生成文面は「`package.json` に typecheck script があれば `npm run typecheck` を実行する」のように条件を文中に書く。`package.json` が無い、または script が無い consumer に対しては、`npm run` の語を条件文以外に出さない。生成 workflow の npm 段は、`package.json` が無いと実行しない (既存の `hashFiles` 型の条件に合わせる)。
+`npm run <script>` は、consumer の `package.json` がその script を定義しているときだけ案内する。生成文面は「`package.json` に typecheck script があれば `npm run typecheck` を実行する」のように条件を文中に書く。`package.json` が無い、または script が無い consumer に対しては、`npm run` の語を条件文以外に出さない。生成 workflow の npm 段は、現行の script ごとの確認 (`package.json` があり、かつ当該 script が定義されているときだけ実行する、§2) をそのまま保つ。`package.json` の存在確認だけに縮める変更はしない。
 
 ### 3.3 consumer setup doctor の正本表記
 
 正本は `doctor --profile consumer-setup-smoke` とする。2 つの表記は同じ profile に解決されるので (§2)、実行結果は変わらず、選択の基準は文面の一貫性である。profile 形は toolchain の `--profile consumer-toolchain` と並び、doctor が公開する profile 名 (`--profiles`) と一致する。managed block・コマンド・生成 workflow は同じ表記 (`${CONSUMER_CLI_PREFIX} doctor --profile consumer-setup-smoke`) を使う。
 
-`--setup-smoke` は互換の別名として受け付け続け、生成物には書かない。Pack の CI 方針 lint (`src/lint/github-ci-policy.ts:150-151`) は現在 `doctor --setup-smoke` の文字列を要求するため、実装 PR は生成 workflow の表記変更と同じ PR で、この lint の要求を profile 形へ改める (別名を受理する形を含む)。lint だけを残すと生成 workflow が lint で赤になる。
+`--setup-smoke` は互換の別名として受け付け続け、生成物には書かない。Pack の CI 方針 lint が `doctor --setup-smoke` を要求するのは role `pack_template` の workflow だけであり、生成 workflow (role `setup_builtin`) には Pack の必須段・禁止段を適用しない (§2)。したがって生成 workflow の表記変更は lint を変えずに成り立つ。本書は Pack の CI 方針 lint (`PACK_REQUIRED_STEPS` と `forbidden_full_doctor`) を変えない。
 
 ### 3.4 実装との対応
 
