@@ -20,10 +20,6 @@ ddd_tdd_rules:
     enforcement: hard
     owner: src/lint/ddd-tdd-rules.ts
     intent: 宣言された domain invariant は必ず L7 U-* oracle を明示する。
-  - id: red-first-evidence
-    enforcement: hard
-    owner: src/lint/ddd-tdd-rules.ts
-    intent: tdd_red_required が付いた confirmed TDD PLAN は red_at と green_at を時系列順に記録する。
   - id: test-oracle-strength
     enforcement: hard
     owner: src/lint/ddd-tdd-rules.ts
@@ -66,7 +62,7 @@ boundary checks は意図的に保守的にする。2 領域をまたいで shar
 
 ## 機械チェック契約
 
-`src/lint/ddd-tdd-rules.ts` は本書、workflow docs、`src/**/*.ts`、`tests/**/*.ts`、PLAN docs、L7/L8 test-design docs を読む。rule drift、workflow anchor drift、boundary drift、invariant oracle gap、Red-first evidence 欠落、弱い test oracle、GWT integration 粒度欠落を deterministic violation として返す。
+`src/lint/ddd-tdd-rules.ts` は本書、workflow docs、`src/**/*.ts`、`tests/**/*.ts`、L7/L8 test-design docs を読む。rule drift、workflow anchor drift、boundary drift、invariant oracle gap、弱い test oracle、GWT integration 粒度欠落を deterministic violation として返す。
 
 ## baseline debt の扱い
 

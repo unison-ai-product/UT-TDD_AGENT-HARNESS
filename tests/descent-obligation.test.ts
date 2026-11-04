@@ -416,7 +416,7 @@ describe("descent-obligation ledger (PLAN-L6-35 / FR-L1-03)", () => {
     }
   });
 
-  it.fails("U-PLANRET-012(a): loadDeferLedger excludes PLAN-only defer rows", () => {
+  it("U-PLANRET-012(a): loadDeferLedger excludes PLAN-only defer rows", () => {
     const fixture = makeDualRootDeferRepo();
     try {
       const rows = loadDeferLedger(fixture.root);

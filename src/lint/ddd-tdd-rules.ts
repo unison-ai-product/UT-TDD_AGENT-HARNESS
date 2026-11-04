@@ -23,18 +23,12 @@ export interface DddTddWorkflowDoc {
   exists: boolean;
 }
 
-export interface DddTddPlanDoc {
-  path: string;
-  text: string;
-}
-
 export interface DddTddInputs {
   policy: DddTddPolicy | null;
   workflowDocs: DddTddWorkflowDoc[];
   docs: DddTddDoc[];
   l7Text: string;
   l8Text: string;
-  plans: DddTddPlanDoc[];
 }
 
 export interface DddTddViolation {
@@ -56,15 +50,9 @@ interface WorkflowRequirement {
   patterns: { pattern: RegExp; message: string }[];
 }
 
-interface EvidenceDates {
-  redAt: string | null;
-  greenAt: string | null;
-}
-
 const REQUIRED_RULE_IDS = [
   "domain-boundary",
   "invariant-test-trace",
-  "red-first-evidence",
   "test-oracle-strength",
   "integration-gwt",
   "unit-oracle-substance",
@@ -143,18 +131,6 @@ function collectDocs(repoRoot: string, relDir: string, scope: DddTddDocScope): D
   return docs.sort((a, b) => a.path.localeCompare(b.path));
 }
 
-function collectPlanDocs(repoRoot: string): DddTddPlanDoc[] {
-  const root = join(repoRoot, "docs", "plans");
-  if (!existsSync(root)) return [];
-  return readdirSync(root)
-    .filter((name) => /^PLAN-.*\.md$/.test(name))
-    .sort()
-    .map((name) => {
-      const path = normalizePath(join("docs", "plans", name));
-      return { path, text: readFileSync(join(root, name), "utf8") };
-    });
-}
-
 function maybeRead(repoRoot: string, relPath: string): string {
   const absPath = join(repoRoot, relPath);
   return existsSync(absPath) ? readFileSync(absPath, "utf8") : "";
@@ -202,7 +178,6 @@ export function loadDddTddInputs(repoRoot: string = process.cwd()): DddTddInputs
       repoRoot,
       normalizePath(join("docs", "test-design", "harness", "L8-integration-test-design.md")),
     ),
-    plans: collectPlanDocs(repoRoot),
   };
 }
 
@@ -306,46 +281,6 @@ function invariantTraceViolations(policy: DddTddPolicy | null, l7Text: string): 
       rule: "invariant-test-trace",
       message: `Invariant ${invariantId} references ${oracle}, but the L7 test design does not define it.`,
     });
-  }
-  return violations;
-}
-
-function frontmatterValue(text: string, key: string): string | null {
-  const match = text.match(new RegExp(`^${key}:\\s*([^\\n]+)`, "m"));
-  return match?.[1]?.trim().replace(/^["']|["']$/g, "") ?? null;
-}
-
-function evidenceDates(text: string): EvidenceDates {
-  return {
-    redAt: frontmatterValue(text, "red_at"),
-    greenAt: frontmatterValue(text, "green_at"),
-  };
-}
-
-function redFirstViolations(plans: DddTddPlanDoc[]): DddTddViolation[] {
-  const violations: DddTddViolation[] = [];
-  for (const plan of plans) {
-    const status = frontmatterValue(plan.text, "status");
-    const required = /^tdd_red_required:\s*true\s*$/m.test(plan.text);
-    if (status !== "confirmed" || !required) continue;
-    const dates = evidenceDates(plan.text);
-    if (!dates.redAt || !dates.greenAt) {
-      violations.push({
-        path: plan.path,
-        line: 1,
-        rule: "red-first-evidence",
-        message: "Confirmed TDD plan requires red_at and green_at evidence.",
-      });
-      continue;
-    }
-    if (Date.parse(dates.redAt) > Date.parse(dates.greenAt)) {
-      violations.push({
-        path: plan.path,
-        line: 1,
-        rule: "red-first-evidence",
-        message: "red_at must be earlier than or equal to green_at.",
-      });
-    }
   }
   return violations;
 }
@@ -858,7 +793,6 @@ export function analyzeDddTddRules(inputs: DddTddInputs): DddTddResult {
   violations.push(...workflowViolations(inputs.workflowDocs));
   violations.push(...domainBoundaryViolations(inputs.docs));
   violations.push(...invariantTraceViolations(inputs.policy, inputs.l7Text));
-  violations.push(...redFirstViolations(inputs.plans));
   violations.push(...testOracleViolations(inputs.docs));
   violations.push(...integrationGwtViolations(inputs.l8Text));
   violations.push(...unitOracleSubstanceViolations(inputs.l7Text));

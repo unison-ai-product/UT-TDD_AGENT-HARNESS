@@ -47,13 +47,13 @@ describe("db-currency lint", () => {
     expect(() => analyzeDbCurrency(stalePlanFingerprintStats)).not.toThrow();
   });
 
-  it.fails("U-PLANRET-010: PLAN count drift is not a db-currency violation", () => {
+  it("U-PLANRET-010: PLAN count drift is not a db-currency violation", () => {
     const result = analyzeDbCurrency(stalePlanCountStats);
 
     expect(result).toMatchObject({ ok: true, violations: [] });
   });
 
-  it.fails("U-PLANRET-010: PLAN fingerprint drift is not a db-currency violation", () => {
+  it("U-PLANRET-010: PLAN fingerprint drift is not a db-currency violation", () => {
     const result = analyzeDbCurrency(stalePlanFingerprintStats);
 
     expect(result).toMatchObject({ ok: true, violations: [] });
