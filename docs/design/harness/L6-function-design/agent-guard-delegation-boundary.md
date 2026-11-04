@@ -214,7 +214,7 @@ DELEGATION_ROLE_ALLOWLIST =
 - **`CLAUDE.md` §runtime 間のやりとりは GUI lane**: 「レーンの中の並列 (Luna の subagent、Claude の Agent tool) は別の話」の記述に、Agent tool の subagent は手を動かす層で closing の権限を持たないことを足す。
 - **`AGENTS.md` §Codex / Claude Code Harness**: 指揮モデル別の表と Luna の subagent の扱いを同じ 2 層で書き直す。
 - **共通ルールの置き場所**: 2 層の定義と「closing の権限は Agent tool の subagent に無い」は共通ルールなので `CLAUDE.md` にだけ書き、アダプタ (`.claude/CLAUDE.md`・`AGENTS.md`) はランタイム固有の手順だけを持つ (Rule Placement Convention)。
-- **rule-drift の marker 節は壊さない**: 各ファイルの「UT-TDD Adapter Rule Markers」節と、`PLAN Filing Rules` の `route_signal` / `generates` の記述、§Hooks の一覧は書き換えの対象外にする。書き直しの PR は `ut-tdd doctor` の `rule-drift` を通す。
+- **rule-drift の marker 節は壊さない**: 各ファイルの「UT-TDD Adapter Rule Markers」節と、§Hooks の一覧は書き換えの対象外にする。`PLAN Filing Rules` の `route_signal` / `generates` の記述は、PLAN 機構の退役 (#1078) の S8 (#1380) で `src/lint/rule-drift.ts` の `SHARED_MARKERS` から 2 語を外すのと同じ PR で 3 adapter の本文から消す (`plan-mechanism-retirement.md` §8「S6・S8 の補足」)。S8 より前の書き直しの PR は、この記述を残す。どちらの場合も書き直しの PR は `ut-tdd doctor` の `rule-drift` を通す。
 
 ## 11. 実装 PR の順番
 
