@@ -318,34 +318,6 @@ describe("L6 completion readiness", () => {
     }
   });
 
-  it("U-L6COMP-007: an issue cannot cover an unresolved plan path", () => {
-    const docPath = "docs/design/harness/L6-function-design/plan-and-issue.md";
-    const planPath = "docs/plans/PLAN-L6-missing.md";
-    const result = analyzeL6Completion({
-      l6Docs: [
-        {
-          path: docPath,
-          text: l6FixtureText({
-            fileName: "plan-and-issue.md",
-            owner: `plan: ${planPath}\nissue: 1035`,
-            pairArtifact: "docs/test-design/harness/L7-unit-test-design.md",
-            oracleId: "U-L6COMP-007",
-          }),
-        },
-      ],
-      l6Plans: [],
-      l7Text: l7FixtureText({
-        fileName: "L7-unit-test-design.md",
-        status: "confirmed",
-        body: "plan-and-issue.md",
-      }),
-      gateText: gatePass,
-    });
-
-    expect(result.unresolvedDocPlans).toEqual([`${docPath} -> ${planPath}`]);
-    expect(result.ready).toBe(false);
-  });
-
   it("U-L6COMP-008 / U-DOCSPLIT-026: accepts an existing eligible alternate L7 pair", () => {
     withFixtureRoot((root) => {
       writeL6CompletionFixture(root, {
@@ -570,7 +542,7 @@ describe("L6 completion readiness", () => {
     expect(familyStart).toBeGreaterThanOrEqual(0);
     expect(familyEnd).toBeGreaterThan(familyStart);
     const family = l7.slice(familyStart, familyEnd);
-    for (const id of ["006", "007", "008", "009", "010", "011", "012"]) {
+    for (const id of ["006", "008", "009", "010", "011", "012"]) {
       expect(family).toContain(`| U-L6COMP-${id} |`);
     }
     expect(family).not.toMatch(/CANDIDATE-U-L6COMP-\d{3}\b/);

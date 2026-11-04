@@ -405,7 +405,7 @@ describe("descent-obligation ledger (PLAN-L6-35 / FR-L1-03)", () => {
     }
   });
 
-  it("CANDIDATE-U-PLANRET-012 fixture: PLAN and design defer rows are both present", () => {
+  it("U-PLANRET-012 fixture: PLAN and design defer rows are both present", () => {
     const fixture = makeDualRootDeferRepo();
     try {
       expect(readFileSync(fixture.planPath, "utf8")).toContain("FR-L1-46 explicit_l7_defer");
@@ -416,7 +416,7 @@ describe("descent-obligation ledger (PLAN-L6-35 / FR-L1-03)", () => {
     }
   });
 
-  it.fails("CANDIDATE-U-PLANRET-012(a): loadDeferLedger excludes PLAN-only defer rows", () => {
+  it.fails("U-PLANRET-012(a): loadDeferLedger excludes PLAN-only defer rows", () => {
     const fixture = makeDualRootDeferRepo();
     try {
       const rows = loadDeferLedger(fixture.root);
