@@ -30,10 +30,12 @@ consumer の実運用で、`ut-tdd pr merge` を使えず自作の merge script 
 | 状態 | 条件 (対象エントリは check-run-selection §4 post-2 で最新 run だけが残った後のもの) | deny reason |
 |---|---|---|
 | `not_run` | 対象エントリが 0 件 (空の rollup を含む) | `ci_not_run` |
-| `failed` | 対象に `conclusion` が `FAILURE` / `ERROR` / `CANCELLED` / `TIMED_OUT` / `ACTION_REQUIRED` / `STARTUP_FAILURE` のものがある。check-run-selection §4 post-3 / post-4 で順序を決められない重複もここに含める (従来の fail-close を保つ) | `ci_failed` |
-| `pending` | failed が無く、`conclusion` が空・欠落、または `status` が `COMPLETED` でないものがある | `ci_pending` |
+| `failed` | 対象に `conclusion` が `FAILURE` / `ERROR` / `CANCELLED` / `TIMED_OUT` / `ACTION_REQUIRED` / `STARTUP_FAILURE`、または他の行に無い値のものがある。object でないエントリと、check-run-selection §4 post-3 / post-4 で順序を決められない重複もここに含める (従来の fail-close を保つ) | `ci_failed` |
+| `pending` | failed が無く、`conclusion` が空・欠落のものがある | `ci_pending` |
 | `skipped` | failed / pending が無く、`SKIPPED` または `NEUTRAL` がある | `ci_skipped` |
 | `green` | 対象の全件が `SUCCESS` | (なし) |
+
+判定は `conclusion` だけで行い、`status` は読まない。現行の `evaluateChecksGreen` も `status` を見ず、`conclusion` が `SUCCESS` なら `status` が `IN_PROGRESS` でも欠落でも green にするため、green になる入力の集合を現行と同一に保つ (GitHub は完了前の run の `conclusion` を空で返すので、未完了は pending 行で捕まる)。
 
 優先順は `failed` > `pending` > `skipped` > `green`。複数に当たるときは最も強い 1 つを返す。`green` 以外はすべて deny で、reason は上表の 1 つを `state:<dispatch state>` に並べて出す。skipped を pass として扱わない。
 
@@ -45,10 +47,15 @@ consumer が任意で置く設定ファイルは `ut-tdd.merge-gate.json` (repo 
 { "requiredChecks": ["build", "test"] }
 ```
 
-- ファイルが無い: §2 を全エントリに適用する。現行の挙動と同一で、本体 repo (このファイルを持たない) は変わらない。
-- ファイルがある: check 名 (`name`、StatusContext は `context`。`workflowName` は見ない) が `requiredChecks` のどれかに一致するエントリだけを §2 の対象にする。名前の無いエントリは無視する。指定した名前に一致するエントリが 0 件なら `not_run`、最新 run が `SKIPPED` なら `skipped` (どちらも deny)。同名の重複には check-run-selection §4 の規則をそのまま使う。
+- ファイルが無い: §2 を全エントリに適用する。green / deny の結論は現行と同一で、本体 repo (このファイルを持たない) は変わらない。
+- ファイルがある: `requiredChecks` の名前ごとに、check 名 (`name`、StatusContext は `context`。`workflowName` は見ない) が一致するエントリが rollup にあるかを確かめる。1 つでも一致するエントリが無い名前があれば `not_run` で deny する (他の名前が green でも同じ。一部の欠落を無視しない)。全名前にエントリがあるときは、一致したエントリだけを §2 の対象にする。どの名前にも一致しないエントリと名前の無いエントリは無視する。最新 run が `SKIPPED` なら `skipped` (deny)。同名の重複には check-run-selection §4 の規則をそのまま使う。
 - ファイルがあるが、JSON として読めない・`requiredChecks` が空配列または空でない string の配列でない・他の key がある、のいずれか: `merge_gate_config_invalid` で deny する (fail-close。設定を無視して緩めない)。
-- 読む場所は、既定ブランチの remote の先端 (`git show origin/<既定ブランチ>:ut-tdd.merge-gate.json`、既定ブランチは §5 と同じく `gh repo view` で取る)。PR のブランチからも、実行する checkout の作業ツリーからも読まない。PR が自分で required を緩められないようにし、手元の checkout が古いことにも左右されないようにするためである。取得に失敗したら `merge_gate_config_invalid` で拒否する (無い場合は「設定なし」として扱う)。reader は注入可能にし、テストは実 repo を読まない。
+- 読む場所は、既定ブランチの remote の先端である。PR のブランチからも、実行する checkout の作業ツリーからも、fetch 前の古い `origin/<既定ブランチ>` からも読まない。PR が自分で required を緩められないようにし、手元の checkout が古いことにも左右されないようにするためである。`git show` は remote の先端を取りに行かないので、読む前に必ず fetch する。手順は次の順とする。
+  1. 既定ブランチ名を §5 と同じく `gh repo view --json defaultBranchRef` で取り、`git check-ref-format --branch` で検査する。
+  2. `git fetch origin +refs/heads/<既定ブランチ>:refs/remotes/origin/<既定ブランチ>` を実行する (§5 の fetch と同じ refspec。同じ実行内で 1 回に兼ねてよい)。
+  3. `git ls-tree --name-only origin/<既定ブランチ> -- ut-tdd.merge-gate.json` で有無を確かめる。exit 0 で出力が空なら「ファイルが無い」(設定なし) とする。
+  4. 出力に名前があれば `git show origin/<既定ブランチ>:ut-tdd.merge-gate.json` で読む。
+- 1〜4 のどれかが失敗した (gh / git が非 0 で終わる、名前が取れない・不正) ときは `merge_gate_config_invalid` で deny する (fail-close)。取得の失敗を「設定なし」として扱わない。「設定なし」になるのは 3 で不存在を確かめたときだけである。reader は注入可能にし、テストは実 repo を読まない。
 
 ## §4 draft と競合 (D-C)
 
@@ -70,4 +77,4 @@ consumer が任意で置く設定ファイルは `ut-tdd.merge-gate.json` (repo 
 
 ## §6 oracle 対応
 
-`CANDIDATE-U-MGCONS-001`〜`012` を `docs/test-design/harness/L7-merge-gate-consumer-test-design.md` に置く。fixture は注入した gh / git の reader だけを使い、実ネットワークと実 repo は読まない。
+`CANDIDATE-U-MGCONS-001`〜`014` を `docs/test-design/harness/L7-merge-gate-consumer-test-design.md` に置く。fixture は注入した gh / git の reader だけを使い、実ネットワークと実 repo は読まない。
