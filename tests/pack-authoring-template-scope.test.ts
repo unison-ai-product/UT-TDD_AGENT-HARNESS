@@ -57,9 +57,9 @@ const planRetirementInputs = (() => {
   }));
   const vmodelIndex =
     templateBytes.find(({ path }) => path === "docs/templates/vmodel/README.md")?.bytes ?? "";
-  const slotPaths = [
-    ...vmodelIndex.matchAll(/^\|\s*`DOC-[^`]+`\s*\|\s*`([^`]+\.md)`/gm),
-  ].map(([, path]) => `docs/templates/vmodel/${path}`);
+  const slotPaths = [...vmodelIndex.matchAll(/^\|\s*`DOC-[^`]+`\s*\|\s*`([^`]+\.md)`/gm)].map(
+    ([, path]) => `docs/templates/vmodel/${path}`,
+  );
   const optionalPaths = [
     ...vmodelIndex.matchAll(/^\|\s*\d{3}\s*\|.*`optional\/([^`]+\.md)`\s*\|/gm),
   ].map(([, path]) => `docs/templates/vmodel/optional/${path}`);
@@ -72,12 +72,10 @@ const planRetirementInputs = (() => {
   const frontmatter = new Map<string, string | null>(
     templateBytes
       .filter(({ path }) => path.endsWith(".md"))
-      .map(
-        ({ path, bytes }): [string, string | null] => [
-          path,
-          /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/.exec(bytes)?.[1] ?? null,
-        ],
-      ),
+      .map(({ path, bytes }): [string, string | null] => [
+        path,
+        /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/.exec(bytes)?.[1] ?? null,
+      ]),
   );
   const mirror = readFileSync(join(root, "src", "setup", "templates.ts"), "utf8");
   return {
@@ -350,11 +348,11 @@ describe("Issue #482 canonical Pack authoring inventory", () => {
 
   it.fails("CANDIDATE-U-PLANRET-017: templates and mirror have no PLAN-prefixed required values", () => {
     const violations = planRetirementInputs.templateAndMirrorBytes.flatMap(({ path, bytes }) =>
-      bytes.split(/\r?\n/).flatMap((line, index) =>
-        /["'`]?[\w-]+["'`]?:\s*["'`]?\s*PLAN-/i.test(line)
-          ? [`${path}:${index + 1}`]
-          : [],
-      ),
+      bytes
+        .split(/\r?\n/)
+        .flatMap((line, index) =>
+          /["'`]?[\w-]+["'`]?:\s*["'`]?\s*PLAN-/i.test(line) ? [`${path}:${index + 1}`] : [],
+        ),
     );
     expect(violations).toEqual([]);
   });
