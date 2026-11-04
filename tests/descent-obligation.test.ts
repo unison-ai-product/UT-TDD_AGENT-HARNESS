@@ -379,9 +379,11 @@ describe("descent-obligation ledger (PLAN-L6-35 / FR-L1-03)", () => {
   it("U-DESC-010: only creates defer rows for trace keys on the defer line", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-descent-"));
     try {
-      mkdirSync(join(root, "docs", "plans"), { recursive: true });
+      mkdirSync(join(root, "docs", "design", "harness", "L6-function-design"), {
+        recursive: true,
+      });
       writeFileSync(
-        join(root, "docs", "plans", "PLAN-L6-test.md"),
+        join(root, "docs", "design", "harness", "L6-function-design", "defer-fixture.md"),
         [
           "---",
           "layer: L6",
