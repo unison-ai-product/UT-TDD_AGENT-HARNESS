@@ -19,8 +19,10 @@ fail-close 化と guard 範囲導出」節。本書はその契約を検証す�
 
 ## 2. Fixture
 
-- workflow の行は、`src/setup/templates.ts` が出す `harness-check.yml` の YAML 文字列と構造を検査する。
-  実 repo の `.github/workflows/` や CI 実行には依存しない。
+- consumer workflow の行 (001..005, 011, 012) は、`src/setup/templates.ts` が出す `harness-check.yml` の YAML 文字列と構造を検査する。
+  CI 実行には依存しない。
+- 本体の行 (013, 014) は、source repo の `.github/workflows/harness-check.yml` ファイルのテキストと、`src/lint/github-ci-policy.ts` が
+  期待する guard step の文字列 (policy が固定する期待テキスト) を、文字列として読んで検査する。CI 実行は不要で、guard 自体は動かさない。
 - guard の行は、テストごとに作る一時 git repo (base branch + PR branch + 合成 merge commit) を使う。
   実 repo の履歴・作業ツリーは読まない。
 
@@ -40,3 +42,9 @@ fail-close 化と guard 範囲導出」節。本書はその契約を検証す�
 | `CANDIDATE-U-CICONS-010` | `--commit-file` の後方互換 | 入力: `--commit-file` に違反 subject を書いて指定。期待: その内容が commit subject として判定される。反例: option が無視される |
 | `CANDIDATE-U-CICONS-011` | 生成 checkout の fetch-depth | 入力: 生成 YAML の `actions/checkout` step。期待: `fetch-depth: 0` を持つ。反例: 指定なし (shallow 既定) |
 | `CANDIDATE-U-CICONS-012` | 生成 guard step の呼び出し | 入力: 生成 YAML の branch-type guard step。期待: `--commit-file` と `git log ... > file` の事前ファイル化を含まず、`--base-ref` を渡す。反例: 旧 `git log -n 20` の出力ファイルを渡す |
+| `CANDIDATE-U-CICONS-013` | 本体 workflow の guard 呼び出し | 入力: source repo の `.github/workflows/harness-check.yml` のテキスト。期待: guard step が `--base-ref` を渡し、`--commit-file` を含まず、`git log` の出力を事前にファイルへ書く行も無い。反例: `git log --format=%s -n 20 > file` と `--commit-file` の旧形が残る |
+| `CANDIDATE-U-CICONS-014` | CI policy の期待 step | 入力: `src/lint/github-ci-policy.ts` が guard step として期待する文字列と、旧形 (`-n 20` + `--commit-file`) の workflow を policy へ通した結果。期待: 期待 step は `--base-ref` を含み `--commit-file` を含まない。旧形の workflow は policy が違反として検出し、新形は通す。反例: policy が旧形を固定したまま、または新旧どちらも通す |
+| `CANDIDATE-U-CICONS-015` | 20 件を超える範囲 | 入力: 非 Conventional な commit を先頭に、その後ろに Conventional な commit を 25 件積んだ PR branch (違反 commit は直近 20 件の外、範囲の内)。`--base-ref <base>` を `--commit-file` なしで実行。期待: 範囲全体を見て違反を検出し fail する。反例: 直近 20 件 (`git log -n 20`) だけを読んで pass する (ref の存在確認だけして `-n 20` を読む実装を落とす) |
+| `CANDIDATE-U-CICONS-016` | 範囲外の commit は対象外 | 入力: base branch 側で merge-base より前に非 Conventional な commit があり、PR branch の commit はすべて Conventional。期待: 範囲 `<base>..HEAD` の外なので報告せず pass する。反例: base 側の過去 commit を拾って fail する |
+| `CANDIDATE-U-CICONS-017` | `origin/<base>` 優先 | 入力: `origin/<base>` と local `<base>` を異なる commit に置く。local `<base>` を古い位置に、`origin/<base>` を新しい位置に進め、両者の差分に当たる commit に違反を置く (どちらを基点にするかで判定が変わる構成)。期待: `origin/<base>` を基点にした範囲で判定する。反例: local `<base>` を優先して判定が逆になる |
+| `CANDIDATE-U-CICONS-018` | `--commit-file` は上書き | 入力: 有効な (Conventional な) subject だけを書いた `--commit-file` を渡し、導出範囲には違反 commit がある。期待: `--commit-file` の内容だけで判定して pass する (範囲の違反は見ない)。反例: `--commit-file` と導出範囲を合算して fail する |
