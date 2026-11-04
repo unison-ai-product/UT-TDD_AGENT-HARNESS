@@ -19,7 +19,7 @@ issue: 1527
 
 - すべて一時ディレクトリに作る使い捨ての repo で行う。実 repo (本 repo) を対象にしない。
 - `designed`: `resolveVModelRoots` が解決する `designRoot` に L1〜L3 の設計文書と対の test-design を持つ最小 repo (`src/` も `package.json` も無い)。
-- `designed-pair-broken`: `designed` から、ある設計文書の対 (`pair_artifact` の指す文書) を欠落させた repo。
+- `designed-l1-only`: L1 の設計文書と、その対になる test-design だけを持つ repo (L2 / L3 が無い)。L1 の設計文書は有効な `pair_artifact` で test-design を指し、test-design はその設計文書を逆参照する。したがって pair-freeze は `pass` になる。
 - `designed-l1-only`: L1 の設計文書だけを持つ repo (L2 / L3 が無い)。
 - `empty`: 設計文書も `src/` も `package.json` も無い repo。
 - `with-package-json`: `empty` に `package.json` だけを足した repo。`with-src`: `empty` に空の `src/` だけを足した repo。
