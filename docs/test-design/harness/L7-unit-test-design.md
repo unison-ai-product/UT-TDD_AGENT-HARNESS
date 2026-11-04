@@ -471,7 +471,6 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 |---|---|---|
 | U-DDDTDD-001 | `analyzeDddTddRules` policy | missing or unknown DDD/TDD rule ID -> violation |
 | U-DDDTDD-002 | invariant trace | `DDD-INV-*` oracle declared in SSoT but absent from L7 test design -> violation |
-| U-DDDTDD-003 | Red-first evidence | confirmed `tdd_red_required` PLAN lacking `red_at` / `green_at`, or `red_at > green_at` -> violation |
 | U-DDDTDD-004 | test oracle strength | `it` / `test` block with no explicit `expect` / `assert`, or truthiness-only assertion -> violation |
 | U-DDDTDD-005 | integration GWT | L8 `IT-*` row missing Given / When / Then granularity -> violation |
 | U-DDDTDD-006 | workflow placement | Forward, Add-feature, or mode index doc missing `DDD-TDD-WORKFLOW` / SSoT reference -> violation |
@@ -698,7 +697,7 @@ SMB/NFS/OneDrive をまたぐ strict lease、heartbeat、clock-skew 耐性は主
 | U-GATE-010 | `buildGateRunEvidence` ID / path と旧形式読込 | 新規 ID は `gate-run:${compactSlug(gateId)}:${sha256([gateId, checkedAt, sessionId ?? "", process.pid].join(":")).slice(0, 12)}` とし PLAN 値を含めず、path は UTF-8 ID の SHA-256 小文字 hex のみから決める。別 ID の hash collision は拒否。旧 `<gate>-<timestamp>-<hash>.json` も読み、新旧で同じ ID なら拒否。**未証明の2軸** (異なる ID 間で実際に起きる SHA-256 衝突の拒否、ASCII でない ID の hash 経路) は #1468 の追記範囲に含め、候補 ID を割り当てて Red → Green し、そこで証明する。 |
 | U-DOCTOR-GATE-02 | `checkGateRunCoverage` 証跡照合 | 証跡と DB の6列 (`gate_run_id` / `gate_id` / `plan_id` / `status` / `checked_at` / `evidence_path`) を全て比較して不一致を fail-close、`plan_id=null` と DB 空値は一致。 |
 | U-DOCTOR-GATE-03 | `checkGateRunCoverage` DB-only 除外 | 証跡が無い実行の DB-only gate row と `stableId("gate-workflow", gate_run_id)` 由来の対応 workflow row を両方除外し、欠落対にしない (`gate_runs=0` は fail-close)。既存 `U-DOCTOR-GATE-01` の「証跡欠落」は現存証跡に対する必要 row の欠落・不正を指す。正常再投影は冪等。 |
-| U-DOCTOR-GATE-04 | `checkGateRunCoverage` / `analyzeDriveDbRegistration` | 追加・除外・全列照合を全体 transaction 内で行い、全証跡を評価する。1件でも不一致なら追加・削除を含め rollback し旧状態を保つ (「独立」は評価順序であり部分 commit ではない)。A4: PLAN がある fixture に `drive_run_id=""` と当該 PLAN の documented 以外を指す非空 `drive_run_id` の routine-gate 各1件以上と非 routine の orphan 1件以上が実在することを assert し、routine-gate は `workflow_orphans` に数えず非 routine は JOIN で違反になることを確認する。 |
+| U-DOCTOR-GATE-04 | `checkGateRunCoverage` / `analyzeDriveDbRegistration` | 追加・除外・全列照合を全体 transaction 内で行い、全証跡を評価する。1件でも不一致なら追加・削除を含め rollback し旧状態を保つ (「独立」は評価順序であり部分 commit ではない)。 |
 | U-TEAMRUN-001 | `validateTeamRun` | hybrid 以外は fail / hybrid で worker(se) と reviewer(tl/qa) が別 provider なら pass |
 | U-TEAMRUN-002 | `validateTeamRun` | 同一 role/provider 重複、worker/reviewer 同一 provider は fail |
 | U-TEAMRUN-003 | `recommendTeamLaunch` + `buildTeamRunPlan` | `team suggest` が返す critical definition は `se -> tl -> qa` の依存順へ正規化され、全 member が high effort selection を持つ。member prompt は resolved `provider` を header に出し、`model_family` 推奨ラベルと runtime provider を混同しない |
@@ -920,15 +919,14 @@ PR2 (`add-feature`) は昇格 PR merge 後の main から開始し、PLAN-L7-423
 
 ### 2026-06-09 L6 Completion Readiness Addendum
 
-- U-L6COMP-001: `analyzeL6Completion` は、L6設計文書のいずれかがdraftである、所有者 (`plan:` または正の整数の `issue:`) を持たない、`plan:` が未解決である (`issue:` も併記されていても同じ)、有効な選択済みL7 `pair_artifact` がない、その選択済みpair内にファイル名の逆参照がない、または最小単体テスト契約の実質 (contract/signature + DbC/oracle + U-* family) を欠く場合にnot-readyを返す。加えて、L6 PLANが存在する場合にbase L6 `kind=design` PLANがdraftまたは必要なreview evidenceを欠く、選択済みpair artifactのいずれかがdraftまたはstatus未記載、あるいはG6がPASSでない場合もnot-readyとする。`docs/plans/`が存在しないかL6 PLANが0件ならPLAN status由来のfindingは空集合とする。
-- U-L6COMP-002: `analyzeL6Completion` は、全L6文書がconfirmedであり、各文書が所有者 (`plan:` は実在PLANへ解決、または正の整数の `issue:`。未解決の `plan:` は `issue:` で救済しない。GitHub issueの実在性は検査しない) を持ち、各 `pair_artifact` が実在する適格な `L7-*.md` test-designを指し、その同じ文書内にL6文書のファイル名を含み、全L6文書が単体テスト粒度の契約実質を備え、選択済みpair artifactがすべてconfirmedで、該当するbase L6 `kind=design` PLANがreview evidence付きでconfirmedとなり、かつG6がPASSの場合に限りreadyを返す。`docs/plans/`が存在しないかL6 PLANが0件なら、PLAN status条件は空集合として充足扱いにする。
+- U-L6COMP-001: `analyzeL6Completion` は、L6設計文書のいずれかがdraftである、所有者として正の整数の `issue:` を持たない、選択済みL7 `pair_artifact` がない・不適格である、その選択済みpair内にファイル名の逆参照がない、または最小単体テスト契約の実質 (contract/signature + DbC/oracle + U-* family) を欠く場合にnot-readyを返す。加えて、選択済みpair artifactのいずれかがdraftまたはstatus未記載、あるいはG6がPASSでない場合もnot-readyとする。L6 completionはPLANを入力にせず、PLANの有無・status・review evidenceに由来するfindingは作らない。
+- U-L6COMP-002: `analyzeL6Completion` は、全L6文書がconfirmedであり、各文書が所有者として正の整数の `issue:` を持ち (GitHub issueの実在性は検査しない)、各 `pair_artifact` が実在する適格な `L7-*.md` test-designを指し、その同じ文書内にL6文書のファイル名を含み、全L6文書が単体テスト粒度の契約実質を備え、選択済みpair artifactがすべてconfirmedで、かつG6がPASSの場合に限りreadyを返す。L6 completionはPLANを入力にしない。
 - U-L6COMP-003: `checkL6Completion` surfaces readiness in `doctor` as hard/fail-close (`ok = analyzeL6Completion().ready`; input unreadable も violation で `ok=false`)。実装 `src/doctor/process-quality.ts` に合わせて 2026-10-14 に是正した (旧記述は warn-only、#958)。
-- U-L6COMP-004: `analyzeL6Completion` reports `freezeInputReady=true` when L6 trace/substance inputs are complete even if docs/plans/L7/G6 are still draft before the G6 audit.
-- U-L6COMP-005: post-G6 `kind=add-design` PLAN drafts do not reopen base L6 completion; add-feature completeness is handled by backfill/pair/review evidence.
+- U-L6COMP-004: `analyzeL6Completion` reports `freezeInputReady=true` when L6 trace/substance inputs are complete even if docs/L7/G6 are still draft before the G6 audit.
+- U-L6COMP-005: L6 completion does not consume `kind=add-design` PLAN drafts, so they do not reopen base L6 completion; add-feature completeness is handled by backfill/pair/review evidence.
 | U-ID | Target | Oracle |
 |---|---|---|
 | U-L6COMP-006 | `analyzeL6Completion` | `plan:` を持たず `issue: <正の整数>` を持つ L6 文書を、所有者ありとして扱う (`missingDocPlans` に入れない)。issueがGitHub上に実在するかは検査しない。負例: `issue:` の値が 0・負数・数字以外なら所有者なしとして not-ready。 |
-| U-L6COMP-007 | `analyzeL6Completion` | `plan:` が実在しない path を指す L6 文書は、`issue:` を併せ持っていても `unresolvedDocPlans` に入り not-ready (誤った PLAN 参照を issue で覆い隠さない)。 |
 | U-L6COMP-008 | `analyzeL6Completion` | `pair_artifact` が実在する `docs/test-design/harness/L7-*.md` (frontmatter に `artifact_type: test_design` と `executed_at_layer: L7`) を指せば、`L7-unit-test-design.md` 以外でも対ありとする。既存の `L7-unit-test-design.md` (`layer: L6` / `executed_at_layer: L7`) を指す L6 文書も、引き続き対ありになる。負例: 実在しない path、`executed_at_layer: L7` を持たないファイル、`L7-` で始まらないファイルは対なし。 |
 | U-L6COMP-009 | `analyzeL6Completion` | L6 文書のファイル名を、その文書の `pair_artifact` が指す文書の本文が含めば逆参照ありとする。負例: `pair_artifact` の文書 A は名前を含まず、別の `L7-*.md` B にだけ名前がある場合は `missingL7DocRefs` に入り not-ready。 |
 | U-L6COMP-010 | `analyzeL6Completion` | `docs/plans/` が存在しない (または L6 の PLAN が 0 件の) tree では、`draftPlans` / `missingReviewPlans` は空集合で、それだけを理由に not-ready にならない。L6 文書がすべて confirmed で所有者・対・逆参照・unit 契約の中身を持ち、各選択pairが confirmed で G6 が PASS なら ready になる。 |
