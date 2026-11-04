@@ -117,13 +117,13 @@ describe("L6 completion readiness", () => {
     ]);
   });
 
-  it.fails("CANDIDATE-U-PLANRET-011: plan-only L6 doc is ownerless", () => {
+  it.fails("U-PLANRET-011: plan-only L6 doc is ownerless", () => {
     const result = analyzeL6Completion(candidatePlanRetirement011Inputs([], ["plan-only.md"]));
 
     expect(result.missingDocPlans).toEqual(["docs/design/harness/L6-function-design/plan-only.md"]);
   });
 
-  it.fails("CANDIDATE-U-PLANRET-011: no PLAN draft finding is returned", () => {
+  it.fails("U-PLANRET-011: no PLAN draft finding is returned", () => {
     const result = analyzeL6Completion(
       candidatePlanRetirement011Inputs([
         {
@@ -136,7 +136,7 @@ describe("L6 completion readiness", () => {
     expect(Object.hasOwn(result, "draftPlans")).toBe(false);
   });
 
-  it.fails("CANDIDATE-U-PLANRET-011: no PLAN review finding is returned", () => {
+  it.fails("U-PLANRET-011: no PLAN review finding is returned", () => {
     const result = analyzeL6Completion(
       candidatePlanRetirement011Inputs([
         {

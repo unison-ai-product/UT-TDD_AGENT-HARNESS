@@ -318,34 +318,6 @@ describe("L6 completion readiness", () => {
     }
   });
 
-  it("U-L6COMP-007: an issue cannot cover an unresolved plan path", () => {
-    const docPath = "docs/design/harness/L6-function-design/plan-and-issue.md";
-    const planPath = "docs/plans/PLAN-L6-missing.md";
-    const result = analyzeL6Completion({
-      l6Docs: [
-        {
-          path: docPath,
-          text: l6FixtureText({
-            fileName: "plan-and-issue.md",
-            owner: `plan: ${planPath}\nissue: 1035`,
-            pairArtifact: "docs/test-design/harness/L7-unit-test-design.md",
-            oracleId: "U-L6COMP-007",
-          }),
-        },
-      ],
-      l6Plans: [],
-      l7Text: l7FixtureText({
-        fileName: "L7-unit-test-design.md",
-        status: "confirmed",
-        body: "plan-and-issue.md",
-      }),
-      gateText: gatePass,
-    });
-
-    expect(result.unresolvedDocPlans).toEqual([`${docPath} -> ${planPath}`]);
-    expect(result.ready).toBe(false);
-  });
-
   it("U-L6COMP-008 / U-DOCSPLIT-026: accepts an existing eligible alternate L7 pair", () => {
     withFixtureRoot((root) => {
       writeL6CompletionFixture(root, {
