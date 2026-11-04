@@ -3,7 +3,7 @@ artifact_type: test_design
 layer: L6
 executed_at_layer: L7
 status: draft
-pair_artifact: docs/plans/PLAN-L7-503-review-custody-delegation-root.md
+pair_artifact: plans-archive-20261102:docs/plans/PLAN-L7-503-review-custody-delegation-root.md
 parent_doc: docs/plans/PLAN-L7-493-d3a-repo-local-verdict-custody.md
 created: 2026-08-25
 updated: 2026-08-25
