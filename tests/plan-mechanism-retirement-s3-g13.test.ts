@@ -21,8 +21,8 @@ function fixture(): string {
   roots.push(root);
   write(
     root,
-    "docs/test-design/L12-acceptance-test-design.md",
-    "---\nlayer: L12\nstatus: confirmed\n---\n\n**AT-FR-01-01**\n",
+    "docs/test-design/harness/L12-acceptance-test-design.md",
+    "---\ndoc_type_id: DOC-L12-ACCEPTANCE\nlayer: L12\nstatus: confirmed\n---\n\n| AT-ID | 対応 AC | 受入条件 | 機械検証 |\n| --- | --- | --- | --- |\n| **AT-FR-01-01** | AC-FR-01-01 | fixture acceptance case | static gate fixture |\n",
   );
   const template = readFileSync(
     join(process.cwd(), "docs/templates/vmodel/L13-production-observation.md"),
