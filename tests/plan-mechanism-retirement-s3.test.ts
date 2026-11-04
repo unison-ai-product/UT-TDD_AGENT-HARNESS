@@ -133,7 +133,7 @@ describe("PLAN mechanism retirement S3 Red", () => {
     expect(readFileSync(join(root, "docs/plans/PLAN-L7-1-x.md"), "utf8")).toContain(
       "plan_id: PLAN-L7-1-x",
     );
-    expect(result.passed).toBe(true);
+    expect(result.passed, result.messages.join("\n")).toBe(true);
   });
 
   it.fails("CANDIDATE-U-PLANRET-001: accepts only the canonical GitHub Issue URL", () => {
@@ -191,9 +191,8 @@ describe("PLAN mechanism retirement S3 Red", () => {
     expect(result.passed).toBe(true);
   });
 
-  it.fails("CANDIDATE-U-PLANRET-004(b): does not resolve an L0 citation from docs/plans", () => {
+  it.fails("CANDIDATE-U-PLANRET-004(b): a resolvable PLAN-L0 citation is not an L0 citation", () => {
     const root = consumerFixture();
-    rmSync(join(root, "docs/plans/PLAN-L0-01.md"));
     const result = evaluateG14(root);
 
     expect(result.messages.join("\n")).toContain("trace target missing PLAN-L0-01");

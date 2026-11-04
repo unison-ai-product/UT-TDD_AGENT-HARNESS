@@ -32,8 +32,8 @@ function fixture(): string {
     .replace(/^status: .*$/m, "status: confirmed")
     .replace(/^plan: .*$/m, "plan: docs/plans/PLAN-CONSUMER-01.md")
     .replace(
-      "| <記入> | <記入> | <記入> | <記入> |",
-      "| SMOKE-PLANRET-01 | deploy smoke | exit 0 | AT-FR-01-01 |",
+      "### harness 追補: G13 検証ケース\n\n| ケースID | 観測内容 | 合否基準 | トレース元 |\n| --- | --- | --- | --- |\n| <記入> | <記入> | <記入> | <記入> |",
+      "### harness 追補: G13 検証ケース\n\n| ケースID | 観測内容 | 合否基準 | トレース元 |\n| --- | --- | --- | --- |\n| SMOKE-PLANRET-01 | deploy smoke | exit 0 | AT-FR-01-01 |",
     );
   write(root, "docs/process/evidence/g13-post-deploy-verification-design.md", design);
   write(root, "tests/fixtures/planret-g13/smoke.txt", "passed\n");
@@ -143,7 +143,7 @@ describe("CANDIDATE-U-PLANRET-002 right-arm G13 evidence", () => {
     makeSmokeMandatory(root);
     const result = evaluateStaticGate({ gate: "G13", repoRoot: root });
 
-    expect(result.passed).toBe(true);
+    expect(result.passed, result.messages.join("\n")).toBe(true);
   });
 
   it.fails("accepts a defer reason paired with an Issue URL", () => {
