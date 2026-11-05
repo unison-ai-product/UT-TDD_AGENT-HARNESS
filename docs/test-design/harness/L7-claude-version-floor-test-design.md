@@ -1,0 +1,36 @@
+---
+title: "L7 Claude Code version floor test design"
+layer: L7
+executed_at_layer: L7
+artifact_type: test_design
+pair_artifact: docs/design/harness/L6-function-design/session-log.md
+status: draft
+updated: 2026-11-05
+issue: 1561
+---
+
+# Claude Code の版が下限未満のときの警告テスト設計 (issue #1561)
+
+## 1. 対象と上位の契約
+
+対象は、Claude Code の版が下限 (2.1.295) 未満のときに利用者へ知らせる経路である。上位の契約は
+`docs/design/harness/L6-function-design/session-log.md` の「2026-11-05 Claude Code の版が下限未満のときの警告 (Issue #1561)」節。
+guard の `onFailure` そのものは `docs/test-design/harness/L7-claude-hook-onfailure-test-design.md` が持ち、本書では再定義しない。
+
+## 2. fixture の作り方
+
+- 一時ディレクトリに transcript の JSONL と session の state を作り、PostToolUse の hook 入力の `transcript_path` にその path を渡す。開発 repository の `.ut-tdd/`・`harness.db`・OneDrive を操作しない。
+- doctor の行は、`claude --version` を呼ぶ関数を stub で差し替える。実際の Claude Code を起動しない。
+
+## 3. 候補の oracle
+
+| ID | 対象 | 入力・期待・反例 |
+|---|---|---|
+| `CANDIDATE-U-CCVER-001` | 実行中の版の警告 | 入力: 最後の message の行の `version` が (a) `2.1.293`、(b) `2.1.295`、(c) `2.1.318`、(d) `2.2.0`、(e) `10.0.0`。期待: (a) だけ stderr に 1 行の警告 (版・下限・guard の失敗時の停止が効かないこと・更新の促し) を出し、(b)〜(e) は出さない。どれも exit 0。反例: 文字列として比べて (e) を下限未満と判定する実装。下限ちょうど (b) を警告する実装。警告のために exit を非 0 にする実装。 |
+| `CANDIDATE-U-CCVER-002` | 版を確かめられない | 入力: (a) `transcript_path` が無い、(b) 指す file が無い、(c) message の行に `version` が無い、(d) `version` が `x.y` 形式でない。期待: どれも「Claude Code の版を確かめられない」を 1 行出し、exit 0。反例: 読めないときに黙って通す実装 (確かめられないことを知らせない)。読めないときに下限以上とみなす実装。 |
+| `CANDIDATE-U-CCVER-003` | 1 session に 1 回 | 入力: 同じ session_id で PostToolUse を 3 回、別の session_id で 1 回。transcript の版は下限未満。期待: 警告は session ごとに 1 回だけ (合計 2 回)。反例: tool の呼び出しごとに警告する実装。session をまたいで 1 回しか出さない実装。 |
+| `CANDIDATE-U-CCVER-004` | 下限の正本と doctor | 入力: src の下限の定数、`docs/templates/adapter/CLAUDE.md`、`src/setup/templates.ts` の生成 adapter、doctor の check (stub の `claude --version` が `2.1.293` と `2.1.318`)。期待: (a) 文書と生成物に書かれた下限が定数と一致する。(b) doctor は `2.1.293` で warn、`2.1.318` で warn なし、どちらも fail にしない。warn の文言が「PATH の claude の版」と明記する。反例: 下限を文書と src に別々に書いて乖離させる実装。doctor を fail にする実装。PATH の版を実行中の版と称する文言。 |
+
+## 4. 段の扱い
+
+- 001〜004 は設計書保護の三段階に従う。登録と Red の PR が `it.fails` として入れ、`src` を含まない昇格 PR が正式 ID に改め、実装 PR が `it` に戻す。004 が開発 repository の文書を読むなら、`test-repository-isolation` の登録行を登録と Red の PR に入れる。
