@@ -174,7 +174,7 @@ describe("Claude hook wrapper execution contract (issue #123 / PLAN-L7-522 S1-b)
     expect(meetsUnflaggedTypeScriptFloor("not-a-range")).toBe(false);
   });
 
-  describe("CANDIDATE-U-HOOKEXEC-014: source, Pack template, and generator failure-policy parity", () => {
+  describe("U-HOOKEXEC-014: source, Pack template, and generator failure-policy parity", () => {
     it("precondition: all three settings contain both guards and the five record/session hooks", () => {
       for (const { label, settings } of loadClaudeFailureSettings()) {
         const rows = claudeHookRows(settings);
@@ -197,7 +197,7 @@ describe("Claude hook wrapper execution contract (issue #123 / PLAN-L7-522 S1-b)
       }
     });
 
-    it("CANDIDATE-U-HOOKEXEC-014: keeps record/session hooks fail-open in all three settings", () => {
+    it("U-HOOKEXEC-014: keeps record/session hooks fail-open in all three settings", () => {
       for (const { label, settings } of loadClaudeFailureSettings()) {
         const recordHooks = claudeHookRows(settings).filter((row) =>
           ["SessionStart", "PostToolUse", "Stop", "SubagentStop"].includes(row.event),
@@ -209,7 +209,7 @@ describe("Claude hook wrapper execution contract (issue #123 / PLAN-L7-522 S1-b)
       }
     });
 
-    it.fails("CANDIDATE-U-HOOKEXEC-014: requires both guards to use onFailure block", () => {
+    it.fails("U-HOOKEXEC-014: requires both guards to use onFailure block", () => {
       for (const { label, settings } of loadClaudeFailureSettings()) {
         const guards = claudeHookRows(settings).filter((row) => row.event === "PreToolUse");
         expect(
@@ -222,7 +222,7 @@ describe("Claude hook wrapper execution contract (issue #123 / PLAN-L7-522 S1-b)
       }
     });
 
-    it.fails("CANDIDATE-U-HOOKEXEC-014: rejects the obsolete blockOnFailure key everywhere", () => {
+    it.fails("U-HOOKEXEC-014: rejects the obsolete blockOnFailure key everywhere", () => {
       for (const { label, settings } of loadClaudeFailureSettings()) {
         const legacyRows = claudeHookRows(settings).filter((row) =>
           Object.hasOwn(row.hook, "blockOnFailure"),
@@ -231,7 +231,7 @@ describe("Claude hook wrapper execution contract (issue #123 / PLAN-L7-522 S1-b)
       }
     });
 
-    it("CANDIDATE-U-HOOKEXEC-014: keeps hook-specific failure fields aligned across all three settings", () => {
+    it("U-HOOKEXEC-014: keeps hook-specific failure fields aligned across all three settings", () => {
       const [source, pack, generator] = loadClaudeFailureSettings().map(({ settings }) =>
         hookFailureState(claudeHookRows(settings)),
       );
