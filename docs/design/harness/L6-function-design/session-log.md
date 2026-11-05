@@ -205,4 +205,4 @@ guard が起動不能・例外・timeout (5 秒) になると、tool call がそ
 前提。`onFailure` の利用には Claude Code v2.1.295 以降が必要である。version の検査は本契約に含めず、doctor check も追加しない。
 
 受け入れ注記。実装 PR は、実際の Claude Code で 1 回の手動確認を残す。guard script を起動不能にした状態で Edit が block されること。
-対応するテスト oracle は `docs/test-design/harness/L7-claude-hook-onfailure-test-design.md` の `CANDIDATE-U-HOOKEXEC-011`〜`014` である。
+対応する正式テスト oracle は `docs/test-design/harness/L7-claude-hook-onfailure-test-design.md` の `U-HOOKEXEC-011`、`012`、`014` である。記録 / session hook の既存 fail-open を保つ通常テストは `CANDIDATE-U-HOOKEXEC-013` として維持する。

@@ -10,6 +10,69 @@ import { removeTestTree } from "./support/temp-tree.ts";
 
 const repoRoot = process.cwd();
 
+type ClaudeSettingsForFailureParity = {
+  hooks: Record<string, Array<{ matcher?: string; hooks: Array<Record<string, unknown>> }>>;
+};
+type ClaudeHookRow = {
+  event: string;
+  matcher: string;
+  entryIndex: number;
+  hookIndex: number;
+  hook: Record<string, unknown>;
+};
+
+function loadClaudeFailureSettings() {
+  return [
+    {
+      label: "source",
+      settings: JSON.parse(
+        readFileSync(join(repoRoot, ".claude", "settings.json"), "utf8"),
+      ) as ClaudeSettingsForFailureParity,
+    },
+    {
+      label: "Pack template",
+      settings: JSON.parse(
+        readFileSync(
+          join(repoRoot, "docs", "templates", "adapter", ".claude", "settings.json"),
+          "utf8",
+        ),
+      ) as ClaudeSettingsForFailureParity,
+    },
+    {
+      label: "generator",
+      settings: JSON.parse(
+        BUILTIN_GITHUB_TEMPLATES["adapter/.claude/settings.json"],
+      ) as ClaudeSettingsForFailureParity,
+    },
+  ];
+}
+
+function claudeHookRows(settings: ClaudeSettingsForFailureParity): ClaudeHookRow[] {
+  return Object.entries(settings.hooks).flatMap(([event, entries]) =>
+    entries.flatMap((entry, entryIndex) =>
+      entry.hooks.map((hook, hookIndex) => ({
+        event,
+        matcher: entry.matcher ?? "",
+        entryIndex,
+        hookIndex,
+        hook,
+      })),
+    ),
+  );
+}
+
+function hookFailureState(rows: ClaudeHookRow[]) {
+  return rows.map(({ event, matcher, entryIndex, hookIndex, hook }) => ({
+    key: `${event}|${matcher}|${entryIndex}|${hookIndex}`,
+    onFailure: Object.hasOwn(hook, "onFailure")
+      ? { present: true, value: hook.onFailure }
+      : { present: false },
+    blockOnFailure: Object.hasOwn(hook, "blockOnFailure")
+      ? { present: true, value: hook.blockOnFailure }
+      : { present: false },
+  }));
+}
+
 function meetsUnflaggedTypeScriptFloor(range: string): boolean {
   const valid = validRange(range);
   if (valid === null) return false;
@@ -109,6 +172,72 @@ describe("Claude hook wrapper execution contract (issue #123 / PLAN-L7-522 S1-b)
     expect(meetsUnflaggedTypeScriptFloor(">=22.18.0 || <22.18.0")).toBe(false);
     expect(meetsUnflaggedTypeScriptFloor("22.x")).toBe(false);
     expect(meetsUnflaggedTypeScriptFloor("not-a-range")).toBe(false);
+  });
+
+  describe("U-HOOKEXEC-014: source, Pack template, and generator failure-policy parity", () => {
+    it("precondition: all three settings contain both guards and the five record/session hooks", () => {
+      for (const { label, settings } of loadClaudeFailureSettings()) {
+        const rows = claudeHookRows(settings);
+        const guards = rows.filter((row) => row.event === "PreToolUse");
+        expect(guards, label).toHaveLength(2);
+        expect(guards.map((row) => row.matcher).sort(), label).toEqual(
+          ["Agent|Task", "Edit|Write|MultiEdit"].sort(),
+        );
+        const guardByMatcher = new Map(guards.map((row) => [row.matcher, row.hook]));
+        expect(JSON.stringify(guardByMatcher.get("Agent|Task")), label).toContain("agent-guard");
+        expect(JSON.stringify(guardByMatcher.get("Edit|Write|MultiEdit")), label).toContain(
+          "work-guard",
+        );
+        expect(
+          ["SessionStart", "PostToolUse", "Stop", "SubagentStop"].map(
+            (event) => rows.filter((row) => row.event === event).length,
+          ),
+          label,
+        ).toEqual([1, 1, 2, 1]);
+      }
+    });
+
+    it("U-HOOKEXEC-014: keeps record/session hooks fail-open in all three settings", () => {
+      for (const { label, settings } of loadClaudeFailureSettings()) {
+        const recordHooks = claudeHookRows(settings).filter((row) =>
+          ["SessionStart", "PostToolUse", "Stop", "SubagentStop"].includes(row.event),
+        );
+        expect(
+          recordHooks.every((row) => !Object.hasOwn(row.hook, "onFailure")),
+          label,
+        ).toBe(true);
+      }
+    });
+
+    it.fails("U-HOOKEXEC-014: requires both guards to use onFailure block", () => {
+      for (const { label, settings } of loadClaudeFailureSettings()) {
+        const guards = claudeHookRows(settings).filter((row) => row.event === "PreToolUse");
+        expect(
+          Object.fromEntries(guards.map((row) => [row.matcher, row.hook.onFailure])),
+          label,
+        ).toEqual({
+          "Agent|Task": "block",
+          "Edit|Write|MultiEdit": "block",
+        });
+      }
+    });
+
+    it.fails("U-HOOKEXEC-014: rejects the obsolete blockOnFailure key everywhere", () => {
+      for (const { label, settings } of loadClaudeFailureSettings()) {
+        const legacyRows = claudeHookRows(settings).filter((row) =>
+          Object.hasOwn(row.hook, "blockOnFailure"),
+        );
+        expect(legacyRows, label).toEqual([]);
+      }
+    });
+
+    it("U-HOOKEXEC-014: keeps hook-specific failure fields aligned across all three settings", () => {
+      const [source, pack, generator] = loadClaudeFailureSettings().map(({ settings }) =>
+        hookFailureState(claudeHookRows(settings)),
+      );
+      expect(pack).toEqual(source);
+      expect(generator).toEqual(source);
+    });
   });
 
   it("U-HOOKEXEC-002/U-HOOKEXEC-003/U-HOOKEXEC-004/U-HOOKEXEC-007: routes all Claude hooks as exact argv and preserves policy", () => {
