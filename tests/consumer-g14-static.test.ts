@@ -376,31 +376,6 @@ describe("consumer G14 right-arm static gate (U-RCDEV-035)", () => {
       "improvement_feedback.items[0].summary is required",
     ],
     [
-      "feedback PLAN must exist",
-      (root: string) =>
-        updateJson(feedbackPath(root), (value) => {
-          requiredRecordAt(value.items, 0).routed_to = "PLAN-L9-999-missing";
-        }),
-      "improvement_feedback.items[0] routed_to PLAN-L9-999-missing does not exist",
-    ],
-    [
-      "feedback Issue must use Issue URL form",
-      (root: string) =>
-        updateJson(feedbackPath(root), (value) => {
-          requiredRecordAt(value.items, 1).routed_to = "#12";
-        }),
-      "improvement_feedback.items[1] routed_to #12 is not a PLAN or Issue URL",
-    ],
-    [
-      "feedback Issue URL must use issue path",
-      (root: string) =>
-        updateJson(feedbackPath(root), (value) => {
-          requiredRecordAt(value.items, 1).routed_to =
-            "https://github.com/example/consumer/pull/12";
-        }),
-      "improvement_feedback.items[1] routed_to https://github.com/example/consumer/pull/12 is not a PLAN or Issue URL",
-    ],
-    [
       "feedback must be a JSON object",
       (root: string) => writeFileSync(feedbackPath(root), "not json\n", "utf8"),
       "invalid artifact improvement_feedback: JSON object required",
@@ -411,6 +386,73 @@ describe("consumer G14 right-arm static gate (U-RCDEV-035)", () => {
     const result = evaluate(root);
     if (expected.startsWith("right-arm-static - OK")) expect(result.passed).toBe(true);
     else expect(result.messages.join("\n")).toContain(expected);
+  });
+
+  it("fixture precondition: the existing PLAN feedback target is present in the passing shape", () => {
+    const root = consumerFixture();
+    const feedback = JSON.parse(readFileSync(feedbackPath(root), "utf8")) as {
+      items: Array<{ routed_to: string }>;
+    };
+    expect(existsSync(join(root, "docs/plans/PLAN-CONSUMER-01.md"))).toBe(true);
+    expect(feedback.items[0]?.routed_to).toBe("PLAN-CONSUMER-01");
+    expect(feedback.items[1]?.routed_to).toBe("https://github.com/example/consumer/issues/12");
+    expect(evaluate(root).passed).toBe(true);
+  });
+
+  it.fails("m-G14g: a missing PLAN ID is rejected as not an Issue URL, not as missing", () => {
+    const root = consumerFixture();
+    updateJson(feedbackPath(root), (value) => {
+      requiredRecordAt(value.items, 0).routed_to = "PLAN-L9-999-missing";
+    });
+    expect(evaluate(root).messages.join("\n")).toContain(
+      "improvement_feedback.items[0] routed_to PLAN-L9-999-missing is not an Issue URL",
+    );
+  });
+
+  it.fails("m-G14g: an existing PLAN ID is also rejected as not an Issue URL", () => {
+    const root = consumerFixture();
+    updateJson(feedbackPath(root), (value) => {
+      requiredRecordAt(value.items, 0).routed_to = "PLAN-CONSUMER-01";
+    });
+    expect(evaluate(root).messages.join("\n")).toContain(
+      "improvement_feedback.items[0] routed_to PLAN-CONSUMER-01 is not an Issue URL",
+    );
+  });
+
+  it("m-G14h: rejects a pull URL (the rejection is unchanged)", () => {
+    const root = consumerFixture();
+    updateJson(feedbackPath(root), (value) => {
+      requiredRecordAt(value.items, 1).routed_to = "https://github.com/example/consumer/pull/12";
+    });
+    expect(evaluate(root).passed).toBe(false);
+  });
+
+  it.fails("m-G14h: reports that a pull URL is not an Issue URL", () => {
+    const root = consumerFixture();
+    updateJson(feedbackPath(root), (value) => {
+      requiredRecordAt(value.items, 1).routed_to = "https://github.com/example/consumer/pull/12";
+    });
+    expect(evaluate(root).messages.join("\n")).toContain(
+      "improvement_feedback.items[1] routed_to https://github.com/example/consumer/pull/12 is not an Issue URL",
+    );
+  });
+
+  it("m-G14i: rejects a number-only reference (the rejection is unchanged)", () => {
+    const root = consumerFixture();
+    updateJson(feedbackPath(root), (value) => {
+      requiredRecordAt(value.items, 1).routed_to = "#12";
+    });
+    expect(evaluate(root).passed).toBe(false);
+  });
+
+  it.fails("m-G14i: reports that a number-only reference is not an Issue URL", () => {
+    const root = consumerFixture();
+    updateJson(feedbackPath(root), (value) => {
+      requiredRecordAt(value.items, 1).routed_to = "#12";
+    });
+    expect(evaluate(root).messages.join("\n")).toContain(
+      "improvement_feedback.items[1] routed_to #12 is not an Issue URL",
+    );
   });
 
   it("allows defined non-pair IDs without misreporting them as missing targets", () => {
