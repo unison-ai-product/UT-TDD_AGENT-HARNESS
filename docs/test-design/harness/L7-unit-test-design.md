@@ -1518,8 +1518,8 @@ spec:
 | `U-VMC-001` | L0-L14各1件 | `VModelContract.create` | layer count 15、exit 0 |
 | `U-VMC-002` | G0.5/G1-G14各1件 | `VModelContract.create` | gate count 15、exit 0 |
 | `U-VMC-003` | layer/gate欠落または重複 | `VModelContract.create` | `contract-cardinality-invalid`, exit 1 |
-| `U-VMC-004` | pair/exception reason不整合 | `VModelContract.create` | `contract-pair-invalid`, exit 1 |
-| `U-VMC-005` | required field欠落 | loader/compiler | default補完せず`contract-field-missing`, exit 1 |
+| `U-VMC-004` | synthetic `verification_issue` URLを持つ L8-L14 と、`source_plan`・`required_backlinks` を持たない L11/L13 pair exception | compiler | Issue URL を compiled obligation に保持し、`PLAN-*` 固定値なしで L11/L13 の layer・allowed pairs・reason を維持する。Issue 番号は fixture の合成値。`verification_issue` の PLAN ID は拒否。S3 昇格は `it.fails`、実装後 `it` |
+| `U-VMC-005` | `verification_issue` が欠落し、旧 `verification_plan_id` は残る L8 | compiler | verification Issue を PLAN ID から補完せず拒否。S3 昇格は `it.fails`、実装後 `it` |
 | `I-VMC-001` | valid contract | compiler→registry/doctor/roadmap | rule ID/verdict集合差0、exit 0 |
 | `U-DISP-001` | checked manifest宣言値と同数records | catalog create | source/item/category/profile件数一致、exit 0 |
 | `U-DISP-002` | manifest件数とrecord件数不一致 | catalog create | `catalog-count-mismatch`, exit 1 |
