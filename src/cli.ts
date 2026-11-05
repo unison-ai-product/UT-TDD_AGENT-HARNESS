@@ -57,8 +57,9 @@ import { writeGateRunEvidence } from "./gate/run-evidence.ts";
 import { evaluateStaticGate } from "./gate/static.ts";
 import { runChangeLaneClassification, SystemGitDiffNamesPort } from "./github/change-lane.ts";
 import { runDesignProtectionCommand } from "./github/design-protection.ts";
+import { evaluateGithubOpsGuardWithCommitInput } from "./github/guard-commit-range.ts";
 import { collectJobSummary, renderJobSummary } from "./github/job-summary.ts";
-import { evaluateGithubOpsGuard, renderGithubOpsGuard } from "./github/ops-guard.ts";
+import { renderGithubOpsGuard } from "./github/ops-guard.ts";
 import { renderPrTraceBlock, validatePrTraceBody } from "./github/pr-trace.ts";
 import {
   diffRepositoryPolicy,
@@ -3591,16 +3592,13 @@ github
     }) => {
       const prBody =
         opts.prBodyFile && existsSync(opts.prBodyFile) ? readFileSync(opts.prBodyFile, "utf8") : "";
-      const commitSubjects =
-        opts.commitFile && existsSync(opts.commitFile)
-          ? readFileSync(opts.commitFile, "utf8").split(/\r?\n/).filter(Boolean)
-          : [];
-      const result = evaluateGithubOpsGuard({
+      const result = evaluateGithubOpsGuardWithCommitInput({
         headRef: opts.headRef,
         baseRef: opts.baseRef,
         prTitle: opts.prTitle,
         prBody,
-        commitSubjects,
+        commitFile: opts.commitFile,
+        cwd: process.cwd(),
       });
       if (opts.json) process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
       else process.stdout.write(renderGithubOpsGuard(result));
