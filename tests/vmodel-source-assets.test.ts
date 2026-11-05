@@ -234,7 +234,7 @@ describe("checked Vモデル source assets", () => {
     }
   });
 
-  it.fails("U-DISPPTR-002: source target authoring edges retire plan_alias", () => {
+  it("U-DISPPTR-002: source target authoring has no plan_alias rows", () => {
     expect(
       tableRows(edges, ["target_type"]).filter((row) => row.target_type === "plan_alias"),
     ).toEqual([]);

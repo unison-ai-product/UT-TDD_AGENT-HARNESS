@@ -78,6 +78,13 @@ function fixture(): CatalogInput {
   };
 }
 
+function supportedSourceTargetFixture(): CatalogInput {
+  const input = fixture();
+  input.sourceTargetEdges[0].targetType = "artifact_path";
+  input.sourceTargetEdges[0].targetRef = "docs/design/harness/L5-detailed-design/physical-data.md";
+  return input;
+}
+
 function rules(input: CatalogInput): string[] {
   const result = DocumentDispositionCatalog.create(input);
   return result.ok ? [] : result.errors.map((finding) => finding.ruleId);
@@ -162,6 +169,16 @@ describe("DocumentDispositionCatalog", () => {
     const disposition = fixture();
     disposition.sourceTargetEdges[0].disposition = "adopt";
     expect(rules(disposition)).toContain("catalog-source-target-mismatch");
+  });
+
+  it("U-DISPPTR-002 precondition: supported source-target kind creates a catalog", () => {
+    expect(DocumentDispositionCatalog.create(supportedSourceTargetFixture()).ok).toBe(true);
+  });
+
+  it.fails("U-DISPPTR-002: rejects plan_alias in source-target catalog input", () => {
+    const input = supportedSourceTargetFixture();
+    input.sourceTargetEdges[0].targetType = "plan_alias";
+    expect(DocumentDispositionCatalog.create(input).ok).toBe(false);
   });
 
   it("U-DISP-004: item ledger row欠落をsource-targetから補完しない", () => {
