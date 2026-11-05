@@ -28,7 +28,7 @@ consumer は runtime と launcher (`.ut-tdd/bin/ut-tdd.mjs`) を commit しな�
 | 既に別の版が入っている repo へ違う版を入れると `consumer_runtime_update_unsupported` で拒否される | #930 |
 | guard は block を stderr + exit 2 で返し、メッセージ本文は `process.stderr.write(decision.message)` で出る。stdin 読み取り・JSON 解析の失敗も同じ経路 (exit 2) である | `.claude/hooks/agent-guard.ts:34-49`、`:70` |
 | consumer 用の guard の argv は `.ut-tdd/bin/ut-tdd.mjs hook <guard>` で、launcher 自体が無いと node が `MODULE_NOT_FOUND` (exit 1、スタック) を出す。その場では案内文を出せる主体が存在しない | `src/lint/project-hook.ts:68-97` |
-| entrypoint 欠落時の launcher は exit 127 で fail-close する、と oracle `U-HOOKEXEC-008` が宣言している (現実装の absent は exit 78 であり、§5 の最後の項目で揃える) | `docs/design/harness/L6-function-design/function-spec.md:2310` |
+| entrypoint 欠落時の launcher は exit 127 で fail-close する、と oracle `U-HOOKEXEC-008` が宣言している (現実装の absent は exit 78 である。§5 の最後の項目の表で exit 2 に揃える) | `docs/design/harness/L6-function-design/function-spec.md:2310` |
 
 ## 3. 決定 1: worktree の入口 (`setup --worktree`)
 
@@ -55,7 +55,16 @@ consumer は runtime と launcher (`.ut-tdd/bin/ut-tdd.mjs`) を commit しな�
 - `setup --worktree` は、成功する場合を除き、worktree・main・キャッシュのどれにも何も残さない (失敗時は巻き戻す)。
 - 入れる版は main の active pointer の版と常に一致する。キャッシュ・引数・環境変数から版を選べる経路は無い。
 - 案内の経路は常に exit 非 0 であり、`MODULE_NOT_FOUND` のスタックを block 理由にしない。
-- entrypoint 欠落の exit code は、実装時に `U-HOOKEXEC-008` の宣言 (127) と launcher の実装 (78 / 本書の 2) を 1 つの表に揃える。
+- **exit code の境界** (Issue #1525、2026-11-05 に確定):
+
+  | 状態 | exit | stderr |
+  |---|---|---|
+  | active pointer が無い (`consumer_runtime_absent`。launcher が project-local の entrypoint を解決できない場合を含む) | 2 | 符号と案内文 (§4) |
+  | launcher 自体が無い (guard の起動断片が検出する) | 2 | 案内文 (§4) |
+  | その他の deny 符号 (`consumer_runtime_digest_mismatch` など) | 78 | 符号のみ (従来どおり) |
+  | guard が確定 block を返す | 2 | block 理由 (従来どおり) |
+
+  exit 127 は使わない。`U-HOOKEXEC-008` が宣言していた「entrypoint 欠落時は exit 127」は、上の表の 1 行目 (exit 2) に置き換える。宣言とテスト (`tests/hook-native-launcher.test.ts` の `U-HOOKEXEC-008`、現状は 78 を確かめている) は、設計書保護の三段階に従い、#1525 の src を含まない昇格 PR で exit 2 の `it.fails` に改め、Green の実装 PR で `it` に戻す。
 
 ## 6. 範囲外
 
