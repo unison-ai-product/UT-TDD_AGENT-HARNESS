@@ -209,7 +209,7 @@ describe("Claude hook wrapper execution contract (issue #123 / PLAN-L7-522 S1-b)
       }
     });
 
-    it.fails("U-HOOKEXEC-014: requires both guards to use onFailure block", () => {
+    it("U-HOOKEXEC-014: requires both guards to use onFailure block", () => {
       for (const { label, settings } of loadClaudeFailureSettings()) {
         const guards = claudeHookRows(settings).filter((row) => row.event === "PreToolUse");
         expect(
@@ -222,7 +222,7 @@ describe("Claude hook wrapper execution contract (issue #123 / PLAN-L7-522 S1-b)
       }
     });
 
-    it.fails("U-HOOKEXEC-014: rejects the obsolete blockOnFailure key everywhere", () => {
+    it("U-HOOKEXEC-014: rejects the obsolete blockOnFailure key everywhere", () => {
       for (const { label, settings } of loadClaudeFailureSettings()) {
         const legacyRows = claudeHookRows(settings).filter((row) =>
           Object.hasOwn(row.hook, "blockOnFailure"),
@@ -246,7 +246,7 @@ describe("Claude hook wrapper execution contract (issue #123 / PLAN-L7-522 S1-b)
     ) as {
       hooks: Record<
         string,
-        { hooks: { command: string; args?: string[]; blockOnFailure?: boolean }[] }[]
+        { hooks: { command: string; args?: string[]; onFailure?: string }[] }[]
       >;
     };
     const hooks = Object.values(settings.hooks).flatMap((entries) =>
@@ -268,15 +268,15 @@ describe("Claude hook wrapper execution contract (issue #123 / PLAN-L7-522 S1-b)
     }
     const preToolHooks = (
       settings.hooks.PreToolUse as {
-        hooks: { command: string; args?: string[]; blockOnFailure?: boolean }[];
+        hooks: { command: string; args?: string[]; onFailure?: string }[];
       }[]
     ).flatMap((entry) => entry.hooks);
-    expect(preToolHooks.every((hook) => hook.blockOnFailure === true)).toBe(true);
+    expect(preToolHooks.every((hook) => hook.onFailure === "block")).toBe(true);
     for (const event of ["SessionStart", "PostToolUse", "Stop", "SubagentStop"]) {
       expect(
         settings.hooks[event]
           .flatMap((entry) => entry.hooks)
-          .every((hook) => hook.blockOnFailure !== true),
+          .every((hook) => hook.onFailure === undefined),
       ).toBe(true);
     }
   });
