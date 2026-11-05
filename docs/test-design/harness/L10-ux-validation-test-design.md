@@ -28,7 +28,7 @@ updated: 2026-07-07
 
 ## §0 量閉じ原則 (L2 ↔ L10)
 
-- 全 L2 sub-doc (6 件) / UXV family 対応必須 (本書 §2 の対応表で機械可読)
+- 全 L2 sub-doc (一覧と数は `src/schema/index.ts` の `VALID_SUB_DOCS` が正本) / UXV family 対応必須 (本書 §2 の対応表で機械可読)
 - UXV 必須 family 5 種 (VISUAL / TOKEN / A11Y / VRT / REVIEW、`g10-ux-workflow` lint が
   selected + mandatory の family 欠落を fail-close)
 - 孤児 = 0 (機械検証 `ut-tdd doctor` pair-freeze + `g10-ux-workflow`)
