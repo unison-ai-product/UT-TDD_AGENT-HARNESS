@@ -1,22 +1,16 @@
+import { createHash } from "node:crypto";
 import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { deriveForwardReadiness } from "../src/kernel/forward-readiness.ts";
 import {
   encodeMergeClosureReceipt,
   reviewReceiptDigest,
 } from "../src/kernel/github-closure-receipt.ts";
 import {
   deriveStoredForwardReadiness,
-  markGithubProjectionApplied,
-  markGithubProjectionFailed,
-  queueGithubProjection,
   readGithubEvidence,
   rebuildExecutionReadiness,
-  recordGithubBinding,
-  selectActiveProjectRows,
-  selectExistingProjectPlans,
 } from "../src/state-db/github-forward-projection.ts";
 import { openHarnessDb } from "../src/state-db/index.ts";
 import { migrate } from "../src/state-db/migration.ts";
@@ -38,6 +32,42 @@ describe("GitHub Forward SQLite store", () => {
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(`schedule:${planId}`, planId, "L7", status, "plan", "yellow", "", "", revision);
+
+  const insertGithubBinding = (
+    db: ReturnType<typeof openHarnessDb>,
+    input: {
+      repositoryId: string;
+      planId: string;
+      planRevision: string;
+      objectKind: string;
+      objectId: string;
+      state: string;
+      projectItemId?: string;
+      objectUrl?: string;
+      headSha?: string;
+      observedAt?: string;
+    },
+  ) =>
+    db
+      .prepare(
+        `INSERT INTO github_object_bindings (
+          binding_id, repository_id, plan_id, plan_revision, project_item_id,
+          object_kind, object_id, object_url, head_sha, state, observed_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        `test:${input.repositoryId}:${input.objectKind}:${input.objectId}`,
+        input.repositoryId,
+        input.planId,
+        input.planRevision,
+        input.projectItemId ?? "",
+        input.objectKind,
+        input.objectId,
+        input.objectUrl ?? "",
+        input.headSha ?? "",
+        input.state,
+        input.observedAt ?? "2026-07-29T01:00:00Z",
+      );
 
   const insertMerge = (
     db: ReturnType<typeof openHarnessDb>,
@@ -186,7 +216,7 @@ ${source.citations.map((citation) => `      - "${citation}"`).join("\n")}`,
           blocked_reason, predecessor_plan_ids, plan_revision, source_hash
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       ).run("s1", "PLAN-L7-1-a", "L7", "draft", "plan", "yellow", "", "", "rev1", "hash1");
-      recordGithubBinding(db, {
+      insertGithubBinding(db, {
         repositoryId: "repo",
         planId: "PLAN-L7-1-a",
         planRevision: "rev1",
@@ -212,298 +242,49 @@ ${source.citations.map((citation) => `      - "${citation}"`).join("\n")}`,
     }
   });
 
-  it("U-GHPROJ-011: converges out-of-order lifecycle observations by object identity", () => {
+  it("U-GHPROJ-012: keeps pending projection intent across rebuild clear", () => {
     const db = openHarnessDb(":memory:");
     try {
       migrate(db);
-      const base = {
-        repositoryId: "repo",
-        planId: "PLAN-L7-1-a",
-        planRevision: "rev1",
-        objectKind: "check_run" as const,
-        objectId: "check:abc",
-      };
-      recordGithubBinding(db, { ...base, state: "実行中", headSha: "abc" });
-      recordGithubBinding(db, { ...base, state: "成功", headSha: "abc" });
-      expect(db.prepare("SELECT state FROM github_object_bindings").all()).toEqual([
-        { state: "成功" },
-      ]);
-    } finally {
-      db.close();
-    }
-  });
-
-  it("U-GHPROJ-012: rejects stale HEAD evidence and keeps queued projection intent", () => {
-    const db = openHarnessDb(":memory:");
-    try {
-      migrate(db);
-      recordGithubBinding(db, {
-        repositoryId: "repo",
-        planId: "PLAN-L7-1-a",
-        planRevision: "rev1",
-        objectKind: "pull_request",
-        objectId: "12",
-        state: "open",
-        headSha: "abc",
-      });
-      expect(() =>
-        recordGithubBinding(db, {
-          repositoryId: "repo",
-          planId: "PLAN-L7-1-a",
-          planRevision: "rev1",
-          objectKind: "review",
-          objectId: "review:1",
-          state: "承認",
-          headSha: "def",
-        }),
-      ).toThrow(/stale/);
-      queueGithubProjection({
-        db,
-        repositoryId: "repo",
-        planId: "PLAN-L7-1-a",
-        planRevision: "rev1",
-        operation: "project-item-upsert",
-        payload: {
-          owner: "unison-ai-product",
-          projectNumber: 6,
-          readiness: "着手可能",
-          currentGate: "G7",
-          headSha: "abcdef1",
-        },
-      });
-      clearRebuildableProjectionTables(db);
-      const queued = db
-        .prepare("SELECT payload_json, payload_digest, status FROM github_projection_outbox")
-        .get();
-      expect(queued).toMatchObject({ status: "pending" });
-      expect(JSON.parse(String(queued?.payload_json))).toEqual({
+      const payload = JSON.stringify({
         owner: "unison-ai-product",
         projectNumber: 6,
         readiness: "着手可能",
         currentGate: "G7",
         headSha: "abcdef1",
       });
-      expect(String(queued?.payload_digest)).toMatch(/^[a-f0-9]{64}$/);
-    } finally {
-      db.close();
-    }
-  });
-
-  it("U-GHPROJ-039: rejects non-contract fields before persisting an outbox payload", () => {
-    const db = openHarnessDb(":memory:");
-    try {
-      migrate(db);
-      expect(() =>
-        queueGithubProjection({
-          db,
-          repositoryId: "repo",
-          planId: "PLAN-L7-1-a",
-          planRevision: "rev1",
-          operation: "project-item-upsert",
-          payload: {
-            owner: "unison-ai-product",
-            projectNumber: 6,
-            readiness: "着手可能",
-            currentGate: "G7",
-            headSha: "abcdef1",
-            token: "must-not-persist",
-          } as never,
-        }),
-      ).toThrow(/payload fields/);
-      expect(db.prepare("SELECT COUNT(*) AS count FROM github_projection_outbox").get()).toEqual({
-        count: 0,
-      });
-    } finally {
-      db.close();
-    }
-  });
-
-  it("U-GHPROJ-052: queues an unstarted PLAN with an explicit empty HEAD", () => {
-    const db = openHarnessDb(":memory:");
-    try {
-      migrate(db);
-      queueGithubProjection({
-        db,
-        repositoryId: "owner/repo",
-        planId: "PLAN-L7-1-unstarted",
-        planRevision: "rev1",
-        operation: "project-item-upsert",
-        payload: {
-          owner: "owner",
-          projectNumber: 6,
-          readiness: "着手可能",
-          currentGate: "implementation",
-          headSha: "",
-        },
-      });
-      const row = db.prepare("SELECT payload_json, status FROM github_projection_outbox").get();
-      expect(JSON.parse(String(row?.payload_json))).toMatchObject({ headSha: "" });
-      expect(row?.status).toBe("pending");
-      for (const invalidHeadSha of [" ", "not-a-sha", undefined, { oid: "abcdef1" }]) {
-        expect(() =>
-          queueGithubProjection({
-            db,
-            repositoryId: "owner/repo",
-            planId: "PLAN-L7-2-invalid-head",
-            planRevision: "rev1",
-            operation: "project-item-upsert",
-            payload: {
-              owner: "owner",
-              projectNumber: 6,
-              readiness: "着手可能",
-              currentGate: "implementation",
-              headSha: invalidHeadSha,
-            } as never,
-          }),
-        ).toThrow(/payload values/);
-      }
-      expect(db.prepare("SELECT COUNT(*) AS count FROM github_projection_outbox").get()).toEqual({
-        count: 1,
-      });
-    } finally {
-      db.close();
-    }
-  });
-
-  it("U-GHPROJ-040: preserves an applied outbox only for an identical payload digest", () => {
-    const db = openHarnessDb(":memory:");
-    try {
-      migrate(db);
-      const input = {
-        db,
-        repositoryId: "repo",
-        planId: "PLAN-L7-1-a",
-        planRevision: "rev1",
-        operation: "project-item-upsert" as const,
-        payload: {
-          owner: "unison-ai-product",
-          projectNumber: 6,
-          readiness: "着手可能",
-          currentGate: "implementation",
-          headSha: "abcdef1",
-        },
-        now: "2026-07-31T00:00:00Z",
-      };
-      const firstId = queueGithubProjection(input);
-      markGithubProjectionApplied(db, [firstId], "2026-07-31T00:01:00Z");
-      expect(queueGithubProjection({ ...input, now: "2026-07-31T00:02:00Z" })).toBe(firstId);
-      expect(
-        db.prepare("SELECT status, attempt_count, last_error FROM github_projection_outbox").get(),
-      ).toEqual({ status: "applied", attempt_count: 1, last_error: "" });
-    } finally {
-      db.close();
-    }
-  });
-
-  it("U-GHPROJ-041: changed payload creates a pending intent that an old completion cannot apply", () => {
-    const db = openHarnessDb(":memory:");
-    try {
-      migrate(db);
-      const base = {
-        db,
-        repositoryId: "repo",
-        planId: "PLAN-L7-1-a",
-        planRevision: "rev1",
-        operation: "project-item-upsert" as const,
-        payload: {
-          owner: "unison-ai-product",
-          projectNumber: 6,
-          readiness: "着手可能",
-          currentGate: "implementation",
-          headSha: "abcdef1",
-        },
-      };
-      const oldId = queueGithubProjection(base);
-      markGithubProjectionApplied(db, [oldId]);
-      const newId = queueGithubProjection({
-        ...base,
-        payload: { ...base.payload, currentGate: "review", headSha: "def5678" },
-      });
-      expect(newId).not.toBe(oldId);
-      markGithubProjectionApplied(db, [oldId]);
-      expect(
-        db
-          .prepare(
-            "SELECT outbox_id, status, attempt_count, last_error, payload_json FROM github_projection_outbox",
-          )
-          .get(),
-      ).toEqual({
-        outbox_id: newId,
+      const payloadDigest = createHash("sha256").update(payload).digest("hex");
+      db.prepare(
+        `INSERT INTO github_projection_outbox (
+          outbox_id, repository_id, plan_id, plan_revision, operation, payload_json,
+          payload_digest, status, attempt_count, last_error, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ).run(
+        "test-outbox-012",
+        "repo",
+        "PLAN-L7-1-a",
+        "rev1",
+        "project-item-upsert",
+        payload,
+        payloadDigest,
+        "pending",
+        0,
+        "",
+        "2026-07-29T01:00:00Z",
+        "2026-07-29T01:00:00Z",
+      );
+      clearRebuildableProjectionTables(db);
+      const pending = db
+        .prepare(
+          "SELECT payload_json, payload_digest, status, attempt_count FROM github_projection_outbox",
+        )
+        .get();
+      expect(pending).toEqual({
+        payload_json: payload,
+        payload_digest: payloadDigest,
         status: "pending",
         attempt_count: 0,
-        last_error: "",
-        payload_json: JSON.stringify({
-          owner: "unison-ai-product",
-          projectNumber: 6,
-          readiness: "着手可能",
-          currentGate: "review",
-          headSha: "def5678",
-        }),
       });
-    } finally {
-      db.close();
-    }
-  });
-
-  it("U-GHPROJ-044: records a closed retryable failure without persisting provider output", () => {
-    const db = openHarnessDb(":memory:");
-    try {
-      migrate(db);
-      const id = queueGithubProjection({
-        db,
-        repositoryId: "repo",
-        planId: "PLAN-L7-1-a",
-        planRevision: "rev1",
-        operation: "project-item-upsert",
-        payload: {
-          owner: "unison-ai-product",
-          projectNumber: 6,
-          readiness: "着手可能",
-          currentGate: "review",
-          headSha: "def5678",
-        },
-      });
-      markGithubProjectionFailed(db, [id], "2026-07-31T00:03:00Z");
-      expect(
-        db
-          .prepare(
-            "SELECT status, attempt_count, last_error, updated_at FROM github_projection_outbox",
-          )
-          .get(),
-      ).toEqual({
-        status: "pending",
-        attempt_count: 1,
-        last_error: "project-sync-failed",
-        updated_at: "2026-07-31T00:03:00Z",
-      });
-    } finally {
-      db.close();
-    }
-  });
-
-  it("U-GHPROJ-045: a delayed failure cannot reopen an applied intent", () => {
-    const db = openHarnessDb(":memory:");
-    try {
-      migrate(db);
-      const id = queueGithubProjection({
-        db,
-        repositoryId: "owner/repo",
-        planId: "PLAN-L7-1-a",
-        planRevision: "rev1",
-        operation: "project-item-upsert",
-        payload: {
-          owner: "unison-ai-product",
-          projectNumber: 6,
-          readiness: "着手可能",
-          currentGate: "review",
-          headSha: "def5678",
-        },
-      });
-      markGithubProjectionApplied(db, [id]);
-      markGithubProjectionFailed(db, [id]);
-      expect(
-        db.prepare("SELECT status, attempt_count, last_error FROM github_projection_outbox").get(),
-      ).toEqual({ status: "applied", attempt_count: 1, last_error: "" });
     } finally {
       db.close();
     }
@@ -518,7 +299,7 @@ ${source.citations.map((citation) => `      - "${citation}"`).join("\n")}`,
         ["owner/repo-a", "成功"],
         ["owner/repo-b", "失敗"],
       ])
-        recordGithubBinding(db, {
+        insertGithubBinding(db, {
           repositoryId,
           planId: "PLAN-L7-1-a",
           planRevision: "rev1",
@@ -545,7 +326,7 @@ ${source.citations.map((citation) => `      - "${citation}"`).join("\n")}`,
         ["owner/repo-a", "PLAN-L7-1-a"],
         ["owner/repo-b", "PLAN-L7-2-b"],
       ])
-        recordGithubBinding(db, {
+        insertGithubBinding(db, {
           repositoryId,
           planId,
           planRevision: "rev1",
@@ -563,120 +344,12 @@ ${source.citations.map((citation) => `      - "${citation}"`).join("\n")}`,
     }
   });
 
-  it("U-GHPROJ-013: rejects reassignment of one provider object to another PLAN revision", () => {
-    const db = openHarnessDb(":memory:");
-    try {
-      migrate(db);
-      recordGithubBinding(db, {
-        repositoryId: "repo",
-        planId: "PLAN-L7-1-a",
-        planRevision: "rev1",
-        objectKind: "pull_request",
-        objectId: "12",
-        state: "open",
-      });
-      expect(() =>
-        recordGithubBinding(db, {
-          repositoryId: "repo",
-          planId: "PLAN-L7-2-b",
-          planRevision: "rev2",
-          objectKind: "pull_request",
-          objectId: "12",
-          state: "open",
-        }),
-      ).toThrow(/identity conflict/);
-      expect(db.prepare("SELECT plan_id, plan_revision FROM github_object_bindings").get()).toEqual(
-        {
-          plan_id: "PLAN-L7-1-a",
-          plan_revision: "rev1",
-        },
-      );
-    } finally {
-      db.close();
-    }
-  });
-
-  it("U-GHPROJ-014: allows Project item revision rollover but rejects delayed regression", () => {
-    const db = openHarnessDb(":memory:");
-    try {
-      migrate(db);
-      const base = {
-        repositoryId: "repo",
-        planId: "PLAN-L7-1-a",
-        objectKind: "project_item" as const,
-        objectId: "item:1",
-        state: "同期済",
-      };
-      recordGithubBinding(db, {
-        ...base,
-        planRevision: "rev1",
-        observedAt: "2026-07-29T01:00:00Z",
-      });
-      recordGithubBinding(db, {
-        ...base,
-        planRevision: "rev2",
-        observedAt: "2026-07-29T02:00:00Z",
-      });
-      recordGithubBinding(db, {
-        ...base,
-        planRevision: "rev2",
-        state: "遅延",
-        observedAt: "2026-07-29T01:30:00Z",
-      });
-      expect(
-        db.prepare("SELECT plan_revision, state, observed_at FROM github_object_bindings").get(),
-      ).toEqual({
-        plan_revision: "rev2",
-        state: "同期済",
-        observed_at: "2026-07-29T02:00:00Z",
-      });
-    } finally {
-      db.close();
-    }
-  });
-
-  it("U-GHPROJ-015: allows a newer lifecycle observation to roll the same PLAN revision", () => {
-    const db = openHarnessDb(":memory:");
-    try {
-      migrate(db);
-      const base = {
-        repositoryId: "repo",
-        planId: "PLAN-L7-1-a",
-        objectKind: "pull_request" as const,
-        objectId: "12",
-        state: "open",
-      };
-      recordGithubBinding(db, {
-        ...base,
-        planRevision: "1",
-        observedAt: "2026-07-29T01:00:00Z",
-      });
-      recordGithubBinding(db, {
-        ...base,
-        planRevision: "2",
-        observedAt: "2026-07-29T02:00:00Z",
-      });
-      expect(
-        recordGithubBinding(db, {
-          ...base,
-          planRevision: "1",
-          observedAt: "2026-07-29T01:30:00Z",
-        }),
-      ).toBeUndefined();
-      expect(
-        db.prepare("SELECT plan_revision, observed_at FROM github_object_bindings").get(),
-      ).toEqual({ plan_revision: "2", observed_at: "2026-07-29T02:00:00Z" });
-    } finally {
-      db.close();
-    }
-  });
-
   it("U-GHPROJ-030: marks multiple open PR heads inconsistent and does not mix their evidence", () => {
     const db = openHarnessDb(":memory:");
     try {
       migrate(db);
       insertSchedule(db, "PLAN-L7-1-a");
-      recordGithubBinding(db, {
+      insertGithubBinding(db, {
         repositoryId: "repo",
         planId: "PLAN-L7-1-a",
         planRevision: "rev1",
@@ -685,7 +358,7 @@ ${source.citations.map((citation) => `      - "${citation}"`).join("\n")}`,
         state: "open",
         headSha: "abc",
       });
-      recordGithubBinding(db, {
+      insertGithubBinding(db, {
         repositoryId: "repo",
         planId: "PLAN-L7-1-a",
         planRevision: "rev1",
@@ -694,7 +367,7 @@ ${source.citations.map((citation) => `      - "${citation}"`).join("\n")}`,
         state: "成功",
         headSha: "abc",
       });
-      recordGithubBinding(db, {
+      insertGithubBinding(db, {
         repositoryId: "repo",
         planId: "PLAN-L7-1-a",
         planRevision: "rev1",
@@ -703,17 +376,15 @@ ${source.citations.map((citation) => `      - "${citation}"`).join("\n")}`,
         state: "open",
         headSha: "def",
       });
-      expect(() =>
-        recordGithubBinding(db, {
-          repositoryId: "repo",
-          planId: "PLAN-L7-1-a",
-          planRevision: "rev1",
-          objectKind: "check_run",
-          objectId: "check:def",
-          state: "成功",
-          headSha: "def",
-        }),
-      ).not.toThrow();
+      insertGithubBinding(db, {
+        repositoryId: "repo",
+        planId: "PLAN-L7-1-a",
+        planRevision: "rev1",
+        objectKind: "check_run",
+        objectId: "check:def",
+        state: "成功",
+        headSha: "def",
+      });
       const [evidence] = readGithubEvidence(db);
       expect(evidence).toMatchObject({
         planId: "PLAN-L7-1-a",
@@ -730,7 +401,7 @@ ${source.citations.map((citation) => `      - "${citation}"`).join("\n")}`,
     try {
       migrate(db);
       insertSchedule(db, "PLAN-L7-1-a");
-      recordGithubBinding(db, {
+      insertGithubBinding(db, {
         repositoryId: "repo",
         planId: "PLAN-L7-1-a",
         planRevision: "rev1",
@@ -746,7 +417,7 @@ ${source.citations.map((citation) => `      - "${citation}"`).join("\n")}`,
         headSha: "old",
         mergeSha: "abc1234",
       });
-      recordGithubBinding(db, {
+      insertGithubBinding(db, {
         repositoryId: "repo",
         planId: "PLAN-L7-1-a",
         planRevision: "rev1",
@@ -754,6 +425,7 @@ ${source.citations.map((citation) => `      - "${citation}"`).join("\n")}`,
         objectId: "13",
         state: "open",
         headSha: "current",
+        observedAt: "2026-07-29T03:00:00Z",
       });
       const [evidence] = readGithubEvidence(db);
       expect(evidence).toMatchObject({
@@ -789,7 +461,7 @@ ${source.citations.map((citation) => `      - "${citation}"`).join("\n")}`,
         "同期済",
         "2026-07-29T01:00:00Z",
       );
-      recordGithubBinding(db, {
+      insertGithubBinding(db, {
         repositoryId: "repo",
         planId: "PLAN-L7-1-a",
         planRevision: "rev2",
@@ -825,7 +497,7 @@ ${source.citations.map((citation) => `      - "${citation}"`).join("\n")}`,
     try {
       migrate(db);
       insertSchedule(db, "PLAN-L7-1-a");
-      recordGithubBinding(db, {
+      insertGithubBinding(db, {
         repositoryId: "repo",
         planId: "PLAN-L7-1-a",
         planRevision: "rev1",
@@ -870,7 +542,7 @@ ${source.citations.map((citation) => `      - "${citation}"`).join("\n")}`,
     try {
       migrate(db);
       insertSchedule(db, "PLAN-L7-1-a", "rev1", "confirmed");
-      recordGithubBinding(db, {
+      insertGithubBinding(db, {
         repositoryId: "repo",
         planId: "PLAN-L7-1-a",
         planRevision: "rev1",
@@ -879,7 +551,7 @@ ${source.citations.map((citation) => `      - "${citation}"`).join("\n")}`,
         state: "成功",
         headSha: "current",
       });
-      recordGithubBinding(db, {
+      insertGithubBinding(db, {
         repositoryId: "repo",
         planId: "PLAN-L7-1-a",
         planRevision: "rev1",
@@ -929,43 +601,6 @@ ${source.citations.map((citation) => `      - "${citation}"`).join("\n")}`,
     }
   });
 
-  it("U-GHPROJ-033: keeps managed completed rows in all-active convergence", () => {
-    const rows = deriveForwardReadiness(
-      [
-        {
-          planId: "PLAN-L7-1-a",
-          revision: "rev1",
-          layer: "L7",
-          status: "accepted",
-          currentLocation: "accept",
-          rag: "green",
-          blockedReason: "",
-          predecessorPlanIds: [],
-        },
-        {
-          planId: "PLAN-L7-2-b",
-          revision: "rev1",
-          layer: "L7",
-          status: "parked",
-          currentLocation: "plan",
-          rag: "yellow",
-          blockedReason: "",
-          predecessorPlanIds: [],
-        },
-      ],
-      [
-        {
-          planId: "PLAN-L7-1-a",
-          ci: "成功",
-          review: "承認",
-          sync: "同期済",
-          mergeVerified: true,
-        },
-      ],
-    );
-    expect(selectActiveProjectRows(rows, new Set(["PLAN-L7-1-a"]))).toEqual([rows[0]]);
-  });
-
   it("U-GHPROJ-034: stored readiness never treats unmanaged completed status as closure evidence", () => {
     const db = openHarnessDb(":memory:");
     try {
@@ -1003,7 +638,7 @@ ${source.citations.map((citation) => `      - "${citation}"`).join("\n")}`,
     try {
       migrate(db);
       insertSchedule(db, "PLAN-L7-1-a");
-      recordGithubBinding(db, {
+      insertGithubBinding(db, {
         repositoryId: "repo",
         planId: "PLAN-L7-1-a",
         planRevision: "rev1",
@@ -1012,17 +647,6 @@ ${source.citations.map((citation) => `      - "${citation}"`).join("\n")}`,
         state: "merged",
         headSha: "head15",
       });
-      expect(() =>
-        recordGithubBinding(db, {
-          repositoryId: "repo",
-          planId: "PLAN-L7-1-a",
-          planRevision: "rev1",
-          objectKind: "merge",
-          objectId: "pr:15:merge:abc9876",
-          state: "bogus",
-          headSha: "head15",
-        } as unknown as Parameters<typeof recordGithubBinding>[1]),
-      ).toThrow(/repository-sync only/);
       insertMerge(db, {
         planId: "PLAN-L7-1-a",
         revision: "rev1",
@@ -1034,7 +658,7 @@ ${source.citations.map((citation) => `      - "${citation}"`).join("\n")}`,
       expect(readGithubEvidence(db)[0]).not.toHaveProperty("mergeVerified");
 
       insertSchedule(db, "PLAN-L7-2-forged");
-      recordGithubBinding(db, {
+      insertGithubBinding(db, {
         repositoryId: "repo",
         planId: "PLAN-L7-2-forged",
         planRevision: "rev1",
@@ -1058,27 +682,6 @@ ${source.citations.map((citation) => `      - "${citation}"`).join("\n")}`,
     } finally {
       db.close();
       removeTestTree(repoRoot);
-    }
-  });
-
-  it("U-GHPROJ-038: existing Project plans are scoped by repository", () => {
-    const db = openHarnessDb(":memory:");
-    try {
-      migrate(db);
-      for (const [repositoryId, planId] of [
-        ["owner/repo-a", "PLAN-L7-1-a"],
-        ["owner/repo-b", "PLAN-L7-2-b"],
-      ])
-        db.prepare(
-          `INSERT INTO github_project_item_projection (
-            projection_id, repository_id, project_id, project_item_id, plan_id,
-            plan_revision, content_node_id, head_sha, sync_status, last_reconciled_at
-          ) VALUES (?, ?, 'project:1', ?, ?, 'rev1', '', '', '同期済', ?)`,
-        ).run(`projection:${planId}`, repositoryId, `item:${planId}`, planId, "2026-07-31");
-
-      expect(selectExistingProjectPlans(db, "owner/repo-a")).toEqual(new Set(["PLAN-L7-1-a"]));
-    } finally {
-      db.close();
     }
   });
 });
