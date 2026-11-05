@@ -181,7 +181,7 @@ describe("consumer CI workflow registered Red oracles (#1522 / #1523)", () => {
     }
   });
 
-  it.fails("CANDIDATE-U-CICONS-001: activation absence fails rather than skipping all checks", () => {
+  it.fails("U-CICONS-001: activation absence fails rather than skipping all checks", () => {
     const workflow = parseWorkflow(generatedWorkflow());
     const steps = allSteps(workflow);
     const activationStep = steps.find((step) => stepText(step).includes("active.json"));
@@ -205,7 +205,7 @@ describe("consumer CI workflow registered Red oracles (#1522 / #1523)", () => {
     ).toBe(false);
   });
 
-  it.fails("CANDIDATE-U-CICONS-002: release setup uses the single top-level version/digest pin", () => {
+  it.fails("U-CICONS-002: release setup uses the single top-level version/digest pin", () => {
     const source = generatedWorkflow();
     const workflow = parseWorkflow(source);
     const steps = allSteps(workflow);
@@ -288,7 +288,7 @@ describe("consumer CI workflow registered Red oracles (#1522 / #1523)", () => {
     }
   });
 
-  it.fails("CANDIDATE-U-CICONS-003: generated dirty check passes clean and fails dirty", () => {
+  it.fails("U-CICONS-003: generated dirty check passes clean and fails dirty", () => {
     const workflow = parseWorkflow(generatedWorkflow());
     const steps = allSteps(workflow);
     const setupIndex = steps.findIndex((step) =>
@@ -317,7 +317,7 @@ describe("consumer CI workflow registered Red oracles (#1522 / #1523)", () => {
     );
   });
 
-  it.fails("CANDIDATE-U-CICONS-004: setup regeneration preserves changed consumer pins", () => {
+  it.fails("U-CICONS-004: setup regeneration preserves changed consumer pins", () => {
     const initial = parseWorkflow(generatedWorkflow());
     const versionKey =
       pinEntries(initial).find(
@@ -341,7 +341,7 @@ describe("consumer CI workflow registered Red oracles (#1522 / #1523)", () => {
     expect(regeneratedSource.match(/^env:\s*$/gm) ?? []).toHaveLength(1);
   });
 
-  it.fails("CANDIDATE-U-CICONS-005: first generation provides one nonempty default pin pair", () => {
+  it.fails("U-CICONS-005: first generation provides one nonempty default pin pair", () => {
     const source = generatedWorkflow();
     const workflow = parseWorkflow(source);
     const versionPin = pinEntries(workflow).filter(
@@ -359,7 +359,7 @@ describe("consumer CI workflow registered Red oracles (#1522 / #1523)", () => {
     }
   });
 
-  it.fails("CANDIDATE-U-CICONS-011: generated checkout fetches full history", () => {
+  it.fails("U-CICONS-011: generated checkout fetches full history", () => {
     const workflow = parseWorkflow(generatedWorkflow());
     const checkout = allSteps(workflow).find((step) =>
       /^actions\/checkout@/i.test(step.uses ?? ""),
@@ -368,7 +368,7 @@ describe("consumer CI workflow registered Red oracles (#1522 / #1523)", () => {
     expect(checkout?.with?.["fetch-depth"]).toBe(0);
   });
 
-  it.fails("CANDIDATE-U-CICONS-012: generated guard delegates range discovery to --base-ref", () => {
+  it.fails("U-CICONS-012: generated guard delegates range discovery to --base-ref", () => {
     const workflow = parseWorkflow(generatedWorkflow());
     const guard = allSteps(workflow).find((step) => stepText(step).includes("github guard"));
     expect(guard).toBeDefined();
@@ -390,7 +390,7 @@ describe("consumer CI workflow registered Red oracles (#1522 / #1523)", () => {
     expect(SOURCE_POLICY_PATH).toContain("github-ci-policy.ts");
   });
 
-  it.fails("CANDIDATE-U-CICONS-013: source harness-check calls range guard without precomputed subjects", () => {
+  it.fails("U-CICONS-013: source harness-check calls range guard without precomputed subjects", () => {
     const workflow = parseWorkflow(SOURCE_WORKFLOW);
     const guard = allSteps(workflow).find((step) => stepText(step).includes("github guard"));
     const source = String(guard?.run ?? "");
@@ -422,7 +422,7 @@ describe("consumer CI workflow registered Red oracles (#1522 / #1523)", () => {
     expect(rangeDocs.find((doc) => doc.role === "runtime")?.content).not.toContain("--commit-file");
   });
 
-  it.fails("CANDIDATE-U-CICONS-014: policy expected guard command owns range discovery", () => {
+  it.fails("U-CICONS-014: policy expected guard command owns range discovery", () => {
     const expectedGuardLines = SOURCE_POLICY.split(/\r?\n/).filter((line) =>
       line.includes("node src/cli.ts github guard"),
     );
@@ -431,13 +431,13 @@ describe("consumer CI workflow registered Red oracles (#1522 / #1523)", () => {
     expect(expectedGuardLines.every((line) => !line.includes("--commit-file"))).toBe(true);
   });
 
-  it.fails("CANDIDATE-U-CICONS-014: CI policy denies the legacy precomputed commit list", () => {
+  it.fails("U-CICONS-014: CI policy denies the legacy precomputed commit list", () => {
     const baselineDocs = loadSourcePolicyDocs();
     const legacyDocs = replaceSourceGuardDocs(baselineDocs, LEGACY_GUARD_RUN);
     expect(analyzeGithubCiPolicy(legacyDocs).ok).toBe(false);
   });
 
-  it.fails("CANDIDATE-U-CICONS-014: CI policy accepts guard-owned base range", () => {
+  it.fails("U-CICONS-014: CI policy accepts guard-owned base range", () => {
     const baselineDocs = loadSourcePolicyDocs();
     const rangeDocs = replaceSourceGuardDocs(baselineDocs, RANGE_GUARD_RUN);
     expect(analyzeGithubCiPolicy(rangeDocs).ok).toBe(true);
