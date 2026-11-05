@@ -59,13 +59,13 @@ github_issue_id: 676
 | ID | oracle | 違反 / mutation |
 | --- | --- | --- |
 | CANDIDATE-U-RCDEV-016 | fixture (ii) setup 直後の `db status` が現行 schema version (> 0、`gate_runs` 存在)、`session start` digest が DEGRADED を含まない。setup は token telemetry を走査しない (home 走査 stub の呼び出し 0) | (m1) setup から rebuild を外す → schema v0。(m2) `skipTokenTelemetry` を外す → stub 呼び出し > 0 |
-| CANDIDATE-U-RCDEV-017 | 生成 `harness-check.yml` を YAML parse し、(a) launcher 経由の ut-tdd step が全て activation pointer (`.ut-tdd/runtime/activation/active.json`) の存在を条件に持つ、(b) pointer 不在時に notice を出す step があり、それ自体は失敗しない、(c) lock / scripts の無い fixture で `npm ci` / `cache: npm` / `npm run <script>` が無条件実行されない | (m1) ut-tdd step の条件を外す → (a) 失敗 (CI で exit 78)。(m2) notice step を削る → (b) 失敗 (黙って skip)。(m3) 旧 npm テンプレートへ戻す → (c) 失敗 |
+| CANDIDATE-U-RCDEV-017 | activation の正本は表直後を参照。本候補では生成 `harness-check.yml` を YAML parse し、lock / scripts の無い fixture で `npm ci` / `cache: npm` / `npm run <script>` が無条件実行されないことを確認する | (m1) `package-lock.json` の条件を外す → `npm ci` / `cache: npm` で失敗。(m2) `package.json` / `scripts` の条件を外す → `npm run <script>` で失敗 |
 | CANDIDATE-U-RCDEV-018 | fixture (iii) / (iv) の両方で `commitlint.config.cjs` が生成され、`node -e "require('./commitlint.config.cjs')"` が読める (依存未導入でも設定ファイル自体の構文は読める)。既存 `commitlint.config.js` がある fixture では bytes 不変で警告が出る。setup 出力に依存の導入コマンドが含まれる | (m1) `.js` + `module.exports` に戻す → (iii) で ESM として読まれ失敗。(m2) 既存 `.js` を上書き → bytes 変化 |
+activation 不在時の fail-close と後続 step の skip 禁止は、正式 oracle `U-CICONS-001` が所有する。
 
 ## PR-T1〜T3 テンプレート / skill 移植 (rev 2、PLAN §3.5)
 
-zip は repo root の `Vモデル設計ドキュメント_checked.zip` (gitignore 対象) であり、CI には無い。zip を入力に取る oracle は、PR-T が port index
-(`docs/templates/vmodel/README.md`) に記録する zip entry 名と sha256 を正とし、CI では tracked な port index とテンプレートだけを読む。
+zip は repo root の `Vモデル設計ドキュメント_checked.zip` (gitignore 対象) であり、CI には無い。zip を入力に取る oracle は、PR-T が port index (`docs/templates/vmodel/README.md`) に記録する zip entry 名と sha256 を正とし、CI では tracked な port index とテンプレートだけを読む。
 
 | ID | oracle | 違反 / mutation |
 | --- | --- | --- |
