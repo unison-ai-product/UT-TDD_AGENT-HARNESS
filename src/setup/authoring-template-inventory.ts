@@ -9,15 +9,6 @@ import { createHash } from "node:crypto";
  */
 export const AUTHORING_TEMPLATE_INVENTORY = Object.freeze([
   Object.freeze({
-    family: "PLAN",
-    sourcePrefix: "docs/templates/plan/",
-    artifactPrefix: "docs/templates/plan/",
-    requiredArtifactPaths: Object.freeze([
-      "docs/templates/plan/design/template.md",
-      "docs/templates/plan/impl/template.md",
-    ]),
-  }),
-  Object.freeze({
     family: "design",
     sourcePrefix: "docs/templates/design/",
     artifactPrefix: "docs/templates/design/",

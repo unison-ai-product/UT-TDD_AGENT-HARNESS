@@ -792,6 +792,7 @@ export function main(argv = process.argv.slice(2), deps = {}) {
   }
   const transcript = `${child.stdout ?? ""}${child.stderr ?? ""}`;
   let authoringTemplate = null;
+  let authoringDocumentSha256 = null;
   if (!child.error && child.status === 0) {
     const identityPath = join(consumerRoot, "ut-tdd.project.json");
     if (!existsSync(identityPath)) throw new Error("consumer-project-identity-not-generated");
@@ -799,18 +800,20 @@ export function main(argv = process.argv.slice(2), deps = {}) {
     runProductGit(run, consumerRoot, ["commit", "--quiet", "-m", "canary consumer identity"]);
     // Keep only the consumer-owned authoring input, derived from verified release bytes.
     verifyReleaseDirectory(directory, record);
-    const template = run("tar", ["-xOf", `${tag}.tar.gz`,
-      "docs/templates/plan/design/template.md"], {
+    const templatePath = "docs/templates/design/L6-function-spec-template.md";
+    const template = run("tar", ["-xOf", `${tag}.tar.gz`, templatePath], {
       cwd: directory, encoding: "utf8", windowsHide: true, timeout: 30_000,
     });
     if (template.error || template.status !== 0)
-      throw new Error(`shipped-plan-template-unavailable:${template.error?.message ?? template.stderr}`);
-    createConsumerPlan(consumerRoot, template.stdout);
+      throw new Error(`shipped-design-template-unavailable:${template.error?.message ?? template.stderr}`);
+    const authoringDocumentPath = createConsumerIssueDesignDocument(consumerRoot, template.stdout);
     authoringTemplate = {
       asset_name: `${tag}.tar.gz`,
-      path: "docs/templates/plan/design/template.md",
+      path: templatePath,
       sha256: `sha256:${createHash("sha256").update(template.stdout, "utf8").digest("hex")}`,
     };
+    const authoringDocument = readFileSync(join(consumerRoot, ...authoringDocumentPath.split("/")));
+    authoringDocumentSha256 = `sha256:${createHash("sha256").update(authoringDocument).digest("hex")}`;
   }
   const evidence = {
     phase: "installed-awaiting-clean-restart",
@@ -833,9 +836,7 @@ export function main(argv = process.argv.slice(2), deps = {}) {
     consumer_root: consumerRoot,
     release_directory: directory,
     consumer_head: child.status === 0 ? productHead(run, consumerRoot) : null,
-    authoring_input_sha256: child.status === 0
-      ? `sha256:${createHash("sha256").update(readFileSync(join(consumerRoot, "canary-plan-draft.json"))).digest("hex")}`
-      : null,
+    authoring_document_sha256: authoringDocumentSha256,
     authoring_template: authoringTemplate,
     reviewer_independent_digest_verification: "pending",
   };
@@ -969,11 +970,10 @@ function verifySmoke(parsed, { now, run }) {
   try {
     runCli("doctor-setup-smoke", ["doctor", "--setup-smoke"]);
     runCli("doctor-consumer-profile", ["doctor", "--profile", "consumer-setup-smoke"]);
-    const authoringInput = readFileSync(join(consumerRoot, "canary-plan-draft.json"));
-    if (`sha256:${createHash("sha256").update(authoringInput).digest("hex")}` !== evidence.authoring_input_sha256)
-      throw new Error("consumer-authoring-input-drift");
-    runCli("plan-authoring", ["plan", "draft", "--manifest", join(consumerRoot, "canary-plan-draft.json")]);
-    runCli("plan-lint", ["plan", "lint"]);
+    const authoringDocument = readFileSync(join(consumerRoot, "docs", "design", "canary-function-spec.md"));
+    if (`sha256:${createHash("sha256").update(authoringDocument).digest("hex")}` !== evidence.authoring_document_sha256)
+      throw new Error("consumer-authoring-document-drift");
+    assertIssueFrontmatter(authoringDocument.toString("utf8"));
     runCli("db-rebuild", ["db", "rebuild", "--json"]);
     if (!existsSync(join(consumerRoot, ".ut-tdd", "harness.db")))
       throw new Error("consumer-local-db-missing");
@@ -1104,45 +1104,23 @@ export function verifyInstallEvidence(evidence, consumerRoot, removedPaths, expe
     throw new Error("verify-removed-paths-not-bound-to-install");
 }
 
-export function createConsumerPlan(consumerRoot, source) {
-  if (typeof source !== "string") throw new Error("consumer-plan-template-invalid");
+export function createConsumerIssueDesignDocument(consumerRoot, source) {
+  if (typeof source !== "string") throw new Error("consumer-design-template-invalid");
   const match = /^---\r?\n([\s\S]*?)\r?\n---\r?\n([\s\S]*)$/.exec(source);
-  if (!match) throw new Error("consumer-plan-template-invalid");
-  let frontmatter = match[1];
-  const replaceScalar = (key, value) => {
-    const pattern = new RegExp(`^${key}:.*$`, "m");
-    if (!pattern.test(frontmatter)) throw new Error(`consumer-plan-template-missing:${key}`);
-    frontmatter = frontmatter.replace(pattern, `${key}: ${value}`);
-  };
-  replaceScalar("plan_id", "PLAN-L2-999-canary-authoring");
-  replaceScalar("title", '"Canary consumer の設計起票"');
-  replaceScalar("drive", "agent");
-  replaceScalar("created", "2026-09-30");
-  replaceScalar("owner", '"Canary consumer"');
-  const generatesStart = frontmatter.indexOf("\ngenerates:\n");
-  const dependenciesStart = frontmatter.indexOf("\ndependencies:\n", generatesStart);
-  const relatedDocsStart = frontmatter.indexOf("\nrelated_docs:\n", dependenciesStart);
-  if (generatesStart < 0 || dependenciesStart < 0 || relatedDocsStart < 0)
-    throw new Error("consumer-plan-template-structure-invalid");
-  frontmatter = `${frontmatter.slice(0, generatesStart)}\ngenerates: []${frontmatter.slice(dependenciesStart, relatedDocsStart)}\nrelated_docs: []\nroute_signal: forward\nroute_mode: forward\nsub_doc: screen-list`;
-  const body = match[2].replaceAll(
-    "(本 PLAN でどの範囲の設計を凍結するかを 1-2 段落で記述)",
-    "配布された PLAN テンプレートから consumer 固有の draft を正規 CLI で起票する。",
-  );
-  const planPath = "docs/plans/PLAN-L2-999-canary-authoring.md";
-  mkdirSync(join(consumerRoot, "docs", "plans"), { recursive: true });
-  mkdirSync(join(consumerRoot, "docs", "governance"), { recursive: true });
-  writeFileSync(join(consumerRoot, "docs", "governance", "plan-admission-receipts.json"),
-    JSON.stringify({ schema_version: "ut-tdd.plan-admission-receipts/v1", records: [] }), "utf8");
-  writeFileSync(join(consumerRoot, "canary-plan-draft.json"), JSON.stringify({
-    version: 2,
-    command_id: "canary:plan-authoring",
-    plan_id: "PLAN-L2-999-canary-authoring",
-    recorded_at: "2026-09-30T00:00:00.000Z",
-    admission: { route_signal: "forward", route_mode: "forward", kind: "design", layer: "L2", drive: "agent", branch: "work/forward-canary", status: "draft", sub_doc: "screen-list" },
-    source: { path: planPath, content: `---\n${frontmatter}\n---\n${body}` },
-    projection: { path: "docs/governance/plan-admission-receipts.json" },
-  }), "utf8");
+  if (!match) throw new Error("consumer-design-template-invalid");
+  assertIssueFrontmatter(source);
+  const destination = "docs/design/canary-function-spec.md";
+  const target = join(consumerRoot, ...destination.split("/"));
+  mkdirSync(dirname(target), { recursive: true });
+  writeFileSync(target, source, { flag: "wx" });
+  return destination;
+}
+
+function assertIssueFrontmatter(source) {
+  const match = /^---\r?\n([\s\S]*?)\r?\n---\r?\n/.exec(source);
+  if (!match) throw new Error("consumer-design-template-frontmatter-invalid");
+  if (!/^issue:\s*\S.*$/m.test(match[1]))
+    throw new Error("consumer-design-template-issue-missing");
 }
 
 export function makeAccessAuditModule(forbiddenPaths, accessLog, processLog) {

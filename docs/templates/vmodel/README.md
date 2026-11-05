@@ -1,7 +1,7 @@
 ---
 title: "PLAN-L7-676 PR-T1 port index: checked ZIP テンプレート 57 本の分類"
 status: draft
-plan: docs/plans/PLAN-L7-676-release-consumer-dev-start.md
+issue: 676
 ---
 
 # port index: checked ZIP テンプレートの移植先

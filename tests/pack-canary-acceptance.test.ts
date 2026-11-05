@@ -46,7 +46,7 @@ interface AcceptanceModule {
   buildInstallerInvocation(releaseDirectory: string, anchorDigest: string, tag?: string): string[];
   buildAgentE2EInstallerInvocation(releaseDirectory: string, anchorDigest: string): string[];
   canaryAssetsForTag(tag: string): readonly string[];
-  createConsumerPlan(consumerRoot: string, source: string): void;
+  createConsumerIssueDesignDocument(consumerRoot: string, source: string): string;
   main(
     argv: string[],
     deps?: {
@@ -175,7 +175,7 @@ const {
   CANARY_TAG,
   AGENT_E2E_TAG,
   canaryAssetsForTag,
-  createConsumerPlan,
+  createConsumerIssueDesignDocument,
   main,
   createClosedReviewProviders,
   findForbiddenReferences,
@@ -1407,31 +1407,19 @@ describe("manual canary acceptance publish-record boundary", () => {
     );
   });
 
-  it("U-ST-PACKCANARY-009: authoring input is derived from the shipped template", () => {
+  it("U-ST-PACKCANARY-009: Issue-linked design document is derived from the shipped template", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-canary-template-"));
     tempRoots.push(root);
-    const template = join(root, "docs", "templates", "plan", "design", "template.md");
-    mkdirSync(join(root, "docs", "templates", "plan", "design"), { recursive: true });
-    copyFileSync(
-      join(process.cwd(), "docs", "templates", "plan", "design", "template.md"),
-      template,
+    const shippedTemplate = readFileSync(
+      join(process.cwd(), "docs", "templates", "design", "L6-function-spec-template.md"),
+      "utf8",
     );
-    const shippedTemplate = readFileSync(template, "utf8");
-    rmSync(template);
-    createConsumerPlan(root, shippedTemplate);
-    const manifest = JSON.parse(readFileSync(join(root, "canary-plan-draft.json"), "utf8"));
-    const match = /^---\n([\s\S]*?)\n---\n/.exec(manifest.source.content);
+    const destination = createConsumerIssueDesignDocument(root, shippedTemplate);
+    const document = readFileSync(join(root, ...destination.split("/")), "utf8");
+    const match = /^---\n([\s\S]*?)\n---\n/.exec(document);
     expect(match).not.toBeNull();
-    expect(parseYaml(match?.[1] ?? "")).toMatchObject({
-      plan_id: "PLAN-L2-999-canary-authoring",
-      drive: "agent",
-      route_signal: "forward",
-      route_mode: "forward",
-      sub_doc: "screen-list",
-      generates: [],
-      related_docs: [],
-    });
-    expect(manifest.source.content).toContain("配布された PLAN テンプレート");
+    expect(parseYaml(match?.[1] ?? "")).toHaveProperty("issue");
+    expect(document).toBe(shippedTemplate);
   });
 
   it("U-ST-PACKCANARY-005/006/009: accepts only exact canary.2 record, comment and 5 digests", () => {
@@ -1556,11 +1544,11 @@ describe("manual canary acceptance publish-record boundary", () => {
       consumer_root: realpathSync.native(fixture.consumerRoot),
       authoring_template: {
         asset_name: "v0.0.0-canary.0.tar.gz",
-        path: "docs/templates/plan/design/template.md",
-        sha256: sha(fixture.planTemplate),
+        path: "docs/templates/design/L6-function-spec-template.md",
+        sha256: sha(fixture.designTemplate),
       },
-      authoring_input_sha256: sha(
-        readFileSync(join(fixture.consumerRoot, "canary-plan-draft.json"), "utf8"),
+      authoring_document_sha256: sha(
+        readFileSync(join(fixture.consumerRoot, "docs", "design", "canary-function-spec.md")),
       ),
       wrong_anchor_denial: {
         typed_reason: "consumer_runtime_anchor_mismatch",

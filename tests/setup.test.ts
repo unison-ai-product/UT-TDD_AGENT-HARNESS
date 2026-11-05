@@ -60,8 +60,6 @@ const codeownersPath = join("/repo", ".github", "CODEOWNERS");
 const statePath = join("/repo", ".ut-tdd", "state", "setup.json");
 
 const AUTHORING_TEMPLATE_SOURCES = [
-  "docs/templates/plan/design/template.md",
-  "docs/templates/plan/impl/template.md",
   "docs/templates/design/L6-function-spec-template.md",
   "docs/templates/state/vmodel.json",
   "docs/templates/prompts/effort-classify.md",
