@@ -108,7 +108,7 @@ L6 機能   ┘                            └ L8 結合テスト       ┘ (L8-
 - **検証**: 観点 A (L0-L3 に関わる mode の workflow が動くか) + 観点 B (L1⇔L14 運用TD / L3⇔L12 受入TD / L2⇔L10 mock が同粒度か)。
 - **このフェーズの追加任務**: §1 の観点 A/B を全フェーズ共通テンプレートとして**確定・明文化**する (PO が Phase 1 を「検証対象 + 観点定義の場」と指定)。
 - **出力**: 課題/アイディア → improvement-backlog。
-- **現状接地**: L0=concept_v3.1 既済 / L1=draft (5 sub-doc) / **L2=5 sub-doc 実在** (screen-flow/screen-list/ui-element/wireframe + README、全件 `status:placeholder`。③ペア=mock 自体・L10 独立 doc 不要を README で明文化済 = IMP-039) / L3=draft (3 sub-doc + roadmap)。
+- **現状接地**: L0=concept_v3.1 既済 / L1=draft (5 sub-doc) / **L2 sub-doc 実在** (一覧と数は `src/schema/index.ts` の `VALID_SUB_DOCS` が正本。screen-flow/screen-list/ui-element/wireframe + README、全件 `status:placeholder`。③ペア=mock 自体・L10 独立 doc 不要を README で明文化済 = IMP-039) / L3=draft (sub-doc は `VALID_SUB_DOCS` が正本 + roadmap)。
 
 ### Phase 2 — L4〜L6 改善サイクル
 
