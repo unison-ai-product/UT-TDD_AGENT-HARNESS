@@ -1,24 +1,30 @@
 import { execFileSync } from "node:child_process";
 import {
   chmodSync,
-  copyFileSync,
+  cpSync,
   existsSync,
-  mkdirSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
+import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { GitAuthoringProvenance } from "../../src/disposition/adapters/git-authoring-provenance.ts";
 import { parseStrictMarkdownTable } from "../../src/disposition/adapters/strict-markdown-table.ts";
+import { buildTrackedTargetRegistry } from "../../src/disposition/adapters/tracked-target-registry.ts";
 import { loadTrackedCatalogInput } from "../../src/disposition/adapters/tracked-vmodel-loader.ts";
+import {
+  reconcileDispositionTarget,
+  resolveCanonicalTarget,
+  type TargetKind,
+} from "../../src/disposition/domain/target-resolver.ts";
 import { openHarnessDb } from "../../src/state-db/index.ts";
 import { migrate } from "../../src/state-db/migration.ts";
 import { projectVmodelAuthoring } from "../../src/state-db/vmodel-projections.ts";
-import { headSnapshotRoot } from "../support/workspace-roots.ts";
+import { headSnapshotRoot, workspaceRead } from "../support/workspace-roots.ts";
 
 const issueOnlyCatalogPaths = [
   "docs/governance/vmodel-source-manifest.md",
@@ -86,6 +92,64 @@ describe("CANDIDATE-U-DISPPTR-001 issue-only projection", () => {
     expect(fixtureRelativePath).not.toBe("..");
     expect(fixtureRelativePath.startsWith(`..${sep}`)).toBe(false);
     expect(isAbsolute(fixtureRelativePath)).toBe(false);
+  });
+
+  it("precondition: tracked source targets exist and resolve in the fixture", () => {
+    const targets = parseStrictMarkdownTable(
+      readFileSync(join(issueOnlyFixtureRoot, "docs/governance/vmodel-source-target-edges.md")),
+      {
+        subjectId: "docs/governance/vmodel-source-target-edges.md",
+        expectedHeaders: ["edge_id", "source_id", "disposition", "target_type", "target_ref"],
+      },
+    );
+    const dispositions = parseStrictMarkdownTable(
+      readFileSync(
+        join(issueOnlyFixtureRoot, "docs/governance/vmodel-document-disposition-catalog.md"),
+      ),
+      {
+        subjectId: "docs/governance/vmodel-document-disposition-catalog.md",
+        expectedHeaders: [
+          "source_id",
+          "source_title",
+          "disposition",
+          "target",
+          "profile / 判断理由",
+        ],
+      },
+    );
+    if (!targets.ok) throw new Error(JSON.stringify(targets.findings));
+    if (!dispositions.ok) throw new Error(JSON.stringify(dispositions.findings));
+    const families = targets.rows
+      .filter((row) => row.target_type === "artifact_family")
+      .map((row) => row.target_ref);
+    const registryRoot = workspaceRead({
+      id: "issue-only-target-resolution",
+      mode: "isolated_fixture",
+      reason: "resolve every authored source target against the tracked fixture docs",
+      root: issueOnlyFixtureRoot,
+    });
+    const registry = buildTrackedTargetRegistry(registryRoot, families);
+    const resolvedEdges = targets.rows.map((row) =>
+      resolveCanonicalTarget(
+        { kind: row.target_type as TargetKind, ref: row.target_ref },
+        registry,
+      ),
+    );
+    expect(targets.rows.length).toBeGreaterThan(0);
+    expect(resolvedEdges.every((result) => result.ok)).toBe(true);
+    for (const source of dispositions.rows) {
+      const edges = targets.rows.filter((edge) => edge.source_id === source.source_id);
+      if (edges.length !== 1) continue;
+      expect(
+        reconcileDispositionTarget(
+          {
+            displayRef: source.target,
+            edge: { kind: edges[0].target_type as TargetKind, ref: edges[0].target_ref },
+          },
+          registry,
+        ).ok,
+      ).toBe(true);
+    }
   });
 
   it("loader finding: current loader rejects the issue-only header", () => {
@@ -170,11 +234,18 @@ function createIssueOnlyFixture(): string {
   const snapshotRoot = headSnapshotRoot();
   const fixtureRoot = mkdtempSync(join(tmpdir(), "ut-1375-issue-only-projection-"));
   try {
-    for (const catalogPath of [...issueOnlyCatalogPaths, ...projectionSupportPaths]) {
-      const fixtureFile = join(fixtureRoot, catalogPath);
-      mkdirSync(dirname(fixtureFile), { recursive: true });
-      copyFileSync(join(snapshotRoot, catalogPath), fixtureFile);
-    }
+    const plansRoot = join(snapshotRoot, "docs", "plans");
+    cpSync(join(snapshotRoot, "docs"), join(fixtureRoot, "docs"), {
+      recursive: true,
+      filter: (source) => source !== plansRoot && !source.startsWith(`${plansRoot}${sep}`),
+    });
+    const makeDirectoriesWritable = (directory: string): void => {
+      chmodSync(directory, 0o755);
+      for (const entry of readdirSync(directory, { withFileTypes: true })) {
+        if (entry.isDirectory()) makeDirectoriesWritable(join(directory, entry.name));
+      }
+    };
+    makeDirectoriesWritable(join(fixtureRoot, "docs"));
     const issueOnlyLedgerFile = join(fixtureRoot, "docs/governance/vmodel-item-target-ledger.md");
     const originalLedger = readFileSync(issueOnlyLedgerFile, "utf8");
     const issueOnlyLedger = originalLedger.replace(
