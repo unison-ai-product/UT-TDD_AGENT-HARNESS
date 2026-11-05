@@ -20,13 +20,16 @@ dependency-drift:4 descent-obligation:3 distribution-acceptance:1 distribution-s
 drive-model-passage:1 fr-roadmap-coverage:4 frontend-design-coverage:1 g10-ux-workflow:5 g8-integration-workflow:6 g9-system-workflow:7
 erasable-syntax:1 gate-static:10 import-specifier:2 l6-completion:2 l6-fr-coverage:2 mode-catalog:2 model-id-ssot:1 model-id-ssot-drift:1 module-drift:2 oracle-test-trace:13
 plan-lint:8 projection-writer:9 proposal-document-coverage:2 readability:5 relation-graph-loader:1 support/plan-mechanism-retirement-s3-migration.ts:1
-release-artifact-resolver:1 release-consumer-skills:4 right-lung-doc-governance:1 rule-drift:4 runtime-hook-entrypoints:1
+release-artifact-resolver:1 release-consumer-skills:4
+right-lung-doc-governance:1 rule-drift:4 runtime-hook-entrypoints:1
 review-live-cli:4
 review-delegation-root:1
 runtime-portability:2 screen-impl-pair-freeze:1 setup-bun-removal:2 ban-lint-detection-power:3 bun-permanent-ban:14 self-pair-normative-guard:1 setup:8 skill-assignment:1 state-db:1
 sub-doc-catalog-drift:5 sub-doc-section-structure:1 telemetry-closure:1 test-design-naming:1 toolchain-pin:1 tracked-canonical:1
 vmodel-contract-compiler:1 vmodel-source-assets:1 work-guard:1 workspace-roots:3 write-encoding-guard:1
-vmodel-consumer-lint:1 release-consumer-gates:15 consumer-g14-static:3
+vmodel-consumer-lint:1
+release-consumer-gates:15
+consumer-g14-static:3
 consumer-g1-screen-namespace:1
 doctor-test-repository-isolation:1 persistent-db-cleanup-contract:1 memory-clean-cut-removal:1 memory-legacy-archive:1 memory-clean-cut-non-read:1 memory-curation-ledger:1
 secret-scan-diff:1
@@ -101,7 +104,8 @@ repositoryReadContracts["tests/design-root.test.ts"] = {
 };
 
 const HEAD_SNAPSHOT_ROWS = `
-github-pr-trace.test.ts:1 model-id-ssot-drift.test.ts:1 model-id-ssot.test.ts:1 setup-project-identity-bootstrap.test.ts:2 plan-mechanism-retirement.test.ts:1 sub-doc-schema-integrity.test.ts:3 disposition/issue-only-projection.test.ts:1
+github-pr-trace.test.ts:1 model-id-ssot-drift.test.ts:1 model-id-ssot.test.ts:1
+setup-project-identity-bootstrap.test.ts:2 plan-mechanism-retirement.test.ts:1 sub-doc-schema-integrity.test.ts:3 disposition/issue-only-projection.test.ts:1
 `;
 
 for (const [name, calls] of HEAD_SNAPSHOT_ROWS.trim()
