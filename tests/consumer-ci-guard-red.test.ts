@@ -3,7 +3,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { headSnapshotRoot } from "./support/workspace-roots.ts";
+import { workspaceRead } from "./support/workspace-roots.ts";
 
 type GuardResult = {
   ok: boolean;
@@ -18,7 +18,15 @@ type Capture = {
   child?: SpawnSyncReturns<string>;
 };
 
-const harnessRoot = headSnapshotRoot();
+// The runner executes tests from its npm-ci snapshot; headSnapshotRoot() is a
+// separate read-only reference clone and intentionally has no installed deps.
+const harnessRoot = workspaceRead({
+  id: "consumer-ci-guard-cli-root",
+  mode: "isolated_fixture",
+  reason:
+    "CLI E2E must use the npm-ci execution snapshot, not the detached read-only reference clone",
+  root: process.cwd(),
+});
 const cliPath = join(harnessRoot, "src", "cli.ts");
 const captures = new Map<string, Capture>();
 const fixtures: GitFixture[] = [];
@@ -380,11 +388,30 @@ describe("consumer github guard commit range contract (CICONS-006..010, 015..018
     ]) {
       const current = captureFor(key);
       expect(current.error, `${key}: setup`).toBeUndefined();
-      expect(current.child?.error, `${key}: spawn`).toBeUndefined();
-      expect(current.child?.status, `${key}: exit status`).not.toBeNull();
-      const parsed = JSON.parse(current.child?.stdout ?? "") as GuardResult;
-      expect(typeof parsed.ok, `${key}: ok field`).toBe("boolean");
-      expect(Array.isArray(parsed.findings), `${key}: findings field`).toBe(true);
+      const stderr = current.child?.stderr ?? "";
+      const stdout = current.child?.stdout ?? "";
+      expect(
+        current.child?.error,
+        `${key}: spawn error; status=${current.child?.status}; stderr:\n${stderr}`,
+      ).toBeUndefined();
+      expect(typeof current.child?.status, `${key}: exit status; stderr:\n${stderr}`).toBe(
+        "number",
+      );
+      let parsed: GuardResult | undefined;
+      let parseError: unknown;
+      try {
+        parsed = JSON.parse(stdout) as GuardResult;
+      } catch (error) {
+        parseError = error;
+      }
+      expect(
+        parseError,
+        `${key}: invalid JSON; status=${current.child?.status}; stderr:\n${stderr}\nstdout:\n${stdout}`,
+      ).toBeUndefined();
+      expect(typeof parsed?.ok, `${key}: ok field; stderr:\n${stderr}`).toBe("boolean");
+      expect(Array.isArray(parsed?.findings), `${key}: findings field; stderr:\n${stderr}`).toBe(
+        true,
+      );
     }
     spawnsVerified = true;
   });

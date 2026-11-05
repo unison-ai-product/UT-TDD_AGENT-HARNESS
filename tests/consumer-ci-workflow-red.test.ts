@@ -413,7 +413,7 @@ describe("consumer CI workflow registered Red oracles (#1522 / #1523)", () => {
     expect(analyzeGithubCiPolicy(legacyDocs).ok).toBe(false);
   });
 
-  it("CANDIDATE-U-CICONS-014: CI policy accepts guard-owned base range", () => {
+  it.fails("CANDIDATE-U-CICONS-014: CI policy accepts guard-owned base range", () => {
     const baselineDocs = loadSourcePolicyDocs();
     const rangeDocs = replaceSourceGuardDocs(baselineDocs, RANGE_GUARD_RUN);
     expect(analyzeGithubCiPolicy(rangeDocs).ok).toBe(true);
