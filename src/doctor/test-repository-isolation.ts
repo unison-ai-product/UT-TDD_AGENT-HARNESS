@@ -101,7 +101,7 @@ repositoryReadContracts["tests/design-root.test.ts"] = {
 };
 
 const HEAD_SNAPSHOT_ROWS = `
-github-pr-trace.test.ts:1 model-id-ssot-drift.test.ts:1 model-id-ssot.test.ts:1 setup-project-identity-bootstrap.test.ts:2 plan-mechanism-retirement.test.ts:1 sub-doc-schema-integrity.test.ts:3
+github-pr-trace.test.ts:1 model-id-ssot-drift.test.ts:1 model-id-ssot.test.ts:1 setup-project-identity-bootstrap.test.ts:2 plan-mechanism-retirement.test.ts:1 sub-doc-schema-integrity.test.ts:3 disposition/issue-only-projection.test.ts:1
 `;
 
 for (const [name, calls] of HEAD_SNAPSHOT_ROWS.trim()
@@ -112,11 +112,6 @@ for (const [name, calls] of HEAD_SNAPSHOT_ROWS.trim()
     calls: Number(calls),
     reason: "repository contract read is fixed to detached HEAD",
   };
-
-repositoryReadContracts["tests/disposition/issue-only-projection.test.ts"] = {
-  mode_calls: { head_snapshot: 1, isolated_fixture: 1 },
-  reason: "fixture reads use detached HEAD bytes and tracked isolated targets",
-};
 
 repositoryReadContracts["tests/disposition/projection.test.ts"] = {
   mode_calls: { head_snapshot: 1 },

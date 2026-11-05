@@ -24,7 +24,7 @@ import {
 import { openHarnessDb } from "../../src/state-db/index.ts";
 import { migrate } from "../../src/state-db/migration.ts";
 import { projectVmodelAuthoring } from "../../src/state-db/vmodel-projections.ts";
-import { headSnapshotRoot, workspaceRead } from "../support/workspace-roots.ts";
+import { headSnapshotRoot } from "../support/workspace-roots.ts";
 
 const issueOnlyCatalogPaths = [
   "docs/governance/vmodel-source-manifest.md",
@@ -122,13 +122,7 @@ describe("CANDIDATE-U-DISPPTR-001 issue-only projection", () => {
     const families = targets.rows
       .filter((row) => row.target_type === "artifact_family")
       .map((row) => row.target_ref);
-    const registryRoot = workspaceRead({
-      id: "issue-only-target-resolution",
-      mode: "isolated_fixture",
-      reason: "resolve every authored source target against the tracked fixture docs",
-      root: issueOnlyFixtureRoot,
-    });
-    const registry = buildTrackedTargetRegistry(registryRoot, families);
+    const registry = buildTrackedTargetRegistry(issueOnlyFixtureRoot, families);
     const resolvedEdges = targets.rows.map((row) =>
       resolveCanonicalTarget(
         { kind: row.target_type as TargetKind, ref: row.target_ref },
