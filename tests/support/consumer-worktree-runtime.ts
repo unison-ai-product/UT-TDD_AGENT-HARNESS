@@ -248,8 +248,14 @@ export async function createConsumerWorktreeRuntimeFixture(): Promise<ConsumerWo
   const releaseB = join(main, "test-release-b");
   const releaseInfoB = writeReleaseFromInput(versionB.inputPath, releaseB, WORKTREE_RUNTIME_TAG_B);
   const common = resolve(main, git(main, ["rev-parse", "--git-common-dir"]));
-  const cache = join(common, "ut-tdd", "runtime-cache", releaseInfo.releaseId);
-  const cacheB = join(common, "ut-tdd", "runtime-cache", releaseInfoB.releaseId);
+  const cacheKey = (releaseId: string): string => {
+    if (!/^rel-sha256:[0-9a-f]{64}$/.test(releaseId)) {
+      throw new Error("fixture release ID is not a canonical rel-sha256 identity");
+    }
+    return releaseId.slice("rel-sha256:".length);
+  };
+  const cache = join(common, "ut-tdd", "runtime-cache", cacheKey(releaseInfo.releaseId));
+  const cacheB = join(common, "ut-tdd", "runtime-cache", cacheKey(releaseInfoB.releaseId));
   for (const [source, target] of [
     [release, cache],
     [releaseB, cacheB],
