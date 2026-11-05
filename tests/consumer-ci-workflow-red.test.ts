@@ -36,6 +36,7 @@ const SOURCE_POLICY = readFileSync(SOURCE_POLICY_PATH, "utf8");
 let cleanGitFixture = "";
 let dirtyGitFixture = "";
 let activationCommandResult: ReturnType<typeof runBashIn> | undefined;
+let cleanDirtyCheckCommandResult: ReturnType<typeof runBashIn> | undefined;
 let dirtyCheckCommandResult: ReturnType<typeof runBashIn> | undefined;
 
 function parseWorkflow(source: string): Workflow {
@@ -137,8 +138,10 @@ const LEGACY_GUARD_RUN = [
   'node src/cli.ts github guard --head-ref "$HEAD_REF" --base-ref "$BASE_REF" --pr-title "$PR_TITLE" --pr-body-file .ut-tdd-pr-body.txt --commit-file .ut-tdd-commit-subjects.txt',
 ].join("\n");
 
-const RANGE_GUARD_RUN =
-  'node src/cli.ts github guard --head-ref "$HEAD_REF" --base-ref "$BASE_REF" --pr-title "$PR_TITLE" --pr-body-file .ut-tdd-pr-body.txt';
+const RANGE_GUARD_RUN = [
+  "printf '%s\\n' \"$PR_BODY\" > .ut-tdd-pr-body.txt",
+  'node src/cli.ts github guard --head-ref "$HEAD_REF" --base-ref "$BASE_REF" --pr-title "$PR_TITLE" --pr-body-file .ut-tdd-pr-body.txt',
+].join("\n");
 
 describe("consumer CI workflow registered Red oracles (#1522 / #1523)", () => {
   beforeAll(() => {
@@ -216,7 +219,9 @@ describe("consumer CI workflow registered Red oracles (#1522 / #1523)", () => {
         )
       );
     });
-    const versionPin = pinEntries(workflow).filter(([key]) => /version|release|tag/i.test(key));
+    const versionPin = pinEntries(workflow).filter(
+      ([key]) => /version|release|tag/i.test(key) && !/digest/i.test(key),
+    );
     const digestPin = pinEntries(workflow).filter(([key]) => /digest/i.test(key));
 
     expect(releaseDownload).toBeDefined();
@@ -254,11 +259,25 @@ describe("consumer CI workflow registered Red oracles (#1522 / #1523)", () => {
     );
     if (dirtyCheck?.run) {
       const syntax = spawnSync("bash", ["--noprofile", "--norc", "-n", "-c", dirtyCheck.run], {
-        cwd: dirtyGitFixture,
+        cwd: cleanGitFixture,
         encoding: "utf8",
       });
       expect(syntax.error).toBeUndefined();
       expect(syntax.status).toBe(0);
+
+      cleanDirtyCheckCommandResult = runBashIn(cleanGitFixture, dirtyCheck.run);
+      expect(cleanDirtyCheckCommandResult.error).toBeUndefined();
+      expect(cleanDirtyCheckCommandResult.status).not.toBeNull();
+      expect(
+        `${cleanDirtyCheckCommandResult.stdout}\n${cleanDirtyCheckCommandResult.stderr}`,
+      ).not.toMatch(/syntax error|command not found/i);
+
+      const dirtySyntax = spawnSync("bash", ["--noprofile", "--norc", "-n", "-c", dirtyCheck.run], {
+        cwd: dirtyGitFixture,
+        encoding: "utf8",
+      });
+      expect(dirtySyntax.error).toBeUndefined();
+      expect(dirtySyntax.status).toBe(0);
 
       dirtyCheckCommandResult = runBashIn(dirtyGitFixture, dirtyCheck.run);
       expect(dirtyCheckCommandResult.error).toBeUndefined();
@@ -282,47 +301,52 @@ describe("consumer CI workflow registered Red oracles (#1522 / #1523)", () => {
     expect(setupIndex).toBeGreaterThanOrEqual(0);
     expect(dirtyCheckIndex).toBeGreaterThan(setupIndex);
     expect(steps[dirtyCheckIndex]?.run).toBeDefined();
+    expect(cleanDirtyCheckCommandResult).toBeDefined();
     expect(dirtyCheckCommandResult).toBeDefined();
+    expect(cleanDirtyCheckCommandResult?.status).toBe(0);
     expect(dirtyCheckCommandResult?.status).not.toBe(0);
   });
 
-  it("precondition: regeneration fixture contains an existing independently chosen pin pair", () => {
+  it("precondition: generated workflow is parseable and pin keys can be inventoried", () => {
     const initial = parseWorkflow(generatedWorkflow());
-    const existing = {
-      ...initial,
-      env: {
-        ...(initial.env ?? {}),
-        PACK_VERSION: "99.8.7",
-        CONSUMER_DIGEST: `sha256:${"a".repeat(64)}`,
-      },
-    };
-    expect(pinEntries(existing)).toEqual([
-      ["PACK_VERSION", "99.8.7"],
-      ["CONSUMER_DIGEST", `sha256:${"a".repeat(64)}`],
-    ]);
+    expect(initial.env ?? {}).toEqual(parseWorkflow(stringifyYaml(initial)).env ?? {});
+    expect(pinEntries(initial)).toEqual(
+      Object.entries(initial.env ?? {}).filter(([key]) =>
+        /(?:version|release|tag|digest)/i.test(key),
+      ),
+    );
   });
 
   it.fails("CANDIDATE-U-CICONS-004: setup regeneration preserves changed consumer pins", () => {
     const initial = parseWorkflow(generatedWorkflow());
+    const versionKey =
+      pinEntries(initial).find(
+        ([key]) => /version|release|tag/i.test(key) && !/digest/i.test(key),
+      )?.[0] ?? "";
+    const digestKey = pinEntries(initial).find(([key]) => /digest/i.test(key))?.[0] ?? "";
+    expect(versionKey).not.toBe("");
+    expect(digestKey).not.toBe("");
+
     const version = "99.8.7";
     const digest = `sha256:${"a".repeat(64)}`;
     const existing = stringifyYaml({
       ...initial,
-      env: { ...(initial.env ?? {}), PACK_VERSION: version, CONSUMER_DIGEST: digest },
+      env: { ...(initial.env ?? {}), [versionKey]: version, [digestKey]: digest },
     });
     const regeneratedSource = generatedWorkflow(existing);
     const regenerated = parseWorkflow(regeneratedSource);
 
-    expect(regenerated.env?.PACK_VERSION).toBe(version);
-    expect(regenerated.env?.CONSUMER_DIGEST).toBe(digest);
-    expect(pinEntries(regenerated)).toHaveLength(2);
+    expect(regenerated.env?.[versionKey]).toBe(version);
+    expect(regenerated.env?.[digestKey]).toBe(digest);
     expect(regeneratedSource.match(/^env:\s*$/gm) ?? []).toHaveLength(1);
   });
 
   it.fails("CANDIDATE-U-CICONS-005: first generation provides one nonempty default pin pair", () => {
     const source = generatedWorkflow();
     const workflow = parseWorkflow(source);
-    const versionPin = pinEntries(workflow).filter(([key]) => /version|release|tag/i.test(key));
+    const versionPin = pinEntries(workflow).filter(
+      ([key]) => /version|release|tag/i.test(key) && !/digest/i.test(key),
+    );
     const digestPin = pinEntries(workflow).filter(([key]) => /digest/i.test(key));
 
     expect(source.match(/^env:\s*$/gm) ?? []).toHaveLength(1);
