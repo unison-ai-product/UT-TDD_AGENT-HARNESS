@@ -174,7 +174,7 @@ digest 再計算を独立に確認する。
    sealed bundle/pointerだけを入力として、別cwdからproject-local wrapperを再実行する。
    テストはbundle/pointerを手書き注入しないため、現行setupが生成できなければRedになる。
 4. consumer root外のread/open/stat/write/processを観測し、失敗時もpartial successへ丸めない。
-5. 別cwdの wrapper から `doctor --setup-smoke`・PLAN authoring/lint・db rebuild・doctor・review
+5. 別cwdの wrapper から `doctor --setup-smoke`・設計文書の雛形の配置と frontmatter の確認 (`CANDIDATE-ST-PACKCANARY-007`)・db rebuild・doctor・review
    smoke と guard hook の正常系/禁止系 (`CANDIDATE-ST-PACKCANARY-010`) を実行する。第 2 層では
    公開 bundle の手順 0 (anchor 照合) が機能することを確認し、`tests/support/pack-consumer-
    runtime.ts` の実行結果と第 1 層の結果を acceptance evidence に混ぜない (`CANDIDATE-ST-
@@ -193,7 +193,7 @@ digest 再計算を独立に確認する。
   実行し、asset 集合・sha256 の記録照合と anchor 照合の deny 経路を実 Release で観測する。
 - source-CLI helper (`--consumer-runtime-input`) と第 1 層の Green が acceptance evidence として
   引用されないことを `CANDIDATE-ST-PACKCANARY-009` の offline test で機械検査する。
-- Linux/Windows/aggregate CI、PLAN lint、L12受入証跡、成果物を書いていない族 (cross-family) の canonical non-author closing receipt、
+- Linux/Windows/aggregate CI、L12受入証跡、成果物を書いていない族 (cross-family) の canonical non-author closing receipt、
   Reverse R1〜R4が同一exact revisionへ束縛される。
 - 専用 consumer repository `unison-ai-product/ut-tdd-consumer-canary` は一時的な検証用であり、恒久の資産ではない
   (PO 2026-10-01、PR #812)。AT-DIST-003 の受入と独立照合が終わったら、受入の証跡 (PR コメント・receipt の
