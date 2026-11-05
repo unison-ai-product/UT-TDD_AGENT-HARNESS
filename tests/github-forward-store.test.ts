@@ -684,5 +684,4 @@ ${source.citations.map((citation) => `      - "${citation}"`).join("\n")}`,
       removeTestTree(repoRoot);
     }
   });
-
 });
