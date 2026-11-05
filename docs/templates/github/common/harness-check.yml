@@ -61,7 +61,7 @@ jobs:
         if: ${{ hashFiles('.ut-tdd/runtime/activation/active.json') != '' }}
         run: node .ut-tdd/bin/ut-tdd.mjs audit quality --include-tests --limit 20
       # Consumer CI gate is doctor --setup-smoke: full doctor asserts source-repo
-      # self-application state (design docs / PLAN corpus) and is structurally red
+      # self-application state (governance/design/test-design corpus) and is structurally red
       # on a fresh consumer repository (A-172 C-1).
       - name: setup smoke
         if: ${{ hashFiles('.ut-tdd/runtime/activation/active.json') != '' }}

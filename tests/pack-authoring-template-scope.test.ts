@@ -99,8 +99,15 @@ const retiredPlanTemplatePaths = [
 ];
 
 describe("Issue #482 canonical Pack authoring inventory", () => {
-  it("U-PACKTPL-001: has six required artifacts and one canonical family inventory", () => {
-    expect(AUTHORING_TEMPLATE_ARTIFACT_PATHS).toHaveLength(6);
+  it("U-PACKTPL-001: has four required artifacts and one canonical family inventory", () => {
+    expect([...AUTHORING_TEMPLATE_ARTIFACT_PATHS].sort()).toEqual(
+      [
+        "docs/templates/design/L6-function-spec-template.md",
+        "docs/templates/state/vmodel.json",
+        "docs/templates/prompts/effort-classify.md",
+        "docs/templates/team/example-review-team.yaml",
+      ].sort(),
+    );
     expect(validateAuthoringTemplateInventory()).toMatchObject({
       ok: true,
       missingFamilies: [],
@@ -231,7 +238,17 @@ describe("Issue #482 canonical Pack authoring inventory", () => {
       checked: AUTHORING_TEMPLATE_ARTIFACT_PATHS,
       errors: [],
     });
-    expect(inspectPackAuthoringEntries(entries.slice(1)).ok).toBe(false);
+    for (const entry of entries) {
+      const missing = inspectPackAuthoringEntries(
+        entries.filter((candidate) => candidate.path !== entry.path),
+      );
+      expect(missing.ok, `missing ${entry.path}`).toBe(false);
+      expect(missing.errors).toContain(`missing:${entry.path}`);
+
+      const duplicate = inspectPackAuthoringEntries([...entries, entry]);
+      expect(duplicate.ok, `duplicate ${entry.path}`).toBe(false);
+      expect(duplicate.errors).toContain(`duplicate:${entry.path}`);
+    }
     expect(
       inspectPackAuthoringEntries([
         ...entries,
@@ -242,6 +259,34 @@ describe("Issue #482 canonical Pack authoring inventory", () => {
       ok: false,
       sourcePaths: [teamSource],
     });
+  });
+
+  it.each(
+    retiredPlanTemplatePaths,
+  )("U-PACKTPL-004: retired PLAN template entry is fail-close (%s)", (path) => {
+    expect(
+      inspectPackAuthoringEntries([...authoringEntries, { ...authoringEntries[0], path }]),
+    ).toMatchObject({
+      ok: false,
+      errors: [`unknown:${path}`],
+    });
+  });
+
+  it("U-PACKTPL-004: generic artifact sets remain valid but a retired-only set is denied", () => {
+    expect(validateAuthoringArtifactSet(["docs/design/consumer-note.md"])).toMatchObject({
+      ok: true,
+      missingArtifactPaths: [],
+      unknownArtifactPaths: [],
+    });
+
+    const retiredPath = retiredPlanTemplatePaths[0];
+    expect(validateAuthoringArtifactSet([retiredPath])).toMatchObject({
+      ok: false,
+      unknownArtifactPaths: [retiredPath],
+    });
+    expect(inspectPackAuthoringEntries([{ ...authoringEntries[0], path: retiredPath }]).ok).toBe(
+      false,
+    );
   });
 
   it("U-PACKTPL-006: broad docs/templates and .ut-tdd wildcard mutations are denied", () => {
@@ -263,8 +308,8 @@ describe("Issue #482 canonical Pack authoring inventory", () => {
     const entries = authoringEntries;
     const legacyTemplateName = "he" + "lix";
     for (const path of [
-      "docs/templates/plan/personal.md",
-      "docs/templates/plan/run-bun.md",
+      "docs/templates/design/personal.md",
+      "docs/templates/design/run-bun.md",
       `docs/templates/design/${legacyTemplateName}.md`,
     ]) {
       expect(inspectPackAuthoringEntries([...entries, { ...entries[0], path }]).ok).toBe(false);
@@ -294,43 +339,50 @@ describe("Issue #482 canonical Pack authoring inventory", () => {
     expect(planRetirementInputs.mirror.trim().length).toBeGreaterThan(0);
   });
 
-  it.fails("U-PLANRET-017: no Pack template has plan frontmatter", () => {
+  it("U-PLANRET-017: no Pack template has plan frontmatter", () => {
     const violations = [...planRetirementInputs.frontmatter]
       .filter(([, bytes]) => bytes?.match(/^\s*plan\s*:/m))
       .map(([path]) => path);
     expect(violations).toEqual([]);
   });
 
-  it.fails("U-PLANRET-017: all §6 templates use issue frontmatter", () => {
+  it("U-PLANRET-017: all §6 templates use issue frontmatter", () => {
     const violations = planRetirementInputs.section6Paths.filter(
       (path) => !planRetirementInputs.frontmatter.get(path)?.match(/^\s*issue\s*:\s*\S+/m),
     );
     expect(violations).toEqual([]);
   });
 
-  it.fails("U-PLANRET-017: authoring inventory has no PLAN template family", () => {
-    expect(planRetirementInputs.inventory).not.toMatch(/docs\/templates\/plan\//);
+  it("U-PLANRET-017: authoring inventory has no PLAN template family", () => {
+    const inventoryPaths = AUTHORING_TEMPLATE_INVENTORY.flatMap((entry) =>
+      "sourcePath" in entry
+        ? [entry.sourcePath, entry.artifactPath]
+        : [entry.sourcePrefix, entry.artifactPrefix],
+    );
+    expect(
+      inventoryPaths.some((path) => path.toLowerCase().startsWith("docs/templates/plan/")),
+    ).toBe(false);
   });
 
-  it.fails("U-PLANRET-017: retired PLAN templates are not tracked", () => {
+  it("U-PLANRET-017: retired PLAN templates are not tracked", () => {
     const stillTracked = retiredPlanTemplatePaths.filter((path) =>
       planRetirementInputs.trackedPaths.includes(path),
     );
     expect(stillTracked).toEqual([]);
   });
 
-  it.fails("U-PLANRET-017: state vmodel template has no plan_id field", () => {
+  it("U-PLANRET-017: state vmodel template has no plan_id field", () => {
     const state = JSON.parse(planRetirementInputs.vmodelState) as Record<string, unknown>;
     expect(Object.hasOwn(state, "plan_id")).toBe(false);
   });
 
-  it.fails("U-PLANRET-017: canary does not invoke plan draft or plan lint", () => {
+  it("U-PLANRET-017: canary does not invoke plan draft or plan lint", () => {
     expect(planRetirementInputs.canary).not.toMatch(
       /\[\s*["']plan["']\s*,\s*["'](?:draft|lint)["']/i,
     );
   });
 
-  it.fails("U-PLANRET-017: templates and mirror do not point to docs/plans", () => {
+  it("U-PLANRET-017: templates and mirror do not point to docs/plans", () => {
     const violations = planRetirementInputs.templateAndMirrorBytes
       .filter(({ bytes }) => /docs[\\/]plans/i.test(bytes))
       .map(({ path }) => path);
@@ -346,7 +398,7 @@ describe("Issue #482 canonical Pack authoring inventory", () => {
     expect(violations).toEqual([]);
   });
 
-  it.fails("U-PLANRET-017: templates and mirror have no PLAN-prefixed required values", () => {
+  it("U-PLANRET-017: templates and mirror have no PLAN-prefixed required values", () => {
     const violations = planRetirementInputs.templateAndMirrorBytes.flatMap(({ path, bytes }) =>
       bytes
         .split(/\r?\n/)

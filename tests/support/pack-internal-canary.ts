@@ -16,8 +16,7 @@ import {
 import { tmpdir } from "node:os";
 import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
-import { parse, stringify } from "yaml";
-import { TRACKED_RECEIPT_SCHEMA } from "../../src/plan-admission/tracked-receipt-projection.ts";
+import { parse as parseYaml, stringify } from "yaml";
 import {
   deriveArtifactInventoryDigest,
   deriveReleaseId,
@@ -55,7 +54,30 @@ export interface CanaryFixture {
   readonly alternateCwd: string;
   readonly anchor: string;
   readonly wrapper: string;
-  readonly planTemplate: string;
+  readonly designTemplate: string;
+}
+
+export function writeCanaryIssueDesignDocument(fixture: CanaryFixture): string {
+  const destination = join(fixture.consumerRoot, "docs", "design", "canary-function-spec.md");
+  const authoredDesign = fixture.designTemplate.replace(
+    /^issue:\s*<Issue 番号>\s*$/m,
+    "issue: 418",
+  );
+  if (authoredDesign === fixture.designTemplate)
+    throw new Error("shipped Issue-linked design template has no replaceable Issue placeholder");
+  mkdirSync(dirname(destination), { recursive: true });
+  writeFileSync(destination, authoredDesign, "utf8");
+  return destination;
+}
+
+export function readCanaryIssueDesignDocument(path: string): {
+  readonly text: string;
+  readonly frontmatter: Record<string, unknown>;
+} {
+  const text = readFileSync(path, "utf8");
+  const match = /^---\r?\n([\s\S]*?)\r?\n---\r?\n/.exec(text);
+  if (!match) throw new Error("authored Issue-linked design document has no frontmatter");
+  return { text, frontmatter: parseYaml(match[1] ?? "") as Record<string, unknown> };
 }
 
 export interface CanaryReviewStubPaths {
@@ -509,14 +531,15 @@ export async function createCanaryFixture(): Promise<CanaryFixture> {
     const anchor = `sha256:${createHash("sha256").update(checksumBytes).digest("hex")}`;
     const names = releaseArtifactFileNames(CANARY_FIXTURE_TAG);
     const wrapper = join(releaseDir, names.compiledEsm);
-    const planTemplate = execFileSync(
+    const designTemplate = execFileSync(
       "tar",
       // The deterministic Pack serializer stores the canonical destinationPath
       // without a leading `./`.
-      ["-xOf", names.tarball, "docs/templates/plan/design/template.md"],
+      ["-xOf", names.tarball, "docs/templates/design/L6-function-spec-template.md"],
       { cwd: releaseDir, encoding: "utf8", windowsHide: true },
     );
-    if (!planTemplate.includes("kind: design")) throw new Error("shipped PLAN template is missing");
+    if (!/^issue:\s*\S+/m.test(designTemplate))
+      throw new Error("shipped Issue-linked design template is missing");
     return {
       root,
       producerRoot,
@@ -525,73 +548,12 @@ export async function createCanaryFixture(): Promise<CanaryFixture> {
       alternateCwd,
       anchor,
       wrapper,
-      planTemplate,
+      designTemplate,
     };
   } catch (error) {
     removeCanaryFixtureTree(root);
     throw error;
   }
-}
-
-/** Author a consumer-owned draft from the actual shipped template; receipts are CLI-produced. */
-export function writeCanaryPlanManifest(fixture: CanaryFixture): {
-  manifest: string;
-  planPath: string;
-} {
-  const match = /^---\r?\n([\s\S]*?)\r?\n---\r?\n([\s\S]*)$/.exec(fixture.planTemplate);
-  if (!match) throw new Error("shipped PLAN template frontmatter is invalid");
-  const planId = "PLAN-L2-999-canary-authoring";
-  const frontmatter = {
-    ...parse(match[1]),
-    plan_id: planId,
-    title: "Canary consumer の設計起票",
-    drive: "agent",
-    created: "2026-09-29",
-    owner: "Canary consumer",
-    route_signal: "forward",
-    route_mode: "forward",
-    sub_doc: "screen-list",
-    generates: [],
-    related_docs: [],
-  };
-  const body = match[2].replaceAll(
-    "(本 PLAN でどの範囲の設計を凍結するかを 1-2 段落で記述)",
-    "配布された PLAN テンプレートから consumer 固有の draft を正規 CLI で起票する。",
-  );
-  const planPath = `docs/plans/${planId}.md`;
-  const manifest = join(fixture.consumerRoot, "canary-plan-draft.json");
-  const projection = "docs/governance/plan-admission-receipts.json";
-  // The product repository owns its PLAN directory; the Pack does not ship
-  // source-side PLAN files into a fresh consumer.
-  mkdirSync(join(fixture.consumerRoot, "docs", "plans"), { recursive: true });
-  mkdirSync(join(fixture.consumerRoot, "docs", "governance"), { recursive: true });
-  // Empty fixture ledger projection, never an authored PASS/admission receipt.
-  writeFileSync(
-    join(fixture.consumerRoot, projection),
-    JSON.stringify({ schema_version: TRACKED_RECEIPT_SCHEMA, records: [] }),
-  );
-  writeFileSync(
-    manifest,
-    JSON.stringify({
-      version: 2,
-      command_id: "canary:plan-authoring",
-      plan_id: planId,
-      recorded_at: "2026-09-29T00:00:00.000Z",
-      admission: {
-        route_signal: "forward",
-        route_mode: "forward",
-        kind: "design",
-        layer: "L2",
-        drive: "agent",
-        branch: "work/forward-canary",
-        status: "draft",
-        sub_doc: "screen-list",
-      },
-      source: { path: planPath, content: `---\n${stringify(frontmatter)}---\n${body}` },
-      projection: { path: projection },
-    }),
-  );
-  return { manifest, planPath };
 }
 
 export function installCanaryFixture(fixture: CanaryFixture, env: NodeJS.ProcessEnv) {

@@ -25,13 +25,14 @@ import {
   installCanaryFixture,
   isolatedCanaryEnv,
   observedForbiddenPaths,
+  readCanaryIssueDesignDocument,
   removeCanaryFixtureChild,
   removeCanaryFixtureTree,
   runNode,
   selectExactCanaryAssets,
   setupSourcePaths,
   writeAccessTrace,
-  writeCanaryPlanManifest,
+  writeCanaryIssueDesignDocument,
   writeCanaryReviewEnvelope,
 } from "./support/pack-internal-canary.ts";
 
@@ -416,16 +417,13 @@ describe("#418 Pack-only internal canary boundary (PR-1 / first layer)", () => {
       const doctor = wrapperRun(["doctor", "--profile", "consumer-setup-smoke"]);
       expect(doctor.status, processDiagnostic(doctor)).toBe(0);
 
-      const authored = writeCanaryPlanManifest(fixture);
-      const planAuthoring = wrapperRun(["plan", "draft", "--manifest", authored.manifest]);
-      expect(planAuthoring.status, processDiagnostic(planAuthoring)).toBe(0);
-      expect(existsSync(join(fixture.consumerRoot, authored.planPath))).toBe(true);
-      const authoredPlan = readFileSync(join(fixture.consumerRoot, authored.planPath), "utf8");
-      expect(authoredPlan).toContain("admission_receipt:");
-      expect(authoredPlan).toContain("Canary consumer の設計起票");
-
-      const planLint = wrapperRun(["plan", "lint"]);
-      expect(planLint.status, processDiagnostic(planLint)).toBe(0);
+      const authoredDesignPath = writeCanaryIssueDesignDocument(fixture);
+      const authoredDesign = readCanaryIssueDesignDocument(authoredDesignPath);
+      const authoredFrontmatter = authoredDesign.frontmatter;
+      expect(authoredFrontmatter.issue).toBe(418);
+      expect(Number.isSafeInteger(authoredFrontmatter.issue)).toBe(true);
+      expect(Object.hasOwn(authoredFrontmatter, "plan")).toBe(false);
+      expect(authoredDesign.text).not.toContain("<Issue 番号>");
 
       const dbRebuild = wrapperRun(["db", "rebuild", "--json"]);
       expect(dbRebuild.status, processDiagnostic(dbRebuild)).toBe(0);
