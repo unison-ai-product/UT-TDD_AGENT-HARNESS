@@ -1,5 +1,5 @@
 ---
-title: "PLAN-L7-676 PR-T1 port index: checked ZIP テンプレート 57 本の分類"
+title: "PR-T1 port index: checked ZIP テンプレート 57 本の分類"
 status: draft
 issue: 676
 ---

@@ -263,8 +263,8 @@ describe("Issue #482 canonical Pack authoring inventory", () => {
     const entries = authoringEntries;
     const legacyTemplateName = "he" + "lix";
     for (const path of [
-      "docs/templates/plan/personal.md",
-      "docs/templates/plan/run-bun.md",
+      "docs/templates/design/personal.md",
+      "docs/templates/design/run-bun.md",
       `docs/templates/design/${legacyTemplateName}.md`,
     ]) {
       expect(inspectPackAuthoringEntries([...entries, { ...entries[0], path }]).ok).toBe(false);
