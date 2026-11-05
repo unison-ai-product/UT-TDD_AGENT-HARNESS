@@ -2276,9 +2276,6 @@ cross-provider比較除去、E9/E11いずれかのgate除去を全てkillする�
 | `U-HOOKEXEC-007` | doctor fail-close | shell-form command、argv 欠落/追加/並替え、command spoofing、argv の shell operator を個別に検出する。 |
 | `U-HOOKEXEC-008` | Windows native smoke | project-local Node wrapper (`.ut-tdd/bin/ut-tdd.mjs`) が `spawnSync(process.execPath, ...)` の直接 executable spawn と `windowsHide: true` を使い、shell host token (`sh.exe` / `bash.exe` / `cmd.exe` / `powershell.exe` / `pwsh.exe` / dispatch 用 `conhost.exe`) を含まない。process-tree ancestry の実測はこの oracle の主張に含めない。entrypoint 欠落時は exit 127 で fail-close し、hook outcome は既存契約どおりである。 |
 | `U-HOOKEXEC-009` | Node TypeScript launcher floor | 無フラグ TypeScript execution の下限は Node 22.18 であり、`package.json#engines.node` はこの下限を満たす範囲（下限が 22.18 以上）でなければならない。22.6〜22.17を対応済みと宣言しない。`engines.node` の実際の範囲は `>=24.22.1 <25` で、22 系を対応範囲に含めない（`internal-processing.md` §Node toolchain authority、Issue #1255）。 |
-| `U-HOOKEXEC-011` | Claude guard failure policy lint | `analyzeProjectHook` は agent-guard / work-guard に `onFailure: "block"` を必須とし、旧 `blockOnFailure` だけ、`onFailure: "continue"`、failure field 欠落を finding にする。 |
-| `U-HOOKEXEC-012` | Obsolete Claude hook key lint | `analyzeProjectHook` は guard と記録 / session hook を含む任意の Claude hook に残る `blockOnFailure` (`true` / `false`) を、guard に正しい `onFailure: "block"` が併存しても finding にする。 |
-| `U-HOOKEXEC-014` | Claude hook failure-policy parity | source settings、built-in generator、Pack template の guard / record-hook failure fields はそれぞれの契約を満たし、hook ごとの `onFailure` の有無と値が一致する。 |
 
 実行対応は `tests/hook-native-launcher.test.ts`、`tests/project-hook.test.ts`、
 `tests/codex-hook-adapter.test.ts`、`tests/setup.test.ts` である。主検証となる
