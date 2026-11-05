@@ -60,7 +60,11 @@ jobs:
           fi
       - name: fail if runtime setup dirtied the checkout
         run: |
-          if [ -n "$(git status --porcelain)" ]; then
+          status="$(git status --porcelain)" || {
+            echo "::error::Unable to inspect consumer checkout after runtime setup."
+            exit 1
+          }
+          if [ -n "$status" ]; then
             git status --short
             echo "::error::UT-TDD runtime setup modified the consumer checkout."
             exit 1
