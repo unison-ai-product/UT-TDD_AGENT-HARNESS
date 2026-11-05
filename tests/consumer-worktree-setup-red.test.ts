@@ -21,6 +21,7 @@ import {
   WORKTREE_RUNTIME_TAG,
   WORKTREE_RUNTIME_TAG_B,
 } from "./support/consumer-worktree-runtime.ts";
+import { registerConsumerWorktreeRuntime010Tests } from "./support/consumer-worktree-runtime-010.ts";
 
 let fixture: Awaited<ReturnType<typeof createConsumerWorktreeRuntimeFixture>>;
 
@@ -50,6 +51,18 @@ describe("consumer worktree runtime setup entry Red (#1525)", () => {
     }).document;
     expect(releaseA.release.tag).toBe(WORKTREE_RUNTIME_TAG);
     expect(releaseB.release.tag).toBe(WORKTREE_RUNTIME_TAG_B);
+    const attestedA = releaseA.admission_input.aggregate_input.attestation.entries[0];
+    const attestedB = releaseB.admission_input.aggregate_input.attestation.entries[0];
+    if (!attestedA || !attestedB) throw new Error("small Release fixture attestation is missing");
+    const attestationBytesA = Buffer.from(attestedA.content_base64, "base64");
+    const attestationBytesB = Buffer.from(attestedB.content_base64, "base64");
+    const compiledEsmBytes = readFileSync(
+      join(fixture.release, releaseArtifactFileNames(WORKTREE_RUNTIME_TAG).compiledEsm),
+    );
+    expect(attestationBytesA.length).toBeLessThan(100);
+    expect(attestationBytesB.length).toBeLessThan(100);
+    expect(compiledEsmBytes.length).toBeGreaterThan(attestationBytesA.length);
+    expect(compiledEsmBytes).toEqual(readFileSync(executingModulePath));
     for (const release of [releaseA, releaseB]) {
       const aggregateInput = release.admission_input.aggregate_input;
       const attestation = aggregateInput.attestation;
@@ -397,4 +410,6 @@ describe("consumer worktree runtime setup entry Red (#1525)", () => {
     expect(result.status).not.toBe(0);
     expect(readdirSync(unmanaged).sort()).toEqual(before);
   });
+
+  registerConsumerWorktreeRuntime010Tests(() => fixture);
 });
