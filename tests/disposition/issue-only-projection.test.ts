@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import {
   chmodSync,
   copyFileSync,
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -25,6 +26,11 @@ const issueOnlyCatalogPaths = [
   "docs/governance/vmodel-semantic-item-catalog.md",
   "docs/governance/vmodel-source-target-edges.md",
   "docs/governance/vmodel-item-target-ledger.md",
+] as const;
+
+const projectionSupportPaths = [
+  "docs/governance/vmodel-document-scale-profiles.md",
+  "docs/governance/vmodel-document-catalog.md",
 ] as const;
 
 const issueOnlyTargetHeaders = [
@@ -58,7 +64,12 @@ describe("CANDIDATE-U-DISPPTR-001 issue-only projection", () => {
     expect(new Set(rows.map((row) => row.edge_id)).size).toBe(163);
     expect(new Set(rows.map((row) => row.item_id)).size).toBe(163);
     expect(rows.every((row) => row.target_status === "pending_review")).toBe(true);
+    expect(rows.every((row) => row.target_kind === null)).toBe(true);
+    expect(rows.every((row) => row.target_ref === null)).toBe(true);
     expect(rows.every((row) => row.issue === null)).toBe(true);
+    expect(
+      projectionSupportPaths.every((path) => existsSync(join(issueOnlyFixtureRoot, path))),
+    ).toBe(true);
     expect(
       rows.every(
         (row) =>
@@ -158,7 +169,7 @@ function createIssueOnlyFixture(): string {
   const snapshotRoot = headSnapshotRoot();
   const fixtureRoot = mkdtempSync(join(tmpdir(), "ut-1375-issue-only-projection-"));
   try {
-    for (const catalogPath of issueOnlyCatalogPaths) {
+    for (const catalogPath of [...issueOnlyCatalogPaths, ...projectionSupportPaths]) {
       const fixtureFile = join(fixtureRoot, catalogPath);
       mkdirSync(dirname(fixtureFile), { recursive: true });
       copyFileSync(join(snapshotRoot, catalogPath), fixtureFile);
