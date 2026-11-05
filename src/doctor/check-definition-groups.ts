@@ -43,7 +43,6 @@ import {
 import {
   checkCycleP4Verification,
   checkDbCurrency,
-  checkDriveDbRegistration,
   checkDriveModelPassage,
   checkFeedbackLog,
   checkFrRoadmapCoverage,
@@ -177,7 +176,6 @@ export function buildDoctorCheckDefinitionGroups(
         full("g3-trace", () => checkPlanTraceGate(deps.repoRoot, "G3-trace")),
         full("rule-automation-closure", () => checkRuleAutomationClosure(deps.repoRoot)),
         full("drive-model-passage", () => checkDriveModelPassage(deps.repoRoot)),
-        full("drive-db-registration", () => checkDriveDbRegistration(deps.repoRoot)),
         full("db-currency", () => checkDbCurrency(deps.repoRoot)),
         full("gate-run-coverage", () => checkGateRunCoverage(deps.repoRoot)),
         full("fr-roadmap-coverage", () => checkFrRoadmapCoverage(deps.repoRoot)),

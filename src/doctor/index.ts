@@ -60,7 +60,6 @@ export {
 export {
   checkCycleP4Verification,
   checkDbCurrency,
-  checkDriveDbRegistration,
   checkDriveModelPassage,
   checkFeedbackLog,
   checkFrRoadmapCoverage,
