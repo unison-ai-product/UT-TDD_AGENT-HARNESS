@@ -77,6 +77,12 @@ export function runConsumerWorktreeCommand(
   });
 }
 
+export function activeCompiledEsmPath(root: string): string {
+  const pointerPath = join(root, ".ut-tdd", "runtime", "activation", "active.json");
+  const pointer = JSON.parse(readFileSync(pointerPath, "utf8")) as { entry_path: string };
+  return pointer.entry_path;
+}
+
 export function runtimeIdentity(root: string): Record<string, string> {
   const pointerPath = join(root, ".ut-tdd", "runtime", "activation", "active.json");
   const pointer = JSON.parse(readFileSync(pointerPath, "utf8")) as { bundle_path: string };

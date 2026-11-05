@@ -14,6 +14,7 @@ import { verifyConsumerRuntimeReleaseAssets } from "../src/setup/consumer-runtim
 import { releaseArtifactFileNames } from "../src/setup/distribution.ts";
 import { admitReleaseAggregate as admitAggregate } from "../src/setup/release-aggregate-admission.ts";
 import {
+  activeCompiledEsmPath,
   cleanupConsumerWorktreeRuntimeFixture,
   createConsumerWorktreeRuntimeFixture,
   runConsumerWorktreeCommand,
@@ -36,7 +37,7 @@ describe("consumer worktree runtime setup entry Red (#1525)", () => {
     expect(existsSync(join(fixture.main, ".ut-tdd", "runtime", "activation", "active.json"))).toBe(
       true,
     );
-    const executingModulePath = join(fixture.main, ".ut-tdd", "bin", "ut-tdd.mjs");
+    const executingModulePath = activeCompiledEsmPath(fixture.main);
     const releaseA = verifyConsumerRuntimeReleaseAssets({
       releaseDirectory: fixture.release,
       tag: WORKTREE_RUNTIME_TAG,
@@ -123,7 +124,7 @@ describe("consumer worktree runtime setup entry Red (#1525)", () => {
         releaseDirectory: fixture.release,
         tag: WORKTREE_RUNTIME_TAG,
         expectedConsumerDigest: `sha256:${"0".repeat(64)}`,
-        executingModulePath: join(fixture.main, ".ut-tdd", "bin", "ut-tdd.mjs"),
+        executingModulePath: activeCompiledEsmPath(fixture.main),
       }),
     ).toThrow("consumer_runtime_anchor_mismatch");
     rmSync(fixture.cache, { recursive: true, force: true });

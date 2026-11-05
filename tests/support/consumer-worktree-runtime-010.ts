@@ -16,6 +16,7 @@ import {
 } from "../../src/setup/consumer-node-runtime.ts";
 import { verifyConsumerRuntimeReleaseAssets } from "../../src/setup/consumer-runtime-release.ts";
 import {
+  activeCompiledEsmPath,
   type ConsumerWorktreeRuntimeFixture,
   runConsumerWorktreeCommand,
   runtimeIdentity,
@@ -202,7 +203,7 @@ export function registerConsumerWorktreeRuntime010Tests(
       releaseDirectory: fixture.releaseB,
       tag: WORKTREE_RUNTIME_TAG_B,
       expectedConsumerDigest: fixture.anchorB,
-      executingModulePath: join(fixture.main, ".ut-tdd", "bin", "ut-tdd.mjs"),
+      executingModulePath: activeCompiledEsmPath(fixture.main),
     });
     expect(bVerification.document.release.tag).toBe(WORKTREE_RUNTIME_TAG_B);
     expect(fixture.releaseIdB).not.toBe(fixture.releaseId);
