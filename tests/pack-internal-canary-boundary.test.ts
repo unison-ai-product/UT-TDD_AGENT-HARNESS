@@ -10,7 +10,6 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { parse as parseYaml } from "yaml";
 import {
   AUTHORING_TEMPLATE_ARTIFACT_PATHS,
   buildCleanDistributionPlan,
@@ -26,12 +25,14 @@ import {
   installCanaryFixture,
   isolatedCanaryEnv,
   observedForbiddenPaths,
+  readCanaryIssueDesignDocument,
   removeCanaryFixtureChild,
   removeCanaryFixtureTree,
   runNode,
   selectExactCanaryAssets,
   setupSourcePaths,
   writeAccessTrace,
+  writeCanaryIssueDesignDocument,
   writeCanaryReviewEnvelope,
 } from "./support/pack-internal-canary.ts";
 
@@ -416,30 +417,13 @@ describe("#418 Pack-only internal canary boundary (PR-1 / first layer)", () => {
       const doctor = wrapperRun(["doctor", "--profile", "consumer-setup-smoke"]);
       expect(doctor.status, processDiagnostic(doctor)).toBe(0);
 
-      const authoredDesignPath = join(
-        fixture.consumerRoot,
-        "docs",
-        "design",
-        "canary-function-spec.md",
-      );
-      mkdirSync(join(fixture.consumerRoot, "docs", "design"), { recursive: true });
-      const authoredDesign = fixture.designTemplate.replace(
-        /^issue:\s*<Issue 番号>\s*$/m,
-        "issue: 418",
-      );
-      writeFileSync(authoredDesignPath, authoredDesign, "utf8");
-      const authoredDesignBytes = readFileSync(authoredDesignPath, "utf8");
-      const authoredFrontmatterMatch = /^---\r?\n([\s\S]*?)\r?\n---\r?\n/.exec(
-        authoredDesignBytes,
-      );
-      expect(authoredFrontmatterMatch).not.toBeNull();
-      const authoredFrontmatter = parseYaml(
-        authoredFrontmatterMatch?.[1] ?? "",
-      ) as Record<string, unknown>;
+      const authoredDesignPath = writeCanaryIssueDesignDocument(fixture);
+      const authoredDesign = readCanaryIssueDesignDocument(authoredDesignPath);
+      const authoredFrontmatter = authoredDesign.frontmatter;
       expect(authoredFrontmatter.issue).toBe(418);
       expect(Number.isSafeInteger(authoredFrontmatter.issue)).toBe(true);
       expect(Object.hasOwn(authoredFrontmatter, "plan")).toBe(false);
-      expect(authoredDesignBytes).not.toContain("<Issue 番号>");
+      expect(authoredDesign.text).not.toContain("<Issue 番号>");
 
       const dbRebuild = wrapperRun(["db", "rebuild", "--json"]);
       expect(dbRebuild.status, processDiagnostic(dbRebuild)).toBe(0);

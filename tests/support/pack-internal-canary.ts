@@ -16,7 +16,7 @@ import {
 import { tmpdir } from "node:os";
 import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
-import { stringify } from "yaml";
+import { parse as parseYaml, stringify } from "yaml";
 import {
   deriveArtifactInventoryDigest,
   deriveReleaseId,
@@ -55,6 +55,29 @@ export interface CanaryFixture {
   readonly anchor: string;
   readonly wrapper: string;
   readonly designTemplate: string;
+}
+
+export function writeCanaryIssueDesignDocument(fixture: CanaryFixture): string {
+  const destination = join(fixture.consumerRoot, "docs", "design", "canary-function-spec.md");
+  const authoredDesign = fixture.designTemplate.replace(
+    /^issue:\s*<Issue 番号>\s*$/m,
+    "issue: 418",
+  );
+  if (authoredDesign === fixture.designTemplate)
+    throw new Error("shipped Issue-linked design template has no replaceable Issue placeholder");
+  mkdirSync(dirname(destination), { recursive: true });
+  writeFileSync(destination, authoredDesign, "utf8");
+  return destination;
+}
+
+export function readCanaryIssueDesignDocument(path: string): {
+  readonly text: string;
+  readonly frontmatter: Record<string, unknown>;
+} {
+  const text = readFileSync(path, "utf8");
+  const match = /^---\r?\n([\s\S]*?)\r?\n---\r?\n/.exec(text);
+  if (!match) throw new Error("authored Issue-linked design document has no frontmatter");
+  return { text, frontmatter: parseYaml(match[1] ?? "") as Record<string, unknown> };
 }
 
 export interface CanaryReviewStubPaths {
