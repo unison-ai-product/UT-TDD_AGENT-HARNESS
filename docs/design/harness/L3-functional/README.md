@@ -11,7 +11,9 @@ updated: 2026-06-02
 
 L1 業務要求 / 機能要求 / NFR を L3 機能要件 (FR-* + AC-* + IPA グレード値) に詳細化する sub-doc 群。
 
-## 構成 (4 sub-doc)
+## 構成
+
+sub-doc の一覧と数は `src/schema/index.ts` の `VALID_SUB_DOCS` (L3) が正本。下表はその sub-doc を列挙する。
 
 | sub-doc | 役割 | status | 担当 PLAN |
 |---------|------|--------|-----------|
@@ -35,7 +37,7 @@ L1 業務要求 / 機能要求 / NFR を L3 機能要件 (FR-* + AC-* + IPA グ�
 ## L1 ↔ L3 ↔ L12 接続
 
 - **上流 (L1 baton)**: L1 5 sub-doc + L2-screen placeholder を全件 `dependencies.requires` で列挙する規約 (G1-trace R4 充足規約) は、PLAN 撤去（#1078）で退役した。L1 → L3 の降下の確認は #1196 の降下検査へ移る。L2-screen は L3 の未充足依存ではなく、L2 着手時に PLAN-L2-01〜04 で本起票する明示 carry として扱う。
-- **下流 (L3 → L12 pair)**: 本 sub-doc 3 件全体 ↔ `docs/test-design/harness/L12-acceptance-test-design.md` 1 doc (V-model L3↔L12 pair)
+- **下流 (L3 → L12 pair)**: 本 sub-doc 全体 ↔ `docs/test-design/harness/L12-acceptance-test-design.md` 1 doc (V-model L3↔L12 pair)
 - **下流 (L3 → L4)**: L4 PLAN (PLAN-L4-01〜05) が本 sub-doc 全件を `dependencies.requires` に列挙する規約は、PLAN 撤去（#1078）で退役した。
 
 ## 横断原則継承 (CC2 carry)
@@ -44,7 +46,7 @@ screen §4.1 で carry 宣言した「人間主導 + AI 補助原則 (CC2)」を
 
 ## G3 ゲート (L3 pair freeze)
 
-L3 3 sub-doc + L12 受入テスト 1 doc の pair freeze を **G3** で確定する。**正規式モデル (PLAN-RECOVERY-02)**: L3 の検証本質 = 本番受入 (L12)。画面要求は L1 (screen sub-doc) が担い L3 では起こさない (L2=L1 フェーズ分離、本 README §scope 分離と一致)。G3 内 sub-gate 候補 (L1 G1-trace と同様の構造):
+L3 sub-doc (一覧は上表) + L12 受入テスト 1 doc の pair freeze を **G3** で確定する。**正規式モデル (PLAN-RECOVERY-02)**: L3 の検証本質 = 本番受入 (L12)。画面要求は L1 (screen sub-doc) が担い L3 では起こさない (L2=L1 フェーズ分離、本 README §scope 分離と一致)。G3 内 sub-gate 候補 (L1 G1-trace と同様の構造):
 
 - **G3-content**: 各 sub-doc の必須 § 完備
 - **G3-pair**: L3 sub-doc ⇔ L12 受入テスト pair 整合
