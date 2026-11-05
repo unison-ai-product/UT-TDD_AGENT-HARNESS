@@ -261,20 +261,16 @@ describe("Issue #482 canonical Pack authoring inventory", () => {
     });
   });
 
-  it.each(retiredPlanTemplatePaths)(
-    "U-PACKTPL-004: retired PLAN template entry is fail-close (%s)",
-    (path) => {
-      expect(
-        inspectPackAuthoringEntries([
-          ...authoringEntries,
-          { ...authoringEntries[0], path },
-        ]),
-      ).toMatchObject({
-        ok: false,
-        errors: [`unknown:${path}`],
-      });
-    },
-  );
+  it.each(
+    retiredPlanTemplatePaths,
+  )("U-PACKTPL-004: retired PLAN template entry is fail-close (%s)", (path) => {
+    expect(
+      inspectPackAuthoringEntries([...authoringEntries, { ...authoringEntries[0], path }]),
+    ).toMatchObject({
+      ok: false,
+      errors: [`unknown:${path}`],
+    });
+  });
 
   it("U-PACKTPL-004: generic artifact sets remain valid but a retired-only set is denied", () => {
     expect(validateAuthoringArtifactSet(["docs/design/consumer-note.md"])).toMatchObject({
@@ -288,9 +284,9 @@ describe("Issue #482 canonical Pack authoring inventory", () => {
       ok: false,
       unknownArtifactPaths: [retiredPath],
     });
-    expect(
-      inspectPackAuthoringEntries([{ ...authoringEntries[0], path: retiredPath }]).ok,
-    ).toBe(false);
+    expect(inspectPackAuthoringEntries([{ ...authoringEntries[0], path: retiredPath }]).ok).toBe(
+      false,
+    );
   });
 
   it("U-PACKTPL-006: broad docs/templates and .ut-tdd wildcard mutations are denied", () => {
@@ -363,9 +359,9 @@ describe("Issue #482 canonical Pack authoring inventory", () => {
         ? [entry.sourcePath, entry.artifactPath]
         : [entry.sourcePrefix, entry.artifactPrefix],
     );
-    expect(inventoryPaths.some((path) => path.toLowerCase().startsWith("docs/templates/plan/"))).toBe(
-      false,
-    );
+    expect(
+      inventoryPaths.some((path) => path.toLowerCase().startsWith("docs/templates/plan/")),
+    ).toBe(false);
   });
 
   it("U-PLANRET-017: retired PLAN templates are not tracked", () => {
