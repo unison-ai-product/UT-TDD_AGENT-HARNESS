@@ -63,7 +63,7 @@
             "command": "node",
             "args": [".ut-tdd/bin/ut-tdd.mjs","session","summary"],
             "timeout": 30,
-            "statusMessage": "session-log: PLAN digest summary (fail-open)"
+            "statusMessage": "session-log: work digest summary (fail-open)"
           }
         ]
       },
