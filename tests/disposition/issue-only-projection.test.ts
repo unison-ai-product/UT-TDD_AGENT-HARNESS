@@ -1,5 +1,13 @@
 import { execFileSync } from "node:child_process";
-import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  copyFileSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -40,7 +48,7 @@ beforeAll(() => {
 });
 
 afterAll(() => {
-  rmSync(issueOnlyFixtureRoot, { recursive: true, force: true });
+  if (issueOnlyFixtureRoot) rmSync(issueOnlyFixtureRoot, { recursive: true, force: true });
 });
 
 describe("CANDIDATE-U-DISPPTR-001 issue-only projection", () => {
@@ -162,6 +170,7 @@ function createIssueOnlyFixture(): string {
       "| 判断理由 | issue |",
     );
     if (issueOnlyLedger === originalLedger) throw new Error("fixture plan_id header not found");
+    chmodSync(issueOnlyLedgerFile, 0o644);
     writeFileSync(issueOnlyLedgerFile, issueOnlyLedger, "utf8");
     execFileSync("git", ["init", "--quiet"], { cwd: fixtureRoot, stdio: "ignore" });
     execFileSync("git", ["add", "--", "docs"], { cwd: fixtureRoot, stdio: "ignore" });
