@@ -297,7 +297,7 @@ export async function createConsumerWorktreeRuntimeFixture(): Promise<ConsumerWo
   const networkMarker = join(networkRoot, "network-attempts.log");
   writeFileSync(
     networkStub,
-    `const fs=require("node:fs");const marker=process.env.UT_TDD_NETWORK_MARKER;const deny=()=>{fs.appendFileSync(marker,"attempt\\n");throw new Error("network disabled by test");};globalThis.fetch=deny;for(const name of ["node:http","node:https"]){const api=require(name);api.request=deny;api.get=deny;}const net=require("node:net");net.connect=deny;net.createConnection=deny;require("node:tls").connect=deny;require("node:module").syncBuiltinESMExports();\n`,
+    `const fs=require("node:fs");const marker=process.env.UT_TDD_NETWORK_MARKER;const deny=()=>{fs.appendFileSync(marker,"attempt\\n");throw new Error("network disabled by test");};globalThis.__utNetworkDenyInstalled=true;globalThis.fetch=deny;for(const name of ["node:http","node:https"]){const api=require(name);api.request=deny;api.get=deny;}const net=require("node:net");net.connect=deny;net.createConnection=deny;require("node:tls").connect=deny;require("node:module").syncBuiltinESMExports();\n`,
   );
   return {
     pack,

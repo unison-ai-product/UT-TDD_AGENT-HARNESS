@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import {
   existsSync,
   mkdirSync,
@@ -118,6 +119,34 @@ describe("consumer worktree runtime setup entry Red (#1525)", () => {
     for (const name of names)
       writeFileSync(join(fixture.cache, name), readFileSync(join(fixture.release, name)));
     expect(readdirSync(fixture.cache).sort()).toEqual(names);
+  });
+
+  it("prerequisite: network interception records and denies a fetch attempt", () => {
+    const nodeOptions = [
+      process.env.NODE_OPTIONS,
+      `--require=${JSON.stringify(fixture.networkStub)}`,
+    ]
+      .filter(Boolean)
+      .join(" ");
+    const result = spawnSync(
+      process.execPath,
+      [
+        "-e",
+        "if (!globalThis.__utNetworkDenyInstalled) process.exit(44); fetch('http://127.0.0.1:1')",
+      ],
+      {
+        encoding: "utf8",
+        timeout: 10_000,
+        env: {
+          ...process.env,
+          NODE_OPTIONS: nodeOptions,
+          UT_TDD_NETWORK_MARKER: fixture.networkMarker,
+        },
+      },
+    );
+    expect(result.status).not.toBe(0);
+    expect(readFileSync(fixture.networkMarker, "utf8")).toContain("attempt");
+    rmSync(fixture.networkMarker);
   });
 
   it.fails("CANDIDATE-U-CWTRT-001: installs main's pin and runs a guard through the worktree launcher", () => {
