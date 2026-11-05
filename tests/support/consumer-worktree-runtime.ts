@@ -1,6 +1,14 @@
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { cpSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  cpSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
@@ -300,9 +308,26 @@ export async function createConsumerWorktreeRuntimeFixture(): Promise<ConsumerWo
   existingInput.admission_input.receipt.runtimeRoot = existingRuntimeRoot;
   const existingInputPath = join(existingRoot, "consumer-runtime-input-b.json");
   writeFileSync(existingInputPath, `${JSON.stringify(existingInput)}\n`);
-  const existingSetup = setupConsumerFromPack(pack, existingRoot, existingInputPath);
+  const existingSetup = spawnSync(
+    process.execPath,
+    [join(pack, "src", "cli.ts"), "setup", "--solo", "--consumer-runtime-input", existingInputPath],
+    {
+      cwd: existingRoot,
+      encoding: "utf8",
+      timeout: 300_000,
+      windowsHide: true,
+      env: {
+        ...process.env,
+        CLAUDE_PROJECT_DIR: existingRoot,
+        UT_TDD_PROJECT_DIR: existingRoot,
+        UT_TDD_SKIP_UPDATE_CHECK: "1",
+      },
+    },
+  );
   if (existingSetup.status !== 0)
     throw new Error(`different-version worktree setup failed: ${existingSetup.stderr}`);
+  if (!existsSync(join(existingRoot, "ut-tdd.project.json")))
+    throw new Error("different-version worktree project identity is missing after setup");
   const unmanaged = mkdtempSync(join(tmpdir(), "ut-tdd-cwtrt-unmanaged-"));
   const networkRoot = mkdtempSync(join(tmpdir(), "ut-tdd-cwtrt-network-"));
   tempRoots.push(unmanaged, networkRoot);
