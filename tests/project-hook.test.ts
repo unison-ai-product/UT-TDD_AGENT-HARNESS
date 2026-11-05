@@ -17,7 +17,7 @@ function teamStandardSettings(): { hooks: Record<string, unknown> } {
           hooks: [
             {
               ...execHook(`\${CLAUDE_PROJECT_DIR}/.claude/hooks/agent-guard.ts`),
-              blockOnFailure: true,
+              onFailure: "block",
             },
           ],
         },
@@ -26,7 +26,7 @@ function teamStandardSettings(): { hooks: Record<string, unknown> } {
           hooks: [
             {
               ...execHook(`\${CLAUDE_PROJECT_DIR}/.claude/hooks/work-guard.ts`),
-              blockOnFailure: true,
+              onFailure: "block",
             },
           ],
         },
@@ -83,11 +83,11 @@ describe("project-hook lint", () => {
 
     expect(result).toMatchObject({ checked: 1, ok: true, violations: [] });
     expect(hookAt(settings, "PreToolUse", 0)).toMatchObject({
-      blockOnFailure: true,
+      onFailure: "block",
       type: "command",
     });
     expect(hookAt(settings, "PreToolUse", 1)).toMatchObject({
-      blockOnFailure: true,
+      onFailure: "block",
       type: "command",
     });
     for (const event of ["SessionStart", "PostToolUse", "Stop", "SubagentStop"]) {
@@ -99,7 +99,7 @@ describe("project-hook lint", () => {
     }
   });
 
-  it.fails("U-HOOKEXEC-011: rejects the legacy guard flag when onFailure is absent", () => {
+  it("U-HOOKEXEC-011: rejects the legacy guard flag when onFailure is absent", () => {
     const settings = teamStandardSettings();
     const hook = hookAt(settings, "PreToolUse", 0);
     hook.blockOnFailure = true;
@@ -113,7 +113,7 @@ describe("project-hook lint", () => {
     });
   });
 
-  it.fails("U-HOOKEXEC-011: rejects onFailure continue for a guard hook", () => {
+  it("U-HOOKEXEC-011: rejects onFailure continue for a guard hook", () => {
     const settings = teamStandardSettings();
     hookAt(settings, "PreToolUse", 0).onFailure = "continue";
     const result = analyzeSettings(settings);
@@ -125,7 +125,7 @@ describe("project-hook lint", () => {
     });
   });
 
-  it.fails("U-HOOKEXEC-011: rejects a guard hook without either failure key", () => {
+  it("U-HOOKEXEC-011: rejects a guard hook without either failure key", () => {
     const settings = teamStandardSettings();
     const hook = hookAt(settings, "PreToolUse", 1);
     delete hook.blockOnFailure;
@@ -139,7 +139,7 @@ describe("project-hook lint", () => {
     });
   });
 
-  it.fails("U-HOOKEXEC-011: accepts both guards with onFailure block and no legacy key", () => {
+  it("U-HOOKEXEC-011: accepts both guards with onFailure block and no legacy key", () => {
     const settings = teamStandardSettings();
     for (const entryIndex of [0, 1]) {
       const hook = hookAt(settings, "PreToolUse", entryIndex);
@@ -151,7 +151,7 @@ describe("project-hook lint", () => {
     expect(result.violations).toEqual([]);
   });
 
-  it.fails("U-HOOKEXEC-012: rejects blockOnFailure true beside a valid guard onFailure", () => {
+  it("U-HOOKEXEC-012: rejects blockOnFailure true beside a valid guard onFailure", () => {
     const settings = teamStandardSettings();
     const hook = hookAt(settings, "PreToolUse", 0);
     hook.blockOnFailure = true;
@@ -165,7 +165,7 @@ describe("project-hook lint", () => {
     });
   });
 
-  it.fails("U-HOOKEXEC-012: rejects blockOnFailure false on a guard hook", () => {
+  it("U-HOOKEXEC-012: rejects blockOnFailure false on a guard hook", () => {
     const settings = teamStandardSettings();
     const hook = hookAt(settings, "PreToolUse", 1);
     hook.onFailure = "block";
@@ -179,7 +179,7 @@ describe("project-hook lint", () => {
     });
   });
 
-  it.fails("U-HOOKEXEC-012: rejects blockOnFailure true on a SessionStart record hook", () => {
+  it("U-HOOKEXEC-012: rejects blockOnFailure true on a SessionStart record hook", () => {
     const settings = teamStandardSettings();
     hookAt(settings, "SessionStart", 0).blockOnFailure = true;
     const result = analyzeSettings(settings);
@@ -191,7 +191,7 @@ describe("project-hook lint", () => {
     });
   });
 
-  it.fails("U-HOOKEXEC-012: rejects blockOnFailure false on a PostToolUse record hook", () => {
+  it("U-HOOKEXEC-012: rejects blockOnFailure false on a PostToolUse record hook", () => {
     const settings = teamStandardSettings();
     hookAt(settings, "PostToolUse", 0).blockOnFailure = false;
     const result = analyzeSettings(settings);
@@ -285,13 +285,13 @@ describe("project-hook lint", () => {
     expect(result.violations).toEqual([]);
   });
 
-  it("rejects wrapper-wired guard hooks that drop blockOnFailure", () => {
+  it("rejects wrapper-wired guard hooks that drop onFailure block", () => {
     const generated = JSON.parse(BUILTIN_GITHUB_TEMPLATES["adapter/.claude/settings.json"]) as {
-      hooks: Record<string, { matcher?: string; hooks: { blockOnFailure?: boolean }[] }[]>;
+      hooks: Record<string, { matcher?: string; hooks: { onFailure?: string }[] }[]>;
     };
     for (const entry of generated.hooks.PreToolUse) {
       for (const hook of entry.hooks) {
-        delete hook.blockOnFailure;
+        delete hook.onFailure;
       }
     }
 
@@ -303,7 +303,7 @@ describe("project-hook lint", () => {
     expect(result.violations).toContainEqual({
       file: ".claude/settings.json",
       hook: "PreToolUse",
-      reason: "missing_block_on_failure",
+      reason: "missing_on_failure_block",
     });
   });
 

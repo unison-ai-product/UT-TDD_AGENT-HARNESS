@@ -34,6 +34,7 @@ issue: 1525
 | `CANDIDATE-U-CWTRT-007` | launcher の案内 (runtime 欠落) | 入力: launcher はあるが active pointer が無い。期待: stderr に符号と、実行すべきコマンド (`setup --worktree <絶対パス>`) を含む文が出て、exit 2。他の deny 符号 (`consumer_runtime_digest_mismatch` など) は従来どおり符号のみ・exit 78。反例: 案内を出しつつ exit 0 にする実装、全 deny 符号へ案内を広げる実装、`MODULE_NOT_FOUND` のスタックを出す実装。 |
 | `CANDIDATE-U-CWTRT-008` | guard の起動断片 (launcher 欠落) | 入力: launcher 自体が無い worktree で、生成された consumer の agent-guard / work-guard の argv を実行する。期待: stderr に案内文 1 つ、exit 2、`MODULE_NOT_FOUND` を含まない。launcher があるときは従来の launcher を起動する。記録 / session hook の argv は従来のまま。反例: 記録 hook まで起動断片に置き換える実装、launcher の有無を見ずに常に案内を出す実装。 |
 | `CANDIDATE-U-CWTRT-009` | 案内の経路 | 入力: 007 / 008 の出力。期待: block 理由は guard と同じ stderr + exit 2 の経路 (`.claude/hooks/agent-guard.ts` の block と同じ)。案内文が 1 つのコマンドを名指しする。反例: stdout だけに出す実装。 |
+| `CANDIDATE-U-CWTRT-010` | キャッシュの key | 入力 (a): main の `release_id` が `rel-sha256:<hex 64 桁>` の正当な版 A。期待: キャッシュの置き場が `<git-common-dir>/ut-tdd/runtime-cache/<hex 64 桁>/` で、ディレクトリ名に `:` を含まず、Windows と Linux の両方で作成と読み込みが成功する (001 と同じ導入が通る)。入力 (b): main の identity の `release_id` を schema に合わない値 (prefix 違い、桁数違い、大文字 hex、`..` や区切り文字を含む値) にする。期待: `worktree_entry_main_not_activated` で、キャッシュ配下にディレクトリを作らず何も書かない。入力 (c): 版 A の key のディレクトリに版 B の正当な Release を置く。期待: 検証失敗または `worktree_entry_pin_mismatch` で拒否し、何も残さない。反例: `release_id` をそのままディレクトリ名にする実装 (Windows で作れない)、`:` を別の文字に置換して衝突の余地を残す実装、schema に合わない `release_id` から path を組み立てる実装、ディレクトリ名が key と一致すれば中身を照合しない実装。 |
 
 ## 4. 段の扱い
 
