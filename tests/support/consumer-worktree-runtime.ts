@@ -284,13 +284,20 @@ export async function createConsumerWorktreeRuntimeFixture(): Promise<ConsumerWo
   }
   const existingInput = JSON.parse(readFileSync(versionBInput, "utf8")) as {
     identity: Record<string, string>;
-    admission_input: { receipt: Record<string, string> };
+    admission_input: {
+      consumerRoot: string;
+      runtimeRoot: string;
+      receipt: Record<string, string>;
+    };
   };
   const existingRoot = linked["005-existing"];
+  const existingRuntimeRoot = join(existingRoot, ".ut-tdd", "runtime");
   existingInput.identity.consumer_root = existingRoot;
-  existingInput.identity.runtime_root = join(existingRoot, ".ut-tdd", "runtime");
+  existingInput.identity.runtime_root = existingRuntimeRoot;
+  existingInput.admission_input.consumerRoot = existingRoot;
+  existingInput.admission_input.runtimeRoot = existingRuntimeRoot;
   existingInput.admission_input.receipt.consumerRoot = existingRoot;
-  existingInput.admission_input.receipt.runtimeRoot = join(existingRoot, ".ut-tdd", "runtime");
+  existingInput.admission_input.receipt.runtimeRoot = existingRuntimeRoot;
   const existingInputPath = join(existingRoot, "consumer-runtime-input-b.json");
   writeFileSync(existingInputPath, `${JSON.stringify(existingInput)}\n`);
   const existingSetup = setupConsumerFromPack(pack, existingRoot, existingInputPath);
