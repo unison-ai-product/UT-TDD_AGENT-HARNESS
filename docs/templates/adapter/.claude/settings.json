@@ -9,7 +9,7 @@
             "command": "node",
             "args": [".ut-tdd/bin/ut-tdd.mjs","hook","agent-guard"],
             "timeout": 5,
-            "blockOnFailure": true,
+            "onFailure": "block",
             "statusMessage": "agent-guard: generic subagent type and model check"
           }
         ]
@@ -22,7 +22,7 @@
             "command": "node",
             "args": [".ut-tdd/bin/ut-tdd.mjs","hook","work-guard"],
             "timeout": 5,
-            "blockOnFailure": true,
+            "onFailure": "block",
             "statusMessage": "work-guard: foreign edit protection"
           }
         ]

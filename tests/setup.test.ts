@@ -401,7 +401,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
             hooks: {
               command: string;
               args: string[];
-              blockOnFailure?: boolean;
+              onFailure?: "block";
               asyncRewake?: boolean;
               timeout?: number;
             }[];
@@ -420,7 +420,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
               expect.objectContaining({
                 command: "node",
                 args: [".ut-tdd/bin/ut-tdd.mjs", "hook", "agent-guard"],
-                blockOnFailure: true,
+                onFailure: "block",
               }),
             ],
           }),
@@ -430,7 +430,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
               expect.objectContaining({
                 command: "node",
                 args: [".ut-tdd/bin/ut-tdd.mjs", "hook", "work-guard"],
-                blockOnFailure: true,
+                onFailure: "block",
               }),
             ],
           }),
