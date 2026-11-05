@@ -1,5 +1,5 @@
 {
-  "description": "UT-TDD Codex adapter hooks (PLAN-L7-668 command schema). Hosted/API tool surfaces still require explicit `ut-tdd guard preflight` before edits because repo-local Codex hooks do not execute there.",
+  "description": "UT-TDD Codex adapter hooks (current command schema). Hosted/API tool surfaces still require explicit `ut-tdd guard preflight` before edits because repo-local Codex hooks do not execute there.",
   "hooks": {
     "PreToolUse": [
       {
@@ -57,7 +57,7 @@
             "type": "command",
             "command": "node \"$(git rev-parse --show-toplevel)/.ut-tdd/bin/ut-tdd.mjs\" session summary",
             "timeout": 30,
-            "statusMessage": "session-log: PLAN digest summary (fail-open)"
+            "statusMessage": "session-log: work digest summary (fail-open)"
           }
         ]
       }
