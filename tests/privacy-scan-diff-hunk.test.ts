@@ -19,6 +19,11 @@ let redBase = "";
 let redAdded = "";
 let redHead = "";
 let redUnits: PrivacyUnit[] = [];
+let replacementRoot = "";
+let replacementBase = "";
+let replacementAdded = "";
+let replacementHead = "";
+let replacementUnits: PrivacyUnit[] = [];
 
 function git(root: string, ...args: string[]): string {
   return execFileSync("git", args, { cwd: root, encoding: "utf8", windowsHide: true }).trim();
@@ -72,6 +77,14 @@ beforeAll(() => {
   redAdded = commit(redFixtureRoot, "add plus-prefixed content");
   rmSync(join(redFixtureRoot, "docs/plus.md"));
   redHead = commit(redFixtureRoot, "remove plus-prefixed line");
+
+  replacementRoot = initRepo("replacement-hunk-add-delete");
+  write(replacementRoot, "docs/rewrite.md", "-- x\n");
+  replacementBase = commit(replacementRoot, "base with old line");
+  write(replacementRoot, "docs/rewrite.md", `++ ${P}\n`);
+  replacementAdded = commit(replacementRoot, "replace old line with plus-prefixed content");
+  write(replacementRoot, "docs/rewrite.md", "-- x\n");
+  replacementHead = commit(replacementRoot, "restore old line");
 });
 
 afterAll(() => {
@@ -162,6 +175,61 @@ describe("privacy scan diff hunk parsing", () => {
     expect(
       result.findings.map(({ location, line, kind }) => [location, line, kind]),
     ).toContainEqual([`docs/plus.md@${redAdded.slice(0, 12)}`, 1, "privacy-email-hit"]);
+    expect(result.ok).toBe(false);
+  });
+
+  it("CANDIDATE-U-PRIVDIFF-003 prerequisites: verifies a same-hunk deletion/addition followed by restoration", () => {
+    expect(replacementBase).not.toBe(replacementAdded);
+    expect(replacementAdded).not.toBe(replacementHead);
+
+    const patch = git(replacementRoot, "show", "--format=", "-U0", replacementAdded);
+    const patchLines = patch.split(/\r?\n/);
+    const hunkStart = patchLines.findIndex((line) => line.startsWith("@@ "));
+    expect(hunkStart).toBeGreaterThanOrEqual(0);
+    expect(patchLines[hunkStart + 1]).toBe("--- x");
+    expect(patchLines[hunkStart + 2]).toBe(`+++ ${P}`);
+
+    const loaded = loadDiffPrivacyUnits(replacementRoot, {
+      base: replacementBase,
+      head: replacementHead,
+    });
+    expect(loaded.kind).toBe("found");
+    if (loaded.kind !== "found") throw new Error("replacement history diff was unreadable");
+    replacementUnits = loaded.units;
+
+    const historyResult = analyzePrivacyScan({
+      mode: "diff",
+      units: replacementUnits,
+      skipped: 0,
+      denylist: null,
+      baseline: null,
+      baselineUnreadable: false,
+      previousBaseline: null,
+    });
+    expect(typeof historyResult.ok).toBe("boolean");
+    expect(Array.isArray(historyResult.findings)).toBe(true);
+
+    const tree = loadTreePrivacyUnits(replacementRoot, replacementHead);
+    expect(tree.kind).toBe("found");
+    if (tree.kind !== "found") throw new Error("replacement head tree was unreadable");
+    expect(
+      tree.units.flatMap((unit) => (unit.field === "content" ? findEmailHitLines(unit) : [])),
+    ).toEqual([]);
+  });
+
+  it.fails("CANDIDATE-U-PRIVDIFF-003: scans the added content after a --- deletion line in the same hunk, even when a later commit restores the old line", () => {
+    const result = analyzePrivacyScan({
+      mode: "diff",
+      units: replacementUnits,
+      skipped: 0,
+      denylist: null,
+      baseline: null,
+      baselineUnreadable: false,
+      previousBaseline: null,
+    });
+    expect(
+      result.findings.map(({ location, line, kind }) => [location, line, kind]),
+    ).toContainEqual([`docs/rewrite.md@${replacementAdded.slice(0, 12)}`, 1, "privacy-email-hit"]);
     expect(result.ok).toBe(false);
   });
 });
