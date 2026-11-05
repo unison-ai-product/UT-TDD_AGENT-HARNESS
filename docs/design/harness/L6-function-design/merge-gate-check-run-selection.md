@@ -66,7 +66,7 @@ doc-split gate と code-size gate は、既存の超過を `docs/governance/*-ba
   3. baseline ファイルが `M` にあり、`P` が空でない。
 
   2 と 3 は、異なるファイルの変更でも干渉するためである。code-size の `functionExcess` は合計で縮小のみを判定し、baseline は 1 ファイル 1 行だが他 PR が縮めた行を前提にする。どの競合も、片側が対象を変えていなければ成り立たない。baseline に載らない新規ファイルは、各 gate が単独で `new-*-over-limit` として止めるので、1〜3 のどれにも当たらない別ファイルどうしは拒否しない。
-- 競合が 1 件でもあれば merge しない (fail-close)。reason は `baseline_conflict`、終了コードは非 0 (既存の DENY と同じ 1)。標準出力に gate 名と競合 path を出し、「`git merge origin/main` で main を取り込み、CI が緑になってから再実行する」と案内する。取り込むと mb が進み、競合は解消される。新しい head には新しい review が必要になる (exact-HEAD 束縛は変えない)。
+- 競合が 1 件でもあれば、§6.6 の再計算に進む。再計算で許可されなければ merge しない (fail-close)。reason は `baseline_conflict`、終了コードは非 0 (既存の DENY と同じ 1)。標準出力に gate 名と競合 path を出し、「`git merge origin/main` で main を取り込み、CI が緑になってから再実行する」と案内する。取り込むと mb が進み、競合は解消される。新しい head には新しい review が必要になる (exact-HEAD 束縛は変えない)。
 - git の起動・`fetch`・差分の取得に失敗したとき、mb を解決できないときは `baseline_conflict_unknown` で拒否する (「競合なし」にしない)。git には `windowsHide: true` を付ける (issue #693)。
 
 ### §6.3 保証の限界
@@ -75,10 +75,45 @@ doc-split gate と code-size gate は、既存の超過を `docs/governance/*-ba
 
 ### §6.4 採らなかった案
 
-- merge preview の tree で gate を再計算する案: wrapper が gate の実装全部を呼び、遅く重くなる。gate が増えるたびに wrapper が追随する。
+- merge preview の tree で全 gate を常に再計算する案: 競合の無い PR にまで再計算の時間をかける。**競合した gate だけを再計算する形は §6.6 で採用した** (Issue #1559)。当初の不採用理由 (wrapper が gate の実装全部を呼ぶ、gate の追加に追随が要る) は、各 gate が `check(repoRoot)` 1 本の境界を既に持ち、`BASELINE_GATES` への登録が既に追随点であることから、競合時に限る再計算には当たらないと判断した。
 - GitHub の branch protection (require up-to-date) に頼る案: repo 設定への依存になり、設計文書の外で規則が決まる。変更が無関係な PR まで全て取り込みと CI の取り直しを強いる。
 - 対象 path が同じときだけ拒否する案: 別ファイルの変更と baseline の変更が干渉する場合 (§6.2 の 2・3) を見逃す。
 
+### §6.6 競合時の再計算 (Issue #1559)
+
+#### 事象
+
+§6.2 は path の重なりだけで拒否する。2026-11-05 の 1 日で #1552・#1555・#1556・#1558 の 4 件が `baseline_conflict` で拒否され、そのうち 3 件は現 main と合成した tree で code-size を計算すると finding が無かった。拒否のたびに、main の取り込み → CI (13〜14 分) → 非著者の再検の往復が 1 回増えた。
+
+#### 方式
+
+§6.2 で競合が見つかったときだけ、次を行う。競合が無い PR は従来どおり再計算しない。
+
+1. **合成**: 取得し直した `origin/main` と PR の exact head を `git merge-tree --write-tree` で合成する。衝突があれば、従来の `baseline_conflict:...` のまま拒否する (再計算しない)。
+2. **展開**: `git commit-tree <tree> -p origin/main -p <head>` で合成 commit を作り、一時 worktree (`C:dev` 直下に作り、判定後に `git worktree remove` で消す) に detached で展開する。第 1 親を main にするので、gate が読む `merge-base HEAD origin/main` は `origin/main` になり、baseline の比較元は main の baseline になる。
+3. **再計算**: 競合した gate だけを、その gate の `check(repoRoot)` で計算する。`BASELINE_GATES` の各 entry に `check` を足し、wrapper に gate の実装を複製しない。doc-split と code-size の両方を対象にする (片方だけの実装にしない。§6.1 の事故は doc-split 側で起きた)。
+4. **判定**: 再計算した全 gate の結果が `ok` (finding 0 件) なら、その競合を解消済みとして merge へ進む。`summary` の `over` / `stale` が 0 であることは判定に使わない。`over` は上限超過、`stale` は消えたファイルの件数だけで、§6.1 の事故の型 (`code-size-baseline-grown`、doc-split の baseline の増加など) を数えないためである。
+5. **失敗**: git の版が `merge-tree --write-tree` に足りない、git の起動・合成・展開に失敗した、一時 worktree を作れない、いずれかの gate が `ok` でない、のどれでも拒否する。reason は gate の finding があれば `baseline_conflict_recomputed:<gate>=<finding の符号>`、それ以外は `baseline_conflict_unknown:<理由>`。許可に倒す経路を作らない。
+6. **証跡**: `merge_intent` の receipt に `preview` として、`mainSha`・`headSha`・合成した `treeSha`・合成 commit の SHA・再計算した gate ごとの `{ name, ok, findings }` を記録する。merge の後に、GitHub が作った merge commit の tree SHA を追記し、`treeSha` との一致・不一致を残す。`merge-tree` と GitHub の merge は、rename の検出の違いで tree が変わることがある。不一致の場合も merge は既に済んでいるので、main の doctor (§6.3) が検知する前提を保ち、原因の調査に使う証跡とする。
+
+#### 実測 (2026-11-05、Windows、git 2.52.0、PR #1562 と当時の origin/main)
+
+| 段 | 時間 |
+|---|---|
+| `git fetch` | 6.8 秒 |
+| `merge-tree --write-tree` と `commit-tree` | 2.4 秒 |
+| detached での展開 (既存 worktree の checkout) | 1.7 秒 |
+| code-size の計算 | 21.1 秒 |
+| doc-split の計算 | 8.6 秒 |
+
+合計は約 41 秒で、DENY 1 回で増える往復 (CI 13〜14 分と再検) より小さい。一時 worktree を新しく作る場合は、作成と削除の時間が加わる。実装の PR は、wrapper の中で計った時間を本節に追記する。
+
+#### 保証と限界
+
+- 再計算で許可した PR は、非著者の再検を取り直さずに merge する。gate の対象外の path だけが変わった MERGEABLE な PR は、base が進んでも従来から再検なしで merge しており、保証の水準は変わらない。exact-HEAD の review の束縛は変えない。
+- 判定から merge までの時間差 (§6.3) は残る。合成で衝突した PR (同じ登録行を並行 PR が変えた場合など) は従来どおり拒否され、author の取り込みが要る。DENY を 0 にする方式ではない。
+- 同じ共有ファイルに並行 PR が行を足す衝突は、CLAUDE.md §PR スコープ規律 6 の直列化で減らす。本節はその代わりではなく補完である。
+
 ### §6.5 oracle 対応
 
-`CANDIDATE-U-RVMG-047`〜`049` を `docs/test-design/harness/L7-unit-test-design.md` の「同じ head の古い check run (Issue #1104)」の表に置く (§6 の oracle も同じ表に追記し、本書の対にする)。実テストは `tests/review-merge-gate.test.ts`。
+`CANDIDATE-U-RVMG-047`〜`049` を `docs/test-design/harness/L7-unit-test-design.md` の「同じ head の古い check run (Issue #1104)」の表に置く (§6 の oracle も同じ表に追記し、本書の対にする)。実テストは `tests/review-merge-gate.test.ts`。 §6.6 の oracle は `docs/test-design/harness/L7-merge-baseline-recompute-test-design.md` の `CANDIDATE-U-RVMG-050`〜`053` に置く (共有の `L7-unit-test-design.md` には足さない)。
