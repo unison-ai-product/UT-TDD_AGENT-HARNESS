@@ -80,7 +80,10 @@ plan: docs/plans/PLAN-CONSUMER-01.md
     ".ut-tdd/evidence/g14-operational/artifacts/feedback.json",
     json({
       items: [
-        { summary: "onboarding 手順の短縮", routed_to: "PLAN-CONSUMER-01" },
+        {
+          summary: "onboarding 手順の短縮",
+          routed_to: "https://github.com/example/consumer/issues/13",
+        },
         {
           summary: "doctor 出力の整理",
           routed_to: "https://github.com/example/consumer/issues/12",
@@ -146,12 +149,19 @@ function evaluate(root: string) {
   return evaluateStaticGate({ gate: "G14", repoRoot: root });
 }
 
+function expectL0CharterDocTypeIdCitationViolation(messages: readonly string[]): void {
+  const valueViolation = messages.find((message) => message.includes("value case OT-CONSUMER-02"));
+  expect(valueViolation).toBeDefined();
+  expect(valueViolation).toContain("does not cite L0");
+  expect(valueViolation).toContain("doc_type_id");
+}
+
 afterEach(() => {
   for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
 });
 
 describe("consumer G14 L0 charter doc_type_id (U-RCDEV-035)", () => {
-  it.fails("accepts a cited L0 charter doc_type_id without a PLAN document", () => {
+  it.fails("accepts a cited L0 charter doc_type_id without a PLAN-L0 document", () => {
     const result = evaluate(consumerFixture());
     expect(result.applicable).toBe(true);
     expect(result.passed).toBe(true);
@@ -159,46 +169,64 @@ describe("consumer G14 L0 charter doc_type_id (U-RCDEV-035)", () => {
     expect(result.messages.join("\n")).toContain("未判定 (review): PO");
   });
 
-  it("fixture precondition: citation names the doc_type_id of a layer L0 document", () => {
+  it("fixture precondition: L0 citation is resolvable and unrelated PLAN references remain valid", () => {
     const root = consumerFixture();
     const charter = readFileSync(join(root, "docs/design/L0-planning/consumer-charter.md"), "utf8");
     const slot = readFileSync(
       join(root, "docs/test-design/L14-operational-test-design.md"),
       "utf8",
     );
+    const feedback = JSON.parse(
+      readFileSync(join(root, ".ut-tdd/evidence/g14-operational/artifacts/feedback.json"), "utf8"),
+    ) as { items: Array<{ routed_to: string }> };
+    const manifest = JSON.parse(
+      readFileSync(join(root, ".ut-tdd/evidence/g14-operational/ok.json"), "utf8"),
+    ) as { plan_id: string };
     expect(charter).toContain("layer: L0");
     expect(charter).toContain("doc_type_id: DOC-L0-CHARTER");
     expect(slot).toContain("BR-01 / DOC-L0-CHARTER");
     expect(existsSync(join(root, "docs/plans/PLAN-L0-01-consumer-charter.md"))).toBe(false);
+    expect(manifest.plan_id).toBe("PLAN-CONSUMER-01");
+    expect(existsSync(join(root, "docs/plans/PLAN-CONSUMER-01.md"))).toBe(true);
+    expect(slot).toContain("plan: docs/plans/PLAN-CONSUMER-01.md");
+    expect(feedback.items[0]?.routed_to).toBe("https://github.com/example/consumer/issues/13");
+    expect(feedback.items[1]?.routed_to).toBe("https://github.com/example/consumer/issues/12");
   });
 
-  it.each([
-    "missing citation",
-    "missing source",
-    "non-L0 citation",
-  ] as const)("denies %s", (mutation) => {
+  it.fails("rejects a VALUE row without an L0 charter doc_type_id citation", () => {
     const root = consumerFixture();
     const slot = join(root, "docs/test-design/L14-operational-test-design.md");
-    if (mutation === "missing citation") {
-      writeFileSync(
-        slot,
-        readFileSync(slot, "utf8").replace("BR-01 / DOC-L0-CHARTER", "BR-01"),
-        "utf8",
-      );
-    } else if (mutation === "missing source") {
-      rmSync(join(root, "docs/design/L0-planning/consumer-charter.md"));
-    } else {
-      write(
-        root,
-        "docs/design/L0-planning/non-l0-charter.md",
-        "---\nlayer: L1\ndoc_type_id: DOC-L1-CHARTER\n---\n",
-      );
-      writeFileSync(
-        slot,
-        readFileSync(slot, "utf8").replace("DOC-L0-CHARTER", "DOC-L1-CHARTER"),
-        "utf8",
-      );
-    }
-    expect(evaluate(root).passed).toBe(false);
+    writeFileSync(
+      slot,
+      readFileSync(slot, "utf8").replace("BR-01 / DOC-L0-CHARTER", "BR-01"),
+      "utf8",
+    );
+    expectL0CharterDocTypeIdCitationViolation(evaluate(root).messages);
+  });
+
+  it.fails("reports a missing L0 charter source separately from citation policy", () => {
+    const root = consumerFixture();
+    rmSync(join(root, "docs/design/L0-planning/consumer-charter.md"));
+    const messages = evaluate(root).messages;
+    expect(messages).toContain("trace target missing DOC-L0-CHARTER");
+    expectL0CharterDocTypeIdCitationViolation(messages);
+  });
+
+  it.fails("rejects a resolvable non-L0 doc_type_id as a charter citation", () => {
+    const root = consumerFixture();
+    write(
+      root,
+      "docs/design/L0-planning/non-l0-charter.md",
+      "---\nlayer: L1\ndoc_type_id: DOC-L1-CHARTER\n---\n",
+    );
+    const slot = join(root, "docs/test-design/L14-operational-test-design.md");
+    writeFileSync(
+      slot,
+      readFileSync(slot, "utf8").replace("DOC-L0-CHARTER", "DOC-L1-CHARTER"),
+      "utf8",
+    );
+    const messages = evaluate(root).messages;
+    expect(messages).not.toContain("trace target missing DOC-L1-CHARTER");
+    expectL0CharterDocTypeIdCitationViolation(messages);
   });
 });
