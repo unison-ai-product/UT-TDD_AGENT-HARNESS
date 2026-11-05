@@ -34,7 +34,7 @@ consumer-g1-screen-namespace:1
 doctor-test-repository-isolation:1 persistent-db-cleanup-contract:1 memory-clean-cut-removal:1 memory-legacy-archive:1 memory-clean-cut-non-read:1 memory-curation-ledger:1
 secret-scan-diff:1
 feedback-log:2
-github-repository-policy:3
+github-repository-policy:3 consumer-ci-guard-red:1
 gate-run-publish-candidate:3 gate-run-stderr-candidate:1 github-ci-policy:1
 github-forward-store:2
 node-self-host-bootstrap:1 node-slice-admission:3 node-plan-revision-runner:3
@@ -104,7 +104,7 @@ repositoryReadContracts["tests/design-root.test.ts"] = {
 };
 
 const HEAD_SNAPSHOT_ROWS = `
-github-pr-trace.test.ts:1 model-id-ssot-drift.test.ts:1 model-id-ssot.test.ts:1
+github-pr-trace.test.ts:1 model-id-ssot-drift.test.ts:1 model-id-ssot.test.ts:1 consumer-ci-workflow-red.test.ts:1
 setup-project-identity-bootstrap.test.ts:2 plan-mechanism-retirement.test.ts:1 sub-doc-schema-integrity.test.ts:3
 `;
 
