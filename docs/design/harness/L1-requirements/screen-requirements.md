@@ -346,7 +346,7 @@ GD: ガイド・トラブルシューティング (参照)
 
 ## §4 関連 doc
 
-L2 画面設計 sub-doc 4 種への carry (旧 SCR-NN → PM/HM/GD-NN 再採番を反映):
+L2 画面設計 sub-doc への carry (sub-doc の一覧は `src/schema/index.ts` の `VALID_SUB_DOCS` が正本) (旧 SCR-NN → PM/HM/GD-NN 再採番を反映):
 
 > **L2 必須実施判定 (2026-05-28 PO 指摘で修正)**: drive=be であっても ut-tdd は **「UI を持つ be」** (15 画面 dashboard) のため、**画面要求 3 sub-doc (screen-list / screen-flow / ui-element) は必須実施**、wireframe (High-Fi モック) のみ省略可 (Low-Fi で代替、High-Fi は L10 UX refinement)。PLAN-L2-03 は `skip_sub_doc: ["L2-wireframe"]` + 理由明記で省略可。詳細は concept §3.7「L2 sub-doc skip ルール」参照。
 
@@ -371,7 +371,7 @@ L3 機能要件 PLAN (PLAN-L3-NN) 起票時、本 screen sub-doc との接続は
 |------|------|------|
 | **R4-screen-requires** | 退役: L3 PLAN が `dependencies.requires` に本 sub-doc + business + functional の 3 軸を全件列挙する規約は、PLAN 撤去（#1078）で退役した | 機械検証は無効。L1 → L3 の降下の確認は #1196 の降下検査へ移る |
 | **画面 ID 引用** | L3 PLAN 本文で対象画面 (PM/HM/GD-NN) を ID 引用する場合、本 §1 で宣言した 15 画面のみ許可 (旧 SCR-NN 体系は §7.3 移行表で廃止確認) | doc-reviewer (BR-08) でレビュー |
-| **L2 carry 接続** | 退役: L3 PLAN が L2 画面設計 4 sub-doc (`docs/design/harness/L2-screen/*.md`) を `dependencies.requires` に列挙する規約は、PLAN 撤去（#1078）で退役した | L1 → L3 の降下の確認は #1196 の降下検査へ移る |
+| **L2 carry 接続** | 退役: L3 PLAN が L2 画面設計 sub-doc (`docs/design/harness/L2-screen/*.md`) を `dependencies.requires` に列挙する規約は、PLAN 撤去（#1078）で退役した | L1 → L3 の降下の確認は #1196 の降下検査へ移る |
 | **横断原則 4 件継承** | §3.1 横断原則 (人間主導 + AI 補助 / 詳細データテーブル必須 / AI copy-paste UI / 問題箇所視覚化) は L3 全機能要件で「人間判断点」明示として forward carry (business §3.3.2 CC2 連動) | L3 PLAN review で確認 (CC2 carry) |
 | **G1-trace 継承** | L3 PLAN 起票時、本 sub-doc §5 trace マトリクス R1-R4 検証結果を継承し、L3 FR 追加・拡張時に再検証 (requirements §1.10.H lint ルール) | `ut-tdd plan lint --gate G1-trace` 再実行 |
 

@@ -271,7 +271,7 @@ describe("Issue #482 canonical Pack authoring inventory", () => {
     }
   });
 
-  it("CANDIDATE-U-PLANRET-017 fixture: §6 template set exists after #1512", () => {
+  it("U-PLANRET-017 fixture: §6 template set exists after #1512", () => {
     const { section6Paths, slotPaths, optionalPaths, frontmatter, templateBytes } =
       planRetirementInputs;
     expect(slotPaths).toHaveLength(21);
@@ -294,50 +294,50 @@ describe("Issue #482 canonical Pack authoring inventory", () => {
     expect(planRetirementInputs.mirror.trim().length).toBeGreaterThan(0);
   });
 
-  it.fails("CANDIDATE-U-PLANRET-017: no Pack template has plan frontmatter", () => {
+  it.fails("U-PLANRET-017: no Pack template has plan frontmatter", () => {
     const violations = [...planRetirementInputs.frontmatter]
       .filter(([, bytes]) => bytes?.match(/^\s*plan\s*:/m))
       .map(([path]) => path);
     expect(violations).toEqual([]);
   });
 
-  it.fails("CANDIDATE-U-PLANRET-017: all §6 templates use issue frontmatter", () => {
+  it.fails("U-PLANRET-017: all §6 templates use issue frontmatter", () => {
     const violations = planRetirementInputs.section6Paths.filter(
       (path) => !planRetirementInputs.frontmatter.get(path)?.match(/^\s*issue\s*:\s*\S+/m),
     );
     expect(violations).toEqual([]);
   });
 
-  it.fails("CANDIDATE-U-PLANRET-017: authoring inventory has no PLAN template family", () => {
+  it.fails("U-PLANRET-017: authoring inventory has no PLAN template family", () => {
     expect(planRetirementInputs.inventory).not.toMatch(/docs\/templates\/plan\//);
   });
 
-  it.fails("CANDIDATE-U-PLANRET-017: retired PLAN templates are not tracked", () => {
+  it.fails("U-PLANRET-017: retired PLAN templates are not tracked", () => {
     const stillTracked = retiredPlanTemplatePaths.filter((path) =>
       planRetirementInputs.trackedPaths.includes(path),
     );
     expect(stillTracked).toEqual([]);
   });
 
-  it.fails("CANDIDATE-U-PLANRET-017: state vmodel template has no plan_id field", () => {
+  it.fails("U-PLANRET-017: state vmodel template has no plan_id field", () => {
     const state = JSON.parse(planRetirementInputs.vmodelState) as Record<string, unknown>;
     expect(Object.hasOwn(state, "plan_id")).toBe(false);
   });
 
-  it.fails("CANDIDATE-U-PLANRET-017: canary does not invoke plan draft or plan lint", () => {
+  it.fails("U-PLANRET-017: canary does not invoke plan draft or plan lint", () => {
     expect(planRetirementInputs.canary).not.toMatch(
       /\[\s*["']plan["']\s*,\s*["'](?:draft|lint)["']/i,
     );
   });
 
-  it.fails("CANDIDATE-U-PLANRET-017: templates and mirror do not point to docs/plans", () => {
+  it.fails("U-PLANRET-017: templates and mirror do not point to docs/plans", () => {
     const violations = planRetirementInputs.templateAndMirrorBytes
       .filter(({ bytes }) => /docs[\\/]plans/i.test(bytes))
       .map(({ path }) => path);
     expect(violations).toEqual([]);
   });
 
-  it("CANDIDATE-U-PLANRET-017: templates and mirror have no ut-tdd plan command", () => {
+  it("U-PLANRET-017: templates and mirror have no ut-tdd plan command", () => {
     const planCommand =
       /(?:[`"'|]|(?:^|\r?\n)\s*(?:[$>]\s*)?|\b(?:run|use|invoke|execute)\s+)(?:\.\/)?ut-tdd(?:\.cmd)?\s+plan\b/i;
     const violations = planRetirementInputs.templateAndMirrorBytes
@@ -346,7 +346,7 @@ describe("Issue #482 canonical Pack authoring inventory", () => {
     expect(violations).toEqual([]);
   });
 
-  it.fails("CANDIDATE-U-PLANRET-017: templates and mirror have no PLAN-prefixed required values", () => {
+  it.fails("U-PLANRET-017: templates and mirror have no PLAN-prefixed required values", () => {
     const violations = planRetirementInputs.templateAndMirrorBytes.flatMap(({ path, bytes }) =>
       bytes
         .split(/\r?\n/)

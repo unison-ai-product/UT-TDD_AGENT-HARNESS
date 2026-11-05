@@ -18,8 +18,8 @@ advisory-strict-gate-aging:4
 codex-hook-adapter:5 coding-rules:1 context-doc-router:2 cycle-p4-verification:3 db-currency:1 db-projection-coverage:1 db-projection-ingestion:3
 dependency-drift:4 descent-obligation:3 distribution-acceptance:1 distribution-scratch-ignore:1 doctor-runtime-surface:2 doctor:25
 drive-model-passage:1 fr-roadmap-coverage:4 frontend-design-coverage:1 g10-ux-workflow:5 g8-integration-workflow:6 g9-system-workflow:7
-erasable-syntax:1 gate-static:10 import-specifier:2 l6-completion:2 l6-fr-coverage:2 mode-catalog:1 model-id-ssot:1 model-id-ssot-drift:1 module-drift:2 oracle-test-trace:13
-plan-lint:8 projection-writer:9 proposal-document-coverage:2 readability:5 relation-graph-loader:1
+erasable-syntax:1 gate-static:10 import-specifier:2 l6-completion:2 l6-fr-coverage:2 mode-catalog:2 model-id-ssot:1 model-id-ssot-drift:1 module-drift:2 oracle-test-trace:13
+plan-lint:8 projection-writer:9 proposal-document-coverage:2 readability:5 relation-graph-loader:1 support/plan-mechanism-retirement-s3-migration.ts:1
 release-artifact-resolver:1 release-consumer-skills:4
 right-lung-doc-governance:1 rule-drift:4 runtime-hook-entrypoints:1
 review-live-cli:4
@@ -103,17 +103,17 @@ repositoryReadContracts["tests/design-root.test.ts"] = {
   reason: "missing consumer roots preserve the immutable HEAD gate definition fallback bytes",
 };
 
-for (const [path, calls] of Object.entries({
-  "tests/github-pr-trace.test.ts": 1,
-  "tests/model-id-ssot-drift.test.ts": 1,
-  "tests/model-id-ssot.test.ts": 1,
-  "tests/setup-project-identity-bootstrap.test.ts": 2,
-  "tests/plan-mechanism-retirement.test.ts": 1,
-  "tests/sub-doc-schema-integrity.test.ts": 3,
-}))
-  repositoryReadContracts[path] = {
+const HEAD_SNAPSHOT_ROWS = `
+github-pr-trace.test.ts:1 model-id-ssot-drift.test.ts:1 model-id-ssot.test.ts:1
+setup-project-identity-bootstrap.test.ts:2 plan-mechanism-retirement.test.ts:1 sub-doc-schema-integrity.test.ts:3
+`;
+
+for (const [name, calls] of HEAD_SNAPSHOT_ROWS.trim()
+  .split(/\s+/)
+  .map((row) => row.split(":")))
+  repositoryReadContracts[`tests/${name}`] = {
     mode: "head_snapshot",
-    calls,
+    calls: Number(calls),
     reason: "repository contract read is fixed to detached HEAD",
   };
 

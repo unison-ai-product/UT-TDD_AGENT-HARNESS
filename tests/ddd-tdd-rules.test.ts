@@ -21,7 +21,6 @@ function createDddTddSplitL7Fixture(): string {
     [
       "- id: domain-boundary",
       "- id: invariant-test-trace",
-      "- id: red-first-evidence",
       "- id: test-oracle-strength",
       "- id: integration-gwt",
       "- id: unit-oracle-substance",
@@ -50,7 +49,6 @@ function baseInputs(overrides: Partial<DddTddInputs> = {}): DddTddInputs {
       text: `
 - id: domain-boundary
 - id: invariant-test-trace
-- id: red-first-evidence
 - id: test-oracle-strength
 - id: integration-gwt
 - id: unit-oracle-substance
@@ -59,7 +57,6 @@ function baseInputs(overrides: Partial<DddTddInputs> = {}): DddTddInputs {
       ruleIds: [
         "domain-boundary",
         "invariant-test-trace",
-        "red-first-evidence",
         "test-oracle-strength",
         "integration-gwt",
         "unit-oracle-substance",
@@ -97,7 +94,6 @@ function baseInputs(overrides: Partial<DddTddInputs> = {}): DddTddInputs {
     l7Text: "U-DDDTDD-002",
     l8Text:
       "| IT-ID | Given | When | Then | Fixture / Boundary | Assertions | Negative / Edge |\n| IT-DDD-01 | a | b | c | d | e | f |",
-    plans: [],
     ...overrides,
   };
 }
@@ -228,7 +224,6 @@ describe("U-DDDTDD DDD/TDD strictness lint", () => {
           path: "docs/governance/ddd-tdd-rules.md",
           text: `- id: domain-boundary
 - id: invariant-test-trace
-- id: red-first-evidence
 - id: test-oracle-strength
 - id: integration-gwt
 - id: unit-oracle-substance
@@ -237,7 +232,6 @@ describe("U-DDDTDD DDD/TDD strictness lint", () => {
           ruleIds: [
             "domain-boundary",
             "invariant-test-trace",
-            "red-first-evidence",
             "test-oracle-strength",
             "integration-gwt",
             "unit-oracle-substance",

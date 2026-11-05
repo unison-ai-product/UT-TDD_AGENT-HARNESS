@@ -266,7 +266,6 @@ function packageViolations(doc: RuntimePortabilityDoc | undefined): RuntimePorta
   if (
     !usesVitestEntrypoint(pkg.scripts?.["test:db"], pkg.scripts) ||
     !pkg.scripts?.["test:db"]?.includes("tests/db-projection-ingestion.test.ts") ||
-    !pkg.scripts?.["test:db"]?.includes("tests/drive-db-registration.test.ts") ||
     !pkg.scripts?.["test:db"]?.includes("tests/projection-writer.test.ts")
   ) {
     violations.push({

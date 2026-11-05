@@ -7,10 +7,6 @@ import {
 } from "../lint/cycle-p4-verification.ts";
 import { analyzeDbCurrency, dbCurrencyMessages } from "../lint/db-currency.ts";
 import {
-  analyzeDriveDbRegistration,
-  driveDbRegistrationMessages,
-} from "../lint/drive-db-registration.ts";
-import {
   analyzeDriveModelPassage,
   driveModelPassageMessages,
   loadDriveModelPassageDocs,
@@ -83,10 +79,6 @@ import {
   telemetryClosureMessages,
 } from "../lint/telemetry-closure.ts";
 import { lintPlanWithGate } from "../plan/lint.ts";
-import {
-  loadDriveDbRegistrationStats,
-  loadOrBuildDriveDbRegistrationStats,
-} from "../state-db/drive-registration.ts";
 import { loadGateRunCoverageStats } from "./gate-run-coverage-reconciliation.ts";
 
 export function checkPlaceholderDeps(repoRoot: string): { messages: string[]; ok: boolean } {
@@ -157,24 +149,6 @@ export function checkDriveModelPassage(repoRoot: string): { messages: string[]; 
   }
 }
 
-export function checkDriveDbRegistration(repoRoot: string): { messages: string[]; ok: boolean } {
-  if (!existsSync(repoRoot)) {
-    return {
-      messages: ["drive-db-registration - violation: repo root could not be read"],
-      ok: false,
-    };
-  }
-  try {
-    const r = analyzeDriveDbRegistration(loadOrBuildDriveDbRegistrationStats(repoRoot));
-    return { messages: driveDbRegistrationMessages(r), ok: r.ok };
-  } catch {
-    return {
-      messages: ["drive-db-registration - violation: harness.db registration could not be read"],
-      ok: false,
-    };
-  }
-}
-
 export function checkDbCurrency(repoRoot: string): { messages: string[]; ok: boolean } {
   if (!existsSync(repoRoot)) {
     return {
@@ -183,7 +157,7 @@ export function checkDbCurrency(repoRoot: string): { messages: string[]; ok: boo
     };
   }
   try {
-    const r = analyzeDbCurrency(loadDriveDbRegistrationStats(repoRoot));
+    const r = analyzeDbCurrency(existsSync(join(repoRoot, ".ut-tdd", "harness.db")) ? {} : null);
     return { messages: dbCurrencyMessages(r), ok: r.ok };
   } catch {
     return {
@@ -388,7 +362,7 @@ export function checkSubDocSectionStructure(repoRoot: string): {
     return { messages: subDocSectionStructureMessages(r), ok: r.ok };
   } catch {
     return {
-      messages: ["sub-doc-section-structure - violation: docs/plans could not be read"],
+      messages: ["sub-doc-section-structure - violation: design documents could not be read"],
       ok: false,
     };
   }
