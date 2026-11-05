@@ -51,7 +51,7 @@ jobs:
       - name: install pinned UT-TDD consumer runtime
         run: |
           release_dir="$RUNNER_TEMP/ut-tdd-consumer-release"
-          node "$release_dir/$UT_TDD_CONSUMER_RUNTIME_VERSION.ut-tdd.mjs" setup --solo --consumer-runtime-release "$release_dir" --expected-consumer-digest "$UT_TDD_CONSUMER_RUNTIME_DIGEST"
+          node "$release_dir/$UT_TDD_CONSUMER_RUNTIME_VERSION.ut-tdd.mjs" setup --consumer-runtime-release "$release_dir" --expected-consumer-digest "$UT_TDD_CONSUMER_RUNTIME_DIGEST" --solo
       - name: verify UT-TDD runtime activation
         run: |
           if [ ! -f ".ut-tdd/runtime/activation/active.json" ]; then
