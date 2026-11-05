@@ -220,4 +220,4 @@ GitHub の合成 merge commit 1 件だけになり、guard が `Merge` で始ま
    `src/lint/github-ci-policy.ts` が固定している。本体の checkout は `fetch-depth: 0` だが、`-n 20` は PR の範囲ではなく直近 20 件を見るので、
    PR の commit が 20 件を超えると漏れ、main 側の commit を混ぜる。実装 PR は本体の workflow と CI policy も同じ呼び方 (`--base-ref` から範囲を導出し、`--commit-file` を渡さない) に揃える。
 
-テスト oracle は `docs/test-design/harness/L7-consumer-ci-workflow-test-design.md` (`CANDIDATE-U-CICONS-001..`)。
+正式な L7 test oracle (`U-CICONS-001..018`) は `docs/test-design/harness/L7-consumer-ci-workflow-test-design.md` に定義する。
