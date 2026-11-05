@@ -197,7 +197,7 @@ const commentUrl =
   "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/418#issuecomment-5907911175";
 const agentCommentUrl =
   "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/946#issuecomment-9460000000";
-const sha = (value: string) => `sha256:${createHash("sha256").update(value).digest("hex")}`;
+const sha = (v: string | Buffer) => `sha256:${createHash("sha256").update(v).digest("hex")}`;
 
 afterEach(() => {
   for (const root of tempRoots.splice(0)) {

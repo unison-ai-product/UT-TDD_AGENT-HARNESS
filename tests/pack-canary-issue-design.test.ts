@@ -8,9 +8,9 @@ interface IssueDesignModule {
   createConsumerIssueDesignDocument(consumerRoot: string, source: string): string;
 }
 
-const { createConsumerIssueDesignDocument } = (await import(
-  "../scripts/pack-canary-acceptance.mjs"
-)) as IssueDesignModule;
+const issueDesignModuleSpecifier = "../scripts/pack-canary-acceptance.mjs";
+const issueDesignModule = await import(issueDesignModuleSpecifier);
+const { createConsumerIssueDesignDocument } = issueDesignModule as IssueDesignModule;
 const shippedTemplate = readFileSync(
   join(process.cwd(), "docs", "templates", "design", "L6-function-spec-template.md"),
   "utf8",
