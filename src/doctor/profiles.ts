@@ -90,7 +90,6 @@ export const FULL_DOCTOR_OUTPUT_IDS = [
   "g3-trace",
   "rule-automation-closure",
   "drive-model-passage",
-  "drive-db-registration",
   "db-currency",
   "gate-run-coverage",
   "fr-roadmap-coverage",

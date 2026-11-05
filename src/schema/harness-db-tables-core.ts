@@ -21,8 +21,7 @@ export const HARNESS_DB_CORE_TABLES: TableDef[] = [
       // Values: "confirmed" | "rejected" | "pivot" | "" (null/unset stored as "").
       // Source: PLAN frontmatter field `decision_outcome`. Used by projectPocEvaluations (FR-L1-43).
       col("decision_outcome"),
-      // source_hash: sha256 of the full PLAN markdown content. Used by drive-db-registration to
-      // detect persisted harness.db staleness even when the plan count is unchanged.
+      // source_hash: sha256 of the full PLAN markdown content, populated by the PLAN projection.
       col("source_hash"),
     ],
   },

@@ -8,17 +8,6 @@ const currentStats = {
   expectedPlanRegistryFingerprint: "sha256:1234567890abcdef",
   driveRuns: 10,
   plansWithoutDriveRun: 0,
-  workflowRuns: 2,
-  workflowOrphans: 0,
-  modelRuns: 4,
-  modelOrphans: 0,
-  skillRecommendations: 10,
-  skillRecommendationOrphans: 0,
-  skillInvocations: 5,
-  skillInvocationOrphans: 0,
-  registeredHookEvents: 3,
-  hookOrphans: 0,
-  modes: ["Forward"],
 };
 
 const stalePlanCountStats = {
@@ -47,13 +36,13 @@ describe("db-currency lint", () => {
     expect(() => analyzeDbCurrency(stalePlanFingerprintStats)).not.toThrow();
   });
 
-  it.fails("U-PLANRET-010: PLAN count drift is not a db-currency violation", () => {
+  it("U-PLANRET-010: PLAN count drift is not a db-currency violation", () => {
     const result = analyzeDbCurrency(stalePlanCountStats);
 
     expect(result).toMatchObject({ ok: true, violations: [] });
   });
 
-  it.fails("U-PLANRET-010: PLAN fingerprint drift is not a db-currency violation", () => {
+  it("U-PLANRET-010: PLAN fingerprint drift is not a db-currency violation", () => {
     const result = analyzeDbCurrency(stalePlanFingerprintStats);
 
     expect(result).toMatchObject({ ok: true, violations: [] });

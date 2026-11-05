@@ -130,7 +130,7 @@ function withFixtureRoot(run: (root: string) => void): void {
 }
 
 describe("L6 completion readiness", () => {
-  it("requires confirmed L6 docs, owning PLAN refs, L7 doc refs, confirmed PLANs, confirmed L7, and G6 PASS", () => {
+  it("requires confirmed L6 docs, issue owners, L7 doc refs, confirmed L7, and G6 PASS", () => {
     const result = analyzeL6Completion({
       l6Docs: [
         {
@@ -155,7 +155,7 @@ describe("L6 completion readiness", () => {
     expect(result.ready).toBe(false);
     expect(result.freezeInputReady).toBe(false);
     expect(result.draftDocs).toEqual(["docs/design/harness/L6-function-design/function-spec.md"]);
-    expect(result.missingDocPlans).toEqual([
+    expect(result.missingDocIssues).toEqual([
       "docs/design/harness/L6-function-design/edge-case.md",
       "docs/design/harness/L6-function-design/function-spec.md",
     ]);
@@ -171,7 +171,6 @@ describe("L6 completion readiness", () => {
       "docs/design/harness/L6-function-design/edge-case.md",
       "docs/design/harness/L6-function-design/function-spec.md",
     ]);
-    expect(result.draftPlans).toEqual(["PLAN-L6-01-function-spec"]);
     expect(result.l7Status).toBe("draft");
     expect(result.g6Status).toBe("not reached");
     expect(l6CompletionMessages(result)[0]).toContain("not ready");
@@ -185,7 +184,7 @@ describe("L6 completion readiness", () => {
           text: [
             "status: confirmed",
             "pair_artifact: docs/test-design/harness/L7-unit-test-design.md",
-            "plan: docs/plans/PLAN-L6-01-function-spec.md",
+            "issue: 1374",
             "L6 contract marker: planDraft(input: PlanDraftInput) => PlanDraftResult. DbC pre/post. L7 oracle family: U-FUNC-001.",
           ].join("\n"),
         },
@@ -220,7 +219,7 @@ describe("L6 completion readiness", () => {
           text: [
             "status: draft",
             "pair_artifact: docs/test-design/harness/L7-unit-test-design.md",
-            "plan: docs/plans/PLAN-L6-01-function-spec.md",
+            "issue: 1374",
             "L6 contract marker: planDraft(input: PlanDraftInput) => PlanDraftResult. DbC pre/post. L7 oracle family: U-FUNC-001.",
           ].join("\n"),
         },
@@ -243,7 +242,7 @@ describe("L6 completion readiness", () => {
     );
   });
 
-  it("does not reopen base G6 completion for post-G6 add-design draft PLANs", () => {
+  it("does not reopen base G6 completion based on unrelated plan inputs", () => {
     const result = analyzeL6Completion({
       l6Docs: [
         {
@@ -251,7 +250,7 @@ describe("L6 completion readiness", () => {
           text: [
             "status: confirmed",
             "pair_artifact: docs/test-design/harness/L7-unit-test-design.md",
-            "plan: docs/plans/PLAN-L6-01-function-spec.md",
+            "issue: 1374",
             "L6 contract marker: planDraft(input: PlanDraftInput) => PlanDraftResult. DbC pre/post. L7 oracle family: U-FUNC-001.",
           ].join("\n"),
         },
@@ -278,7 +277,6 @@ describe("L6 completion readiness", () => {
     });
 
     expect(result.ready).toBe(true);
-    expect(result.draftPlans).toEqual([]);
   });
 
   it("U-L6COMP-006: accepts a positive issue as the sole L6 owner", () => {
@@ -324,7 +322,7 @@ describe("L6 completion readiness", () => {
         docs: [
           {
             fileName: "alternate-pair.md",
-            owner: `plan: ${fixturePlanPath}`,
+            owner: "issue: 1374",
             pairArtifact: "docs/test-design/harness/L7-alternate.md",
             oracleId: "U-L6COMP-008",
           },
@@ -341,8 +339,8 @@ describe("L6 completion readiness", () => {
       const inputs = loadL6CompletionInputs(root);
       const result = analyzeL6Completion(inputs);
 
-      expect(result.missingReviewPlans).toEqual([]);
-      expect(result.draftPlans).toEqual([]);
+      expect(Object.hasOwn(result, "missingReviewPlans")).toBe(false);
+      expect(Object.hasOwn(result, "draftPlans")).toBe(false);
       expect(result.missingDocPairArtifacts).toEqual([]);
       expect(result.ready).toBe(true);
     });
@@ -360,7 +358,7 @@ describe("L6 completion readiness", () => {
         docs: [
           {
             fileName: "invalid-pair.md",
-            owner: `plan: ${fixturePlanPath}`,
+            owner: "issue: 1374",
             pairArtifact,
             oracleId: "U-L6COMP-008",
           },
@@ -378,10 +376,9 @@ describe("L6 completion readiness", () => {
         );
       }
       const result = analyzeL6Completion(loadL6CompletionInputs(root));
-      expect(result.missingReviewPlans).toEqual([]);
-      expect(result.draftPlans).toEqual([]);
-      expect(result.missingDocPlans).toEqual([]);
-      expect(result.unresolvedDocPlans).toEqual([]);
+      expect(Object.hasOwn(result, "missingReviewPlans")).toBe(false);
+      expect(Object.hasOwn(result, "draftPlans")).toBe(false);
+      expect(result.missingDocIssues).toEqual([]);
       expect(result.missingDocPairArtifacts).toEqual([
         "docs/design/harness/L6-function-design/invalid-pair.md",
       ]);
@@ -396,7 +393,7 @@ describe("L6 completion readiness", () => {
         docs: [
           {
             fileName: "pair-bound-ref.md",
-            owner: `plan: ${fixturePlanPath}`,
+            owner: "issue: 1374",
             pairArtifact: "docs/test-design/harness/L7-pair-a.md",
             oracleId: "U-L6COMP-009",
           },
@@ -409,8 +406,8 @@ describe("L6 completion readiness", () => {
       const inputs = loadL6CompletionInputs(root);
       const result = analyzeL6Completion(inputs);
 
-      expect(result.missingReviewPlans).toEqual([]);
-      expect(result.draftPlans).toEqual([]);
+      expect(Object.hasOwn(result, "missingReviewPlans")).toBe(false);
+      expect(Object.hasOwn(result, "draftPlans")).toBe(false);
       expect(result.missingL7DocRefs).toEqual([docPath]);
       expect(result.missingDocPairArtifacts).toEqual([]);
     });
@@ -445,13 +442,13 @@ describe("L6 completion readiness", () => {
         docs: [
           {
             fileName: "pair-confirmed.md",
-            owner: `plan: ${fixturePlanPath}`,
+            owner: "issue: 1374",
             pairArtifact: "docs/test-design/harness/L7-unit-test-design.md",
             oracleId: "U-L6COMP-011",
           },
           {
             fileName: "pair-draft.md",
-            owner: `plan: ${fixturePlanPath}`,
+            owner: "issue: 1374",
             pairArtifact: "docs/test-design/harness/L7-other.md",
             oracleId: "U-L6COMP-011",
           },
@@ -468,8 +465,8 @@ describe("L6 completion readiness", () => {
       const inputs = loadL6CompletionInputs(root);
       const result = analyzeL6Completion(inputs);
 
-      expect(result.missingReviewPlans).toEqual([]);
-      expect(result.draftPlans).toEqual([]);
+      expect(Object.hasOwn(result, "missingReviewPlans")).toBe(false);
+      expect(Object.hasOwn(result, "draftPlans")).toBe(false);
       expect(result.ready).toBe(true);
     });
   });
@@ -483,13 +480,13 @@ describe("L6 completion readiness", () => {
         docs: [
           {
             fileName: "pair-confirmed.md",
-            owner: `plan: ${fixturePlanPath}`,
+            owner: "issue: 1374",
             pairArtifact: "docs/test-design/harness/L7-unit-test-design.md",
             oracleId: "U-L6COMP-011",
           },
           {
             fileName: "pair-draft.md",
-            owner: `plan: ${fixturePlanPath}`,
+            owner: "issue: 1374",
             pairArtifact: "docs/test-design/harness/L7-other.md",
             oracleId: "U-L6COMP-011",
           },
@@ -506,8 +503,8 @@ describe("L6 completion readiness", () => {
       const inputs = loadL6CompletionInputs(root);
 
       const result = analyzeL6Completion(inputs);
-      expect(result.missingReviewPlans).toEqual([]);
-      expect(result.draftPlans).toEqual([]);
+      expect(Object.hasOwn(result, "missingReviewPlans")).toBe(false);
+      expect(Object.hasOwn(result, "draftPlans")).toBe(false);
       expect(result.missingDocPairArtifacts).toEqual([]);
       expect(result.missingL7DocRefs).toEqual([]);
       expect(result.ready).toBe(false);

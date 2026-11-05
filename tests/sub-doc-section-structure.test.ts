@@ -1,4 +1,4 @@
-// 標準成果物 § 構造定義 (要件 §G.6.1): L4 report/batch/notification/code-value の design PLAN が
+// 標準成果物 § 構造定義 (要件 §G.6.1): L4 report/batch/notification/code-value の設計文書が
 // IPA 共通フレーム外部設計の必須 § を h2 で持つことを fail-close 検証する。
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -109,7 +109,7 @@ describe("analyzeSubDocSectionStructure (U-SDSS-001..006)", () => {
     expect(r.ok).toBe(true);
   });
 
-  it("U-SDSS-005: archived PLAN は検査対象外 (成果物整理後の false-positive 回避)", () => {
+  it("U-SDSS-005: archived 設計文書は検査対象外 (成果物整理後の false-positive 回避)", () => {
     const r = analyzeSubDocSectionStructure(input([plan("batch", ["バッチ一覧"], "archived")]));
     expect(r.checked).toBe(0);
     expect(r.ok).toBe(true);
@@ -148,9 +148,31 @@ describe("extractPlanSections (U-SDSS-007)", () => {
 });
 
 describe("loadSubDocSectionStructureInput real repo (U-SDSS-008)", () => {
-  it("U-SDSS-008: 実 repo に標準成果物 PLAN は無い (subject 0) ゆえ ok (downstream 起票時に発火)", () => {
+  it("U-SDSS-008: 実 repo に標準成果物文書は無い (subject 0) ゆえ ok (downstream 作成時に発火)", () => {
     const r = analyzeSubDocSectionStructure(loadSubDocSectionStructureInput(process.cwd()));
     expect(r.ok).toBe(true);
+  });
+});
+
+describe("loadSubDocSectionStructureInput read failures", () => {
+  it("keeps a missing design root fail-open as an empty input", () => {
+    const root = mkdtempSync(join(tmpdir(), "sub-doc-missing-design-root-"));
+    try {
+      expect(loadSubDocSectionStructureInput(root).plans).toEqual([]);
+    } finally {
+      removeTestTree(root);
+    }
+  });
+
+  it("propagates a non-directory design root failure to the gate wrapper", () => {
+    const root = mkdtempSync(join(tmpdir(), "sub-doc-invalid-design-root-"));
+    try {
+      mkdirSync(join(root, "docs"), { recursive: true });
+      writeFileSync(join(root, "docs", "design"), "not a directory", "utf8");
+      expect(() => loadSubDocSectionStructureInput(root)).toThrow();
+    } finally {
+      removeTestTree(root);
+    }
   });
 });
 
@@ -176,7 +198,7 @@ describe("U-PLANRET-012(c): sub_doc は design root だけを読む", () => {
     expect(() => loadSubDocSectionStructureInput(fixture.root)).not.toThrow();
   });
 
-  it.fails("U-PLANRET-012(c): docs/plans は無視し design root の report だけを検査", () => {
+  it("U-PLANRET-012(c): docs/plans は無視し design root の report だけを検査", () => {
     const loaded = loadSubDocSectionStructureInput(fixture.root);
     expect(loaded.plans.map(({ subDoc, status, h2 }) => ({ subDoc, status, h2 }))).toEqual([
       {

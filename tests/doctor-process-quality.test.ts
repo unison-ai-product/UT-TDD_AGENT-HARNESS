@@ -1,3 +1,4 @@
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -5,7 +6,6 @@ import { checkDriveModelPassage as checkDriveModelPassageFromIndex } from "../sr
 import {
   checkCycleP4Verification,
   checkDbCurrency,
-  checkDriveDbRegistration,
   checkDriveModelPassage,
   checkFeedbackLog,
   checkFrRoadmapCoverage,
@@ -21,6 +21,7 @@ import {
   checkSubDocSectionStructure,
   checkTelemetryClosure,
 } from "../src/doctor/process-quality.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 
 describe("doctor process quality checks", () => {
   it("fails closed when process quality inputs cannot read the repo root", () => {
@@ -32,7 +33,6 @@ describe("doctor process quality checks", () => {
       ["g3-trace", checkPlanTraceGate(missingRoot, "G3-trace")],
       ["rule-automation-closure", checkRuleAutomationClosure(missingRoot)],
       ["drive-model-passage", checkDriveModelPassage(missingRoot)],
-      ["drive-db-registration", checkDriveDbRegistration(missingRoot)],
       ["db-currency", checkDbCurrency(missingRoot)],
       ["fr-roadmap-coverage", checkFrRoadmapCoverage(missingRoot)],
       ["telemetry-closure", checkTelemetryClosure(missingRoot)],
@@ -60,5 +60,20 @@ describe("doctor process quality checks", () => {
 
     expect(result.ok).toBe(false);
     expect(result.messages.join("\n")).toContain("drive-model-passage - violation");
+  });
+
+  it("db-currency checks existence without opening or rebuilding the DB", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-db-currency-existence-"));
+    try {
+      expect(checkDbCurrency(root)).toMatchObject({ ok: false });
+      expect(checkDbCurrency(root).messages.join("\n")).toContain("missing_db");
+      mkdirSync(join(root, ".ut-tdd"));
+      const path = join(root, ".ut-tdd", "harness.db");
+      writeFileSync(path, "not a SQLite database", "utf8");
+      expect(checkDbCurrency(root)).toMatchObject({ ok: true });
+      expect(readFileSync(path, "utf8")).toBe("not a SQLite database");
+    } finally {
+      removeTestTree(root);
+    }
   });
 });

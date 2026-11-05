@@ -164,14 +164,14 @@ describe("U-PLANRET-013: red-first evidence retirement", () => {
     ).toEqual([]);
   });
 
-  it.fails("U-PLANRET-013: PLAN evidence no longer emits red-first-evidence", () => {
+  it("U-PLANRET-013: PLAN evidence no longer emits red-first-evidence", () => {
     const withPlan = analyzeDddTddRules(loadDddTddInputs(withPlanFixture.root));
     expect(
       withPlan.violations.filter((violation) => violation.rule === "red-first-evidence"),
     ).toEqual([]);
   });
 
-  it.fails("U-PLANRET-013: retired rule, policy, invariant, and oracle leave no drift", () => {
+  it("U-PLANRET-013: retired rule, policy, invariant, and oracle leave no drift", () => {
     const withPlan = analyzeDddTddRules(loadDddTddInputs(withPlanFixture.root));
     expect(
       withPlan.violations.filter(
