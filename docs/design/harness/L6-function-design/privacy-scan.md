@@ -38,6 +38,8 @@ issue: 1391
 | `pack` | Pack の配布物の artifact の全て (拡張子で絞らない。`runDistributionSecretScan` と同じ artifact の列で、team の yaml は同じく追跡中の blob の写しを読む) と、その path の文字列 | `ut-tdd distribution sync-pack` / `package` の、書き出しの前 | 必須 (§5) | 適用しない |
 
 - **`diff` が commit ごとに読む理由**: この repo は merge commit で取り込むので、PR の途中の commit も main の履歴に残る。途中の commit で足して後の commit で消した漏れは、HEAD の木 (`tree`) には現れないが、merge すると公開の履歴に残り、書き換えない (PO 決定)。`scripts/git-hooks/secret-scan-diff.ts` が commit ごとの blob を読むのと同じ理由である。追加行の行番号は、その commit の差分の hunk 見出し (`+c,d`) から求めた、その commit の時点のファイルの行番号である。
+- `+++ ` は hunk の外では追加側のファイル path を示すヘッダーとして扱い、hunk の中では追加内容の行として扱う。したがって、ヘッダー判定は `@@ ` で始まる hunk の内外を区別して行う。hunk 内の `+++ ` 行は、先頭の diff marker を除いた `++ ` をファイル内容として通常の追加行と同じく走査し、その commit の行番号を付ける。hunk 外の `+++ ` path header は内容として走査しない。
+- この境界の回帰 oracle は `docs/test-design/harness/L7-privacy-scan-diff-hunk-test-design.md` の `CANDIDATE-U-PRIVDIFF-001` と `CANDIDATE-U-PRIVDIFF-002` を参照する。後者は追加 commit の内容を後続 commit で削除しても、追加 commit の finding が残ることを検証する。候補 ID は test design の正式 ID 昇格前の参照である。
 - **merge commit の内容も読む**: PR の範囲に merge commit があるときは、その merge commit と **first parent との差分** (`git diff <M>^1 <M>`) の追加行を、通常の commit と同じく読む。衝突の解消で入れた行は、この差分にだけ現れる。merge commit を飛ばすと、解消で入れて後の commit で消した漏れ (merge commit M で入れ、後の commit B で消す) が、どの commit の追加行にも木にも現れないまま公開の履歴に残る。first parent との差分は、取り込んだ側 (多くは main) の変更も含む。それらは main に入るときに同じ検査を通っているので、ふつうは当たらない。
 - **`diff` が commit のメタを見る理由**: 履歴の書き換えが必要になった A-129 の原因は、commit の author の email だった。author と committer の email は、merge で公開の履歴に残る。merge commit のメタも見る。
 - **`tree` を PR でも流す理由**: `diff` は既存の内容を見ないので、規則を変えたときに既にある当たりを見つけられない。`tree` は PR の merge 結果の木 (CI の checkout の `HEAD`) を見る。
