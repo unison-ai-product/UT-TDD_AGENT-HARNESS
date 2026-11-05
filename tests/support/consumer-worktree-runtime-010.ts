@@ -386,7 +386,7 @@ export function registerConsumerWorktreeRuntime010Tests(
     }
   });
 
-  it.fails("CANDIDATE-U-CWTRT-010: installs A through its lowercase hex cache key", () => {
+  it.fails("U-CWTRT-010: installs A through its lowercase hex cache key", () => {
     const fixture = getFixture();
     const target = fixture.linked["010-a"];
     const cacheBefore = snapshotTree(dirname(fixture.cache));
@@ -407,7 +407,7 @@ export function registerConsumerWorktreeRuntime010Tests(
     ["010-separator", 3],
   ] as const) {
     describe(targetId, () => {
-      it.fails("CANDIDATE-U-CWTRT-010: rejects malformed main release_id without cache aliasing", () => {
+      it.fails("U-CWTRT-010: rejects malformed main release_id without cache aliasing", () => {
         const malformed = malformedFixtures[malformedIndex];
         if (!malformed) throw new Error("malformed active fixture is missing");
         const cacheRoot = malformed.cacheRoot;
@@ -429,7 +429,7 @@ export function registerConsumerWorktreeRuntime010Tests(
     });
   }
 
-  it.fails("CANDIDATE-U-CWTRT-010: rejects B under A's cache key and rolls back", () => {
+  it.fails("U-CWTRT-010: rejects B under A's cache key and rolls back", () => {
     const fixture = getFixture();
     const bVerification = verifyConsumerRuntimeReleaseAssets({
       releaseDirectory: fixture.releaseB,

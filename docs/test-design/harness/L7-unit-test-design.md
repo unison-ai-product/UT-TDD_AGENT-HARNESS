@@ -2267,7 +2267,7 @@ cross-provider比較除去、E9/E11いずれかのgate除去を全てkillする�
 
 | U-ID | 対象 | oracle |
 |---|---|---|
-| `U-HOOKEXEC-001` | semantic invocation | executable と argv が別 field で保持され、空白・quote を含む token も join/split されない。 |
+| `U-HOOKEXEC-001` | semantic invocation | executable と argv が別 field で保持され、空白・quote を含む token も join/split されない。 consumer-local runtime の active pointer 不在は `consumer_runtime_absent` と案内文を stderr に出し exit 2 で fail-close する (other deny は exit 78)。 |
 | `U-HOOKEXEC-002` | Claude serializer | `command` は `node`、`args` は `.ut-tdd/bin/ut-tdd.mjs` と hook 固有 subcommand の shell-free token 配列になる。旧 `run-bun.ts` や Bun launcher は含めない。 |
 | `U-HOOKEXEC-003` | source Claude hooks | agent/work guards、session start/post-tool-use/summary、subagent-stop の全 6 hook が exec form である。 |
 | `U-HOOKEXEC-004` | policy preservation | guard は `onFailure: "block"`、観測/session hook は `onFailure` を省略した既存 fail-open policy を保持する (#1521)。 |

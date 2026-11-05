@@ -163,7 +163,7 @@ describe("consumer worktree runtime setup entry Red (#1525)", () => {
     rmSync(fixture.networkMarker);
   });
 
-  it.fails("CANDIDATE-U-CWTRT-001: installs main's pin and runs a guard through the worktree launcher", () => {
+  it.fails("U-CWTRT-001: installs main's pin and runs a guard through the worktree launcher", () => {
     const worktree = fixture.linked["001"];
     const result = runConsumerWorktreeCommand(fixture.main, ["setup", "--worktree", worktree]);
     expect(result.status, `${result.stdout}\n${result.stderr}`).toBe(0);
@@ -179,7 +179,7 @@ describe("consumer worktree runtime setup entry Red (#1525)", () => {
     expect(guard.status, `${guard.stdout}\n${guard.stderr}`).toBe(0);
   });
 
-  it.fails("CANDIDATE-U-CWTRT-002: cache A succeeds without making any network call", () => {
+  it.fails("U-CWTRT-002: cache A succeeds without making any network call", () => {
     rmSync(fixture.networkMarker, { force: true });
     const nodeOptions = [
       process.env.NODE_OPTIONS,
@@ -202,7 +202,7 @@ describe("consumer worktree runtime setup entry Red (#1525)", () => {
     expect(runtimeIdentity(fixture.linked["002-network"]).release_id).toBe(fixture.releaseId);
   });
 
-  it.fails("CANDIDATE-U-CWTRT-002: accepts the explicit pinned Release when cache is absent", () => {
+  it.fails("U-CWTRT-002: accepts the explicit pinned Release when cache is absent", () => {
     const mainPointer = readFileSync(
       join(fixture.main, ".ut-tdd", "runtime", "activation", "active.json"),
     );
@@ -243,7 +243,7 @@ describe("consumer worktree runtime setup entry Red (#1525)", () => {
     }
   });
 
-  it.fails("CANDIDATE-U-CWTRT-002: missing cache without an explicit Release returns cache_missing", () => {
+  it.fails("U-CWTRT-002: missing cache without an explicit Release returns cache_missing", () => {
     rmSync(fixture.cache, { recursive: true, force: true });
     try {
       const result = runConsumerWorktreeCommand(fixture.main, [
@@ -268,7 +268,7 @@ describe("consumer worktree runtime setup entry Red (#1525)", () => {
     }
   });
 
-  it.fails("CANDIDATE-U-CWTRT-002: explicit Release with an invalid anchor is rejected", () => {
+  it.fails("U-CWTRT-002: explicit Release with an invalid anchor is rejected", () => {
     rmSync(fixture.cache, { recursive: true, force: true });
     try {
       const result = runConsumerWorktreeCommand(fixture.main, [
@@ -297,7 +297,7 @@ describe("consumer worktree runtime setup entry Red (#1525)", () => {
     }
   });
 
-  it.fails("CANDIDATE-U-CWTRT-002: explicit valid Release B is rejected against main's pin A", () => {
+  it.fails("U-CWTRT-002: explicit valid Release B is rejected against main's pin A", () => {
     const before = readFileSync(
       join(fixture.main, ".ut-tdd", "runtime", "activation", "active.json"),
     );
@@ -325,7 +325,7 @@ describe("consumer worktree runtime setup entry Red (#1525)", () => {
     }
   });
 
-  it.fails("CANDIDATE-U-CWTRT-003: rejects a tampered cached asset without partial runtime", () => {
+  it.fails("U-CWTRT-003: rejects a tampered cached asset without partial runtime", () => {
     const target = join(fixture.cache, releaseArtifactFileNames(WORKTREE_RUNTIME_TAG).compiledEsm);
     const original = readFileSync(target);
     writeFileSync(target, Buffer.concat([original, Buffer.from("tamper")]));
@@ -348,7 +348,7 @@ describe("consumer worktree runtime setup entry Red (#1525)", () => {
     }
   });
 
-  it.fails("CANDIDATE-U-CWTRT-004: refuses setup while main has no active runtime", () => {
+  it.fails("U-CWTRT-004: refuses setup while main has no active runtime", () => {
     const active = join(fixture.main, ".ut-tdd", "runtime", "activation", "active.json");
     const saved = readFileSync(active);
     rmSync(active);
@@ -366,7 +366,7 @@ describe("consumer worktree runtime setup entry Red (#1525)", () => {
     }
   });
 
-  it.fails("CANDIDATE-U-CWTRT-005: cache A and B still install only main's pinned A", () => {
+  it.fails("U-CWTRT-005: cache A and B still install only main's pinned A", () => {
     const mainPointer = readFileSync(
       join(fixture.main, ".ut-tdd", "runtime", "activation", "active.json"),
     );
@@ -383,7 +383,7 @@ describe("consumer worktree runtime setup entry Red (#1525)", () => {
     ).toEqual(mainPointer);
   });
 
-  it.fails("CANDIDATE-U-CWTRT-005: refuses to replace an existing worktree runtime pinned to B", () => {
+  it.fails("U-CWTRT-005: refuses to replace an existing worktree runtime pinned to B", () => {
     const existing = fixture.linked["005-existing"];
     const identityBefore = runtimeIdentity(existing);
     const pointer = join(existing, ".ut-tdd", "runtime", "activation", "active.json");
@@ -395,7 +395,7 @@ describe("consumer worktree runtime setup entry Red (#1525)", () => {
     expect(readFileSync(pointer)).toEqual(pointerBefore);
   });
 
-  it.fails("CANDIDATE-U-CWTRT-006: rejects the main worktree without writing", () => {
+  it.fails("U-CWTRT-006: rejects the main worktree without writing", () => {
     const before = readdirSync(fixture.main).sort();
     const result = runConsumerWorktreeCommand(fixture.main, ["setup", "--worktree", fixture.main]);
     expect(`${result.stdout}\n${result.stderr}`).toContain("worktree_entry_not_linked");
@@ -403,7 +403,7 @@ describe("consumer worktree runtime setup entry Red (#1525)", () => {
     expect(readdirSync(fixture.main).sort()).toEqual(before);
   });
 
-  it.fails("CANDIDATE-U-CWTRT-006: rejects a non-git path without writing", () => {
+  it.fails("U-CWTRT-006: rejects a non-git path without writing", () => {
     const unmanaged = fixture.linked.unmanaged;
     const before = readdirSync(unmanaged).sort();
     const result = runConsumerWorktreeCommand(fixture.main, ["setup", "--worktree", unmanaged]);

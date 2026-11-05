@@ -115,13 +115,13 @@ describe("issue #1525 consumer worktree missing-runtime guard guidance", () => {
 
     // The positive control proves that the generated Pack argv reaches the
     // present launcher rather than failing in Node's module resolver. Its
-    // missing-runtime result is the exact boundary exercised by candidate 007.
+    // missing-runtime result is the exact boundary exercised by U-CWTRT-007.
     expect(result.status).not.toBe(1);
     expect(`${result.stderr}\n${result.stdout}`).not.toContain("MODULE_NOT_FOUND");
     expect(result.stderr).toContain("consumer_runtime_absent");
   });
 
-  it.fails("CANDIDATE-U-CWTRT-007: a present launcher gives setup guidance only for absent runtime", () => {
+  it.fails("U-CWTRT-007: a present launcher gives setup guidance only for absent runtime", () => {
     const fixture = createHookFixture();
     expect(existsSync(fixture.launcherPath)).toBe(true);
     expect(
@@ -165,7 +165,7 @@ describe("issue #1525 consumer worktree missing-runtime guard guidance", () => {
     expect(result.stdout).toBe("");
   });
 
-  it.fails("CANDIDATE-U-CWTRT-008: absent launcher is handled before Node module resolution", () => {
+  it.fails("U-CWTRT-008: absent launcher is handled before Node module resolution", () => {
     const fixture = createHookFixture();
     rmSync(fixture.launcherPath);
     expect(existsSync(fixture.launcherPath)).toBe(false);
@@ -182,7 +182,7 @@ describe("issue #1525 consumer worktree missing-runtime guard guidance", () => {
     expect(result.stdout).toBe("");
   });
 
-  it.fails("CANDIDATE-U-CWTRT-008: absent launcher is handled for the work guard", () => {
+  it.fails("U-CWTRT-008: absent launcher is handled for the work guard", () => {
     const fixture = createHookFixture();
     rmSync(fixture.launcherPath);
     expect(existsSync(fixture.launcherPath)).toBe(false);
@@ -208,7 +208,7 @@ describe("issue #1525 consumer worktree missing-runtime guard guidance", () => {
     expect(result.stderr).toContain("consumer_runtime_absent");
   });
 
-  it.fails("CANDIDATE-U-CWTRT-009: missing-runtime guidance is a single stderr block reason", () => {
+  it.fails("U-CWTRT-009: missing-runtime guidance is a single stderr block reason", () => {
     const fixture = createHookFixture();
     const result = runGeneratedHook(fixture, fixture.workGuard, {
       tool_name: "Edit",
