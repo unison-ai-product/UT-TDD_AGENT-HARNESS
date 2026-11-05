@@ -10,7 +10,7 @@
             "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/agent-guard.ts"],
             "timeout": 5,
             "statusMessage": "explicit-model + frontmatter-floor guard (env-independent TS)",
-            "blockOnFailure": true
+            "onFailure": "block"
           }
         ]
       },
@@ -23,7 +23,7 @@
             "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/work-guard.ts"],
             "timeout": 5,
             "statusMessage": "work guard: block edits to foreign uncommitted files unless explicitly bypassed",
-            "blockOnFailure": true
+            "onFailure": "block"
           }
         ]
       }
