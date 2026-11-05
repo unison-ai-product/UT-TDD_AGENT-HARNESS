@@ -160,6 +160,12 @@ describe("consumer worktree runtime setup entry Red (#1525)", () => {
   });
 
   it.fails("CANDIDATE-U-CWTRT-002: accepts the explicit pinned Release when cache is absent", () => {
+    const mainPointer = readFileSync(
+      join(fixture.main, ".ut-tdd", "runtime", "activation", "active.json"),
+    );
+    const otherPointer = readFileSync(
+      join(fixture.linked["005-existing"], ".ut-tdd", "runtime", "activation", "active.json"),
+    );
     rmSync(fixture.cache, { recursive: true, force: true });
     try {
       const result = runConsumerWorktreeCommand(fixture.main, [
@@ -173,6 +179,19 @@ describe("consumer worktree runtime setup entry Red (#1525)", () => {
       ]);
       expect(result.status, `${result.stdout}\n${result.stderr}`).toBe(0);
       expect(existsSync(join(fixture.linked["002"], ".ut-tdd", "bin", "ut-tdd.mjs"))).toBe(true);
+      const mainIdentity = runtimeIdentity(fixture.main);
+      const worktreeIdentity = runtimeIdentity(fixture.linked["002"]);
+      expect(worktreeIdentity.release_id).toBe(mainIdentity.release_id);
+      expect(worktreeIdentity.artifact_set_digest).toBe(mainIdentity.artifact_set_digest);
+      expect(worktreeIdentity.compiled_esm_digest).toBe(mainIdentity.compiled_esm_digest);
+      expect(
+        readFileSync(join(fixture.main, ".ut-tdd", "runtime", "activation", "active.json")),
+      ).toEqual(mainPointer);
+      expect(
+        readFileSync(
+          join(fixture.linked["005-existing"], ".ut-tdd", "runtime", "activation", "active.json"),
+        ),
+      ).toEqual(otherPointer);
       expect(existsSync(fixture.cache)).toBe(false);
     } finally {
       mkdirSync(fixture.cache, { recursive: true });
@@ -207,46 +226,60 @@ describe("consumer worktree runtime setup entry Red (#1525)", () => {
   });
 
   it.fails("CANDIDATE-U-CWTRT-002: explicit Release with an invalid anchor is rejected", () => {
-    const result = runConsumerWorktreeCommand(fixture.main, [
-      "setup",
-      "--worktree",
-      fixture.linked["002-anchor"],
-      "--consumer-runtime-release",
-      fixture.release,
-      "--expected-consumer-digest",
-      `sha256:${"0".repeat(64)}`,
-    ]);
-    expect(`${result.stdout}\n${result.stderr}`).toContain("consumer_runtime_anchor_mismatch");
-    expect(result.status).not.toBe(0);
-    expect(existsSync(join(fixture.linked["002-anchor"], ".ut-tdd", "bin", "ut-tdd.mjs"))).toBe(
-      false,
-    );
-    expect(
-      existsSync(
-        join(fixture.linked["002-anchor"], ".ut-tdd", "runtime", "activation", "active.json"),
-      ),
-    ).toBe(false);
+    rmSync(fixture.cache, { recursive: true, force: true });
+    try {
+      const result = runConsumerWorktreeCommand(fixture.main, [
+        "setup",
+        "--worktree",
+        fixture.linked["002-anchor"],
+        "--consumer-runtime-release",
+        fixture.release,
+        "--expected-consumer-digest",
+        `sha256:${"0".repeat(64)}`,
+      ]);
+      expect(`${result.stdout}\n${result.stderr}`).toContain("consumer_runtime_anchor_mismatch");
+      expect(result.status).not.toBe(0);
+      expect(existsSync(join(fixture.linked["002-anchor"], ".ut-tdd", "bin", "ut-tdd.mjs"))).toBe(
+        false,
+      );
+      expect(
+        existsSync(
+          join(fixture.linked["002-anchor"], ".ut-tdd", "runtime", "activation", "active.json"),
+        ),
+      ).toBe(false);
+    } finally {
+      mkdirSync(fixture.cache, { recursive: true });
+      for (const name of readdirSync(fixture.release))
+        writeFileSync(join(fixture.cache, name), readFileSync(join(fixture.release, name)));
+    }
   });
 
   it.fails("CANDIDATE-U-CWTRT-002: explicit valid Release B is rejected against main's pin A", () => {
     const before = readFileSync(
       join(fixture.main, ".ut-tdd", "runtime", "activation", "active.json"),
     );
-    const result = runConsumerWorktreeCommand(fixture.main, [
-      "setup",
-      "--worktree",
-      fixture.linked["002-b"],
-      "--consumer-runtime-release",
-      fixture.releaseB,
-      "--expected-consumer-digest",
-      fixture.anchorB,
-    ]);
-    expect(`${result.stdout}\n${result.stderr}`).toContain("worktree_entry_pin_mismatch");
-    expect(result.status).not.toBe(0);
-    expect(existsSync(join(fixture.linked["002-b"], ".ut-tdd", "bin", "ut-tdd.mjs"))).toBe(false);
-    expect(
-      readFileSync(join(fixture.main, ".ut-tdd", "runtime", "activation", "active.json")),
-    ).toEqual(before);
+    rmSync(fixture.cache, { recursive: true, force: true });
+    try {
+      const result = runConsumerWorktreeCommand(fixture.main, [
+        "setup",
+        "--worktree",
+        fixture.linked["002-b"],
+        "--consumer-runtime-release",
+        fixture.releaseB,
+        "--expected-consumer-digest",
+        fixture.anchorB,
+      ]);
+      expect(`${result.stdout}\n${result.stderr}`).toContain("worktree_entry_pin_mismatch");
+      expect(result.status).not.toBe(0);
+      expect(existsSync(join(fixture.linked["002-b"], ".ut-tdd", "bin", "ut-tdd.mjs"))).toBe(false);
+      expect(
+        readFileSync(join(fixture.main, ".ut-tdd", "runtime", "activation", "active.json")),
+      ).toEqual(before);
+    } finally {
+      mkdirSync(fixture.cache, { recursive: true });
+      for (const name of readdirSync(fixture.release))
+        writeFileSync(join(fixture.cache, name), readFileSync(join(fixture.release, name)));
+    }
   });
 
   it.fails("CANDIDATE-U-CWTRT-003: rejects a tampered cached asset without partial runtime", () => {
