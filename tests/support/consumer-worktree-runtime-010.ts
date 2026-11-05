@@ -5,6 +5,7 @@ import {
   mkdtempSync,
   readdirSync,
   readFileSync,
+  readlinkSync,
   realpathSync,
   rmSync,
   statSync,
@@ -232,14 +233,16 @@ function createMalformedActiveFixture(
   };
 }
 
-function snapshotTree(path: string): string {
+export function snapshotTree(path: string): string {
   return JSON.stringify(
     readdirSync(path, { withFileTypes: true })
       .sort((left, right) => left.name.localeCompare(right.name))
       .map((entry) =>
-        entry.isDirectory()
-          ? [entry.name, snapshotTree(join(path, entry.name))]
-          : [entry.name, readFileSync(join(path, entry.name)).toString("hex")],
+        entry.isSymbolicLink()
+          ? [entry.name, ["symlink", readlinkSync(join(path, entry.name))]]
+          : entry.isDirectory()
+            ? [entry.name, snapshotTree(join(path, entry.name))]
+            : [entry.name, readFileSync(join(path, entry.name)).toString("hex")],
       ),
   );
 }
