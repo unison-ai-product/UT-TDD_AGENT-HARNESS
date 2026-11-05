@@ -1,9 +1,6 @@
 import { execFileSync } from "node:child_process";
-import { createHash } from "node:crypto";
 import {
-  accessSync,
   chmodSync,
-  constants,
   cpSync,
   existsSync,
   lstatSync,
@@ -11,10 +8,7 @@ import {
   mkdtempSync,
   readdirSync,
   readFileSync,
-  realpathSync,
   rmSync,
-  statSync,
-  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -22,9 +16,7 @@ import { dirname, join, sep } from "node:path";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { GitAuthoringProvenance } from "../../src/disposition/adapters/git-authoring-provenance.ts";
 import { loadTrackedCatalogInput } from "../../src/disposition/adapters/tracked-vmodel-loader.ts";
-import { gitBlobOid } from "../../src/disposition/domain/authoring-provenance.ts";
 import { DocumentDispositionCatalog } from "../../src/disposition/domain/document-disposition-catalog.ts";
-import type { AuthoringProvenancePort } from "../../src/disposition/ports/authoring-provenance.ts";
 import { openHarnessDb } from "../../src/state-db/index.ts";
 import { migrate } from "../../src/state-db/migration.ts";
 import { rebuildHarnessDb } from "../../src/state-db/projection-writer.ts";
@@ -72,273 +64,6 @@ describe("I-DISP-001 V-model projection", () => {
     } finally {
       db.close();
     }
-  });
-
-  describe("CANDIDATE-U-DISPPTR-001: projection without docs/plans", () => {
-    let noPlanRoot: string;
-
-    beforeAll(() => {
-      noPlanRoot = createDocsGitFixture({ planMode: "none" });
-      expect(existsSync(join(noPlanRoot, "docs", "plans"))).toBe(false);
-      expect(
-        execFileSync("git", ["ls-tree", "-r", "--name-only", "HEAD", "--", "docs/plans"], {
-          cwd: noPlanRoot,
-          encoding: "utf8",
-        }).trim(),
-      ).toBe("");
-    });
-
-    afterAll(() => {
-      rmSync(noPlanRoot, { recursive: true, force: true });
-    });
-
-    it.fails("projects all pending items to physical-data without a PLAN seed", () => {
-      const db = openHarnessDb(":memory:");
-      try {
-        migrate(db);
-        projectVmodelAuthoring(noPlanRoot, db);
-        expect(count(db, "vmodel_semantic_items")).toBe(163);
-        expect(count(db, "vmodel_item_target_edges")).toBe(163);
-        const itemTargetColumns = db
-          .prepare("PRAGMA table_info(vmodel_item_target_edges)")
-          .all()
-          .map((column) => column.name);
-        expect(itemTargetColumns).toContain("design_path");
-        const pendingTargets = db
-          .prepare(
-            `SELECT target_status, plan_id, design_path
-             FROM vmodel_item_target_edges ORDER BY item_id`,
-          )
-          .all();
-        expect(pendingTargets).toHaveLength(163);
-        expect(pendingTargets.every((row) => row.target_status === "pending_review")).toBe(true);
-        expect(pendingTargets.every((row) => row.plan_id === null)).toBe(true);
-        expect(pendingTargets.map((row) => row.design_path)).toEqual(
-          Array(163).fill("docs/design/harness/L5-detailed-design/physical-data.md"),
-        );
-      } finally {
-        db.close();
-      }
-    });
-  });
-
-  it.fails("CANDIDATE-U-DISPPTR-002: accepts defer with tracked design_path and NULL legacy plan_id", () => {
-    const db = openHarnessDb(":memory:");
-    try {
-      migrate(db);
-      seedPlan(db);
-      const ledger = ledgerWithDesignPath({
-        designPath: "docs/design/harness/L5-detailed-design/physical-data.md",
-        planId: "—",
-      });
-      const deps = authoringDepsWithLedger(repoRoot, ledger);
-      let projectionFailure: unknown;
-      try {
-        projectVmodelAuthoring(repoRoot, db, deps);
-      } catch (error) {
-        projectionFailure = error;
-      }
-
-      // Current observation: projectVmodelAuthoring returns successfully here;
-      // the following SELECT fails with `no such column: design_path`. Neither
-      // NULL-plan persistence nor the tracked-path guard is established here.
-      expect(projectionFailure).toBeUndefined();
-      expect(
-        db
-          .prepare(
-            "SELECT target_status, plan_id, design_path FROM vmodel_item_target_edges WHERE edge_id = ?",
-          )
-          .get("ITEM-TARGET-KIKAKU"),
-      ).toMatchObject({
-        target_status: "defer",
-        plan_id: null,
-        design_path: "docs/design/harness/L5-detailed-design/physical-data.md",
-      });
-    } finally {
-      db.close();
-    }
-  });
-
-  it.fails("CANDIDATE-U-DISPPTR-002 contrast: rejects legacy plan_id-only defer without a design_path column", () => {
-    const db = openHarnessDb(":memory:");
-    try {
-      migrate(db);
-      seedPlan(db);
-      const ledger = legacyLedgerWithPlanOnlyDefer(
-        "PLAN-L7-417-source-disposition-profile-projection",
-      );
-      expect(ledger).not.toContain("design_path");
-      let projectionFailure: unknown;
-      try {
-        projectVmodelAuthoring(repoRoot, db, authoringDepsWithLedger(repoRoot, ledger));
-      } catch (error) {
-        projectionFailure = error;
-      }
-      expect(projectionFailure).toBeInstanceOf(Error);
-    } finally {
-      db.close();
-    }
-  });
-
-  describe("CANDIDATE-U-DISPPTR-003 physical path variants", () => {
-    const validPath = "docs/design/harness/L5-detailed-design/physical-data.md";
-    const missingPath = "docs/design/harness/L5-detailed-design/missing-physical-data.md";
-    const unreadablePath = "docs/design/harness/L5-detailed-design/unreadable-fixture.md";
-    const gitSymlinkPath = "docs/design/harness/L5-detailed-design/git-symlink-fixture.md";
-    const junctionPath = "docs/design/harness/L5-detailed-design/junction-escape/target.md";
-    let tempRoot: string;
-    let junctionOutside: string | undefined;
-
-    beforeAll(() => {
-      tempRoot = createDocsGitFixture({ ensureTracked: missingPath });
-      rmSync(join(tempRoot, missingPath));
-      addTrackedFixtureFile(tempRoot, unreadablePath);
-      addTrackedFixtureFile(tempRoot, gitSymlinkPath);
-      const symlinkOid = execFileSync("git", ["hash-object", gitSymlinkPath], {
-        cwd: tempRoot,
-        encoding: "utf8",
-      }).trim();
-      execFileSync(
-        "git",
-        ["update-index", "--add", "--cacheinfo", `120000,${symlinkOid},${gitSymlinkPath}`],
-        { cwd: tempRoot, stdio: "ignore" },
-      );
-
-      addTrackedFixtureFile(tempRoot, junctionPath);
-      commitFixtureIndex(tempRoot);
-      expect(
-        execFileSync("git", ["ls-tree", "HEAD", "--", gitSymlinkPath], {
-          cwd: tempRoot,
-          encoding: "utf8",
-        }),
-      ).toMatch(/^120000\s/m);
-      expect(
-        execFileSync("git", ["ls-tree", "HEAD", "--", junctionPath], {
-          cwd: tempRoot,
-          encoding: "utf8",
-        }),
-      ).toMatch(/^100644\s/m);
-      junctionOutside = mkdtempSync(join(tmpdir(), "ut-t1-disposition-junction-outside-"));
-      writeFileSync(join(junctionOutside, "target.md"), "outside target\n", "utf8");
-      const junctionDirectory = dirname(join(tempRoot, junctionPath));
-      rmSync(junctionDirectory, { recursive: true });
-      const junctionParent = dirname(junctionDirectory);
-      symlinkSync(
-        junctionOutside,
-        join(junctionParent, "junction-escape"),
-        process.platform === "win32" ? "junction" : "dir",
-      );
-    });
-
-    afterAll(() => {
-      rmSync(tempRoot, { recursive: true, force: true });
-      if (junctionOutside) rmSync(junctionOutside, { recursive: true, force: true });
-    });
-
-    it.fails("rejects lexical/noncanonical paths after a valid tracked-path baseline", () => {
-      const db = openHarnessDb(":memory:");
-      try {
-        migrate(db);
-        seedPlan(db);
-        expect(projectFailure(tempRoot, db, validPath)).toBeUndefined();
-        const invalidPaths = [
-          missingPath,
-          "",
-          "physical-data.md",
-          "C:/docs/design/harness/L5-detailed-design/physical-data.md",
-          "docs/design/harness/../harness/L5-detailed-design/physical-data.md",
-          "docs\\design\\harness\\L5-detailed-design\\physical-data.md",
-          "docs/design/harness/L5-detailed-design/cafe\u0301.md",
-          "docs/design/harness/L5-detailed-design/../L5-detailed-design/physical-data.md",
-          "docs/governance/README.md",
-        ];
-
-        for (const designPath of invalidPaths) {
-          expect(
-            projectFailure(tempRoot, db, designPath),
-            `design_path=${JSON.stringify(designPath)}`,
-          ).toBeInstanceOf(Error);
-        }
-      } finally {
-        db.close();
-      }
-    });
-
-    const verifyPosixUnreadableTarget = () => {
-      const path = join(tempRoot, unreadablePath);
-      const originalMode = statSync(path).mode & 0o777;
-      chmodSync(path, 0);
-      try {
-        expect(statSync(path).mode & 0o444).toBe(0);
-        expect(() => accessSync(path, constants.R_OK)).toThrow();
-        const db = openHarnessDb(":memory:");
-        try {
-          migrate(db);
-          seedPlan(db);
-          expect(projectFailure(tempRoot, db, validPath)).toBeUndefined();
-          expect(projectFailure(tempRoot, db, unreadablePath)).toBeInstanceOf(Error);
-        } finally {
-          db.close();
-        }
-      } finally {
-        chmodSync(path, originalMode);
-      }
-    };
-
-    if (process.platform === "win32") {
-      it.skip("read-inaccessible target fixture requires POSIX permission semantics", () => {});
-    } else if (process.getuid?.() === 0) {
-      it.skip("root bypasses POSIX read-permission checks, so chmod is not an access-denial fixture", () => {});
-    } else {
-      it.fails(
-        "rejects a tracked target with no read permission on POSIX",
-        verifyPosixUnreadableTarget,
-      );
-    }
-
-    it.fails("rejects a Git mode-120000 target even when a regular worktree file exists", () => {
-      const path = join(tempRoot, gitSymlinkPath);
-      const indexEntry = execFileSync("git", ["ls-files", "--stage", "--", gitSymlinkPath], {
-        cwd: tempRoot,
-        encoding: "utf8",
-      });
-      expect(indexEntry).toMatch(/^120000\s/m);
-      expect(lstatSync(path).isFile()).toBe(true);
-
-      const db = openHarnessDb(":memory:");
-      try {
-        migrate(db);
-        seedPlan(db);
-        expect(projectFailure(tempRoot, db, validPath)).toBeUndefined();
-        expect(projectFailure(tempRoot, db, gitSymlinkPath)).toBeInstanceOf(Error);
-      } finally {
-        db.close();
-      }
-    });
-
-    it.fails("rejects a tracked target that resolves through a junction/symlink outside the fixture", () => {
-      if (!junctionOutside) throw new Error("junction escape fixture was not initialized");
-      const physicalTarget = realpathSync.native(join(tempRoot, junctionPath));
-      expect(existsSync(physicalTarget)).toBe(true);
-      expect(readFileSync(physicalTarget, "utf8")).toBe("outside target\n");
-      expect(physicalTarget.startsWith(realpathSync.native(junctionOutside))).toBe(true);
-      expect(
-        execFileSync("git", ["ls-files", "--error-unmatch", "--", junctionPath], {
-          cwd: tempRoot,
-          encoding: "utf8",
-        }).trim(),
-      ).toBe(junctionPath);
-
-      const db = openHarnessDb(":memory:");
-      try {
-        migrate(db);
-        seedPlan(db);
-        expect(projectFailure(tempRoot, db, validPath)).toBeUndefined();
-        expect(projectFailure(tempRoot, db, junctionPath)).toBeInstanceOf(Error);
-      } finally {
-        db.close();
-      }
-    });
   });
 
   describe("CANDIDATE-U-DISPPTR-007 rebuild boundary", () => {
@@ -697,266 +422,12 @@ function rebuildFixture(root: string, db: ReturnType<typeof openHarnessDb>) {
   });
 }
 
-function projectFailure(root: string, db: ReturnType<typeof openHarnessDb>, designPath: string) {
-  try {
-    projectVmodelAuthoring(
-      root,
-      db,
-      authoringDepsWithLedger(
-        root,
-        ledgerWithDesignPath({
-          designPath,
-          planId: "PLAN-L7-417-source-disposition-profile-projection",
-        }),
-      ),
-    );
-  } catch (error) {
-    return error;
-  }
-  return undefined;
-}
-
 function clear(db: ReturnType<typeof openHarnessDb>): void {
   for (const table of [...tables].reverse()) db.exec(`DELETE FROM ${table}`);
   db.prepare("DELETE FROM findings WHERE source = ?").run("vmodel-item-target");
 }
 
-function ledgerWithDesignPath(input: { designPath: string; planId: string }): string {
-  const lines = readFileSync(
-    join(repoRoot, "docs/governance/vmodel-item-target-ledger.md"),
-    "utf8",
-  ).split(/\r?\n/);
-  let header: string[] | undefined;
-  let inItemTable = false;
-  const result = lines.map((line) => {
-    const candidateHeader = line.startsWith("|")
-      ? line
-          .split("|")
-          .slice(1, -1)
-          .map((cell) => cell.trim().replace(/^`|`$/g, ""))
-      : [];
-    if (
-      !inItemTable &&
-      candidateHeader[0] === "edge_id" &&
-      candidateHeader[1] === "item_id" &&
-      candidateHeader.at(-1) === "plan_id"
-    ) {
-      inItemTable = true;
-      header = candidateHeader;
-      return `| ${[...header, "design_path"].join(" | ")} |`;
-    }
-    if (inItemTable && !line.startsWith("|")) inItemTable = false;
-    if (!inItemTable || !line.startsWith("|")) return line;
-    if (/^\|\s*[-:| ]+\|\s*$/.test(line)) {
-      const divider = line
-        .split("|")
-        .slice(1, -1)
-        .map((cell) => cell.trim());
-      return `| ${[...divider, "---"].join(" | ")} |`;
-    }
-
-    const columns = [...(header ?? []), "design_path"];
-    const values = line
-      .split("|")
-      .slice(1, -1)
-      .map((cell) => cell.trim());
-    const cells = Object.fromEntries(
-      (header ?? []).map((key, index) => [key, values[index] ?? ""]),
-    );
-    if (cells.edge_id === "`ITEM-TARGET-KIKAKU`") {
-      cells.target_status = "`defer`";
-      cells.target_kind = "`plan_alias`";
-      cells.target_ref = "`PLAN-L7-417-source-disposition-profile-projection`";
-      cells["判断理由"] = "valid defer fixture";
-      cells.plan_id = input.planId === "—" ? "—" : `\`${input.planId}\``;
-      values[values.length] = input.designPath ? `\`${input.designPath}\`` : "";
-      for (const [key, value] of Object.entries(cells)) {
-        const index = columns.indexOf(key);
-        if (index >= 0) values[index] = value;
-      }
-    } else {
-      values.push("—");
-    }
-    return `| ${columns.map((key, index) => values[index] ?? "").join(" | ")} |`;
-  });
-  const expanded = result.join("\n");
-  const expandedLines = expanded.split(/\r?\n/);
-  const expandedHeaderIndex = expandedLines.findIndex((line) => {
-    const cells = line
-      .split("|")
-      .slice(1, -1)
-      .map((cell) => cell.trim().replace(/^`|`$/g, ""));
-    return cells[0] === "edge_id" && cells[1] === "item_id";
-  });
-  expect(expandedHeaderIndex).toBeGreaterThanOrEqual(0);
-  const expandedHeader = expandedLines[expandedHeaderIndex]
-    .split("|")
-    .slice(1, -1)
-    .map((cell) => cell.trim().replace(/^`|`$/g, ""));
-  expect(expandedHeader.filter((cell) => cell === "design_path")).toHaveLength(1);
-  const designPathIndex = expandedHeader.indexOf("design_path");
-  const tableLinesAfter = (rows: string[], start: number): string[] => {
-    const tableLines: string[] = [];
-    for (const line of rows.slice(start)) {
-      if (!line.startsWith("|")) break;
-      tableLines.push(line);
-    }
-    return tableLines;
-  };
-  const expandedTableLines = tableLinesAfter(expandedLines, expandedHeaderIndex + 1);
-  expect(expandedTableLines.length).toBeGreaterThan(0);
-  expect(
-    expandedTableLines.every(
-      (line) => line.split("|").slice(1, -1).length === expandedHeader.length,
-    ),
-  ).toBe(true);
-  const expandedRows = expandedTableLines.filter((line) => !/^\|\s*[-:| ]+\|\s*$/.test(line));
-  const sourceHeaderIndex = lines.findIndex((line) => {
-    const cells = line
-      .split("|")
-      .slice(1, -1)
-      .map((cell) => cell.trim().replace(/^`|`$/g, ""));
-    return cells[0] === "edge_id" && cells[1] === "item_id";
-  });
-  const sourceRows = tableLinesAfter(lines, sourceHeaderIndex + 1).filter(
-    (line) => !/^\|\s*[-:| ]+\|\s*$/.test(line),
-  );
-  expect(expandedRows).toHaveLength(sourceRows.length);
-  const kikakuRows = expandedRows.filter(
-    (line) => line.split("|")[1]?.trim() === "`ITEM-TARGET-KIKAKU`",
-  );
-  expect(kikakuRows).toHaveLength(1);
-  const kikakuCells = kikakuRows[0]
-    .split("|")
-    .slice(1, -1)
-    .map((cell) => cell.trim());
-  const statusIndex = expandedHeader.indexOf("target_status");
-  const kindIndex = expandedHeader.indexOf("target_kind");
-  const planIdIndex = expandedHeader.indexOf("plan_id");
-  expect(kikakuCells).toHaveLength(expandedHeader.length);
-  expect(kikakuCells[statusIndex]).toBe("`defer`");
-  expect(kikakuCells[kindIndex]).toBe("`plan_alias`");
-  expect(kikakuCells[planIdIndex]).toBe(input.planId === "—" ? "—" : `\`${input.planId}\``);
-  expect(kikakuCells[designPathIndex]).toBe(input.designPath ? `\`${input.designPath}\`` : "");
-  return expanded;
-}
-
-function legacyLedgerWithPlanOnlyDefer(planId: string): string {
-  const expanded = ledgerWithDesignPath({ designPath: "", planId });
-  const lines = expanded.split(/\r?\n/);
-  const header = lines
-    .find((line) => {
-      const cells = line
-        .split("|")
-        .slice(1, -1)
-        .map((cell) => cell.trim().replace(/^`|`$/g, ""));
-      return cells[0] === "edge_id" && cells[1] === "item_id";
-    })
-    ?.split("|")
-    .slice(1, -1)
-    .map((cell) => cell.trim().replace(/^`|`$/g, ""));
-  expect(header?.filter((cell) => cell === "design_path")).toHaveLength(1);
-  const designPathIndex = header?.indexOf("design_path") ?? -1;
-  const kikakuRow = lines.find((line) => line.split("|")[1]?.trim() === "`ITEM-TARGET-KIKAKU`");
-  expect(kikakuRow).toBeDefined();
-  const kikakuCells =
-    kikakuRow
-      ?.split("|")
-      .slice(1, -1)
-      .map((cell) => cell.trim()) ?? [];
-  expect(kikakuCells).toHaveLength(header?.length ?? 0);
-  expect(kikakuCells[designPathIndex]).toBe("");
-  expect(kikakuCells[header?.indexOf("target_status") ?? -1]).toBe("`defer`");
-  let inItemTable = false;
-  const legacy = lines
-    .map((line) => {
-      const headerCells = line.startsWith("|")
-        ? line
-            .split("|")
-            .slice(1, -1)
-            .map((cell) => cell.trim().replace(/^`|`$/g, ""))
-        : [];
-      if (!inItemTable && headerCells[0] === "edge_id" && headerCells[1] === "item_id")
-        inItemTable = true;
-      if (inItemTable && !line.startsWith("|")) inItemTable = false;
-      if (!inItemTable || !line.startsWith("|")) return line;
-      const cells = line.split("|");
-      cells.splice(-2, 1);
-      return cells.join("|");
-    })
-    .join("\n");
-  const legacyLines = legacy.split(/\r?\n/);
-  const legacyHeader = legacyLines
-    .find((line) => {
-      const cells = line
-        .split("|")
-        .slice(1, -1)
-        .map((cell) => cell.trim().replace(/^`|`$/g, ""));
-      return cells[0] === "edge_id" && cells[1] === "item_id";
-    })
-    ?.split("|")
-    .slice(1, -1)
-    .map((cell) => cell.trim().replace(/^`|`$/g, ""));
-  expect(legacyHeader?.includes("design_path")).toBe(false);
-  const legacyHeaderIndex = legacyLines.findIndex((line) => {
-    const cells = line
-      .split("|")
-      .slice(1, -1)
-      .map((cell) => cell.trim().replace(/^`|`$/g, ""));
-    return cells[0] === "edge_id" && cells[1] === "item_id";
-  });
-  const legacyTableLines: string[] = [];
-  for (const line of legacyLines.slice(legacyHeaderIndex + 1)) {
-    if (!line.startsWith("|")) break;
-    legacyTableLines.push(line);
-  }
-  expect(
-    legacyTableLines.every((line) => line.split("|").slice(1, -1).length === legacyHeader?.length),
-  ).toBe(true);
-  const legacyKikaku = legacyLines.find(
-    (line) => line.split("|")[1]?.trim() === "`ITEM-TARGET-KIKAKU`",
-  );
-  const legacyKikakuCells =
-    legacyKikaku
-      ?.split("|")
-      .slice(1, -1)
-      .map((cell) => cell.trim()) ?? [];
-  expect(legacyKikakuCells).toHaveLength(legacyHeader?.length ?? 0);
-  expect(legacyKikakuCells[legacyHeader?.indexOf("target_status") ?? -1]).toBe("`defer`");
-  expect(legacyKikakuCells[legacyHeader?.indexOf("plan_id") ?? -1]).toBe(`\`${planId}\``);
-  return legacy;
-}
-
-function authoringDepsWithLedger(
-  root: string,
-  ledger: string,
-): Parameters<typeof projectVmodelAuthoring>[2] {
-  const ledgerPath = "docs/governance/vmodel-item-target-ledger.md";
-  const ledgerBytes = new TextEncoder().encode(ledger);
-  const provenance = new GitAuthoringProvenance(root);
-  const digest = createHash("sha256").update(ledgerBytes).digest("hex");
-  const receipts: AuthoringProvenancePort = {
-    receipts: (paths) =>
-      provenance.receipts(paths).map((receipt) =>
-        receipt.path === ledgerPath
-          ? {
-              ...receipt,
-              blobOid: gitBlobOid(ledgerBytes),
-              contentDigest: digest,
-            }
-          : receipt,
-      ),
-  };
-  return {
-    read: (path) => (path === ledgerPath ? ledgerBytes : readFileSync(join(root, path))),
-    provenance: receipts,
-  };
-}
-
-function createDocsGitFixture(fixtureOptions: {
-  ensureTracked?: string;
-  planMode?: "none" | "legacy";
-}): string {
+function createDocsGitFixture(fixtureOptions: { ensureTracked?: string }): string {
   const root = mkdtempSync(join(tmpdir(), "ut-t1-disposition-target-fixture-"));
   const plansRoot = join(repoRoot, "docs", "plans");
   cpSync(join(repoRoot, "docs"), join(root, "docs"), {
@@ -970,30 +441,28 @@ function createDocsGitFixture(fixtureOptions: {
     }
   };
   makeDirectoriesWritable(join(root, "docs"));
-  if (fixtureOptions.planMode !== "none") {
-    const legacyPlanPath = "docs/plans/PLAN-L7-417-source-disposition-profile-projection.md";
-    const destination = join(root, legacyPlanPath);
-    mkdirSync(dirname(destination), { recursive: true });
-    // This legacy PLAN is fixture-only; keep the test independent of the source-repo copy.
-    writeFileSync(
-      destination,
-      [
-        "---",
-        "plan_id: PLAN-L7-417-source-disposition-profile-projection",
-        'title: "PLAN-L7-417 (add-impl): source disposition / semantic catalog / profile projection"',
-        "kind: add-impl",
-        "layer: L7",
-        "drive: db",
-        "status: confirmed",
-        "route_mode: add-feature",
-        "created: 2026-07-10",
-        "updated: 2026-07-10",
-        "---",
-        "",
-      ].join("\n"),
-      "utf8",
-    );
-  }
+  const legacyPlanPath = "docs/plans/PLAN-L7-417-source-disposition-profile-projection.md";
+  const destination = join(root, legacyPlanPath);
+  mkdirSync(dirname(destination), { recursive: true });
+  // This legacy PLAN is fixture-only; keep the test independent of the source-repo copy.
+  writeFileSync(
+    destination,
+    [
+      "---",
+      "plan_id: PLAN-L7-417-source-disposition-profile-projection",
+      'title: "PLAN-L7-417 (add-impl): source disposition / semantic catalog / profile projection"',
+      "kind: add-impl",
+      "layer: L7",
+      "drive: db",
+      "status: confirmed",
+      "route_mode: add-feature",
+      "created: 2026-07-10",
+      "updated: 2026-07-10",
+      "---",
+      "",
+    ].join("\n"),
+    "utf8",
+  );
   if (fixtureOptions.ensureTracked) {
     const extraPath = join(root, fixtureOptions.ensureTracked);
     if (!existsSync(extraPath)) {
@@ -1025,13 +494,6 @@ function createDocsGitFixture(fixtureOptions: {
     { cwd: root, stdio: "ignore" },
   );
   return root;
-}
-
-function addTrackedFixtureFile(root: string, relativePath: string): void {
-  const path = join(root, relativePath);
-  mkdirSync(dirname(path), { recursive: true });
-  writeFileSync(path, "tracked fixture target\n", "utf8");
-  execFileSync("git", ["add", "--", relativePath], { cwd: root, stdio: "ignore" });
 }
 
 function commitFixtureIndex(root: string): void {

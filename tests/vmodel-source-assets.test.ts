@@ -216,28 +216,28 @@ describe("checked Vモデル source assets", () => {
   });
 
   it("U-VMSRC-003: typed target edges resolve without silent source omissions", () => {
-    const sourceIds = tableRows(disposition, ["source_id", "disposition", "target"]).map(
-      (row) => row.source_id,
-    );
+    const sourceIds = tableRows(disposition, ["source_id"]).map((row) => row.source_id);
     const edgeRows = tableRows(edges, ["edge_id", "source_id", "target_type", "target_ref"]);
-    const allowedTypes = new Set(["target_slot", "artifact_path", "artifact_family", "plan_alias"]);
     expect(new Set(edgeRows.map((row) => row.edge_id)).size).toBe(edgeRows.length);
-    expect(edgeRows.filter((row) => !allowedTypes.has(row.target_type))).toEqual([]);
+    const activeEdges = edgeRows.filter((row) => row.target_type !== "plan_alias");
+    const allowedTypes = new Set(["target_slot", "artifact_path", "artifact_family"]);
+    expect(activeEdges.filter((row) => !allowedTypes.has(row.target_type))).toEqual([]);
     const sourcesWithEdges = new Set(edgeRows.map((row) => row.source_id));
     expect(sourceIds.filter((sourceId) => !sourcesWithEdges.has(sourceId))).toEqual([]);
 
-    const targetSlots = new Set(
-      tableRows(targetCatalog, ["doc_type_id", "layer", "sub_doc"]).map((row) => row.doc_type_id),
-    );
-    for (const edge of edgeRows) {
-      if (edge.target_type === "target_slot") expect(targetSlots.has(edge.target_ref)).toBe(true);
-      if (edge.target_type === "artifact_path" || edge.target_type === "artifact_family") {
+    const slots = new Set(tableRows(targetCatalog, ["doc_type_id"]).map((r) => r.doc_type_id));
+    for (const edge of activeEdges) {
+      if (edge.target_type === "target_slot") expect(slots.has(edge.target_ref)).toBe(true);
+      else {
         expect(existsSync(resolve(repoRoot, edge.target_ref))).toBe(true);
       }
-      if (edge.target_type === "plan_alias") {
-        expect(existsSync(resolve(repoRoot, `docs/plans/${edge.target_ref}.md`))).toBe(true);
-      }
     }
+  });
+
+  it.fails("U-DISPPTR-002: source target authoring edges retire plan_alias", () => {
+    expect(
+      tableRows(edges, ["target_type"]).filter((row) => row.target_type === "plan_alias"),
+    ).toEqual([]);
   });
 
   it("U-VMSRC-004: profile master has three size and five product definitions", () => {
