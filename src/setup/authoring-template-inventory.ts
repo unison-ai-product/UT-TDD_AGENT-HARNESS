@@ -42,6 +42,9 @@ export const AUTHORING_TEMPLATE_ARTIFACT_PATHS = Object.freeze(
   AUTHORING_TEMPLATE_INVENTORY.flatMap((entry) => entry.requiredArtifactPaths),
 );
 
+// Retired authoring paths remain explicitly denied without being Pack inventory families.
+const RETIRED_AUTHORING_ARTIFACT_PREFIXES = Object.freeze(["docs/templates/plan/"]);
+
 const EXPECTED_TEAM_BLOB = Object.freeze({
   sourcePath: ".ut-tdd/teams/example-review-team.yaml",
   artifactPath: "docs/templates/team/example-review-team.yaml",
@@ -240,10 +243,15 @@ export function validateAuthoringArtifactSet(
 ): AuthoringArtifactSetValidation {
   const normalizedPaths = paths.map(normalized);
   const authoringPaths = normalizedPaths.filter((path) => isInAuthoringFamilyPath(path, inventory));
+  const retiredArtifactPaths = normalizedPaths.filter((path) =>
+    RETIRED_AUTHORING_ARTIFACT_PREFIXES.some((prefix) =>
+      path.toLowerCase().startsWith(prefix.toLowerCase()),
+    ),
+  );
   const sourcePaths = normalizedPaths.filter((path) =>
     inventory.some((entry) => "sourcePath" in entry && path === normalized(entry.sourcePath)),
   );
-  if (authoringPaths.length === 0 && sourcePaths.length === 0)
+  if (authoringPaths.length === 0 && sourcePaths.length === 0 && retiredArtifactPaths.length === 0)
     return {
       ok: true,
       missingArtifactPaths: [],
@@ -261,7 +269,12 @@ export function validateAuthoringArtifactSet(
     inventory.some((entry) => entry.requiredArtifactPaths.includes(path)),
   );
   const missingArtifactPaths = required.filter((path) => (counts.get(path) ?? 0) !== 1);
-  const unknownArtifactPaths = authoringPaths.filter((path) => !required.includes(path));
+  const unknownArtifactPaths = [
+    ...new Set([
+      ...authoringPaths.filter((path) => !required.includes(path)),
+      ...retiredArtifactPaths,
+    ]),
+  ].sort();
   return Object.freeze({
     ok:
       sourcePaths.length === 0 &&

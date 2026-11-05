@@ -100,7 +100,14 @@ const retiredPlanTemplatePaths = [
 
 describe("Issue #482 canonical Pack authoring inventory", () => {
   it("U-PACKTPL-001: has four required artifacts and one canonical family inventory", () => {
-    expect(AUTHORING_TEMPLATE_ARTIFACT_PATHS).toHaveLength(4);
+    expect([...AUTHORING_TEMPLATE_ARTIFACT_PATHS].sort()).toEqual(
+      [
+        "docs/templates/design/L6-function-spec-template.md",
+        "docs/templates/state/vmodel.json",
+        "docs/templates/prompts/effort-classify.md",
+        "docs/templates/team/example-review-team.yaml",
+      ].sort(),
+    );
     expect(validateAuthoringTemplateInventory()).toMatchObject({
       ok: true,
       missingFamilies: [],
@@ -231,7 +238,17 @@ describe("Issue #482 canonical Pack authoring inventory", () => {
       checked: AUTHORING_TEMPLATE_ARTIFACT_PATHS,
       errors: [],
     });
-    expect(inspectPackAuthoringEntries(entries.slice(1)).ok).toBe(false);
+    for (const entry of entries) {
+      const missing = inspectPackAuthoringEntries(
+        entries.filter((candidate) => candidate.path !== entry.path),
+      );
+      expect(missing.ok, `missing ${entry.path}`).toBe(false);
+      expect(missing.errors).toContain(`missing:${entry.path}`);
+
+      const duplicate = inspectPackAuthoringEntries([...entries, entry]);
+      expect(duplicate.ok, `duplicate ${entry.path}`).toBe(false);
+      expect(duplicate.errors).toContain(`duplicate:${entry.path}`);
+    }
     expect(
       inspectPackAuthoringEntries([
         ...entries,
@@ -242,6 +259,38 @@ describe("Issue #482 canonical Pack authoring inventory", () => {
       ok: false,
       sourcePaths: [teamSource],
     });
+  });
+
+  it.each(retiredPlanTemplatePaths)(
+    "U-PACKTPL-004: retired PLAN template entry is fail-close (%s)",
+    (path) => {
+      expect(
+        inspectPackAuthoringEntries([
+          ...authoringEntries,
+          { ...authoringEntries[0], path },
+        ]),
+      ).toMatchObject({
+        ok: false,
+        errors: [`unknown:${path}`],
+      });
+    },
+  );
+
+  it("U-PACKTPL-004: generic artifact sets remain valid but a retired-only set is denied", () => {
+    expect(validateAuthoringArtifactSet(["docs/design/consumer-note.md"])).toMatchObject({
+      ok: true,
+      missingArtifactPaths: [],
+      unknownArtifactPaths: [],
+    });
+
+    const retiredPath = retiredPlanTemplatePaths[0];
+    expect(validateAuthoringArtifactSet([retiredPath])).toMatchObject({
+      ok: false,
+      unknownArtifactPaths: [retiredPath],
+    });
+    expect(
+      inspectPackAuthoringEntries([{ ...authoringEntries[0], path: retiredPath }]).ok,
+    ).toBe(false);
   });
 
   it("U-PACKTPL-006: broad docs/templates and .ut-tdd wildcard mutations are denied", () => {
@@ -309,7 +358,14 @@ describe("Issue #482 canonical Pack authoring inventory", () => {
   });
 
   it("U-PLANRET-017: authoring inventory has no PLAN template family", () => {
-    expect(planRetirementInputs.inventory).not.toMatch(/docs\/templates\/plan\//);
+    const inventoryPaths = AUTHORING_TEMPLATE_INVENTORY.flatMap((entry) =>
+      "sourcePath" in entry
+        ? [entry.sourcePath, entry.artifactPath]
+        : [entry.sourcePrefix, entry.artifactPrefix],
+    );
+    expect(inventoryPaths.some((path) => path.toLowerCase().startsWith("docs/templates/plan/"))).toBe(
+      false,
+    );
   });
 
   it("U-PLANRET-017: retired PLAN templates are not tracked", () => {

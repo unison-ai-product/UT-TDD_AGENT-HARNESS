@@ -19,6 +19,7 @@ import { tmpdir } from "node:os";
 
 export const CANARY_TAG = "v0.2.0-canary.2";
 export const AGENT_E2E_TAG = "v0.2.0-canary.7";
+const CANARY_ISSUE_NUMBER = 418;
 export const PACK_RELEASE_PREFIX =
   "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS-Pack/releases/tag/";
 export const SOURCE_ISSUE_PREFIX =
@@ -1108,19 +1109,35 @@ export function createConsumerIssueDesignDocument(consumerRoot, source) {
   if (typeof source !== "string") throw new Error("consumer-design-template-invalid");
   const match = /^---\r?\n([\s\S]*?)\r?\n---\r?\n([\s\S]*)$/.exec(source);
   if (!match) throw new Error("consumer-design-template-invalid");
-  assertIssueFrontmatter(source);
+  const document = source.replace(
+    /^issue:\s*<Issue 番号>\s*$/m,
+    `issue: ${CANARY_ISSUE_NUMBER}`,
+  );
+  assertIssueFrontmatter(document);
   const destination = "docs/design/canary-function-spec.md";
   const target = join(consumerRoot, ...destination.split("/"));
   mkdirSync(dirname(target), { recursive: true });
-  writeFileSync(target, source, { flag: "wx" });
+  writeFileSync(target, document, { flag: "wx" });
   return destination;
 }
 
 function assertIssueFrontmatter(source) {
   const match = /^---\r?\n([\s\S]*?)\r?\n---\r?\n/.exec(source);
   if (!match) throw new Error("consumer-design-template-frontmatter-invalid");
-  if (!/^issue:\s*\S.*$/m.test(match[1]))
-    throw new Error("consumer-design-template-issue-missing");
+  const fields = new Map();
+  for (const line of match[1].split(/\r?\n/)) {
+    if (line.trim() === "" || /^\s*#/.test(line)) continue;
+    const field = /^([A-Za-z_][A-Za-z0-9_-]*):(?:[ \t]+(.*))?$/.exec(line);
+    if (!field) throw new Error("consumer-design-template-frontmatter-invalid");
+    const [, key, rawValue = ""] = field;
+    if (fields.has(key)) throw new Error("consumer-design-template-frontmatter-duplicate-key");
+    fields.set(key, rawValue.trim());
+  }
+  if (fields.has("plan"))
+    throw new Error("consumer-design-template-plan-field-forbidden");
+  const issue = fields.get("issue");
+  if (typeof issue !== "string" || !/^[1-9]\d*$/.test(issue) || !Number.isSafeInteger(Number(issue)))
+    throw new Error("consumer-design-template-issue-invalid");
 }
 
 export function makeAccessAuditModule(forbiddenPaths, accessLog, processLog) {
