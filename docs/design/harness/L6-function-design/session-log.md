@@ -205,4 +205,50 @@ guard が起動不能・例外・timeout (5 秒) になると、tool call がそ
 前提。`onFailure` の利用には Claude Code v2.1.295 以降が必要である。version の検査は本契約に含めず、doctor check も追加しない。
 
 受け入れ注記。実装 PR は、実際の Claude Code で 1 回の手動確認を残す。guard script を起動不能にした状態で Edit が block されること。
-対応するテスト oracle は `docs/test-design/harness/L7-claude-hook-onfailure-test-design.md` の `CANDIDATE-U-HOOKEXEC-011`〜`014` である。
+対応する正式テスト oracle は `docs/test-design/harness/L7-claude-hook-onfailure-test-design.md` の `U-HOOKEXEC-011`、`012`、`014` である。記録 / session hook の既存 fail-open を保つ通常テストは `CANDIDATE-U-HOOKEXEC-013` として維持する。
+
+## 2026-11-05 Codex hook の失敗時の扱い (Issue #1538)
+
+Codex CLI の hook 設定 (`.codex/hooks.json`) には、hook の失敗時にツール呼び出しを止める field が無い。command handler が受理する
+field は `type`・`command`・`timeout`・`statusMessage`・`async`・`additionalContextLimit` だけであり、`blockOnFailure` を書いても
+無音で無視される (Issue #668 の実測、`src/lint/codex-hook-adapter.ts` の `ALLOWED_HOOK_FIELDS`)。Claude の `onFailure: "block"`
+(前節) に当たるものは Codex には無い。本節は、Codex の guard が「どの失敗まで止まるか」を実測した範囲だけで書き、
+実測していない範囲を fail-close と称さないための契約である。
+
+実測 (2026-11-05、codex-cli 0.159.2、Windows、非対話 `codex exec`、scratch repo)。
+
+- 明示 deny: `PreToolUse` hook が `permissionDecision: "deny"` を返すと、対象の shell command は実行されなかった
+  (marker file 不在、hook の入力記録あり)。exit 2 の block と同じく、**確定 deny による阻止は成立する**。
+- 起動失敗 (hook の実行ファイル不存在)・timeout 超過・exit 1・不正 JSON の 4 種は **未実測**である。Codex lane の sandbox では
+  対象 command の起動自体が OS に拒否され (`CreateProcessAsUserW` error 5)、判定できなかった。advisor (`gpt-6.1-sol`、
+  troubleshooting) の判定も「判定不能」であり、明示 deny の成立をこの 4 種の fail-close の証拠に広げてはならない。
+
+不変条件。
+
+- Codex の guard (`agent-guard`・`work-guard`) について fail-close と書いてよいのは、**guard が確定 deny を返した場合だけ**である。
+  起動失敗・timeout・exit 1・不正出力の扱いは、実測されるまで「未実測 (fail-open の可能性あり)」と書く。`AGENTS.md`・設計文書・
+  lint の注釈は、この区別に合わせる。
+- `src/lint/codex-hook-adapter-policy.ts` の `CODEX_REQUIRED` は `blockOnFailure` を持たない。現状この値はどの lint からも読まれず、
+  Codex の設定にも効かない。残すと「Codex の guard は失敗時に止まる」と読めるため、削除する。Claude 側の
+  `src/lint/project-hook.ts` の扱いは前節 (Issue #1521) が持ち、本節では変えない。
+- Codex の hooks.json に `blockOnFailure` などの未対応 field を足すことは、従来どおり `unsupported_hook_field` で拒否する
+  (`U-CXHOOKCMD-002`)。
+
+採らない方式。hook の command を常に起動できる launcher に固定し、子 hook の失敗を deny に変える方式は、advisor により
+**保証としては反証された**。node の不在、launcher の読み込み失敗、外側の timeout、強制終了では launcher も deny を返せず、
+障害の境界が一段移るだけである。4 種の実測で fail-open が確認された場合に、限定的な緩和策として別 Issue で扱う
+(その場合も launcher 自体の障害は残余リスクとして書く)。
+
+実測の経路。残り 4 種は、Pack の実機受け入れで人が対話の Codex を動かす工程で測る。手順は次のとおり。
+
+1. `C:\dev\` 配下の scratch repo を使い、hook の trust は通常の対話フロー (`/hooks` でのレビューと trust) で付ける。
+   hook trust を迂回するフラグは使わない。
+2. Codex の版、OS、shell、sandbox、cwd、hook 定義を記録する。
+3. 同じツール・同じ sandbox で、正常 hook では marker の作成が成功し、deny hook では同じ操作が阻止される対照をとる。
+4. 4 種を 1 つずつ注入し、ケースごとに trust 済みであることを確かめる。「node は起動するが子 script が無い」は起動失敗と
+   別に扱い、不正 JSON は hooks.json 自体の破損と分ける。
+5. 対象ツールの呼び出し、注入した障害、ツールの実行結果、marker の有無を対応づけて残す。marker があれば fail-open。
+   marker が無ければ hook が阻止した証拠を求め、sandbox の拒否や外側の timeout は「判定不能」とする。
+6. 追加した trust の項目だけを撤回し、設定ファイルが事前と一致することを確かめる。他の設定を退避から丸ごと戻さない。
+
+対応するテスト oracle は `docs/test-design/harness/L7-codex-hook-failure-test-design.md` の `CANDIDATE-U-HOOKEXEC-015`〜`017` である。

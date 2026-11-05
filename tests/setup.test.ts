@@ -60,8 +60,6 @@ const codeownersPath = join("/repo", ".github", "CODEOWNERS");
 const statePath = join("/repo", ".ut-tdd", "state", "setup.json");
 
 const AUTHORING_TEMPLATE_SOURCES = [
-  "docs/templates/plan/design/template.md",
-  "docs/templates/plan/impl/template.md",
   "docs/templates/design/L6-function-spec-template.md",
   "docs/templates/state/vmodel.json",
   "docs/templates/prompts/effort-classify.md",
@@ -401,7 +399,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
             hooks: {
               command: string;
               args: string[];
-              blockOnFailure?: boolean;
+              onFailure?: "block";
               asyncRewake?: boolean;
               timeout?: number;
             }[];
@@ -420,7 +418,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
               expect.objectContaining({
                 command: "node",
                 args: [".ut-tdd/bin/ut-tdd.mjs", "hook", "agent-guard"],
-                blockOnFailure: true,
+                onFailure: "block",
               }),
             ],
           }),
@@ -430,7 +428,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
               expect.objectContaining({
                 command: "node",
                 args: [".ut-tdd/bin/ut-tdd.mjs", "hook", "work-guard"],
-                blockOnFailure: true,
+                onFailure: "block",
               }),
             ],
           }),
