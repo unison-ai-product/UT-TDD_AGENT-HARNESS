@@ -103,17 +103,17 @@ repositoryReadContracts["tests/design-root.test.ts"] = {
   reason: "missing consumer roots preserve the immutable HEAD gate definition fallback bytes",
 };
 
-for (const [path, calls] of Object.entries({
-  "tests/github-pr-trace.test.ts": 1,
-  "tests/model-id-ssot-drift.test.ts": 1,
-  "tests/model-id-ssot.test.ts": 1,
-  "tests/setup-project-identity-bootstrap.test.ts": 2,
-  "tests/plan-mechanism-retirement.test.ts": 1,
-  "tests/sub-doc-schema-integrity.test.ts": 3,
-}))
-  repositoryReadContracts[path] = {
+const HEAD_SNAPSHOT_ROWS = `
+github-pr-trace.test.ts:1 model-id-ssot-drift.test.ts:1 model-id-ssot.test.ts:1
+setup-project-identity-bootstrap.test.ts:2 plan-mechanism-retirement.test.ts:1 sub-doc-schema-integrity.test.ts:3
+`;
+
+for (const [name, calls] of HEAD_SNAPSHOT_ROWS.trim()
+  .split(/\s+/)
+  .map((row) => row.split(":")))
+  repositoryReadContracts[`tests/${name}`] = {
     mode: "head_snapshot",
-    calls,
+    calls: Number(calls),
     reason: "repository contract read is fixed to detached HEAD",
   };
 
