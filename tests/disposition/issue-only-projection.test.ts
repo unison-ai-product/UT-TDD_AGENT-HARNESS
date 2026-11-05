@@ -98,6 +98,7 @@ describe("CANDIDATE-U-DISPPTR-001 issue-only projection", () => {
     const receipts = new GitAuthoringProvenance(issueOnlyFixtureRoot).receipts(
       issueOnlyCatalogPaths,
     );
+    expect(() => loadTrackedCatalogInput(bundle, receipts)).toThrowError(Error);
     expect(() => loadTrackedCatalogInput(bundle, receipts)).toThrow(
       JSON.stringify([
         {
