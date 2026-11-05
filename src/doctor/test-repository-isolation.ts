@@ -105,7 +105,7 @@ repositoryReadContracts["tests/design-root.test.ts"] = {
 
 const HEAD_SNAPSHOT_ROWS = `
 github-pr-trace.test.ts:1 model-id-ssot-drift.test.ts:1 model-id-ssot.test.ts:1
-setup-project-identity-bootstrap.test.ts:2 plan-mechanism-retirement.test.ts:1 sub-doc-schema-integrity.test.ts:3
+setup-project-identity-bootstrap.test.ts:2 plan-mechanism-retirement.test.ts:1 sub-doc-schema-integrity.test.ts:3 disposition/issue-only-projection.test.ts:1
 `;
 
 for (const [name, calls] of HEAD_SNAPSHOT_ROWS.trim()
