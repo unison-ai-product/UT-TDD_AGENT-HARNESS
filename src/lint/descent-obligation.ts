@@ -271,7 +271,6 @@ export function loadDeferLedger(root = process.cwd()): DeferEntry[] {
   const files = [
     ...recursiveFiles(join(root, "docs", "design"), (path) => path.endsWith(".md")),
     ...recursiveFiles(join(root, "docs", "test-design"), (path) => path.endsWith(".md")),
-    ...recursiveFiles(join(root, "docs", "plans"), (path) => path.endsWith(".md")),
   ];
   return files.flatMap((path) => deferRowsForFile(root, path));
 }

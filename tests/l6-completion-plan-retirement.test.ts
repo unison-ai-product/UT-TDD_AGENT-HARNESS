@@ -106,24 +106,26 @@ describe("L6 completion readiness", () => {
   it("candidate 011 fixture: positive issue remains an L6 owner", () => {
     const result = analyzeL6Completion(candidatePlanRetirement011Inputs([], ["issue-owned.md"]));
 
-    expect(result.missingDocPlans).toEqual([]);
+    expect(result.missingDocIssues).toEqual([]);
   });
 
   it("candidate 011 fixture: zero issue leaves an L6 doc ownerless", () => {
     const result = analyzeL6Completion(candidatePlanRetirement011Inputs([], ["issue-zero.md"]));
 
-    expect(result.missingDocPlans).toEqual([
+    expect(result.missingDocIssues).toEqual([
       "docs/design/harness/L6-function-design/issue-zero.md",
     ]);
   });
 
-  it.fails("U-PLANRET-011: plan-only L6 doc is ownerless", () => {
+  it("U-PLANRET-011: plan-only L6 doc is ownerless", () => {
     const result = analyzeL6Completion(candidatePlanRetirement011Inputs([], ["plan-only.md"]));
 
-    expect(result.missingDocPlans).toEqual(["docs/design/harness/L6-function-design/plan-only.md"]);
+    expect(result.missingDocIssues).toEqual([
+      "docs/design/harness/L6-function-design/plan-only.md",
+    ]);
   });
 
-  it.fails("U-PLANRET-011: no PLAN draft finding is returned", () => {
+  it("U-PLANRET-011: no PLAN draft finding is returned", () => {
     const result = analyzeL6Completion(
       candidatePlanRetirement011Inputs([
         {
@@ -136,7 +138,7 @@ describe("L6 completion readiness", () => {
     expect(Object.hasOwn(result, "draftPlans")).toBe(false);
   });
 
-  it.fails("U-PLANRET-011: no PLAN review finding is returned", () => {
+  it("U-PLANRET-011: no PLAN review finding is returned", () => {
     const result = analyzeL6Completion(
       candidatePlanRetirement011Inputs([
         {
