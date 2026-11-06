@@ -17,6 +17,7 @@ import {
   buildFixture,
   buildFunctionExcessFixture,
   buildGateSelectionFixture,
+  buildLineBaselineGrowthFixture,
   changedPaths,
   checkWithGates,
   cleanFixture,
@@ -34,6 +35,7 @@ import {
   smallFiles,
   TARGET,
   verifyFunctionExcessFixture,
+  verifyLineBaselineGrowthFixture,
   worktreePaths,
 } from "./fixtures/baseline-recompute-fixture.ts";
 
@@ -43,6 +45,7 @@ const gitFault = vi.hoisted(() => ({
   hits: 0,
   mergeBases: [] as Array<{ repoRoot: string; sha: string }>,
   mergeTreeCalls: [] as string[][],
+  commitTreeCalls: [] as string[][],
 }));
 
 vi.mock("node:child_process", async (importOriginal) => {
@@ -67,6 +70,13 @@ vi.mock("node:child_process", async (importOriginal) => {
         commandArgs.includes("merge-tree")
       ) {
         gitFault.mergeTreeCalls.push(commandArgs.map(String));
+      }
+      if (
+        String(command) === "git" &&
+        Array.isArray(commandArgs) &&
+        commandArgs.includes("commit-tree")
+      ) {
+        gitFault.commitTreeCalls.push(commandArgs.map(String));
       }
       const output = actual.execFileSync(...args);
       if (
@@ -153,14 +163,40 @@ afterEach(() => {
   gitFault.hits = 0;
   gitFault.mergeBases = [];
   gitFault.mergeTreeCalls = [];
+  gitFault.commitTreeCalls = [];
 });
 
 describe.sequential("review merge gate baseline recompute (Issue #1559)", {
-  timeout: 120_000,
+  timeout: 240_000,
 }, () => {
   it("prerequisite: fixtures, merge graph, conflict paths and gates are valid", () => {
     const small = smallFiles();
     fixtures.set("small", buildFixture(small.base, small.branches));
+    const lineBaselineGrowth = buildLineBaselineGrowthFixture();
+    fixtures.set("line-baseline-growth", lineBaselineGrowth);
+    const lineBaselineGate = injectedGate("code-size-baseline-grown", {
+      name: "code-size",
+      baselinePath: CODE_SIZE_BASELINE_PATH,
+      forceFinding: true,
+      reason: "lines",
+    });
+    expect(
+      evaluateBaselineConflict(
+        changedPaths(
+          lineBaselineGrowth.work,
+          lineBaselineGrowth.baseSha,
+          lineBaselineGrowth.headSha,
+        ),
+        changedPaths(
+          lineBaselineGrowth.work,
+          lineBaselineGrowth.baseSha,
+          lineBaselineGrowth.mainSha,
+        ),
+        [lineBaselineGate],
+      ).conflicts,
+    ).toEqual([{ gate: "code-size", paths: [TARGET] }]);
+    verifyConflictAndCleanPreview(lineBaselineGrowth, [lineBaselineGate], () => {});
+    verifyLineBaselineGrowthFixture(lineBaselineGrowth);
     const smallPreviewTree = verifyConflictAndCleanPreview(
       fixture("small"),
       [injectedGate(null)],
@@ -396,10 +432,21 @@ describe.sequential("review merge gate baseline recompute (Issue #1559)", {
 
   it.fails("CANDIDATE-U-RVMG-051(b): over=0 stale=0 でも baseline-grown は拒否する", () => {
     expect(
-      checkWithGates(fixture("small").work, fixture("small").headSha, [
-        injectedGate("code-size-baseline-grown", { over: 0, stale: 0 }),
-      ]),
-    ).toBe("baseline_conflict_recomputed:fixture-gate=code-size-baseline-grown");
+      checkWithGates(
+        fixture("line-baseline-growth").work,
+        fixture("line-baseline-growth").headSha,
+        [
+          injectedGate("code-size-baseline-grown", {
+            over: 0,
+            stale: 0,
+            name: "code-size",
+            baselinePath: CODE_SIZE_BASELINE_PATH,
+            forceFinding: true,
+            reason: "lines",
+          }),
+        ],
+      ),
+    ).toBe("baseline_conflict_recomputed:code-size=code-size-baseline-grown");
   });
 
   it.fails("CANDIDATE-U-RVMG-051(c): stale-baseline finding は拒否する", () => {
@@ -422,11 +469,15 @@ describe.sequential("review merge gate baseline recompute (Issue #1559)", {
 
   it.fails("CANDIDATE-U-RVMG-052(a): merge-tree content conflict は従来どおり拒否する", () => {
     const testFixture = fixture("content-conflict");
+    const calls: string[] = [];
     gitFault.mergeTreeCalls = [];
-    const run = runMerge(testFixture);
+    const run = runMerge(testFixture, false, (repoRoot, headSha) =>
+      checkWithGates(repoRoot, headSha, [injectedGate(null, { calls })]),
+    );
     expect(run.result.reason).toMatch(/^baseline_conflict:/);
     expect(run.merges).toBe(0);
     expect(gitFault.mergeTreeCalls).toHaveLength(1);
+    expect(calls).toEqual([]);
   });
 
   it.fails("CANDIDATE-U-RVMG-052(c): commit-tree / worktree 失敗時は unknown で拒否する", () => {
@@ -467,7 +518,11 @@ describe.sequential("review merge gate baseline recompute (Issue #1559)", {
   });
 
   it("CANDIDATE-U-RVMG-053(d): 非競合時は再計算しない", () => {
+    gitFault.mergeTreeCalls = [];
+    gitFault.commitTreeCalls = [];
     expectGateSelection(fixture("selection-none"), []);
+    expect(gitFault.mergeTreeCalls).toEqual([]);
+    expect(gitFault.commitTreeCalls).toEqual([]);
   });
 
   it.fails("CANDIDATE-U-RVMG-054: 比較元は元 merge-base でなく現 main", () => {

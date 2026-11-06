@@ -156,6 +156,77 @@ export function buildFunctionExcessFixture(): Fixture {
   );
 }
 
+function codeLines(count: number): string {
+  return `${Array.from(
+    { length: count },
+    (_, index) => `export const line${index + 1} = ${index + 1};`,
+  ).join("\n")}\n`;
+}
+
+function lineBaseline(lines: number): string {
+  return `${JSON.stringify({ [TARGET]: { lines, functionExcess: null } }, null, 2)}\n`;
+}
+
+export function buildLineBaselineGrowthFixture(): Fixture {
+  return buildFixture(
+    { [TARGET]: codeLines(1001), [CODE_SIZE_BASELINE_PATH]: lineBaseline(1001) },
+    {
+      pr: { [CODE_SIZE_BASELINE_PATH]: lineBaseline(1002) },
+      main: { [TARGET]: codeLines(1002) },
+    },
+  );
+}
+
+/** CANDIDATE-U-RVMG-051(b) analyzer oracle; kept independent of the Red rejection assertion. */
+export function verifyLineBaselineGrowthFixture(fixture: Fixture): void {
+  const preview = createPreviewWorktree(fixture);
+  try {
+    const source: CodeSizeSource = {
+      path: TARGET,
+      text: readFileSync(join(preview.path, TARGET), "utf8"),
+    };
+    const sources: CodeSizeSource[] = [source];
+    const baseline = parseCodeSizeBaseline(
+      readFileSync(join(preview.path, CODE_SIZE_BASELINE_PATH), "utf8"),
+    ) as CodeSizeBaseline;
+    const previousBaseline = parseCodeSizeBaseline(
+      execFileSync(
+        "git",
+        ["-C", fixture.work, "show", `${fixture.mainSha}:${CODE_SIZE_BASELINE_PATH}`],
+        { encoding: "utf8", windowsHide: true, stdio: ["ignore", "pipe", "pipe"] },
+      ),
+    ) as CodeSizeBaseline;
+    expect(measureCodeFile(source)).toMatchObject({ lines: 1002 });
+    expect(previousBaseline[TARGET]).toEqual({ lines: 1001, functionExcess: null });
+    expect(baseline[TARGET]).toEqual({ lines: 1002, functionExcess: null });
+    const actual = analyzeCodeSize({
+      sources,
+      baseline,
+      previousBaseline,
+      mergeBaseMeasures: null,
+      renames: [],
+    });
+    const expectedFinding = {
+      path: TARGET,
+      kind: "code-size-baseline-grown",
+      reason: "lines",
+    };
+    expect(actual.findings).toEqual([expectedFinding]);
+    expect(actual.summary).toMatchObject({ over: 0, stale: 0 });
+
+    const injected = injectedGate(expectedFinding.kind, {
+      name: "code-size",
+      baselinePath: CODE_SIZE_BASELINE_PATH,
+      forceFinding: true,
+      reason: expectedFinding.reason,
+    }).check(preview.path);
+    expect(injected).toMatchObject({ ok: false, summary: { over: 0, stale: 0 } });
+    expect(injected.findings).toEqual(actual.findings);
+  } finally {
+    removeFixturePreviewWorktree(fixture, preview.path);
+  }
+}
+
 export function verifyFunctionExcessFixture(fixture: Fixture): void {
   const preview = createPreviewWorktree(fixture);
   try {
@@ -404,6 +475,8 @@ export function injectedGate(
     throwOnCheck?: boolean;
     over?: number;
     stale?: number;
+    forceFinding?: boolean;
+    reason?: string;
     name?: string;
     inScope?: (path: string) => boolean;
     baselinePath?: string;
@@ -419,7 +492,7 @@ export function injectedGate(
       if (options.throwOnCheck) throw new Error("fixture gate check failed");
       const content = readFileSync(join(repoRoot, TARGET), "utf8");
       const hasMergedEdits = content.includes("pr-line") && content.includes("main-line");
-      let shouldFind = hasMergedEdits;
+      let shouldFind = options.forceFinding ?? hasMergedEdits;
       if (kind === "code-size-required") {
         const baseline = JSON.parse(readFileSync(join(repoRoot, SMALL_BASELINE), "utf8")) as Record<
           string,
@@ -428,7 +501,10 @@ export function injectedGate(
         const lines = content.split(/\r?\n/).filter((line) => line.trim() !== "");
         shouldFind = !(TARGET in baseline) && lines.length > 2;
       }
-      const findings = kind === null || !shouldFind ? [] : [{ path: TARGET, kind, reason: kind }];
+      const findings =
+        kind === null || !shouldFind
+          ? []
+          : [{ path: TARGET, kind, reason: options.reason ?? kind }];
       return {
         ok: findings.length === 0,
         findings,
