@@ -33,6 +33,7 @@ import {
   type Confirm,
   type GhRunner,
 } from "./branch-protection.ts";
+import { preserveConsumerCiPins } from "./consumer-ci-pins.ts";
 import {
   admitConsumerLocalRuntime,
   type ConsumerLocalRuntimeAdmission,
@@ -782,7 +783,6 @@ function templateNameFor(targetPath: string): string {
   if (targetPath === join(".claude", "settings.json")) return "adapter/.claude/settings.json";
   return `common/${basename(targetPath)}`;
 }
-
 function mergeManagedBlock(existing: string | null, rendered: string): string | null {
   if (existing === null) return rendered;
   const start = rendered.indexOf(MANAGED_START);
@@ -799,7 +799,6 @@ function mergeManagedBlock(existing: string | null, rendered: string): string | 
   const prefix = existing.endsWith("\n") ? existing : `${existing}\n`;
   return `${prefix}\n${managed}\n`;
 }
-
 /** U-SETUP-004: render setup artifacts and write unless dry-run. */
 export function emitSetup(plan: SetupPlan, templates: TemplateSet, deps: SetupDeps): string[] {
   const rendered = renderArtifacts(plan, templates);
@@ -808,8 +807,7 @@ export function emitSetup(plan: SetupPlan, templates: TemplateSet, deps: SetupDe
   for (const r of rendered) {
     const abs = join(deps.repoRoot, r.path);
     const existing = deps.readText(abs);
-    const exists = existing !== null;
-    if (exists && MERGEABLE_ADAPTER_DOCS.has(r.path)) {
+    if (existing !== null && MERGEABLE_ADAPTER_DOCS.has(r.path)) {
       const merged = mergeManagedBlock(existing, r.content);
       if (merged === null) continue;
       if (merged !== existing) {
@@ -818,14 +816,14 @@ export function emitSetup(plan: SetupPlan, templates: TemplateSet, deps: SetupDe
       }
       continue;
     }
-    if (exists) {
+    if (existing !== null) {
       // confirm は isInteractive 時のみ (nodeConfirm の blocking readSync が、stdin が開いたまま
       // 無音の非対話環境 (CI runner / tool shell) で無限待ちになる)。非対話は既存保護 = skip が
       // 既定 (非破壊導入の invariant、PLAN-L7-361)。
       if (deps.isInteractive !== true) continue;
       if (!deps.confirm(`${r.path} は既存です。上書きしますか？`)) continue;
     }
-    deps.writeText(abs, r.content);
+    deps.writeText(abs, preserveConsumerCiPins(r.path, existing, r.content));
     written.push(r.path);
   }
   return written;

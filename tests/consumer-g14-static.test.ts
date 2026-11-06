@@ -283,35 +283,6 @@ describe("consumer G14 right-arm static gate (U-RCDEV-035)", () => {
       "invalid evidence family SMOKE for OT-CONSUMER-02",
     ],
     [
-      "VALUE without L0 citation",
-      (root: string) => {
-        const slot = join(root, "docs/test-design/L14-operational-test-design.md");
-        writeFileSync(
-          slot,
-          readFileSync(slot, "utf8").replace("BR-01 / PLAN-L0-01-consumer-charter", "BR-01"),
-          "utf8",
-        );
-      },
-      "value case OT-CONSUMER-02 does not cite L0 (file the L0 charter as docs/plans/PLAN-L0-*.md and cite its plan_id)",
-    ],
-    [
-      "missing L0 target",
-      (root: string) => rmSync(join(root, "docs/plans/PLAN-L0-01-consumer-charter.md")),
-      "trace target missing PLAN-L0-01-consumer-charter",
-    ],
-    [
-      "non-L0 PLAN citation",
-      (root: string) => {
-        const slot = join(root, "docs/test-design/L14-operational-test-design.md");
-        writeFileSync(
-          slot,
-          readFileSync(slot, "utf8").replace("PLAN-L0-01-consumer-charter", "PLAN-CONSUMER-01"),
-          "utf8",
-        );
-      },
-      "value case OT-CONSUMER-02 does not cite L0",
-    ],
-    [
       "untraced OT row",
       (root: string) => {
         const slot = join(root, "docs/test-design/L14-operational-test-design.md");
@@ -440,28 +411,6 @@ describe("consumer G14 right-arm static gate (U-RCDEV-035)", () => {
     const result = evaluate(root);
     if (expected.startsWith("right-arm-static - OK")) expect(result.passed).toBe(true);
     else expect(result.messages.join("\n")).toContain(expected);
-  });
-
-  it("keeps trace misses and the L0-specific VALUE rule distinct", () => {
-    const missingL0 = consumerFixture();
-    rmSync(join(missingL0, "docs/plans/PLAN-L0-01-consumer-charter.md"));
-    const missingL0Message = evaluate(missingL0).messages.join("\n");
-    expect(missingL0Message).toContain("trace target missing PLAN-L0-01-consumer-charter");
-    expect(missingL0Message).toContain("value case OT-CONSUMER-02 does not cite L0");
-    expect(missingL0Message).toContain(
-      "file the L0 charter as docs/plans/PLAN-L0-*.md and cite its plan_id",
-    );
-
-    const nonL0Plan = consumerFixture();
-    const slot = join(nonL0Plan, "docs/test-design/L14-operational-test-design.md");
-    writeFileSync(
-      slot,
-      readFileSync(slot, "utf8").replace("PLAN-L0-01-consumer-charter", "PLAN-CONSUMER-01"),
-      "utf8",
-    );
-    const nonL0Message = evaluate(nonL0Plan).messages.join("\n");
-    expect(nonL0Message).toContain("value case OT-CONSUMER-02 does not cite L0");
-    expect(nonL0Message).toContain("trace target missing PLAN-CONSUMER-01");
   });
 
   it("allows defined non-pair IDs without misreporting them as missing targets", () => {

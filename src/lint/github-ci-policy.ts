@@ -469,13 +469,12 @@ const RUNTIME_STEP_MANIFESTS: Record<(typeof RUNTIME_LEGS)[number], readonly obj
         HEAD_REF: githubExpression("github.head_ref || github.ref_name"),
         BASE_REF: githubExpression("github.base_ref || 'main'"),
         PR_TITLE: githubExpression(
-          "github.event.pull_request.title || github.event.head_commit.message || ''",
+          "github.event_name == 'pull_request' && github.event.pull_request.title || ''",
         ),
         PR_BODY: githubExpression("github.event.pull_request.body || ''"),
       },
       run: `printf '%s\\n' "$PR_BODY" > .ut-tdd-pr-body.txt
-git log --format=%s -n 20 > .ut-tdd-commit-subjects.txt
-node src/cli.ts github guard --head-ref "$HEAD_REF" --base-ref "$BASE_REF" --pr-title "$PR_TITLE" --pr-body-file .ut-tdd-pr-body.txt --commit-file .ut-tdd-commit-subjects.txt`,
+node src/cli.ts github guard --head-ref "$HEAD_REF" --base-ref "$BASE_REF" --pr-title "$PR_TITLE" --pr-body-file .ut-tdd-pr-body.txt`,
     }),
     step("design-protection (実装 PR の設計書書き換え拒否、fail-close)", {
       if: githubExpression("github.event_name == 'pull_request'"),

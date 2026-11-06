@@ -1518,25 +1518,20 @@ spec:
 | `U-VMC-001` | L0-L14各1件 | `VModelContract.create` | layer count 15、exit 0 |
 | `U-VMC-002` | G0.5/G1-G14各1件 | `VModelContract.create` | gate count 15、exit 0 |
 | `U-VMC-003` | layer/gate欠落または重複 | `VModelContract.create` | `contract-cardinality-invalid`, exit 1 |
-| `U-VMC-004` | pair/exception reason不整合 | `VModelContract.create` | `contract-pair-invalid`, exit 1 |
-| `U-VMC-005` | required field欠落 | loader/compiler | default補完せず`contract-field-missing`, exit 1 |
+| `U-VMC-004` | synthetic `verification_issue` URLを持つ L8-L14 と、`source_plan`・`required_backlinks` を持たない L11/L13 pair exception | compiler | Issue URL を compiled obligation に保持し、`PLAN-*` 固定値なしで L11/L13 の layer・allowed pairs・reason を維持する。Issue 番号は fixture の合成値。`verification_issue` の PLAN ID は拒否。S3 昇格は `it.fails`、実装後 `it` |
+| `U-VMC-005` | `verification_issue` が欠落し、旧 `verification_plan_id` は残る L8 | compiler | verification Issue を PLAN ID から補完せず拒否。S3 昇格は `it.fails`、実装後 `it` |
 | `I-VMC-001` | valid contract | compiler→registry/doctor/roadmap | rule ID/verdict集合差0、exit 0 |
 | `U-DISP-001` | checked manifest宣言値と同数records | catalog create | source/item/category/profile件数一致、exit 0 |
 | `U-DISP-002` | manifest件数とrecord件数不一致 | catalog create | `catalog-count-mismatch`, exit 1 |
 | `U-DISP-003` | source/item/target orphan | catalog create | `catalog-orphan-edge`, exit 1 |
-| `U-DISP-004` | disposition理由/target/PLAN欠落 | catalog create | `catalog-disposition-incomplete`, exit 1 |
+| `U-DISP-004` | disposition理由/target欠落、defer item targetのIssue欠落 (旧`plan_id`では代替不可) | catalog create | 欠落を拒否。source disposition理由欠落は`catalog-disposition-incomplete`, exit 1。 |
 | `U-DISP-005` | 同一edge ID重複 | catalog create | `catalog-edge-duplicate`, exit 1 |
-| `CANDIDATE-U-DISPPTR-001` | docs/plansなし、全163 itemがpendingのtracked catalog | catalog create → DB rebuild | 全件pendingを保持し、design_path=`docs/design/harness/L5-detailed-design/physical-data.md`、plan_id=NULL。item identity、target/status、reason、source_digestを変えない。本候補は未昇格で既存U-DISP-004を変更しない。後続formal promotionではU-DISP-004のPLAN必須をdesign_path必須へ置換し、旧条件を併存させない。 |
-| `CANDIDATE-U-DISPPTR-002` | defer rowに、Git-tracked exact pathでregular fileとして実在し、realpathがrepo root内に収まる`docs/design/**`を指定。plan_id=NULL。対照fixtureはplan_idのみ、またはdesign_path欠落 | pure path resolver → domain validate | canonical realpathがrepo内にあるvalid design_pathのdeferを受理する。plan_idだけ、design_path欠落は拒否し、deferをPLAN必須で判定しない。 |
-| `CANDIDATE-U-DISPPTR-003` | 次を各1変異fixtureで与える (optionalな`design_path`の省略/NULLは負例にしない。空文字は、required pathを持つ`defer` rowで指定する): trackedだが物理欠落、read不可、explicit empty string、basename/partial path alias、absolute path、`.`/`..` segment、backslash区切り、非NFC表記、入力pathの正規化結果が別のtracked pathへ化ける不一致、tracked・実在の非`docs/design/` path、Git mode `120000` symlink、親junction/reparse point経由でrepo外へ出るpath | tracked path resolver + regular-file/realpath containment/domain check | 各変異を拒否し、projection commit 0・既存projectionを保持する。 |
-| `CANDIDATE-U-DISPPTR-004` | legacy `vmodel_item_target_edges` CHECKのdefer row（plan_idあり、design_path列なし）と旧`user_version` | transactional table migration | design_pathをPLAN等から推定せずmigrationを失敗させる。rollback後も旧table CHECK、全row、旧`user_version`を保持する。 |
-| `CANDIDATE-U-DISPPTR-005` | design_path列追加とCHECK置換を行う旧table copy/swap。親item/plan rowを用意 | SQLite FK constraint inspection + invalid-reference insert | `item_id→vmodel_semantic_items` と nullable `plan_id→plan_registry` のFKを保持する。NULL plan_idは許可し、存在しないitem/plan参照は拒否する。 |
-| `CANDIDATE-U-DISPPTR-006` | valid legacy schema/versionと保全対象row | schema migration | 成功後`PRAGMA user_version = SCHEMA_VERSION`、既存rowの全authoring値を保持し、新nullable `design_path`を持つ。 |
+| `U-DISPPTR-001` | docs/plansなし、全targetの存在とtyped resolver解決を確認するtracked fixture、全163 itemがpendingのissue-only catalog | catalog load → target validation/resolution → DB rebuild | 全targetを解決し全件pendingを保持する。item target projectionは`issue`列を持ち`plan_id`/`design_path`列を持たない。issueはNULL。item identity/status/target/reason/source_digestの全値と集合を変えない。既存`U-DISP-004`とは別のoracle。 |
+| `U-DISPPTR-002` | 退役kind `plan_alias` を持つ item target、または source target edge | canonical target resolver / tracked source-target catalog | unknown kindとして拒否し、他kindへ変換しない。source-target authoringにも`plan_alias`を残さない。 |
 | `CANDIDATE-U-DISPPTR-007` | DOC-L0-CHARTER catalog、ZIP-DOC-001/071 disposition target、EDGE001/071 (`artifact_path`) typed edge | source catalog loader + tracked artifact resolver | authoring_source_path=`docs/design/harness/L0-planning/charter.md`、projection_table=`spec_defs`、target/edge pathが同実体へ束縛される。ID/slotのみ、別path、実体欠落ではprojection commitを許さず既存projectionを保持する。 |
-| `CANDIDATE-U-DISPPTR-008` | memory-only DBの旧schema/version・既存projectionを用意。`HarnessDb` wrapperでitem-target実insertを観測した後の最終`COMMIT`だけを失敗させ、先行migrate commitは許可 | 実`rebuildHarnessDb` call（外側test transactionで包まない） | faultは実V-model projection後に発生し、失敗時は旧`sqlite_master.sql`、`user_version`、全既存projection rows/digestsを保持する。migrateがprojection前にcommitする実装ではschema/version変更が残りRedとなる。 |
-| `U-TARGET-001` | 4 typed target | canonical resolver | plan/path/family/slotをregistryだけで解決、exit 0 |
-| `U-TARGET-002` | disposition short alias / edge full alias | reconcile | canonical identity一致、exit 0 |
-| `U-TARGET-003` | unknown/ambiguous/absent target | canonical resolver | typed finding、exit 1 |
+| `U-TARGET-001` | 3 typed target | canonical resolver | path/family/slotをregistryだけで解決、exit 0 |
+| `U-TARGET-002` | unique source-disposition basename alias / canonical `artifact_path` edge | reconcile | tracked pathのcanonical identity一致、exit 0 |
+| `U-TARGET-003` | unresolved/ambiguous/absent target | canonical resolver | typed finding、exit 1 |
 | `U-TARGET-004` | phantom family/canonical mismatch | canonical resolver | existence/mismatch finding、exit 1 |
 | `I-DISP-001` | valid authored catalog | DB削除→rebuild | catalog/edge/profile full row・digest identity集合差0、provenance失敗時rollback |
 | `U-PROFILE-001` | checked manifest size 3/product 5 | profile create | 宣言件数一致、exit 0 |
