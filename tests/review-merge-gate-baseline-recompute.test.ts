@@ -207,7 +207,7 @@ describe.sequential("review merge gate baseline recompute (Issue #1559)", {
       fixtures.set(`selection-${key}`, buildGateSelectionFixture(key));
     }
 
-    const wrapperBaseline = '{\n  "src/alpha.ts": {"lines": 10, "functionExcess": null}\n}\n';
+    const wrapperBaseline = '{\n  "src/alpha.ts": {"lines": null, "functionExcess": null}\n}\n';
     fixtures.set(
       "wrapper",
       buildFixture(
