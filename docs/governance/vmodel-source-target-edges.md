@@ -131,7 +131,7 @@ tracked target slotへ展開するための一時的な設計参照である。d
 ## 3. 不変条件
 
 - edge_idは一意、source_idは109 source dispositionへ解決する。
-- target_typeは `target_slot|artifact_path|artifact_family|plan_alias` のみとする。
-- artifact_pathはtracked file、target_slotはtarget catalog、plan_aliasはPLAN registryへ解決する。
+- target_typeは `target_slot|artifact_path|artifact_family` のみとする。
+- artifact_pathはtracked file、target_slotはtarget catalogへ解決する。`plan_alias` は有効なtarget kindではない。
 - artifact_familyはmember 1件以上を持ち、design freeze時に未解決familyを残さない。
 - source→targetは1:Nを許すが、理由なし0 edgeは許さない。
