@@ -277,8 +277,11 @@ describe.sequential("review merge gate baseline recompute (Issue #1559)", {
         { encoding: "utf8", windowsHide: true, stdio: ["ignore", "pipe", "pipe"] },
       );
     } catch (error) {
+      const stdout = error instanceof Error && "stdout" in error ? error.stdout : undefined;
       const stderr = error instanceof Error && "stderr" in error ? error.stderr : undefined;
-      mergeTreeHadConflict = String(stderr ?? error).includes("CONFLICT");
+      const status = error instanceof Error && "status" in error ? error.status : undefined;
+      mergeTreeHadConflict =
+        status === 1 && `${stdout ?? ""}\n${stderr ?? ""}`.includes("CONFLICT");
     }
     expect(mergeTreeHadConflict).toBe(true);
 
