@@ -80,7 +80,7 @@ function consumerFixture(): string {
     "| ケースID | family | 検証内容 | 合否基準 | トレース元 |",
     "|---|---|---|---|---|",
     "| OT-PLANRET-01 | OT | 日常運用の手順 | 失敗 0 | FR-L1-01 |",
-    "| OT-PLANRET-02 | VALUE | 導入価値の検証 | KPI 達成 | BR-01 / PLAN-L0-01 |",
+    "| OT-PLANRET-02 | VALUE | 導入価値の検証 | KPI 達成 | BR-01 / DOC-L0-CHARTER |",
     "",
   ].join("\n");
   writeFixture(root, "docs/test-design/L14-operational-test-design.md", content);
@@ -158,7 +158,7 @@ function evaluateG14(root: string) {
 function makeValueCase(root: string, citations: string): void {
   const slot = join(root, "docs/test-design/L14-operational-test-design.md");
   const content = readFileSync(slot, "utf8").replace(
-    "| OT-PLANRET-02 | VALUE | 導入価値の検証 | KPI 達成 | BR-01 / PLAN-L0-01 |",
+    "| OT-PLANRET-02 | VALUE | 導入価値の検証 | KPI 達成 | BR-01 / DOC-L0-CHARTER |",
     `| OT-PLANRET-02 | VALUE | 導入価値の検証 | KPI 達成 | ${citations} |`,
   );
   writeFileSync(slot, content, "utf8");

@@ -688,7 +688,7 @@ function checkG13CaseTraces(
 }
 
 function l0CharterDocTypeIds(repoRoot: string): Set<string> {
-  const planningDirectory = join(resolveDesignRoot(repoRoot), "L0-planning");
+  const planningDirectory = join(repoRoot, resolveDesignRoot(repoRoot), "L0-planning");
   if (!existsSync(planningDirectory)) return new Set();
   return new Set(
     readdirSync(planningDirectory, { withFileTypes: true })

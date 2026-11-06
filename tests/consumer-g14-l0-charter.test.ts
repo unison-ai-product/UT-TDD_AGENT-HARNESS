@@ -208,7 +208,7 @@ describe("consumer G14 L0 charter doc_type_id (U-RCDEV-035)", () => {
     const root = consumerFixture();
     rmSync(join(root, "docs/design/L0-planning/consumer-charter.md"));
     const messages = evaluate(root).messages;
-    expect(messages).toContain("trace target missing DOC-L0-CHARTER");
+    expect(messages.join("\n")).toContain("trace target missing DOC-L0-CHARTER");
     expectL0CharterDocTypeIdCitationViolation(messages);
   });
 
@@ -226,7 +226,7 @@ describe("consumer G14 L0 charter doc_type_id (U-RCDEV-035)", () => {
       "utf8",
     );
     const messages = evaluate(root).messages;
-    expect(messages).not.toContain("trace target missing DOC-L1-CHARTER");
+    expect(messages.join("\n")).not.toContain("trace target missing DOC-L1-CHARTER");
     expectL0CharterDocTypeIdCitationViolation(messages);
   });
 });

@@ -39,8 +39,8 @@ function consumerFixture(): string {
   );
   write(
     root,
-    "docs/plans/PLAN-L0-01-consumer-charter.md",
-    "---\nplan_id: PLAN-L0-01-consumer-charter\n---\n",
+    "docs/design/L0-planning/consumer-charter.md",
+    "---\nlayer: L0\ndoc_type_id: DOC-L0-CHARTER\n---\n",
   );
   write(root, "docs/plans/PLAN-CONSUMER-01.md", "---\nplan_id: PLAN-CONSUMER-01\n---\n");
   const template = readFileSync(
@@ -52,7 +52,7 @@ function consumerFixture(): string {
     .replace("plan: docs/plans/PLAN-<id>.md", "plan: docs/plans/PLAN-CONSUMER-01.md")
     .replace(
       "| <記入> | <記入> | <記入> | <記入> | <記入> |",
-      "| OT-CONSUMER-01 | OT | 日常運用の手順 | 失敗 0 | FR-L1-01 |\n| OT-CONSUMER-02 | VALUE | 導入価値の検証 | KPI 達成 | BR-01 / PLAN-L0-01-consumer-charter |",
+      "| OT-CONSUMER-01 | OT | 日常運用の手順 | 失敗 0 | FR-L1-01 |\n| OT-CONSUMER-02 | VALUE | 導入価値の検証 | KPI 達成 | BR-01 / DOC-L0-CHARTER |",
     );
   write(root, "docs/test-design/L14-operational-test-design.md", content);
   write(root, "tests/fixtures/g14-consumer/operational-results.txt", "passed\n");
