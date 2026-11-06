@@ -63,7 +63,7 @@ afterAll(() => {
   if (issueOnlyFixtureRoot) rmSync(issueOnlyFixtureRoot, { recursive: true, force: true });
 });
 
-describe("CANDIDATE-U-DISPPTR-001 issue-only projection", () => {
+describe("U-DISPPTR-001 issue-only projection", () => {
   it("precondition: issue-only ledger has 163 complete authored target rows", () => {
     const rows = authoredIssueOnlyTargetRows(issueOnlyFixtureRoot);
     expect(rows).toHaveLength(163);
@@ -146,7 +146,7 @@ describe("CANDIDATE-U-DISPPTR-001 issue-only projection", () => {
     }
   });
 
-  it("loader finding: current loader rejects the issue-only header", () => {
+  it.fails("loads the issue-only item-target ledger without a plan_id header", () => {
     const bundle = Object.fromEntries(
       issueOnlyCatalogPaths.map((catalogPath) => [
         catalogPath,
@@ -156,16 +156,15 @@ describe("CANDIDATE-U-DISPPTR-001 issue-only projection", () => {
     const receipts = new GitAuthoringProvenance(issueOnlyFixtureRoot).receipts(
       issueOnlyCatalogPaths,
     );
-    expect(() => loadTrackedCatalogInput(bundle, receipts)).toThrowError(Error);
-    expect(() => loadTrackedCatalogInput(bundle, receipts)).toThrow(
-      JSON.stringify([
-        {
-          ruleId: "catalog-authoring-schema-invalid",
-          subjectId: "docs/governance/vmodel-item-target-ledger.md",
-          message: "table header missing",
-        },
-      ]),
-    );
+    let loadFailure: unknown;
+    let loaded: ReturnType<typeof loadTrackedCatalogInput> | undefined;
+    try {
+      loaded = loadTrackedCatalogInput(bundle, receipts);
+    } catch (error) {
+      loadFailure = error;
+    }
+    expect(loadFailure).toBeUndefined();
+    expect(loaded?.itemTargetEdges).toHaveLength(163);
   });
 
   it.fails("projects every issue-only target column unchanged", () => {
@@ -173,7 +172,13 @@ describe("CANDIDATE-U-DISPPTR-001 issue-only projection", () => {
     try {
       migrate(db);
       const expected = authoredIssueOnlyTargetRows(issueOnlyFixtureRoot);
-      projectVmodelAuthoring(issueOnlyFixtureRoot, db);
+      let projectionFailure: unknown;
+      try {
+        projectVmodelAuthoring(issueOnlyFixtureRoot, db);
+      } catch (error) {
+        projectionFailure = error;
+      }
+      expect(projectionFailure).toBeUndefined();
       expect(
         Number(db.prepare("SELECT COUNT(*) AS count FROM vmodel_semantic_items").get()?.count ?? 0),
       ).toBe(163);

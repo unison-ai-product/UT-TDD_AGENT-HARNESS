@@ -1,7 +1,7 @@
 import { execFileSync, spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 import {
@@ -19,6 +19,7 @@ type WorkflowStep = Record<string, unknown> & {
   run?: string;
   uses?: string;
   if?: string;
+  env?: Record<string, unknown>;
   with?: Record<string, unknown>;
 };
 
@@ -32,9 +33,14 @@ const HEAD_SNAPSHOT_ROOT = headSnapshotRoot();
 const SOURCE_WORKFLOW_PATH = join(HEAD_SNAPSHOT_ROOT, WORKFLOW_PATH);
 const SOURCE_POLICY_PATH = join(HEAD_SNAPSHOT_ROOT, "src", "lint", "github-ci-policy.ts");
 const SOURCE_WORKFLOW = readFileSync(SOURCE_WORKFLOW_PATH, "utf8");
+const SOURCE_TEMPLATE = readFileSync(
+  join(HEAD_SNAPSHOT_ROOT, "docs", "templates", "github", "common", "harness-check.yml"),
+  "utf8",
+);
 const SOURCE_POLICY = readFileSync(SOURCE_POLICY_PATH, "utf8");
 let cleanGitFixture = "";
 let dirtyGitFixture = "";
+let nonGitFixture = "";
 let activationCommandResult: ReturnType<typeof runBashIn> | undefined;
 let cleanDirtyCheckCommandResult: ReturnType<typeof runBashIn> | undefined;
 let dirtyCheckCommandResult: ReturnType<typeof runBashIn> | undefined;
@@ -125,11 +131,25 @@ function createGitFixture(dirty: boolean): string {
   }
 }
 
+function gitBashExecutable(): string {
+  if (process.platform !== "win32") return "bash";
+  const execPath = execFileSync("git", ["--exec-path"], { encoding: "utf8" }).trim();
+  const gitRoot = resolve(execPath, "..", "..", "..");
+  const bashPath = [join(gitRoot, "bin", "bash.exe"), join(gitRoot, "usr", "bin", "bash.exe")].find(
+    existsSync,
+  );
+  if (!bashPath) throw new Error(`Git for Windows bash.exe was not found from ${execPath}`);
+  return bashPath;
+}
+
+const BASH_EXECUTABLE = gitBashExecutable();
+
 function runBashIn(cwd: string, command: string) {
-  return spawnSync("bash", ["--noprofile", "--norc", "-e", "-o", "pipefail", "-c", command], {
-    cwd,
-    encoding: "utf8",
-  });
+  return spawnSync(
+    BASH_EXECUTABLE,
+    ["--noprofile", "--norc", "-e", "-o", "pipefail", "-c", command],
+    { cwd, encoding: "utf8" },
+  );
 }
 
 const LEGACY_GUARD_RUN = [
@@ -147,11 +167,13 @@ describe("consumer CI workflow registered Red oracles (#1522 / #1523)", () => {
   beforeAll(() => {
     cleanGitFixture = createGitFixture(false);
     dirtyGitFixture = createGitFixture(true);
+    nonGitFixture = mkdtempSync(join(tmpdir(), "ut-tdd-cicons-non-git-"));
   });
 
   afterAll(() => {
     if (cleanGitFixture) removeTestTree(cleanGitFixture);
     if (dirtyGitFixture) removeTestTree(dirtyGitFixture);
+    if (nonGitFixture) removeTestTree(nonGitFixture);
   });
 
   it("precondition: setup emits parseable workflow and detached HEAD inputs exist", () => {
@@ -165,10 +187,14 @@ describe("consumer CI workflow registered Red oracles (#1522 / #1523)", () => {
 
     const activationStep = steps.find((step) => stepText(step).includes("active.json"));
     if (activationStep?.run) {
-      const syntax = spawnSync("bash", ["--noprofile", "--norc", "-n", "-c", activationStep.run], {
-        cwd: cleanGitFixture,
-        encoding: "utf8",
-      });
+      const syntax = spawnSync(
+        BASH_EXECUTABLE,
+        ["--noprofile", "--norc", "-n", "-c", activationStep.run],
+        {
+          cwd: cleanGitFixture,
+          encoding: "utf8",
+        },
+      );
       expect(syntax.error).toBeUndefined();
       expect(syntax.status).toBe(0);
 
@@ -181,7 +207,7 @@ describe("consumer CI workflow registered Red oracles (#1522 / #1523)", () => {
     }
   });
 
-  it.fails("U-CICONS-001: activation absence fails rather than skipping all checks", () => {
+  it("U-CICONS-001: activation absence fails rather than skipping all checks", () => {
     const workflow = parseWorkflow(generatedWorkflow());
     const steps = allSteps(workflow);
     const activationStep = steps.find((step) => stepText(step).includes("active.json"));
@@ -205,7 +231,7 @@ describe("consumer CI workflow registered Red oracles (#1522 / #1523)", () => {
     ).toBe(false);
   });
 
-  it.fails("U-CICONS-002: release setup uses the single top-level version/digest pin", () => {
+  it("U-CICONS-002: release setup uses the single top-level version/digest pin", () => {
     const source = generatedWorkflow();
     const workflow = parseWorkflow(source);
     const steps = allSteps(workflow);
@@ -258,10 +284,14 @@ describe("consumer CI workflow registered Red oracles (#1522 / #1523)", () => {
       /git status --porcelain/.test(step.run ?? ""),
     );
     if (dirtyCheck?.run) {
-      const syntax = spawnSync("bash", ["--noprofile", "--norc", "-n", "-c", dirtyCheck.run], {
-        cwd: cleanGitFixture,
-        encoding: "utf8",
-      });
+      const syntax = spawnSync(
+        BASH_EXECUTABLE,
+        ["--noprofile", "--norc", "-n", "-c", dirtyCheck.run],
+        {
+          cwd: cleanGitFixture,
+          encoding: "utf8",
+        },
+      );
       expect(syntax.error).toBeUndefined();
       expect(syntax.status).toBe(0);
 
@@ -272,10 +302,14 @@ describe("consumer CI workflow registered Red oracles (#1522 / #1523)", () => {
         `${cleanDirtyCheckCommandResult.stdout}\n${cleanDirtyCheckCommandResult.stderr}`,
       ).not.toMatch(/syntax error|command not found/i);
 
-      const dirtySyntax = spawnSync("bash", ["--noprofile", "--norc", "-n", "-c", dirtyCheck.run], {
-        cwd: dirtyGitFixture,
-        encoding: "utf8",
-      });
+      const dirtySyntax = spawnSync(
+        BASH_EXECUTABLE,
+        ["--noprofile", "--norc", "-n", "-c", dirtyCheck.run],
+        {
+          cwd: dirtyGitFixture,
+          encoding: "utf8",
+        },
+      );
       expect(dirtySyntax.error).toBeUndefined();
       expect(dirtySyntax.status).toBe(0);
 
@@ -288,7 +322,7 @@ describe("consumer CI workflow registered Red oracles (#1522 / #1523)", () => {
     }
   });
 
-  it.fails("U-CICONS-003: generated dirty check passes clean and fails dirty", () => {
+  it("U-CICONS-003: generated dirty check passes clean and fails dirty", () => {
     const workflow = parseWorkflow(generatedWorkflow());
     const steps = allSteps(workflow);
     const setupIndex = steps.findIndex((step) =>
@@ -297,6 +331,16 @@ describe("consumer CI workflow registered Red oracles (#1522 / #1523)", () => {
     const dirtyCheckIndex = steps.findIndex((step) =>
       /git status --porcelain/.test(step.run ?? ""),
     );
+    const dirtyStatus = execFileSync("git", ["status", "--porcelain"], {
+      cwd: dirtyGitFixture,
+      encoding: "utf8",
+    });
+    const dirtyCheckDiagnostic = [
+      `dirtyCheck.run=${JSON.stringify(steps[dirtyCheckIndex]?.run)}`,
+      `dirtyGitStatus=${JSON.stringify(dirtyStatus)}`,
+      `bash.stdout=${JSON.stringify(dirtyCheckCommandResult?.stdout)}`,
+      `bash.stderr=${JSON.stringify(dirtyCheckCommandResult?.stderr)}`,
+    ].join("\n");
 
     expect(setupIndex).toBeGreaterThanOrEqual(0);
     expect(dirtyCheckIndex).toBeGreaterThan(setupIndex);
@@ -304,7 +348,19 @@ describe("consumer CI workflow registered Red oracles (#1522 / #1523)", () => {
     expect(cleanDirtyCheckCommandResult).toBeDefined();
     expect(dirtyCheckCommandResult).toBeDefined();
     expect(cleanDirtyCheckCommandResult?.status).toBe(0);
-    expect(dirtyCheckCommandResult?.status).not.toBe(0);
+    expect(dirtyCheckCommandResult?.status, dirtyCheckDiagnostic).not.toBe(0);
+  });
+
+  it("U-CICONS-003b: dirty check fails closed outside a Git worktree", () => {
+    const dirtyCheck = allSteps(parseWorkflow(generatedWorkflow())).find((step) =>
+      /git status --porcelain/.test(step.run ?? ""),
+    );
+    expect(dirtyCheck?.run).toBeDefined();
+    const result = runBashIn(nonGitFixture, dirtyCheck?.run ?? "");
+    expect(result.status).not.toBe(0);
+    expect(`${result.stdout}\n${result.stderr}`).toContain(
+      "Unable to inspect consumer checkout after runtime setup.",
+    );
   });
 
   it("precondition: generated workflow is parseable and pin keys can be inventoried", () => {
@@ -317,7 +373,7 @@ describe("consumer CI workflow registered Red oracles (#1522 / #1523)", () => {
     );
   });
 
-  it.fails("U-CICONS-004: setup regeneration preserves changed consumer pins", () => {
+  it("U-CICONS-004: setup regeneration preserves changed consumer pins", () => {
     const initial = parseWorkflow(generatedWorkflow());
     const versionKey =
       pinEntries(initial).find(
@@ -341,7 +397,7 @@ describe("consumer CI workflow registered Red oracles (#1522 / #1523)", () => {
     expect(regeneratedSource.match(/^env:\s*$/gm) ?? []).toHaveLength(1);
   });
 
-  it.fails("U-CICONS-005: first generation provides one nonempty default pin pair", () => {
+  it("U-CICONS-005: first generation provides one nonempty default pin pair", () => {
     const source = generatedWorkflow();
     const workflow = parseWorkflow(source);
     const versionPin = pinEntries(workflow).filter(
@@ -359,7 +415,7 @@ describe("consumer CI workflow registered Red oracles (#1522 / #1523)", () => {
     }
   });
 
-  it.fails("U-CICONS-011: generated checkout fetches full history", () => {
+  it("U-CICONS-011: generated checkout fetches full history", () => {
     const workflow = parseWorkflow(generatedWorkflow());
     const checkout = allSteps(workflow).find((step) =>
       /^actions\/checkout@/i.test(step.uses ?? ""),
@@ -368,13 +424,24 @@ describe("consumer CI workflow registered Red oracles (#1522 / #1523)", () => {
     expect(checkout?.with?.["fetch-depth"]).toBe(0);
   });
 
-  it.fails("U-CICONS-012: generated guard delegates range discovery to --base-ref", () => {
+  it("U-CICONS-012: generated guard delegates range discovery to --base-ref", () => {
     const workflow = parseWorkflow(generatedWorkflow());
     const guard = allSteps(workflow).find((step) => stepText(step).includes("github guard"));
     expect(guard).toBeDefined();
     expect(guard?.run).toContain("--base-ref");
     expect(guard?.run).not.toContain("--commit-file");
     expect(guard?.run).not.toMatch(/git\s+log[^\n]*>\s*\S+/);
+  });
+
+  it("control: only pull_request events supply a PR title to the guard", () => {
+    const expected =
+      "$" + "{{ github.event_name == 'pull_request' && github.event.pull_request.title || '' }}";
+    for (const source of [generatedWorkflow(), SOURCE_WORKFLOW, SOURCE_TEMPLATE]) {
+      const workflow = parseWorkflow(source);
+      const guard = allSteps(workflow).find((step) => stepText(step).includes("github guard"));
+      expect(guard?.env?.PR_TITLE).toBe(expected);
+      expect(String(guard?.env?.PR_TITLE)).not.toContain("head_commit.message");
+    }
   });
 
   it("precondition: snapshot workflow and policy contain one source guard contract input", () => {
@@ -390,7 +457,7 @@ describe("consumer CI workflow registered Red oracles (#1522 / #1523)", () => {
     expect(SOURCE_POLICY_PATH).toContain("github-ci-policy.ts");
   });
 
-  it.fails("U-CICONS-013: source harness-check calls range guard without precomputed subjects", () => {
+  it("U-CICONS-013: source harness-check calls range guard without precomputed subjects", () => {
     const workflow = parseWorkflow(SOURCE_WORKFLOW);
     const guard = allSteps(workflow).find((step) => stepText(step).includes("github guard"));
     const source = String(guard?.run ?? "");
@@ -422,7 +489,7 @@ describe("consumer CI workflow registered Red oracles (#1522 / #1523)", () => {
     expect(rangeDocs.find((doc) => doc.role === "runtime")?.content).not.toContain("--commit-file");
   });
 
-  it.fails("U-CICONS-014: policy expected guard command owns range discovery", () => {
+  it("U-CICONS-014: policy expected guard command owns range discovery", () => {
     const expectedGuardLines = SOURCE_POLICY.split(/\r?\n/).filter((line) =>
       line.includes("node src/cli.ts github guard"),
     );
@@ -431,13 +498,13 @@ describe("consumer CI workflow registered Red oracles (#1522 / #1523)", () => {
     expect(expectedGuardLines.every((line) => !line.includes("--commit-file"))).toBe(true);
   });
 
-  it.fails("U-CICONS-014: CI policy denies the legacy precomputed commit list", () => {
+  it("U-CICONS-014: CI policy denies the legacy precomputed commit list", () => {
     const baselineDocs = loadSourcePolicyDocs();
     const legacyDocs = replaceSourceGuardDocs(baselineDocs, LEGACY_GUARD_RUN);
     expect(analyzeGithubCiPolicy(legacyDocs).ok).toBe(false);
   });
 
-  it.fails("U-CICONS-014: CI policy accepts guard-owned base range", () => {
+  it("U-CICONS-014: CI policy accepts guard-owned base range", () => {
     const baselineDocs = loadSourcePolicyDocs();
     const rangeDocs = replaceSourceGuardDocs(baselineDocs, RANGE_GUARD_RUN);
     expect(analyzeGithubCiPolicy(rangeDocs).ok).toBe(true);
