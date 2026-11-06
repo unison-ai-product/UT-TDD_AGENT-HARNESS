@@ -78,6 +78,13 @@ function fixture(): CatalogInput {
   };
 }
 
+function supportedSourceTargetFixture(): CatalogInput {
+  const input = fixture();
+  input.sourceTargetEdges[0].targetType = "artifact_path";
+  input.sourceTargetEdges[0].targetRef = "docs/design/harness/L5-detailed-design/physical-data.md";
+  return input;
+}
+
 function rules(input: CatalogInput): string[] {
   const result = DocumentDispositionCatalog.create(input);
   return result.ok ? [] : result.errors.map((finding) => finding.ruleId);
@@ -164,11 +171,39 @@ describe("DocumentDispositionCatalog", () => {
     expect(rules(disposition)).toContain("catalog-source-target-mismatch");
   });
 
+  it("U-DISPPTR-002 precondition: supported source-target kind creates a catalog", () => {
+    expect(DocumentDispositionCatalog.create(supportedSourceTargetFixture()).ok).toBe(true);
+  });
+
+  it.fails("U-DISPPTR-002: rejects plan_alias in source-target catalog input", () => {
+    const input = supportedSourceTargetFixture();
+    input.sourceTargetEdges[0].targetType = "plan_alias";
+    expect(DocumentDispositionCatalog.create(input).ok).toBe(false);
+  });
+
   it("U-DISP-004: item ledger row欠落をsource-targetから補完しない", () => {
     const input = fixture();
     input.itemTargetEdges = [];
     input.declaredCounts.itemTargetEdges = 0;
     expect(rules(input)).toContain("catalog-item-target-incomplete");
+  });
+
+  it.fails("U-DISP-004: defer requires an Issue instead of a legacy plan_id", () => {
+    const input = fixture();
+    input.sourceTargetEdges[0].targetType = "artifact_path";
+    input.sourceTargetEdges[0].targetRef =
+      "docs/design/harness/L5-detailed-design/physical-data.md";
+    const target = input.itemTargetEdges[0] as (typeof input.itemTargetEdges)[number] & {
+      issue?: string;
+      planId?: string;
+    };
+    target.targetStatus = "defer";
+    target.targetKind = "artifact_path";
+    target.targetRef = "docs/design/harness/L5-detailed-design/physical-data.md";
+    target.planId = "PLAN-L6-01";
+    delete target.issue;
+
+    expect(DocumentDispositionCatalog.create(input).ok).toBe(false);
   });
 
   it("U-DISP-004: source dispositionの理由欠落を拒否する", () => {

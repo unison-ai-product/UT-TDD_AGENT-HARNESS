@@ -252,3 +252,30 @@ field は `type`・`command`・`timeout`・`statusMessage`・`async`・`addition
 6. 追加した trust の項目だけを撤回し、設定ファイルが事前と一致することを確かめる。他の設定を退避から丸ごと戻さない。
 
 対応するテスト oracle は `docs/test-design/harness/L7-codex-hook-failure-test-design.md` の `CANDIDATE-U-HOOKEXEC-015`〜`017` である。
+
+## 2026-11-05 Claude Code の版が下限未満のときの警告 (Issue #1561)
+
+前節 (Issue #1521) の `onFailure: "block"` は、Claude Code の版が下限 (2.1.295) 未満だと無音で無視される。2026-11-05 の実機確認 (#1521 のコメント) では、同じ PC で VS Code 拡張の 2.1.318 は guard の起動失敗と exit 1 で書き込みを止め、PATH の CLI の 2.1.293 は止めなかった。利用者からは、保護が効いているように見える。本節は、古い版で作業していることを利用者が知る経路を定める。
+
+前提 (実測)。
+
+- hook の stdin に Claude Code の版は無い (`SessionHookInput`、`src/runtime/session-log.ts`)。
+- session の transcript (`transcript_path` の JSONL) の message の行は `"version":"<x.y.z>"` を持つ (2026-11-05、この repo の control session の transcript で確認)。
+- PATH の `claude --version` は、実際に hook を起動している版と食い違うことがある (上の実機確認)。
+
+方式。
+
+1. **実行中の版の警告 (PostToolUse)**: 既存の PostToolUse の記録 hook (`hook post-tool-use`) が、session ごとに 1 回だけ、`transcript_path` の最後の message の行から `version` を読む。下限未満なら、警告 (版、下限、guard の失敗時の停止が効かないこと、更新を促す文) を出す。読めない (`transcript_path` が無い、行に `version` が無い、形式が違う) ときは「Claude Code の版を確かめられない」を出す。どちらも exit code は変えない (記録 hook の fail-open を保つ。前節の不変条件)。1 session に 1 回だけ出すため、警告済みの印を session の state に残す。
+   - **出し方**: 警告は stdout に Claude Code の hook の JSON 出力 `{"systemMessage":"<警告>"}` を 1 つだけ書いて出す。exit 0 の hook の stderr は通常の画面に出ない (Claude Code の Hooks reference の Exit code 0 の節。debug logging でしか見えない) ので、stderr は使わない。Claude Code は stdout 全体が 1 つの JSON object のときだけ JSON として解釈するので、警告を出す呼び出しでは既存の `session-log: post-tool-use <id>` の行を stdout に書かない。警告を出さない呼び出しの stdout は今のまま (既存の行) にする。encoding guard の stderr の出力は変えない。
+2. **下限の正本は 1 か所**: 下限の値 (`2.1.295`) は src の定数 1 つに置く。警告の判定・doctor の判定・adapter の `CLAUDE.md` の生成 (`src/setup/templates.ts`) はその定数を import して使い、src の他の場所に下限の値を書かない。`docs/templates/adapter/CLAUDE.md` は生成物のミラーとして値を持つ。値は前節 (#1521) の契約のものを使う。実測で言えるのは「2.1.293 で無効、2.1.318 で有効」までであり、正確な境界の出典は Claude Code の changelog で確かめて、確かめたら本節に追記する。
+3. **導入手順 (Pack)**: consumer 向けの adapter の `CLAUDE.md` (`docs/templates/adapter/CLAUDE.md` と `src/setup/templates.ts` のミラー) に、下限とその理由 (guard の失敗時の停止が `onFailure` に依存する) を書く。
+4. **doctor (参考)**: doctor は PATH の `claude --version` が下限未満なら warn を出す。文言では「PATH の claude の版」と明記し、実行中の版と同じだとは主張しない。fail にはしない。PATH の版が下限以上で、実行中の版だけが下限未満のときは doctor は警告しない。その場合を知らせるのは方式 1 の警告である。
+5. **実画面での確認**: 方式 1 の警告が通常の画面に出ることは、unit test では確かめられない。下限未満の Claude Code と下限以上の Claude Code の両方の実機で確かめて、結果を Issue に記録する (`CANDIDATE-U-CCVER-006`)。
+
+採らない方式。
+
+- SessionStart で版を読む方式: hook の stdin に版が無く、`source=startup` の時点では transcript に message の行がまだ無いことがある。
+- わざと失敗する検査用の hook を置く方式: 新しい版では全 tool を止めて作業できなくなり、古い版では無音になる。
+- guard の内部エラーをすべて exit 2 にして版に頼らない方式: 古い版で効かなかったのは guard の script を起動できない場合であり、script の中で例外を捕まえても救えない。work-guard の「内部エラーは fail-open (exit 0)」は既存の契約で、本節では変えない。
+
+対応するテスト oracle は `docs/test-design/harness/L7-claude-version-floor-test-design.md` の `CANDIDATE-U-CCVER-001`〜`006` である。
