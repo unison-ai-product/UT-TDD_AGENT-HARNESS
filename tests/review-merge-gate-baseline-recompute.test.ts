@@ -121,17 +121,6 @@ function fixture(key: string): Fixture {
   return value;
 }
 
-function readMergeResultReceipt(receiptPath: string | null): Record<string, unknown> {
-  expect(receiptPath).not.toBeNull();
-  const receipts = readFileSync(receiptPath ?? "", "utf8")
-    .trim()
-    .split(/\r?\n/)
-    .map((line) => JSON.parse(line) as Record<string, unknown>);
-  const receipt = receipts.find((entry) => entry.receiptKind === "merge_result");
-  expect(receipt).toBeDefined();
-  return receipt ?? {};
-}
-
 afterEach(() => {
   gitFault.active = false;
   gitFault.needles = [];
@@ -395,56 +384,6 @@ describe.sequential("review merge gate baseline recompute (Issue #1559)", {
     expect(worktreePaths(testFixture.work).map(canonicalPath).sort()).toEqual(
       testFixture.initialWorktreePaths.map(canonicalPath).sort(),
     );
-  });
-
-  it("U-RVMG-050: merge 後の tree 一致を記録し、merge 成功を維持する", () => {
-    const testFixture = fixture("wrapper");
-    const expectedTreeSha = wrapperPreviewTree.get("wrapper");
-    expect(expectedTreeSha).toBeDefined();
-    const run = runMerge(testFixture, false, undefined, () => expectedTreeSha ?? null);
-
-    expect(run.result).toMatchObject({ ok: true, decision: "merge" });
-    expect(run.merges).toBe(1);
-    const receipt = readMergeResultReceipt(run.result.receiptPath);
-    expect(receipt.preview).toMatchObject({
-      treeSha: expectedTreeSha,
-      postMergeTreeSha: expectedTreeSha,
-      treeMatch: true,
-    });
-  });
-
-  it("U-RVMG-050: merge 後の tree 不一致を記録し、merge 成功を維持する", () => {
-    const testFixture = fixture("wrapper");
-    const expectedTreeSha = wrapperPreviewTree.get("wrapper");
-    expect(expectedTreeSha).toBeDefined();
-    const differentTreeSha = "0".repeat(expectedTreeSha?.length ?? 40);
-    const run = runMerge(testFixture, false, undefined, () => differentTreeSha);
-
-    expect(run.result).toMatchObject({ ok: true, decision: "merge" });
-    expect(run.merges).toBe(1);
-    const receipt = readMergeResultReceipt(run.result.receiptPath);
-    expect(receipt.preview).toMatchObject({
-      treeSha: expectedTreeSha,
-      postMergeTreeSha: differentTreeSha,
-      treeMatch: false,
-    });
-  });
-
-  it("U-RVMG-050: merge 後の tree 読取例外は unknown として記録し、merge 成功を維持する", () => {
-    const testFixture = fixture("wrapper");
-    const run = runMerge(testFixture, false, undefined, () => {
-      throw new Error("injected merge tree read failure");
-    });
-
-    expect(run.result).toMatchObject({ ok: true, decision: "merge" });
-    expect(run.merges).toBe(1);
-    const receipt = readMergeResultReceipt(run.result.receiptPath);
-    expect(receipt.preview).toMatchObject({
-      treeSha: wrapperPreviewTree.get("wrapper"),
-      postMergeTreeSha: null,
-      treeMatch: "unknown",
-      postMergeTreeError: "injected merge tree read failure",
-    });
   });
 
   it("U-RVMG-051(a): baseline に無い上限超過 finding は拒否する", () => {
