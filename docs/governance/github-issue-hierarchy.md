@@ -125,7 +125,14 @@ v4 候補 (`docs/governance/candidates/ut-tdd-concept-v4.0.md`) のチケット�
 
 **並列ボックスへの入れ方**: 変更する path が、他の open な並列チケットと重ならないこと。かつ共有の面に
 触れないこと (例: `package.json` / lock、`.github/workflows/`、`docs/test-design/harness/L7-unit-test-design.md` や
-`function-spec.md`、`tests/gate-static.test.ts` のような共有 test-design)。当てはまらないものは直列の鎖に入れる。
+`function-spec.md`、`tests/gate-static.test.ts` のような共有 test-design、baseline を持つ gate の baseline ファイル
+`docs/governance/doc-split-baseline.json` と `docs/governance/code-size-baseline.json`)。当てはまらないものは直列の鎖に入れる。
+baseline ファイルは、PR が変えていなくても、merge gate の baseline_conflict (`src/feedback/baseline-conflict.ts`) が
+共有の面として扱う。そのため、gate の対象 (分割規則の対象の文書、size 規則の対象のコード・テスト) を足す・変えるチケットは、
+baseline ファイルに触れるものとして扱い、同じ鎖に入れる。並列のまま review すると、先の 1 本の merge で残りが DENY され、
+main の取り込みと再検が merge のたびに発生する (2026-11-05〜06 の実例: #1569 が 3 回 DENY された)。
+この扱いは、baseline_conflict が path の重なりだけで拒否している間の運用である。合成 tree で再計算する #1559 が
+入ったら、本当に衝突する場合だけ拒否されるので、この段落を見直す。
 
 **空きは問題である**: slot の空きを、普通の待ちとして扱わない。どちらも問題として Issue コメントに記録する。
 
