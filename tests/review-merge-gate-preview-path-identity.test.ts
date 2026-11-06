@@ -1,6 +1,6 @@
-import { execFileSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import { existsSync, realpathSync } from "node:fs";
-import { resolve } from "node:path";
+import { isAbsolute, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   buildFixture,
@@ -20,17 +20,25 @@ describe("review merge gate preview path identity", () => {
     const fixture = buildFixture(smallFiles().base, smallFiles().branches);
     try {
       const longPath = fixture.gitCommonDir;
-      const shortPath = execFileSync(
+      const result = spawnSync(
         process.env.ComSpec ?? "cmd.exe",
         ["/d", "/c", `for %I in ("${longPath}") do @echo %~sI`],
-        { encoding: "utf8", windowsHide: true },
-      )
-        .trim()
-        .split(/\r?\n/)
-        .at(-1);
-      expect(shortPath).toBeTruthy();
-      if (resolve(shortPath ?? "").toLowerCase() === resolve(longPath).toLowerCase()) skip();
-      expect(canonicalGitCommonDir(shortPath ?? "")).toBe(canonicalGitCommonDir(longPath));
+        { encoding: "utf8", windowsVerbatimArguments: true, windowsHide: true },
+      );
+      if (result.error) throw new Error(`8.3 helper spawn failed: ${result.error.message}`);
+      if (result.status !== 0) {
+        throw new Error(`8.3 helper exit ${result.status}: ${result.stderr}${result.stdout}`);
+      }
+      const shortPath = result.stdout.trim().split(/\r?\n/).at(-1)?.trim();
+      if (!shortPath || !isAbsolute(shortPath))
+        throw new Error(
+          `8.3 helper returned non-absolute output: ${JSON.stringify(result.stdout)}`,
+        );
+      if (!existsSync(shortPath)) {
+        throw new Error(`8.3 helper candidate does not exist: ${JSON.stringify(shortPath)}`);
+      }
+      if (resolve(shortPath).toLowerCase() === resolve(longPath).toLowerCase()) skip();
+      expect(canonicalGitCommonDir(shortPath)).toBe(canonicalGitCommonDir(longPath));
     } finally {
       cleanFixture(fixture);
     }
