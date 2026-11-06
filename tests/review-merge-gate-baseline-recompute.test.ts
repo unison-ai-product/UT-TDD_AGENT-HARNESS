@@ -34,6 +34,7 @@ import {
   separatedFile,
   smallFiles,
   TARGET,
+  verifyConflictAndCleanPreview,
   verifyFunctionExcessFixture,
   verifyLineBaselineGrowthFixture,
   worktreePaths,
@@ -102,59 +103,6 @@ function fixture(key: string): Fixture {
   const value = fixtures.get(key);
   if (!value) throw new Error(`fixture prerequisite did not register: ${key}`);
   return value;
-}
-
-function verifyConflictAndCleanPreview(
-  testFixture: Fixture,
-  gates: readonly InjectedGate[],
-  inspectPreview: (previewPath: string) => void,
-): string {
-  expect(
-    execFileSync(
-      "git",
-      ["-C", testFixture.work, "merge-base", testFixture.headSha, "origin/main"],
-      {
-        encoding: "utf8",
-        windowsHide: true,
-        stdio: ["ignore", "pipe", "pipe"],
-      },
-    ).trim(),
-  ).toBe(testFixture.baseSha);
-  const preview = createPreviewWorktree(testFixture);
-  try {
-    const parentLine = execFileSync(
-      "git",
-      ["-C", preview.path, "rev-list", "--parents", "-n", "1", "HEAD"],
-      {
-        encoding: "utf8",
-        windowsHide: true,
-        stdio: ["ignore", "pipe", "pipe"],
-      },
-    )
-      .trim()
-      .split(/\s+/);
-    expect(parentLine).toEqual([parentLine[0], testFixture.mainSha, testFixture.headSha]);
-    expect(
-      execFileSync("git", ["-C", preview.path, "merge-base", "HEAD", "origin/main"], {
-        encoding: "utf8",
-        windowsHide: true,
-        stdio: ["ignore", "pipe", "pipe"],
-      }).trim(),
-    ).toBe(testFixture.mainSha);
-    const conflict = evaluateBaselineConflict(
-      changedPaths(testFixture.work, testFixture.baseSha, testFixture.headSha),
-      changedPaths(testFixture.work, testFixture.baseSha, testFixture.mainSha),
-      gates,
-    );
-    expect(conflict.conflicts).not.toHaveLength(0);
-    inspectPreview(preview.path);
-    return preview.treeSha;
-  } finally {
-    removeFixturePreviewWorktree(testFixture, preview.path);
-    expect(worktreePaths(testFixture.work).sort()).toEqual(
-      testFixture.initialWorktreePaths.slice().sort(),
-    );
-  }
 }
 
 afterEach(() => {

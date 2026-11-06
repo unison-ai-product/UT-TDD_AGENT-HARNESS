@@ -12,7 +12,10 @@ import {
 import { tmpdir } from "node:os";
 import { basename, dirname, join, parse, resolve, sep } from "node:path";
 import { expect } from "vitest";
-import { checkBaselineConflict } from "../../src/feedback/baseline-conflict.ts";
+import {
+  checkBaselineConflict,
+  evaluateBaselineConflict,
+} from "../../src/feedback/baseline-conflict.ts";
 import { type GhPrMergePorts, runPrMerge } from "../../src/feedback/review-merge-gate.ts";
 import {
   analyzeCodeSize,
@@ -448,6 +451,49 @@ export function removeFixturePreviewWorktree(fixture: Fixture, previewPath: stri
   }
   git(fixture.work, "worktree", "remove", absolutePath);
   fixture.ownedPreviewPaths.delete(absolutePath);
+}
+
+export function verifyConflictAndCleanPreview(
+  fixture: Fixture,
+  gates: readonly InjectedGate[],
+  inspectPreview: (previewPath: string) => void,
+): string {
+  expect(
+    execFileSync("git", ["-C", fixture.work, "merge-base", fixture.headSha, "origin/main"], {
+      encoding: "utf8",
+      windowsHide: true,
+      stdio: ["ignore", "pipe", "pipe"],
+    }).trim(),
+  ).toBe(fixture.baseSha);
+  const preview = createPreviewWorktree(fixture);
+  try {
+    const parentLine = execFileSync(
+      "git",
+      ["-C", preview.path, "rev-list", "--parents", "-n", "1", "HEAD"],
+      { encoding: "utf8", windowsHide: true, stdio: ["ignore", "pipe", "pipe"] },
+    )
+      .trim()
+      .split(/\s+/);
+    expect(parentLine).toEqual([parentLine[0], fixture.mainSha, fixture.headSha]);
+    expect(
+      execFileSync("git", ["-C", preview.path, "merge-base", "HEAD", "origin/main"], {
+        encoding: "utf8",
+        windowsHide: true,
+        stdio: ["ignore", "pipe", "pipe"],
+      }).trim(),
+    ).toBe(fixture.mainSha);
+    const conflict = evaluateBaselineConflict(
+      changedPaths(fixture.work, fixture.baseSha, fixture.headSha),
+      changedPaths(fixture.work, fixture.baseSha, fixture.mainSha),
+      gates,
+    );
+    expect(conflict.conflicts).not.toHaveLength(0);
+    inspectPreview(preview.path);
+    return preview.treeSha;
+  } finally {
+    removeFixturePreviewWorktree(fixture, preview.path);
+    expect(worktreePaths(fixture.work).sort()).toEqual(fixture.initialWorktreePaths.slice().sort());
+  }
 }
 
 export function smallFiles(
