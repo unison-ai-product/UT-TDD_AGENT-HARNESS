@@ -121,7 +121,7 @@
   "tests/relation-graph-loader.test.ts": { "lines": 843, "functionExcess": null },
   "tests/relation-graph.test.ts": { "lines": 514, "functionExcess": null },
   "tests/release-aggregate-admission.test.ts": { "lines": 693, "functionExcess": null },
-  "tests/release-consumer-gates.test.ts": { "lines": 2958, "functionExcess": null },
+  "tests/release-consumer-gates.test.ts": { "lines": 2956, "functionExcess": null },
   "tests/release-consumer-vmodel-template.test.ts": { "lines": 633, "functionExcess": null },
   "tests/release-manifest.test.ts": { "lines": 549, "functionExcess": null },
   "tests/release-promotion-rollback-gate.test.ts": { "lines": 1222, "functionExcess": null },
