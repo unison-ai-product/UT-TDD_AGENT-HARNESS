@@ -59,7 +59,10 @@ function consumerFixture(): string {
     ".ut-tdd/evidence/g14-operational/artifacts/feedback.json",
     json({
       items: [
-        { summary: "onboarding 手順の短縮", routed_to: "PLAN-CONSUMER-01" },
+        {
+          summary: "onboarding 手順の短縮",
+          routed_to: "https://github.com/example/consumer/issues/13",
+        },
         {
           summary: "doctor 出力の整理",
           routed_to: "https://github.com/example/consumer/issues/12",
@@ -388,13 +391,13 @@ describe("consumer G14 right-arm static gate (U-RCDEV-035)", () => {
     else expect(result.messages.join("\n")).toContain(expected);
   });
 
-  it("fixture precondition: the existing PLAN feedback target is present in the passing shape", () => {
+  it("fixture precondition: the PLAN document exists alongside Issue URL feedback routing", () => {
     const root = consumerFixture();
     const feedback = JSON.parse(readFileSync(feedbackPath(root), "utf8")) as {
       items: Array<{ routed_to: string }>;
     };
     expect(existsSync(join(root, "docs/plans/PLAN-CONSUMER-01.md"))).toBe(true);
-    expect(feedback.items[0]?.routed_to).toBe("PLAN-CONSUMER-01");
+    expect(feedback.items[0]?.routed_to).toBe("https://github.com/example/consumer/issues/13");
     expect(feedback.items[1]?.routed_to).toBe("https://github.com/example/consumer/issues/12");
     expect(evaluate(root).passed).toBe(true);
   });
