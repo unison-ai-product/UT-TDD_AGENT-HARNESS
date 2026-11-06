@@ -4,6 +4,7 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  realpathSync,
   rmdirSync,
   rmSync,
   statSync,
@@ -72,6 +73,11 @@ export function git(root: string, ...args: string[]): string {
     windowsHide: true,
     stdio: ["ignore", "pipe", "pipe"],
   }).trim();
+}
+
+export function canonicalGitCommonDir(path: string): string {
+  const canonical = realpathSync.native(resolve(path));
+  return process.platform === "win32" ? canonical.toLowerCase() : canonical;
 }
 
 function configure(root: string): void {
@@ -333,7 +339,9 @@ export function buildFixture(baseFiles: Record<string, string>, branchFiles: Bra
       baseSha,
       headSha,
       mainSha,
-      gitCommonDir: resolve(work, git(work, "rev-parse", "--git-common-dir")),
+      gitCommonDir: canonicalGitCommonDir(
+        resolve(work, git(work, "rev-parse", "--git-common-dir")),
+      ),
       initialWorktreePaths: worktreePaths(work),
       ownedPreviewPaths: new Set(),
     };
@@ -439,8 +447,11 @@ export function removeFixturePreviewWorktree(fixture: Fixture, previewPath: stri
     return;
   }
   const common = resolve(absolutePath, git(absolutePath, "rev-parse", "--git-common-dir"));
-  if (common.toLowerCase() !== fixture.gitCommonDir.toLowerCase()) {
-    throw new Error("refusing to remove a preview worktree with a different git common directory");
+  const canonicalCommon = canonicalGitCommonDir(common);
+  if (canonicalCommon !== fixture.gitCommonDir) {
+    throw new Error(
+      `refusing to remove a preview worktree with a different git common directory: expected=${JSON.stringify(fixture.gitCommonDir)} actual=${JSON.stringify(canonicalCommon)}`,
+    );
   }
   if (
     !worktreePaths(fixture.work).some(
@@ -697,8 +708,11 @@ export function cleanFixture(fixture: Fixture): void {
     }
     if (!existsSync(path)) continue;
     const common = resolve(path, git(path, "rev-parse", "--git-common-dir"));
-    if (common.toLowerCase() !== fixture.gitCommonDir.toLowerCase()) {
-      throw new Error("refusing to remove a linked worktree outside this fixture repository");
+    const canonicalCommon = canonicalGitCommonDir(common);
+    if (canonicalCommon !== fixture.gitCommonDir) {
+      throw new Error(
+        `refusing to remove a linked worktree outside this fixture repository: expected=${JSON.stringify(fixture.gitCommonDir)} actual=${JSON.stringify(canonicalCommon)}`,
+      );
     }
     git(fixture.work, "worktree", "remove", path);
   }
