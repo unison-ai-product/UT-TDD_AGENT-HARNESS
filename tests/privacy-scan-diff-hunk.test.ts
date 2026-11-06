@@ -92,7 +92,7 @@ afterAll(() => {
 });
 
 describe("privacy scan diff hunk parsing", () => {
-  it("CANDIDATE-U-PRIVDIFF-001: accepts regular file headers, scans additions across files, and ignores deletions", () => {
+  it("U-PRIVDIFF-001: accepts regular file headers, scans additions across files, and ignores deletions", () => {
     const root = initRepo("ordinary-diff");
     write(root, "docs/old.md", `${P}\nkeep\n`);
     write(root, "docs/steady.md", "before\n");
@@ -111,7 +111,7 @@ describe("privacy scan diff hunk parsing", () => {
     expect(result.ok).toBe(false);
   });
 
-  it("CANDIDATE-U-PRIVDIFF-002 prerequisites: builds the intended plus-only add/delete history and confirms scanner health", () => {
+  it("U-PRIVDIFF-002 prerequisites: builds the intended plus-only add/delete history and confirms scanner health", () => {
     expect(redBase).not.toBe(redAdded);
     expect(redAdded).not.toBe(redHead);
     const patch = git(redFixtureRoot, "show", "--format=", "-U0", redAdded);
@@ -162,7 +162,7 @@ describe("privacy scan diff hunk parsing", () => {
     ).toEqual([]);
   });
 
-  it.fails("CANDIDATE-U-PRIVDIFF-002: distinguishes an added hunk line beginning ++ from a +++ file header and retains it after a later deletion", () => {
+  it.fails("U-PRIVDIFF-002: distinguishes an added hunk line beginning ++ from a +++ file header and retains it after a later deletion", () => {
     const result = analyzePrivacyScan({
       mode: "diff",
       units: redUnits,
@@ -178,7 +178,7 @@ describe("privacy scan diff hunk parsing", () => {
     expect(result.ok).toBe(false);
   });
 
-  it("CANDIDATE-U-PRIVDIFF-003 prerequisites: verifies a same-hunk deletion/addition followed by restoration", () => {
+  it("U-PRIVDIFF-003 prerequisites: verifies a same-hunk deletion/addition followed by restoration", () => {
     expect(replacementBase).not.toBe(replacementAdded);
     expect(replacementAdded).not.toBe(replacementHead);
 
@@ -217,7 +217,7 @@ describe("privacy scan diff hunk parsing", () => {
     ).toEqual([]);
   });
 
-  it.fails("CANDIDATE-U-PRIVDIFF-003: scans the added content after a --- deletion line in the same hunk, even when a later commit restores the old line", () => {
+  it.fails("U-PRIVDIFF-003: scans the added content after a --- deletion line in the same hunk, even when a later commit restores the old line", () => {
     const result = analyzePrivacyScan({
       mode: "diff",
       units: replacementUnits,
