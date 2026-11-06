@@ -29,6 +29,11 @@ import {
 
 let fixture: Awaited<ReturnType<typeof createConsumerWorktreeRuntimeFixture>>;
 
+function snapshotOptionalPath(path: string): string | null {
+  if (!existsSync(path)) return null;
+  return statSync(path).isDirectory() ? snapshotTree(path) : readFileSync(path).toString("hex");
+}
+
 describe("consumer worktree runtime setup entry Red (#1525)", () => {
   beforeAll(async () => {
     fixture = await createConsumerWorktreeRuntimeFixture();
@@ -184,9 +189,34 @@ describe("consumer worktree runtime setup entry Red (#1525)", () => {
 
   it("U-CWTRT-001: installs main's pin and runs a guard through the worktree launcher", () => {
     const worktree = fixture.linked["001"];
+    const targetRegularSetupPaths = [
+      join(worktree, ".ut-tdd", "harness.db"),
+      join(worktree, ".claude", "settings.json"),
+      join(worktree, ".claude", "hooks"),
+      join(worktree, ".codex", "hooks.json"),
+    ];
+    // These are absent in this clean linked-worktree fixture, not assumed from a
+    // generic consumer layout. Keep the precondition explicit before checking
+    // that runtime-only setup does not materialize ordinary setup state.
+    for (const path of targetRegularSetupPaths) expect(existsSync(path), path).toBe(false);
+
+    const mainSetupPaths = [
+      join(fixture.main, ".ut-tdd"),
+      join(fixture.main, ".claude"),
+      join(fixture.main, ".codex"),
+      join(fixture.main, "AGENTS.md"),
+      join(fixture.main, "CLAUDE.md"),
+      join(fixture.main, "ut-tdd.project.json"),
+    ];
+    const mainBefore = mainSetupPaths.map(snapshotOptionalPath);
+    const cacheBefore = snapshotTree(dirname(fixture.cache));
+
     const result = runConsumerWorktreeCommand(fixture.main, ["setup", "--worktree", worktree]);
     expect(result.status, `${result.stdout}\n${result.stderr}`).toBe(0);
     expect(existsSync(join(worktree, ".ut-tdd", "bin", "ut-tdd.mjs"))).toBe(true);
+    for (const path of targetRegularSetupPaths) expect(existsSync(path), path).toBe(false);
+    expect(mainSetupPaths.map(snapshotOptionalPath)).toEqual(mainBefore);
+    expect(snapshotTree(dirname(fixture.cache))).toBe(cacheBefore);
     const mainIdentity = runtimeIdentity(fixture.main);
     const installedIdentity = runtimeIdentity(worktree);
     expect(installedIdentity.release_id).toBe(mainIdentity.release_id);
