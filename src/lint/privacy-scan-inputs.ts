@@ -101,44 +101,58 @@ function unquote(path: string): string {
   return path.startsWith('"') ? JSON.parse(path) : path;
 }
 
+type DiffHunk = { oldRemaining: number; newRemaining: number };
+type DiffState = {
+  current: { line: number; text: string }[] | null;
+  next: number;
+  hunk: DiffHunk | null;
+};
+
+function parseDiffHunkHeader(line: string, state: DiffState): void {
+  const match = /^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/.exec(line);
+  state.next = Number(match?.[3] ?? 0);
+  state.hunk = {
+    oldRemaining: Number(match?.[2] ?? 1),
+    newRemaining: Number(match?.[4] ?? 1),
+  };
+  if (state.hunk.oldRemaining === 0 && state.hunk.newRemaining === 0) state.hunk = null;
+}
+
+function consumeDiffHunkLine(line: string, state: DiffState): void {
+  const hunk = state.hunk;
+  if (hunk === null || line.startsWith("\\ No newline at end of file")) return;
+  if (line.startsWith(" ")) {
+    hunk.oldRemaining -= 1;
+    hunk.newRemaining -= 1;
+    state.next += 1;
+  } else if (line.startsWith("-")) {
+    hunk.oldRemaining -= 1;
+  } else if (line.startsWith("+")) {
+    state.current?.push({ line: state.next, text: line.slice(1) });
+    hunk.newRemaining -= 1;
+    state.next += 1;
+  }
+  if (hunk.oldRemaining === 0 && hunk.newRemaining === 0) state.hunk = null;
+}
+
 /** Parses a `git diff -U0` patch into added-line units (paths are read by `addedPathUnits`). */
 function diffUnits(patch: string, commit: string): PrivacyUnit[] {
   const units: PrivacyUnit[] = [];
-  let current: { line: number; text: string }[] | null = null;
-  let next = 0;
-  let hunk: { oldRemaining: number; newRemaining: number } | null = null;
+  const state: DiffState = { current: null, next: 0, hunk: null };
   for (const line of patch.replace(/\r\n/g, "\n").split("\n")) {
     if (line.startsWith("diff --git ")) {
-      current = null;
-      hunk = null;
-    } else if (hunk !== null) {
-      if (line.startsWith("\\ No newline at end of file")) continue;
-      if (line.startsWith(" ")) {
-        hunk.oldRemaining -= 1;
-        hunk.newRemaining -= 1;
-        next += 1;
-      } else if (line.startsWith("-")) {
-        hunk.oldRemaining -= 1;
-      } else if (line.startsWith("+")) {
-        if (current !== null) current.push({ line: next, text: line.slice(1) });
-        hunk.newRemaining -= 1;
-        next += 1;
-      }
-      if (hunk.oldRemaining === 0 && hunk.newRemaining === 0) hunk = null;
+      state.current = null;
+      state.hunk = null;
+    } else if (state.hunk !== null) {
+      consumeDiffHunkLine(line, state);
     } else if (line.startsWith("+++ ")) {
       const target = line.slice(4);
       if (target === "/dev/null") continue;
       const path = unquote(target).replace(/^b\//, "");
-      current = [];
-      units.push({ source: "diff", path, commit, field: "content", lines: current });
+      state.current = [];
+      units.push({ source: "diff", path, commit, field: "content", lines: state.current });
     } else if (line.startsWith("@@ ")) {
-      const match = /^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/.exec(line);
-      next = Number(match?.[3] ?? 0);
-      hunk = {
-        oldRemaining: Number(match?.[2] ?? 1),
-        newRemaining: Number(match?.[4] ?? 1),
-      };
-      if (hunk.oldRemaining === 0 && hunk.newRemaining === 0) hunk = null;
+      parseDiffHunkHeader(line, state);
     }
   }
   return units;
