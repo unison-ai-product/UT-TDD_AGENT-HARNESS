@@ -680,6 +680,7 @@ export function runMerge(
   fixture: Fixture,
   bypassBaselineConflict = false,
   baselineConflictChecker?: GhPrMergePorts["checkBaselineConflict"],
+  readMergeCommitTree?: GhPrMergePorts["readMergeCommitTree"],
 ) {
   seedPassReview(fixture.work, fixture.headSha);
   let mergeCount = 0;
@@ -697,6 +698,7 @@ export function runMerge(
   };
   if (bypassBaselineConflict) ports.checkBaselineConflict = () => null;
   else if (baselineConflictChecker) ports.checkBaselineConflict = baselineConflictChecker;
+  if (readMergeCommitTree) ports.readMergeCommitTree = readMergeCommitTree;
   const result = runPrMerge({ repoRoot: fixture.work, pr: 1559, now: () => NOW, ports });
   return { result, merges: mergeCount };
 }
