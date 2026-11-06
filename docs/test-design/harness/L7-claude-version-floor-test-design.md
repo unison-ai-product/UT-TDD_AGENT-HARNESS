@@ -22,7 +22,12 @@ guard の `onFailure` そのものは `docs/test-design/harness/L7-claude-hook-o
 - 一時ディレクトリに transcript の JSONL と session の state を作り、PostToolUse の hook 入力の `transcript_path` にその path を渡す。開発 repository の `.ut-tdd/`・`harness.db`・OneDrive を操作しない。
 - doctor の行は、`checkClaudeVersionFloor` の `readPathClaudeVersion` 引数で `claude --version` の読み取りを差し替える。実際の Claude Code を起動しない。
 - 005 の下限の差し替えは、`vi.mock("../src/runtime/claude-version-floor.ts", () => ({ CLAUDE_CODE_VERSION_FLOOR: "9.9.9" }))` で行う。注入口と module の名前は、L6 の「注入口と module」の表に従う。
-- Red の段では、これらの module と export はまだ無い。import の失敗で `it.fails` が通ってしまうと、偽の Red になる。そのため Red の PR は、前提のテスト (通常の `it`) で「対象の module を動的 import できること」を別に確かめ、本体の `it.fails` は import が成功した上での assertion の不一致だけで落ちるように書く。前提のテストは Red の段では `it.fails` にし、実装 PR で `it` に戻す。
+- Red の段では、新しい module と export はまだ無い。import が解決できないと、ファイル全体が collection で落ちるか、例外を `it.fails` が吸収して偽の Red になる。そこで登録と Red の PR は、`design-protection-diff-gate.md` §10.3 の手順 1' (契約形 stub) に従い、L6 の「注入口と module」の表の形だけを持つ stub を同じ PR に入れる。stub が返す値は、oracle の期待を満たし得ない fail-close の値に限る。
+  - `src/runtime/claude-version-floor.ts`：`CLAUDE_CODE_VERSION_FLOOR = "2.1.295"` (契約の値そのもの。定数だけの module なので判定を持たない)。
+  - `src/runtime/claude-version-check.ts`：`evaluateClaudeVersion` は常に `"unknown"` を返し、`readTranscriptClaudeVersion` は常に `null` を返す。
+  - `src/doctor/toolchain.ts` (既存の module に足す export)：`checkClaudeVersionFloor` は、版に関係なく warn でも ok でもない固定の結果 (例：`status: "fail"`、detail に `stub`) を返し、`readPathClaudeVersion` を呼ばない。doctor の check の登録 (check-definitions) には足さない。
+  - adapter の生成 (`src/setup/templates.ts`) と PostToolUse の hook (`src/cli.ts`) は、Red の段では変えない。
+  これで、どの `it.fails` も import は成功し、assertion の不一致だけで落ちる。stub は実装 PR (Green) で実装に置き換える。前提を確かめるテストは、失敗を吸収する `it.fails` にはしない。
 
 ## 3. 候補の oracle
 
