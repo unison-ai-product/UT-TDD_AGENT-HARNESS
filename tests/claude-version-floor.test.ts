@@ -18,18 +18,16 @@ interface PreparedClaudeVersionCases {
     floor: string;
     adapterDoc: string;
     generatedAdapter: string;
-    below: ReturnType<
-      typeof import("../src/doctor/claude-version-floor-check.ts")["checkClaudeVersionFloor"]
-    >;
-    atOrAbove: ReturnType<
-      typeof import("../src/doctor/claude-version-floor-check.ts")["checkClaudeVersionFloor"]
-    >;
+    belowOk: boolean;
+    belowWarns: boolean;
+    belowMessages: string;
+    atOrAboveOk: boolean;
+    atOrAboveWarns: boolean;
   };
   case005: {
     evaluated: string;
-    doctorResult: ReturnType<
-      typeof import("../src/doctor/claude-version-floor-check.ts")["checkClaudeVersionFloor"]
-    >;
+    doctorOk: boolean;
+    doctorWarns: boolean;
     generatedAdapter: string;
     literalLocations: { path: string; count: number }[];
   };
@@ -183,6 +181,8 @@ describe("Claude Code version floor warning (Issue #1561)", () => {
       import("../src/doctor/claude-version-floor-check.ts"),
       import("../src/setup/templates.ts"),
     ]);
+    const below = checkClaudeVersionFloor({ readPathClaudeVersion: () => "2.1.293" });
+    const atOrAbove = checkClaudeVersionFloor({ readPathClaudeVersion: () => "2.1.318" });
     const case004 = {
       floor,
       adapterDoc: readFileSync(
@@ -190,8 +190,11 @@ describe("Claude Code version floor warning (Issue #1561)", () => {
         "utf8",
       ),
       generatedAdapter: BUILTIN_GITHUB_TEMPLATES["adapter/CLAUDE.md"] ?? "",
-      below: checkClaudeVersionFloor({ readPathClaudeVersion: () => "2.1.293" }),
-      atOrAbove: checkClaudeVersionFloor({ readPathClaudeVersion: () => "2.1.318" }),
+      belowOk: below.ok,
+      belowWarns: below.messages.some((message) => /warn|⚠/i.test(message)),
+      belowMessages: below.messages.join("\n"),
+      atOrAboveOk: atOrAbove.ok,
+      atOrAboveWarns: atOrAbove.messages.some((message) => /warn|⚠/i.test(message)),
     };
 
     vi.resetModules();
@@ -215,7 +218,8 @@ describe("Claude Code version floor warning (Issue #1561)", () => {
       });
       case005 = {
         evaluated: comparison.evaluateClaudeVersion("2.1.318"),
-        doctorResult,
+        doctorOk: doctorResult.ok,
+        doctorWarns: doctorResult.messages.some((message) => /warn|⚠/i.test(message)),
         generatedAdapter: setup.BUILTIN_GITHUB_TEMPLATES["adapter/CLAUDE.md"] ?? "",
         literalLocations,
       };
@@ -352,26 +356,47 @@ describe("Claude Code version floor warning (Issue #1561)", () => {
   });
 
   it.fails("CANDIDATE-U-CCVER-004: keeps the floor consistent and doctor advisory", async () => {
-    expect(prepared.case004.adapterDoc).toContain(prepared.case004.floor);
-    expect(prepared.case004.generatedAdapter).toContain(prepared.case004.floor);
-    expect(prepared.case004.below.ok).toBe(true);
-    expect(prepared.case004.below.messages.some((message) => /warn|⚠/i.test(message))).toBe(true);
-    expect(prepared.case004.below.messages.join("\n")).toContain("PATH の claude の版");
-    expect(prepared.case004.atOrAbove.ok).toBe(true);
-    expect(prepared.case004.atOrAbove.messages.some((message) => /warn|⚠/i.test(message))).toBe(
-      false,
-    );
+    const violations: string[] = [];
+    if (!prepared.case004.adapterDoc.includes(prepared.case004.floor)) {
+      violations.push("adapter doc must contain the shared floor");
+    }
+    if (!prepared.case004.generatedAdapter.includes(prepared.case004.floor)) {
+      violations.push("generated adapter must contain the shared floor");
+    }
+    if (!prepared.case004.belowOk) {
+      violations.push("below-floor doctor result must remain advisory");
+    }
+    if (!prepared.case004.belowWarns) violations.push("below-floor doctor result must warn");
+    if (!prepared.case004.belowMessages.includes("PATH の claude の版")) {
+      violations.push("doctor warning must identify the PATH claude version");
+    }
+    if (!prepared.case004.atOrAboveOk) {
+      violations.push("at-or-above doctor result must remain advisory");
+    }
+    if (prepared.case004.atOrAboveWarns) violations.push("at-or-above doctor result must not warn");
+    expect(violations).toEqual([]);
   });
 
   it.fails("CANDIDATE-U-CCVER-005: makes the shared floor authoritative across seams", async () => {
-    expect(prepared.case005.evaluated).toBe("below");
-    expect(prepared.case005.doctorResult.ok).toBe(true);
-    expect(prepared.case005.doctorResult.messages.some((message) => /warn|⚠/i.test(message))).toBe(
-      true,
-    );
-    expect(prepared.case005.generatedAdapter).toContain("9.9.9");
-    expect(prepared.case005.literalLocations).toEqual([
+    const violations: string[] = [];
+    if (prepared.case005.evaluated !== "below") {
+      violations.push("comparison must follow the mocked shared floor");
+    }
+    if (!prepared.case005.doctorOk) violations.push("doctor result must remain advisory");
+    if (!prepared.case005.doctorWarns) {
+      violations.push("doctor must warn against the mocked shared floor");
+    }
+    if (!prepared.case005.generatedAdapter.includes("9.9.9")) {
+      violations.push("generated adapter must follow the mocked shared floor");
+    }
+    const expectedLiteralLocations = [
       { path: join(REPO_ROOT, "src", "runtime", "claude-version-floor.ts"), count: 1 },
-    ]);
+    ];
+    if (
+      JSON.stringify(prepared.case005.literalLocations) !== JSON.stringify(expectedLiteralLocations)
+    ) {
+      violations.push("the literal floor must appear only in the authoritative source module");
+    }
+    expect(violations).toEqual([]);
   });
 });
