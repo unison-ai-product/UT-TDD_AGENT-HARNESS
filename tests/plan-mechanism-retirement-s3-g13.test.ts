@@ -177,7 +177,7 @@ describe("CANDIDATE-U-PLANRET-002 right-arm G13 evidence", () => {
     expect(result.passed, result.messages.join("\n")).toBe(true);
   });
 
-  it.fails("accepts a defer reason paired with an Issue URL", () => {
+  it("accepts a defer reason paired with an Issue URL", () => {
     const root = fixture();
     const result = evaluateStaticGate({ gate: "G13", repoRoot: root });
 

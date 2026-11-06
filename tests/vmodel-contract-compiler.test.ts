@@ -41,6 +41,7 @@ function legacyContractWithInvalidVerificationIssue(): ContractRecord {
     const layerId = String(layer.layer);
     if (!/^L(?:[89]|1[0-4])$/.test(layerId)) continue;
     layer.verification_issue = `https://github.com/example/vmodel/issues/${layerId.slice(1)}`;
+    layer.verification_plan_id = `PLAN-${layerId}-legacy`;
   }
   const l8 = raw.layers.find((layer) => layer.layer === "L8");
   if (!l8) throw new Error("L8 fixture missing");
@@ -55,6 +56,22 @@ describe("V-model contract compiler", () => {
     const second = compileRightArmContract(YAML.parse(text));
     expect(first.obligations.map((entry) => entry.layer)).toEqual(RIGHT_ARM_LAYERS);
     expect(first).toEqual(second);
+  });
+
+  it("U-VMC-001: compiles authored YAML with seven distinct verification Issue URLs", () => {
+    const result = compileRightArmContract(YAML.parse(source()));
+    const issueUrls = result.obligations.map((entry) => entry.issueUrl);
+
+    expect(issueUrls).toEqual([
+      "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/1579",
+      "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/1580",
+      "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/1581",
+      "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/1582",
+      "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/1583",
+      "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/1584",
+      "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/1585",
+    ]);
+    expect(new Set(issueUrls).size).toBe(RIGHT_ARM_LAYERS.length);
   });
 
   it("U-VMC-002: keeps the right-arm gate mapping exactly once", () => {
@@ -94,12 +111,13 @@ describe("V-model contract compiler", () => {
     expect(() => compileRightArmContract(raw)).toThrow("exactly once");
   });
 
-  it.fails("U-VMC-005: rejects a missing verification Issue even when a legacy PLAN is present", () => {
+  it("U-VMC-005: rejects a missing verification Issue even when a legacy PLAN is present", () => {
     const raw = YAML.parse(source()) as { layers: Array<Record<string, unknown>> };
     for (const layer of raw.layers) {
       const layerId = String(layer.layer);
       if (!/^L(?:[89]|1[0-4])$/.test(layerId)) continue;
       layer.verification_issue = `https://github.com/example/vmodel/issues/${layerId.slice(1)}`;
+      layer.verification_plan_id = `PLAN-${layerId}-legacy`;
     }
     const l8 = raw.layers.find((entry) => entry.layer === "L8");
     if (!l8) throw new Error("L8 fixture missing");
@@ -140,7 +158,7 @@ describe("V-model contract compiler", () => {
     ).toBe(true);
   });
 
-  it.fails("U-VMC-004: compiles Issue-backed obligations and pair exceptions without PLAN backlinks", () => {
+  it("U-VMC-004: compiles Issue-backed obligations and pair exceptions without PLAN backlinks", () => {
     const raw = issueBackedContract();
     const expectedExceptions = raw.forward_workflow.pair_reciprocity_exception_contracts.map(
       (exception) => ({
@@ -188,7 +206,7 @@ describe("V-model contract compiler", () => {
     expect(raw.forward_workflow.pair_reciprocity_exception_contracts).toHaveLength(2);
   });
 
-  it.fails("U-VMC-004: rejects a PLAN value instead of compiling through the legacy identity", () => {
+  it("U-VMC-004: rejects a PLAN value instead of compiling through the legacy identity", () => {
     expect(() => compileRightArmContract(legacyContractWithInvalidVerificationIssue())).toThrow();
   });
 
@@ -202,21 +220,19 @@ describe("V-model contract compiler", () => {
     expect(altered.generatedHash).not.toBe(first.generatedHash);
   });
 
-  it("U-VMC-007: rejects an empty structured pair-exception obligation", () => {
-    const raw = YAML.parse(source()) as {
-      forward_workflow: { pair_reciprocity_exception_contracts: Array<Record<string, unknown>> };
-    };
-    raw.forward_workflow.pair_reciprocity_exception_contracts[0].required_backlinks = [];
-    expect(() => compileRightArmContract(raw)).toThrow("non-empty string array");
-  });
-
-  it("U-VMC-008: rejects a pair exception without the owning L4 backlink", () => {
-    const raw = YAML.parse(source()) as {
-      forward_workflow: { pair_reciprocity_exception_contracts: Array<Record<string, unknown>> };
-    };
-    raw.forward_workflow.pair_reciprocity_exception_contracts[0].required_backlinks = [
-      "PLAN-L9-01-engine-swap-l9",
+  it("U-VMC-004: rejects a pair exception missing its layer, reason, or allowed pairs", () => {
+    const removeRequiredField = [
+      (exception: Record<string, unknown>) => delete exception.layer,
+      (exception: Record<string, unknown>) => delete exception.reason,
+      (exception: Record<string, unknown>) => delete exception.allowed_pair_layers,
     ];
-    expect(() => compileRightArmContract(raw)).toThrow("required_backlinks drift");
+
+    for (const removeField of removeRequiredField) {
+      const raw = issueBackedContract();
+      const exception = raw.forward_workflow.pair_reciprocity_exception_contracts[0];
+      if (!exception) throw new Error("pair exception fixture missing");
+      removeField(exception);
+      expect(() => compileRightArmContract(raw)).toThrow();
+    }
   });
 });
