@@ -13,7 +13,8 @@ import YAML from "yaml";
 import { removeTestTree } from "./support/temp-tree.ts";
 
 const repoRoot = process.cwd();
-const canonicalIssueUrl = /^https:\/\/github\.com\/[A-Za-z0-9-]+\/[A-Za-z0-9._-]+\/issues\/[1-9][0-9]*$/;
+const canonicalIssueUrl =
+  /^https:\/\/github\.com\/[A-Za-z0-9-]+\/[A-Za-z0-9._-]+\/issues\/[1-9][0-9]*$/;
 
 function read(relativePath: string): string {
   return readFileSync(resolve(repoRoot, relativePath), "utf8");
@@ -655,25 +656,21 @@ describe("checked Vモデル source assets", () => {
     expect(targetRows.filter((row) => row.source_ref !== semanticSource.get(row.item_id))).toEqual(
       [],
     );
-    const allowedStatuses = new Set([
-      "pending_review",
-      "adopt",
-      "merge",
-      "reference",
-      "defer",
-      "not_applicable",
-      "reject",
-    ]);
+    const allowedStatuses = new Set(
+      "pending_review adopt merge reference defer not_applicable reject".split(" "),
+    );
     expect(targetRows.filter((row) => !allowedStatuses.has(row.target_status))).toEqual([]);
     expect(targetRows.filter((row) => !/^ITEM-TARGET-[A-Z0-9-]+$/.test(row.edge_id))).toEqual([]);
     expect(targetRows.filter((row) => !/^[a-f0-9]{64}$/.test(row.source_digest))).toEqual([]);
     expect(targetRows.filter((row) => !row.判断理由 || !row.issue)).toEqual([]);
-    expect(targetRows.filter((row) => row.target_status === "pending_review" &&
-      [row.target_kind, row.target_ref, row.issue].some((value) => value !== "—"))).toEqual([]);
-    expect(targetRows.filter((row) => ["adopt", "merge", "reference", "defer"].includes(
-      row.target_status,
-    ) && (row.target_kind === "—" || row.target_ref === "—"))).toEqual([]);
-    expect(targetRows.filter((row) => row.target_status === "defer" &&
-      !canonicalIssueUrl.test(row.issue))).toEqual([]);
+    const pending = targetRows.filter((row) => row.target_status === "pending_review");
+    const pendingFields = pending.flatMap((row) => [row.target_kind, row.target_ref, row.issue]);
+    expect(pendingFields.every((value) => value === "—")).toBe(true);
+    const resolved = targetRows.filter((row) =>
+      ["adopt", "merge", "reference", "defer"].includes(row.target_status),
+    );
+    expect(resolved.every((row) => row.target_kind !== "—" && row.target_ref !== "—")).toBe(true);
+    const deferred = targetRows.filter((row) => row.target_status === "defer");
+    expect(deferred.every((row) => canonicalIssueUrl.test(row.issue))).toBe(true);
   });
 });
