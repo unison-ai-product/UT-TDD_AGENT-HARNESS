@@ -19,6 +19,7 @@ import {
   buildGateSelectionFixture,
   buildLineBaselineGrowthFixture,
   canonicalPath,
+  captureWorktreeObservation,
   changedPaths,
   checkWithGates,
   cleanFixture,
@@ -28,7 +29,7 @@ import {
   type Fixture,
   type InjectedGate,
   injectedGate,
-  isScratchPreviewRoot,
+  isFixtureLinkedPreviewRoot,
   removeFixturePreviewWorktree,
   runMerge,
   SMALL_BASELINE,
@@ -45,7 +46,12 @@ const gitFault = vi.hoisted(() => ({
   active: false,
   needles: [] as string[],
   hits: 0,
-  mergeBases: [] as Array<{ repoRoot: string; sha: string }>,
+  mergeBases: [] as Array<{
+    repoRoot: string;
+    sha: string;
+    commonDir: string;
+    registeredWorktreePaths: string[];
+  }>,
   mergeTreeCalls: [] as string[][],
   commitTreeCalls: [] as string[][],
 }));
@@ -90,7 +96,16 @@ vi.mock("node:child_process", async (importOriginal) => {
       ) {
         const rootIndex = commandArgs.indexOf("-C");
         const repoRoot = rootIndex >= 0 ? String(commandArgs[rootIndex + 1]) : "";
-        gitFault.mergeBases.push({ repoRoot, sha: String(output).trim() });
+        const observation = captureWorktreeObservation(repoRoot, (args) =>
+          String(
+            actual.execFileSync("git", args, {
+              encoding: "utf8",
+              windowsHide: true,
+              stdio: ["ignore", "pipe", "pipe"],
+            }),
+          ),
+        );
+        gitFault.mergeBases.push({ sha: String(output).trim(), ...observation });
       }
       return output;
     },
@@ -484,12 +499,19 @@ describe.sequential("review merge gate baseline recompute (Issue #1559)", {
     );
     expect(run.merges).toBe(0);
     expect(
-      gitFault.mergeBases.some((entry) => {
-        return (
-          isScratchPreviewRoot(entry.repoRoot, testFixture) && entry.sha === testFixture.mainSha
-        );
-      }),
+      gitFault.mergeBases.some(
+        (entry) =>
+          isFixtureLinkedPreviewRoot(entry, testFixture) && entry.sha === testFixture.mainSha,
+      ),
     ).toBe(true);
+    const previewRoots = gitFault.mergeBases.filter((entry) =>
+      isFixtureLinkedPreviewRoot(entry, testFixture),
+    );
+    expect(previewRoots.length).toBeGreaterThan(0);
+    const registeredAfterDecision = new Set(worktreePaths(testFixture.work).map(canonicalPath));
+    for (const entry of previewRoots) {
+      expect(registeredAfterDecision.has(entry.repoRoot)).toBe(false);
+    }
   });
 
   afterAll(() => {

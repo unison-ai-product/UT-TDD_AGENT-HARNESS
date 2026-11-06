@@ -83,6 +83,17 @@ export function canonicalPath(path: string): string {
   return process.platform === "win32" ? canonical.toLowerCase() : canonical;
 }
 
+function canonicalExistingPath(path: string): string {
+  const absolutePath = resolve(path);
+  if (!existsSync(absolutePath)) {
+    throw new Error(
+      `expected path to exist before canonicalization: ${JSON.stringify(absolutePath)}`,
+    );
+  }
+  const canonical = realpathSync.native(absolutePath);
+  return process.platform === "win32" ? canonical.toLowerCase() : canonical;
+}
+
 export function canonicalGitCommonDir(path: string): string {
   return canonicalPath(path);
 }
@@ -344,14 +355,14 @@ export function buildFixture(baseFiles: Record<string, string>, branchFiles: Bra
     return {
       scratchRoot,
       base,
-      work,
+      work: canonicalExistingPath(work),
       baseSha,
       headSha,
       mainSha,
       gitCommonDir: canonicalGitCommonDir(
         resolve(work, git(work, "rev-parse", "--git-common-dir")),
       ),
-      initialWorktreePaths: worktreePaths(work),
+      initialWorktreePaths: worktreePaths(work).map(canonicalExistingPath),
       ownedPreviewPaths: new Set(),
     };
   } catch (error) {
@@ -704,13 +715,34 @@ export function expectGitFailureDenied(
   expect(fault.hits).toBe(1);
 }
 
-export function isScratchPreviewRoot(repoRoot: string, fixture: Fixture): boolean {
-  const candidate = resolve(repoRoot);
-  const samePath = (left: string, right: string) => canonicalPath(left) === canonicalPath(right);
+export function captureWorktreeObservation(
+  repoRoot: string,
+  executeGit: (args: string[]) => string,
+): { repoRoot: string; commonDir: string; registeredWorktreePaths: string[] } {
+  const commonDir = canonicalExistingPath(
+    executeGit(["-C", repoRoot, "rev-parse", "--path-format=absolute", "--git-common-dir"]).trim(),
+  );
+  const worktrees = executeGit(["-C", repoRoot, "worktree", "list", "--porcelain"]);
+  const registeredWorktreePaths = worktrees
+    .split(/\r?\n/)
+    .filter((line) => line.startsWith("worktree "))
+    .map((line) => canonicalExistingPath(line.slice("worktree ".length)));
+  return { repoRoot: canonicalExistingPath(repoRoot), commonDir, registeredWorktreePaths };
+}
+
+export function isFixtureLinkedPreviewRoot(
+  observation: {
+    repoRoot: string;
+    commonDir: string;
+    registeredWorktreePaths: string[];
+  },
+  fixture: Fixture,
+): boolean {
+  const initialPaths = new Set([fixture.work, ...fixture.initialWorktreePaths]);
   return (
-    samePath(dirname(canonicalPath(candidate)), fixture.scratchRoot) &&
-    !samePath(candidate, fixture.base) &&
-    !samePath(candidate, fixture.work)
+    !initialPaths.has(observation.repoRoot) &&
+    observation.commonDir === fixture.gitCommonDir &&
+    observation.registeredWorktreePaths.includes(observation.repoRoot)
   );
 }
 
