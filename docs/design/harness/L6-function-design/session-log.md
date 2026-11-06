@@ -279,7 +279,7 @@ field は `type`・`command`・`timeout`・`statusMessage`・`async`・`addition
 | 下限の正本 | `src/runtime/claude-version-floor.ts` の `CLAUDE_CODE_VERSION_FLOOR` | `string` (`"2.1.295"`)。この module は定数だけを持ち、関数を持たない。 |
 | 版の比較 | `src/runtime/claude-version-check.ts` の `evaluateClaudeVersion(version: string | null): "ok" | "below" | "unknown"` | 下限は `claude-version-floor.ts` から import する (引数で受けない)。`x.y.z` の数値で比べ、読めない値は `"unknown"`。 |
 | transcript から版を読む | 同じ module の `readTranscriptClaudeVersion(transcriptPath: string | undefined): string | null` | 最後の message の行の `version` を返す。読めなければ `null`。 |
-| doctor の check | `src/doctor/toolchain.ts` の `checkClaudeVersionFloor(deps?: { readPathClaudeVersion?: () => string | null })` | 既定の `readPathClaudeVersion` は PATH の `claude --version` を呼ぶ。テストはこの引数で差し替え、実際の Claude Code を起動しない。 |
+| doctor の check | 新しい module `src/doctor/claude-version-floor-check.ts` の `checkClaudeVersionFloor(deps?: { readPathClaudeVersion?: () => string | null })` | 既定の `readPathClaudeVersion` は PATH の `claude --version` を呼ぶ。テストはこの引数で差し替え、実際の Claude Code を起動しない。doctor への登録 (既存の check の一覧への追加) は実装 PR で行う。既存の module (`src/doctor/toolchain.ts` など) に export を足す形にしないのは、登録と Red の PR で既存の src を変えずに済ませるためである (`design-protection-diff-gate.md` §10.3 の手順 1' は、新しい module の stub だけを許す)。 |
 | adapter の生成 | `src/setup/templates.ts` | 下限は `claude-version-floor.ts` から import して本文に埋める。 |
 
 下限の定数を関数と別の module に置くのは、`vi.mock` で定数の module を差し替えたときに、比較・doctor・adapter の生成がそろって追従することを確かめるためである (同じ module の中の参照は `vi.mock` では差し替わらない)。
