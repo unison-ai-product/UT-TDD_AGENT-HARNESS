@@ -18,6 +18,7 @@ import {
   buildFunctionExcessFixture,
   buildGateSelectionFixture,
   buildLineBaselineGrowthFixture,
+  canonicalPath,
   changedPaths,
   checkWithGates,
   cleanFixture,
@@ -365,8 +366,8 @@ describe.sequential("review merge gate baseline recompute (Issue #1559)", {
     expect(gateEntries).toContainEqual(
       expect.objectContaining({ name: "code-size", ok: true, findings: [] }),
     );
-    expect(worktreePaths(testFixture.work).sort()).toEqual(
-      testFixture.initialWorktreePaths.slice().sort(),
+    expect(worktreePaths(testFixture.work).map(canonicalPath).sort()).toEqual(
+      testFixture.initialWorktreePaths.map(canonicalPath).sort(),
     );
   });
 

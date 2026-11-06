@@ -75,9 +75,16 @@ export function git(root: string, ...args: string[]): string {
   }).trim();
 }
 
-export function canonicalGitCommonDir(path: string): string {
-  const canonical = realpathSync.native(resolve(path));
+export function canonicalPath(path: string): string {
+  const absolutePath = resolve(path);
+  // A missing owned preview is still removable from the in-memory registry, but
+  // realpath cannot resolve it. Keep that branch lexical and non-destructive.
+  const canonical = existsSync(absolutePath) ? realpathSync.native(absolutePath) : absolutePath;
   return process.platform === "win32" ? canonical.toLowerCase() : canonical;
+}
+
+export function canonicalGitCommonDir(path: string): string {
+  return canonicalPath(path);
 }
 
 function configure(root: string): void {
@@ -289,8 +296,10 @@ export function verifyFunctionExcessFixture(fixture: Fixture): void {
 
 function fixtureScratchRoot(): string {
   const root = resolve(process.env.UT_TDD_TEST_SCRATCH_ROOT ?? tmpdir());
-  if (root.toLowerCase() === parse(root).root.toLowerCase()) {
-    throw new Error("UT_TDD_TEST_SCRATCH_ROOT must not be a filesystem root");
+  if (canonicalPath(root) === canonicalPath(parse(root).root)) {
+    throw new Error(
+      `UT_TDD_TEST_SCRATCH_ROOT must not be a filesystem root: expectedNonRoot=true actual=${JSON.stringify(canonicalPath(root))}`,
+    );
   }
   if (!existsSync(root) || !statSync(root).isDirectory()) {
     throw new Error(`UT_TDD_TEST_SCRATCH_ROOT must be an existing directory: ${root}`);
@@ -417,8 +426,9 @@ export function createPreviewWorktree(fixture: Fixture): { path: string; treeSha
     git(fixture.work, "worktree", "add", "-q", "--detach", absolutePath, commitSha);
     return { path: absolutePath, treeSha };
   } catch (error) {
+    const absolutePathIdentity = canonicalPath(absolutePath);
     const registered = worktreePaths(fixture.work).some(
-      (candidate) => resolve(candidate).toLowerCase() === absolutePath.toLowerCase(),
+      (candidate) => canonicalPath(candidate) === absolutePathIdentity,
     );
     if (registered) removeFixturePreviewWorktree(fixture, absolutePath);
     else {
@@ -432,36 +442,55 @@ export function createPreviewWorktree(fixture: Fixture): { path: string; treeSha
 export function removeFixturePreviewWorktree(fixture: Fixture, previewPath: string): void {
   const absolutePath = resolve(previewPath);
   const scratchRoot = resolve(fixture.scratchRoot);
-  const ownsPath = [...fixture.ownedPreviewPaths].some(
-    (ownedPath) => resolve(ownedPath).toLowerCase() === absolutePath.toLowerCase(),
+  const absolutePathExists = existsSync(absolutePath);
+  const absolutePathIdentity = canonicalPath(absolutePath);
+  const ownedPath = [...fixture.ownedPreviewPaths].find(
+    (candidate) => canonicalPath(candidate) === absolutePathIdentity,
   );
-  if (
-    !ownsPath ||
-    dirname(absolutePath).toLowerCase() !== scratchRoot.toLowerCase() ||
-    !basename(absolutePath).startsWith("ut-tdd-rvmg-preview-")
-  ) {
-    throw new Error("refusing to remove a preview worktree outside this fixture");
+  const structuralPath = absolutePathExists ? realpathSync.native(absolutePath) : absolutePath;
+  if (ownedPath === undefined) {
+    const expectedOwnedPaths = [...fixture.ownedPreviewPaths].map(canonicalPath);
+    throw new Error(
+      `refusing to remove a preview worktree outside this fixture: expectedOwnedPaths=${JSON.stringify(expectedOwnedPaths)} actual=${JSON.stringify(absolutePathIdentity)}`,
+    );
   }
-  if (!existsSync(absolutePath)) {
-    fixture.ownedPreviewPaths.delete(absolutePath);
+  const expectedParent = canonicalPath(scratchRoot);
+  const actualParent = canonicalPath(dirname(structuralPath));
+  if (actualParent !== expectedParent) {
+    throw new Error(
+      `refusing to remove a preview worktree outside this fixture: expectedParent=${JSON.stringify(expectedParent)} actualParent=${JSON.stringify(actualParent)}`,
+    );
+  }
+  const expectedBasenamePrefix = "ut-tdd-rvmg-preview-";
+  const actualBasename = basename(structuralPath);
+  if (!actualBasename.startsWith(expectedBasenamePrefix)) {
+    throw new Error(
+      `refusing to remove a preview worktree outside this fixture: expectedBasenamePrefix=${JSON.stringify(expectedBasenamePrefix)} actualBasename=${JSON.stringify(actualBasename)}`,
+    );
+  }
+  if (!absolutePathExists) {
+    fixture.ownedPreviewPaths.delete(ownedPath);
     return;
   }
   const common = resolve(absolutePath, git(absolutePath, "rev-parse", "--git-common-dir"));
   const canonicalCommon = canonicalGitCommonDir(common);
-  if (canonicalCommon !== fixture.gitCommonDir) {
+  const expectedCommon = canonicalGitCommonDir(fixture.gitCommonDir);
+  if (canonicalCommon !== expectedCommon) {
     throw new Error(
-      `refusing to remove a preview worktree with a different git common directory: expected=${JSON.stringify(fixture.gitCommonDir)} actual=${JSON.stringify(canonicalCommon)}`,
+      `refusing to remove a preview worktree with a different git common directory: expected=${JSON.stringify(expectedCommon)} actual=${JSON.stringify(canonicalCommon)}`,
     );
   }
-  if (
-    !worktreePaths(fixture.work).some(
-      (candidate) => resolve(candidate).toLowerCase() === absolutePath.toLowerCase(),
-    )
-  ) {
-    throw new Error("refusing to remove a path not registered as this fixture's worktree");
+  const registeredPath = worktreePaths(fixture.work).find(
+    (candidate) => canonicalPath(candidate) === absolutePathIdentity,
+  );
+  if (registeredPath === undefined) {
+    const registeredPaths = worktreePaths(fixture.work).map(canonicalPath);
+    throw new Error(
+      `refusing to remove a path not registered as this fixture's worktree: expectedRegisteredPaths=${JSON.stringify(registeredPaths)} actual=${JSON.stringify(absolutePathIdentity)}`,
+    );
   }
-  git(fixture.work, "worktree", "remove", absolutePath);
-  fixture.ownedPreviewPaths.delete(absolutePath);
+  git(fixture.work, "worktree", "remove", registeredPath);
+  fixture.ownedPreviewPaths.delete(ownedPath);
 }
 
 export function verifyConflictAndCleanPreview(
@@ -503,7 +532,9 @@ export function verifyConflictAndCleanPreview(
     return preview.treeSha;
   } finally {
     removeFixturePreviewWorktree(fixture, preview.path);
-    expect(worktreePaths(fixture.work).sort()).toEqual(fixture.initialWorktreePaths.slice().sort());
+    expect(worktreePaths(fixture.work).map(canonicalPath).sort()).toEqual(
+      fixture.initialWorktreePaths.map(canonicalPath).sort(),
+    );
   }
 }
 
@@ -675,12 +706,9 @@ export function expectGitFailureDenied(
 
 export function isScratchPreviewRoot(repoRoot: string, fixture: Fixture): boolean {
   const candidate = resolve(repoRoot);
-  const samePath = (left: string, right: string) =>
-    process.platform === "win32"
-      ? resolve(left).toLowerCase() === resolve(right).toLowerCase()
-      : resolve(left) === resolve(right);
+  const samePath = (left: string, right: string) => canonicalPath(left) === canonicalPath(right);
   return (
-    samePath(dirname(candidate), fixture.scratchRoot) &&
+    samePath(dirname(canonicalPath(candidate)), fixture.scratchRoot) &&
     !samePath(candidate, fixture.base) &&
     !samePath(candidate, fixture.work)
   );
@@ -689,36 +717,48 @@ export function isScratchPreviewRoot(repoRoot: string, fixture: Fixture): boolea
 export function cleanFixture(fixture: Fixture): void {
   const base = resolve(fixture.base);
   const scratchRoot = resolve(fixture.scratchRoot);
-  if (
-    !basename(base).startsWith("ut-tdd-rvmg-") ||
-    dirname(base).toLowerCase() !== scratchRoot.toLowerCase()
-  ) {
-    throw new Error("refusing to remove a path not created by this fixture");
+  const baseIdentity = canonicalPath(base);
+  const expectedBasePrefix = "ut-tdd-rvmg-";
+  const actualBaseName = basename(baseIdentity);
+  if (!actualBaseName.startsWith(expectedBasePrefix)) {
+    throw new Error(
+      `refusing to remove a path not created by this fixture: expectedBasenamePrefix=${JSON.stringify(expectedBasePrefix)} actualBasename=${JSON.stringify(actualBaseName)}`,
+    );
+  }
+  const expectedParent = canonicalPath(scratchRoot);
+  const actualParent = canonicalPath(dirname(baseIdentity));
+  if (actualParent !== expectedParent) {
+    throw new Error(
+      `refusing to remove a path not created by this fixture: expectedParent=${JSON.stringify(expectedParent)} actualParent=${JSON.stringify(actualParent)}`,
+    );
   }
   for (const previewPath of [...fixture.ownedPreviewPaths]) {
     removeFixturePreviewWorktree(fixture, previewPath);
   }
-  const initial = new Set(fixture.initialWorktreePaths.map((path) => resolve(path).toLowerCase()));
+  const initial = new Set(fixture.initialWorktreePaths.map((path) => canonicalPath(path)));
   const outsidePaths: string[] = [];
+  const basePrefix = baseIdentity.endsWith(sep) ? baseIdentity : `${baseIdentity}${sep}`;
   for (const path of worktreePaths(fixture.work)) {
-    if (initial.has(path.toLowerCase())) continue;
-    if (!path.toLowerCase().startsWith(`${base}${sep}`.toLowerCase())) {
+    const pathIdentity = canonicalPath(path);
+    if (initial.has(pathIdentity)) continue;
+    if (!pathIdentity.startsWith(basePrefix)) {
       outsidePaths.push(path);
       continue;
     }
     if (!existsSync(path)) continue;
     const common = resolve(path, git(path, "rev-parse", "--git-common-dir"));
     const canonicalCommon = canonicalGitCommonDir(common);
-    if (canonicalCommon !== fixture.gitCommonDir) {
+    const expectedCommon = canonicalGitCommonDir(fixture.gitCommonDir);
+    if (canonicalCommon !== expectedCommon) {
       throw new Error(
-        `refusing to remove a linked worktree outside this fixture repository: expected=${JSON.stringify(fixture.gitCommonDir)} actual=${JSON.stringify(canonicalCommon)}`,
+        `refusing to remove a linked worktree outside this fixture repository: expected=${JSON.stringify(expectedCommon)} actual=${JSON.stringify(canonicalCommon)}`,
       );
     }
     git(fixture.work, "worktree", "remove", path);
   }
   if (outsidePaths.length > 0) {
     throw new Error(
-      `refusing to remove fixture storage while linked worktrees remain outside it: ${outsidePaths.join(", ")}`,
+      `refusing to remove fixture storage while linked worktrees remain outside it: expectedBasePrefix=${JSON.stringify(basePrefix)} actualPaths=${JSON.stringify(outsidePaths.map(canonicalPath))}`,
     );
   }
   rmSync(base, { recursive: true });
