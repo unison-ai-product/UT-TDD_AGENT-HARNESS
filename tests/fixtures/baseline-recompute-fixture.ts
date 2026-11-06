@@ -204,7 +204,7 @@ export function buildLineBaselineGrowthFixture(): Fixture {
   );
 }
 
-/** CANDIDATE-U-RVMG-051(b) analyzer oracle; kept independent of the Red rejection assertion. */
+/** U-RVMG-051(b) analyzer oracle; kept independent of the Red rejection assertion. */
 export function verifyLineBaselineGrowthFixture(fixture: Fixture): void {
   const preview = createPreviewWorktree(fixture);
   try {

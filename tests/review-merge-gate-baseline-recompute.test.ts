@@ -343,13 +343,13 @@ describe.sequential("review merge gate baseline recompute (Issue #1559)", {
     }
   });
 
-  it.fails("CANDIDATE-U-RVMG-050: finding 0 件の injected gate なら checker は許可する", () => {
+  it.fails("U-RVMG-050: finding 0 件の injected gate なら checker は許可する", () => {
     expect(
       checkWithGates(fixture("small").work, fixture("small").headSha, [injectedGate(null)]),
     ).toBeNull();
   });
 
-  it.fails("CANDIDATE-U-RVMG-050: runPrMerge は preview receipt を記録して merge する", () => {
+  it.fails("U-RVMG-050: runPrMerge は preview receipt を記録して merge する", () => {
     const testFixture = fixture("wrapper");
     const run = runMerge(testFixture);
     expect(run.result).toMatchObject({ ok: true, decision: "merge" });
@@ -386,7 +386,7 @@ describe.sequential("review merge gate baseline recompute (Issue #1559)", {
     );
   });
 
-  it.fails("CANDIDATE-U-RVMG-051(a): baseline に無い上限超過 finding は拒否する", () => {
+  it.fails("U-RVMG-051(a): baseline に無い上限超過 finding は拒否する", () => {
     expect(
       checkWithGates(fixture("required").work, fixture("required").headSha, [
         injectedGate("code-size-required"),
@@ -394,7 +394,7 @@ describe.sequential("review merge gate baseline recompute (Issue #1559)", {
     ).toBe("baseline_conflict_recomputed:fixture-gate=code-size-required");
   });
 
-  it.fails("CANDIDATE-U-RVMG-051(b): over=0 stale=0 でも baseline-grown は拒否する", () => {
+  it.fails("U-RVMG-051(b): over=0 stale=0 でも baseline-grown は拒否する", () => {
     expect(
       checkWithGates(
         fixture("line-baseline-growth").work,
@@ -413,7 +413,7 @@ describe.sequential("review merge gate baseline recompute (Issue #1559)", {
     ).toBe("baseline_conflict_recomputed:code-size=code-size-baseline-grown");
   });
 
-  it.fails("CANDIDATE-U-RVMG-051(c): stale-baseline finding は拒否する", () => {
+  it.fails("U-RVMG-051(c): stale-baseline finding は拒否する", () => {
     expect(
       checkWithGates(fixture("small").work, fixture("small").headSha, [
         injectedGate("code-size-stale-baseline", { stale: 1 }),
@@ -421,7 +421,7 @@ describe.sequential("review merge gate baseline recompute (Issue #1559)", {
     ).toBe("baseline_conflict_recomputed:fixture-gate=code-size-stale-baseline");
   });
 
-  it.fails("CANDIDATE-U-RVMG-052(b): merge-tree 非対応時は unknown で拒否する", () => {
+  it.fails("U-RVMG-052(b): merge-tree 非対応時は unknown で拒否する", () => {
     gitFault.active = true;
     gitFault.needles = ["--version"];
     const testFixture = fixture("small");
@@ -431,7 +431,7 @@ describe.sequential("review merge gate baseline recompute (Issue #1559)", {
     expect(gitFault.hits).toBeGreaterThan(0);
   });
 
-  it.fails("CANDIDATE-U-RVMG-052(a): merge-tree content conflict は従来どおり拒否する", () => {
+  it.fails("U-RVMG-052(a): merge-tree content conflict は従来どおり拒否する", () => {
     const testFixture = fixture("content-conflict");
     const calls: string[] = [];
     gitFault.mergeTreeCalls = [];
@@ -444,15 +444,15 @@ describe.sequential("review merge gate baseline recompute (Issue #1559)", {
     expect(calls).toEqual([]);
   });
 
-  it.fails("CANDIDATE-U-RVMG-052(c): commit-tree / worktree 失敗時は unknown で拒否する", () => {
+  it.fails("U-RVMG-052(c): commit-tree / worktree 失敗時は unknown で拒否する", () => {
     expectGitFailureDenied(fixture("small"), ["commit-tree"], gitFault);
   });
 
-  it.fails("CANDIDATE-U-RVMG-052(c): worktree add 失敗時は unknown で拒否する", () => {
+  it.fails("U-RVMG-052(c): worktree add 失敗時は unknown で拒否する", () => {
     expectGitFailureDenied(fixture("small"), ["worktree", "add"], gitFault);
   });
 
-  it.fails("CANDIDATE-U-RVMG-052(d): gate check 例外は unknown で拒否する", () => {
+  it.fails("U-RVMG-052(d): gate check 例外は unknown で拒否する", () => {
     const testFixture = fixture("small");
     const calls: string[] = [];
     const run = runMerge(testFixture, false, (repoRoot, headSha) =>
@@ -463,25 +463,25 @@ describe.sequential("review merge gate baseline recompute (Issue #1559)", {
     expect(calls).toEqual(["fixture-gate"]);
   });
 
-  it.fails("CANDIDATE-U-RVMG-053: 実 BASELINE_GATES は両方の check を持つ", () => {
+  it.fails("U-RVMG-053: 実 BASELINE_GATES は両方の check を持つ", () => {
     const gates = BASELINE_GATES as unknown as Array<{ name: string; check?: unknown }>;
     expect(gates.map((gate) => gate.name).sort()).toEqual(["code-size", "doc-split"]);
     for (const gate of gates) expect(typeof gate.check).toBe("function");
   });
 
-  it.fails("CANDIDATE-U-RVMG-053(a): code-size のみ再計算する", () => {
+  it.fails("U-RVMG-053(a): code-size のみ再計算する", () => {
     expectGateSelection(fixture("selection-code"), ["code-size"]);
   });
 
-  it.fails("CANDIDATE-U-RVMG-053(b): doc-split のみ再計算する", () => {
+  it.fails("U-RVMG-053(b): doc-split のみ再計算する", () => {
     expectGateSelection(fixture("selection-doc"), ["doc-split"]);
   });
 
-  it.fails("CANDIDATE-U-RVMG-053(c): 両gateを再計算する", () => {
+  it.fails("U-RVMG-053(c): 両gateを再計算する", () => {
     expectGateSelection(fixture("selection-both"), ["code-size", "doc-split"]);
   });
 
-  it("CANDIDATE-U-RVMG-053(d): 非競合時は再計算しない", () => {
+  it("U-RVMG-053(d): 非競合時は再計算しない", () => {
     gitFault.mergeTreeCalls = [];
     gitFault.commitTreeCalls = [];
     expectGateSelection(fixture("selection-none"), []);
@@ -489,7 +489,7 @@ describe.sequential("review merge gate baseline recompute (Issue #1559)", {
     expect(gitFault.commitTreeCalls).toEqual([]);
   });
 
-  it.fails("CANDIDATE-U-RVMG-054: 比較元は元 merge-base でなく現 main", () => {
+  it.fails("U-RVMG-054: 比較元は元 merge-base でなく現 main", () => {
     const testFixture = fixture("function-excess");
     gitFault.mergeBases = [];
     const run = runMerge(testFixture);
