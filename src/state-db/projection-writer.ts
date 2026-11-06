@@ -2433,17 +2433,17 @@ export function rebuildHarnessDb(input: RebuildHarnessDbInput = {}): RebuildHarn
     return result;
   };
   try {
-    time("migrate", () => migrate(db));
     const relationGraph =
       input.relationGraph ??
       time("load-relation-graph", () => defaultRelationGraphProjection(repoRoot));
     const documentExports =
       input.documentExports ??
       time("load-document-exports", () => defaultDocumentExportProjection(repoRoot));
-    // Atomic rebuild: truncate + re-project run inside a single transaction so a
-    // mid-rebuild failure rolls back to the prior committed projection instead of
-    // leaving the DB truncated or half-populated (DB rebuild atomicity).
+    // Atomic rebuild: migrations, truncate, and re-project run in one transaction,
+    // so failures restore the prior schema/version and committed projection rather
+    // than leaving the DB truncated or half-populated (DB rebuild atomicity).
     runSqliteTransaction(db, () => {
+      time("migrate", () => migrate(db));
       time("truncate", () => truncateProjectionTables(db));
       const plans = time("plans", () => projectPlans(repoRoot, db));
       if (hasVmodelAuthoring(repoRoot)) {

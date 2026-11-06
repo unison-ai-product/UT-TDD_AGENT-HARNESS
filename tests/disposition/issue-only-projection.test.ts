@@ -7,7 +7,6 @@ import {
   readdirSync,
   readFileSync,
   rmSync,
-  writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
@@ -146,7 +145,7 @@ describe("U-DISPPTR-001 issue-only projection", () => {
     }
   });
 
-  it.fails("loads the issue-only item-target ledger without a plan_id header", () => {
+  it("loads the issue-only item-target ledger without a plan_id header", () => {
     const bundle = Object.fromEntries(
       issueOnlyCatalogPaths.map((catalogPath) => [
         catalogPath,
@@ -167,7 +166,7 @@ describe("U-DISPPTR-001 issue-only projection", () => {
     expect(loaded?.itemTargetEdges).toHaveLength(163);
   });
 
-  it.fails("projects every issue-only target column unchanged", () => {
+  it("projects every issue-only target column unchanged", () => {
     const db = openHarnessDb(":memory:");
     try {
       migrate(db);
@@ -247,13 +246,9 @@ function createIssueOnlyFixture(): string {
     makeDirectoriesWritable(join(fixtureRoot, "docs"));
     const issueOnlyLedgerFile = join(fixtureRoot, "docs/governance/vmodel-item-target-ledger.md");
     const originalLedger = readFileSync(issueOnlyLedgerFile, "utf8");
-    const issueOnlyLedger = originalLedger.replace(
-      /\|\s*判断理由\s*\|\s*plan_id\s*\|/,
-      "| 判断理由 | issue |",
-    );
-    if (issueOnlyLedger === originalLedger) throw new Error("fixture plan_id header not found");
-    chmodSync(issueOnlyLedgerFile, 0o644);
-    writeFileSync(issueOnlyLedgerFile, issueOnlyLedger, "utf8");
+    if (!/\|\s*判断理由\s*\|\s*issue\s*\|/.test(originalLedger)) {
+      throw new Error("issue-only fixture requires the issue header");
+    }
     execFileSync("git", ["init", "--quiet"], { cwd: fixtureRoot, stdio: "ignore" });
     execFileSync("git", ["add", "--", "docs"], { cwd: fixtureRoot, stdio: "ignore" });
     execFileSync(
