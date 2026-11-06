@@ -12,6 +12,42 @@ function source(): string {
   return readFileSync(resolve(process.cwd(), "docs/process/vmodel-contract.yaml"), "utf8");
 }
 
+type ContractRecord = {
+  source_plan?: string;
+  layers: Array<Record<string, unknown>>;
+  forward_workflow: {
+    pair_reciprocity_exception_contracts: Array<Record<string, unknown>>;
+  };
+};
+
+function issueBackedContract(): ContractRecord {
+  const raw = YAML.parse(source()) as ContractRecord;
+  delete raw.source_plan;
+  for (const layer of raw.layers) {
+    const layerId = String(layer.layer);
+    if (!/^L(?:[89]|1[0-4])$/.test(layerId)) continue;
+    layer.verification_issue = `https://github.com/example/vmodel/issues/${layerId.slice(1)}`;
+    delete layer.verification_plan_id;
+  }
+  for (const exception of raw.forward_workflow.pair_reciprocity_exception_contracts) {
+    delete exception.required_backlinks;
+  }
+  return raw;
+}
+
+function legacyContractWithInvalidVerificationIssue(): ContractRecord {
+  const raw = YAML.parse(source()) as ContractRecord;
+  for (const layer of raw.layers) {
+    const layerId = String(layer.layer);
+    if (!/^L(?:[89]|1[0-4])$/.test(layerId)) continue;
+    layer.verification_issue = `https://github.com/example/vmodel/issues/${layerId.slice(1)}`;
+  }
+  const l8 = raw.layers.find((layer) => layer.layer === "L8");
+  if (!l8) throw new Error("L8 fixture missing");
+  l8.verification_issue = "PLAN-L8-01-legacy";
+  return raw;
+}
+
 describe("V-model contract compiler", () => {
   it("U-VMC-001: compiles L8-L14 obligations exactly once with stable digests", () => {
     const text = source();
@@ -58,19 +94,102 @@ describe("V-model contract compiler", () => {
     expect(() => compileRightArmContract(raw)).toThrow("exactly once");
   });
 
-  it("U-VMC-005: rejects a missing plan identity instead of inferring it", () => {
-    const text = source();
-    const raw = YAML.parse(text) as { layers: Array<Record<string, unknown>> };
-    const l8 = raw.layers.find((entry) => entry.layer === "L8") as Record<string, unknown>;
-    delete l8.verification_plan_id;
-    expect(() => compileRightArmContract(raw)).toThrow("verification_plan_id");
+  it.fails("U-VMC-005: rejects a missing verification Issue even when a legacy PLAN is present", () => {
+    const raw = YAML.parse(source()) as { layers: Array<Record<string, unknown>> };
+    for (const layer of raw.layers) {
+      const layerId = String(layer.layer);
+      if (!/^L(?:[89]|1[0-4])$/.test(layerId)) continue;
+      layer.verification_issue = `https://github.com/example/vmodel/issues/${layerId.slice(1)}`;
+    }
+    const l8 = raw.layers.find((entry) => entry.layer === "L8");
+    if (!l8) throw new Error("L8 fixture missing");
+    delete l8.verification_issue;
+    expect(() => compileRightArmContract(raw)).toThrow();
   });
 
-  it("U-VMC-004: validates structured L11 and L13 pair exceptions", () => {
-    const text = source();
-    const result = compileRightArmContract(YAML.parse(text));
-    expect(result.pairExceptions.map((entry) => entry.layer)).toEqual(["L11", "L13"]);
-    expect(result.pairExceptions.every((entry) => entry.requiredBacklinks.length > 0)).toBe(true);
+  it("U-VMC-004 fixture precondition: Issue URLs and pair-exception fields are well-formed", () => {
+    const raw = issueBackedContract();
+    const issues = raw.layers
+      .filter((layer) => /^L(?:[89]|1[0-4])$/.test(String(layer.layer)))
+      .map((layer) => layer.verification_issue);
+    expect(raw.source_plan).toBeUndefined();
+    expect(issues).toEqual(
+      RIGHT_ARM_LAYERS.map((layer) => `https://github.com/example/vmodel/issues/${layer.slice(1)}`),
+    );
+    expect(raw.layers.filter((layer) => "verification_issue" in layer)).toHaveLength(7);
+    expect(
+      raw.layers
+        .filter((layer) => /^L(?:[89]|1[0-4])$/.test(String(layer.layer)))
+        .every((layer) => !("verification_plan_id" in layer)),
+    ).toBe(true);
+    expect(
+      raw.forward_workflow.pair_reciprocity_exception_contracts.map((exception) => exception.layer),
+    ).toEqual(["L11", "L13"]);
+    expect(
+      raw.forward_workflow.pair_reciprocity_exception_contracts.every(
+        (exception) =>
+          typeof exception.reason === "string" &&
+          Array.isArray(exception.allowed_pair_layers) &&
+          exception.allowed_pair_layers.length > 0,
+      ),
+    ).toBe(true);
+    expect(
+      raw.forward_workflow.pair_reciprocity_exception_contracts.every(
+        (exception) => !("required_backlinks" in exception),
+      ),
+    ).toBe(true);
+  });
+
+  it.fails("U-VMC-004: compiles Issue-backed obligations and pair exceptions without PLAN backlinks", () => {
+    const raw = issueBackedContract();
+    const expectedExceptions = raw.forward_workflow.pair_reciprocity_exception_contracts.map(
+      (exception) => ({
+        layer: exception.layer,
+        reason: exception.reason,
+        allowedPairLayers: exception.allowed_pair_layers,
+      }),
+    );
+    const result = compileRightArmContract(raw);
+    const compiled = JSON.stringify(result);
+    expect(result.obligations.map((entry) => entry.layer)).toEqual(RIGHT_ARM_LAYERS);
+    expect(
+      raw.layers
+        .filter((layer) => /^L(?:[89]|1[0-4])$/.test(String(layer.layer)))
+        .every((layer) => compiled.includes(String(layer.verification_issue))),
+    ).toBe(true);
+    expect(compiled).not.toContain("PLAN-");
+    expect(
+      result.pairExceptions.map(({ layer, reason, allowedPairLayers }) => ({
+        layer,
+        reason,
+        allowedPairLayers,
+      })),
+    ).toEqual(expectedExceptions);
+    expect(result.pairExceptions.every((entry) => !("requiredBacklinks" in entry))).toBe(true);
+  });
+
+  it("U-VMC-004 invalid Issue fixture precondition: preserves valid legacy fields", () => {
+    const raw = legacyContractWithInvalidVerificationIssue();
+    const rightArm = raw.layers.filter((layer) => /^L(?:[89]|1[0-4])$/.test(String(layer.layer)));
+    expect(rightArm).toHaveLength(7);
+    expect(rightArm.every((layer) => typeof layer.verification_plan_id === "string")).toBe(true);
+    expect(
+      rightArm
+        .filter((layer) => layer.layer !== "L8")
+        .every((layer) =>
+          String(layer.verification_issue).match(
+            /^https:\/\/github\.com\/example\/vmodel\/issues\/[1-9][0-9]*$/,
+          ),
+        ),
+    ).toBe(true);
+    expect(rightArm.find((layer) => layer.layer === "L8")?.verification_issue).toBe(
+      "PLAN-L8-01-legacy",
+    );
+    expect(raw.forward_workflow.pair_reciprocity_exception_contracts).toHaveLength(2);
+  });
+
+  it.fails("U-VMC-004: rejects a PLAN value instead of compiling through the legacy identity", () => {
+    expect(() => compileRightArmContract(legacyContractWithInvalidVerificationIssue())).toThrow();
   });
 
   it("U-VMC-006: derives both digests from the same raw contract aggregate", () => {

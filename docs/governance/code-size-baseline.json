@@ -79,7 +79,6 @@
   "tests/cli-surface.test.ts": { "lines": 1616, "functionExcess": null },
   "tests/codex-hook-adapter.test.ts": { "lines": 666, "functionExcess": null },
   "tests/consumer-g1-screen-namespace.test.ts": { "lines": 525, "functionExcess": null },
-  "tests/consumer-g14-static.test.ts": { "lines": 513, "functionExcess": null },
   "tests/consumer-local-runtime-admission.test.ts": { "lines": 889, "functionExcess": null },
   "tests/consumer-node-runtime-closure-red.test.ts": { "lines": 900, "functionExcess": null },
   "tests/consumer-node-runtime-physical.test.ts": { "lines": 816, "functionExcess": null },
