@@ -17,7 +17,8 @@ export interface ProjectHookViolation {
     | "missing_hook"
     | "missing_project_dir"
     | "shell_form"
-    | "missing_block_on_failure"
+    | "missing_on_failure_block"
+    | "legacy_block_on_failure"
     | "missing_async_rewake"
     | "tracked_permissions"
     | "forbidden_path";
@@ -33,7 +34,8 @@ interface HookCommand {
   type?: string;
   command?: unknown;
   args?: unknown;
-  blockOnFailure?: boolean;
+  onFailure?: unknown;
+  blockOnFailure?: unknown;
   asyncRewake?: boolean;
 }
 
@@ -55,7 +57,7 @@ interface RequiredProjectHook {
   wrapperCommand: string;
   sourceArgs: readonly string[];
   wrapperArgs: readonly string[];
-  blockOnFailure?: boolean;
+  onFailure?: "block";
   asyncRewake?: boolean;
 }
 
@@ -80,7 +82,7 @@ export const REQUIRED = [
     wrapperCommand: wrapperCommand("hook agent-guard"),
     sourceArgs: args(`\${CLAUDE_PROJECT_DIR}/.claude/hooks/agent-guard.ts`),
     wrapperArgs: args(WRAPPER_CLI, "hook", "agent-guard"),
-    blockOnFailure: true,
+    onFailure: "block",
   },
   {
     id: "work-guard",
@@ -90,7 +92,7 @@ export const REQUIRED = [
     wrapperCommand: wrapperCommand("hook work-guard"),
     sourceArgs: args(`\${CLAUDE_PROJECT_DIR}/.claude/hooks/work-guard.ts`),
     wrapperArgs: args(WRAPPER_CLI, "hook", "work-guard"),
-    blockOnFailure: true,
+    onFailure: "block",
   },
   {
     id: "session-start",
@@ -219,6 +221,9 @@ export function analyzeProjectHooks(docs: ProjectHookDoc[]): ProjectHookResult {
       for (const entry of entries ?? []) {
         for (const hook of entry.hooks ?? []) {
           const invocation = parseHookInvocation(hook);
+          if (Object.hasOwn(hook, "blockOnFailure")) {
+            violations.push({ file: doc.file, hook: event, reason: "legacy_block_on_failure" });
+          }
           if (invocation && FORBIDDEN_PATH_RE.test(invocation.display)) {
             violations.push({ file: doc.file, hook: event, reason: "forbidden_path" });
           }
@@ -270,11 +275,11 @@ export function analyzeProjectHooks(docs: ProjectHookDoc[]): ProjectHookResult {
           if (FORBIDDEN_PATH_RE.test(invocation.display)) {
             violations.push({ file: doc.file, hook: required.event, reason: "forbidden_path" });
           }
-          if (required.blockOnFailure && hook.blockOnFailure !== true) {
+          if (required.onFailure && hook.onFailure !== required.onFailure) {
             violations.push({
               file: doc.file,
               hook: required.event,
-              reason: "missing_block_on_failure",
+              reason: "missing_on_failure_block",
             });
           }
           if (required.asyncRewake && hook.asyncRewake !== true) {
