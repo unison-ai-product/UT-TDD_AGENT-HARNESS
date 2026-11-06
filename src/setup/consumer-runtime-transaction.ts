@@ -92,7 +92,7 @@ function writeRuntimeLauncher(snapshot: RuntimeLauncherSnapshot): boolean {
     }
 
     renameSync(stagePath, snapshot.launcherPath);
-    rmSync(stageDirectory, { recursive: false, force: false });
+    rmdirSync(stageDirectory);
     stageDirectory = null;
     return true;
   } catch (error) {
