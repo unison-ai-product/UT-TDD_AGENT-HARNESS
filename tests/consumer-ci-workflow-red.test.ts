@@ -19,6 +19,7 @@ type WorkflowStep = Record<string, unknown> & {
   run?: string;
   uses?: string;
   if?: string;
+  env?: Record<string, unknown>;
   with?: Record<string, unknown>;
 };
 
