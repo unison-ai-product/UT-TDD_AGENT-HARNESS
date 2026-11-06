@@ -116,4 +116,4 @@ doc-split gate と code-size gate は、既存の超過を `docs/governance/*-ba
 
 ### §6.5 oracle 対応
 
-`CANDIDATE-U-RVMG-047`〜`049` を `docs/test-design/harness/L7-unit-test-design.md` の「同じ head の古い check run (Issue #1104)」の表に置く (§6 の oracle も同じ表に追記し、本書の対にする)。実テストは `tests/review-merge-gate.test.ts`。 §6.6 の oracle は `docs/test-design/harness/L7-merge-baseline-recompute-test-design.md` の `CANDIDATE-U-RVMG-050`〜`054` に置く (共有の `L7-unit-test-design.md` には足さない)。
+`CANDIDATE-U-RVMG-047`〜`049` を `docs/test-design/harness/L7-unit-test-design.md` の「同じ head の古い check run (Issue #1104)」の表に置く (§6 の oracle も同じ表に追記し、本書の対にする)。実テストは `tests/review-merge-gate.test.ts`。 §6.6 の oracle は `docs/test-design/harness/L7-merge-baseline-recompute-test-design.md` の `U-RVMG-050`〜`054` に置く (共有の `L7-unit-test-design.md` には足さない)。
