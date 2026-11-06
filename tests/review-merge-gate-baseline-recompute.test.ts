@@ -466,7 +466,7 @@ describe.sequential("review merge gate baseline recompute (Issue #1559)", {
     expectGateSelection(fixture("selection-both"), ["code-size", "doc-split"]);
   });
 
-  it.fails("CANDIDATE-U-RVMG-053(d): 非競合時は再計算しない", () => {
+  it("CANDIDATE-U-RVMG-053(d): 非競合時は再計算しない", () => {
     expectGateSelection(fixture("selection-none"), []);
   });
 
