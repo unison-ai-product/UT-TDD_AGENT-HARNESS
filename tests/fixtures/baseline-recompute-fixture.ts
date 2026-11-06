@@ -455,6 +455,14 @@ export function gateSelectionGates(calls: string[]): InjectedGate[] {
   ];
 }
 
+export function expectGateSelection(testFixture: Fixture, expected: string[]): void {
+  const calls: string[] = [];
+  expect(
+    checkWithGates(testFixture.work, testFixture.headSha, gateSelectionGates(calls)),
+  ).toBeNull();
+  expect(calls.sort()).toEqual(expected);
+}
+
 export const checkWithGates = checkBaselineConflict as unknown as (
   repoRoot: string,
   headSha: string,
@@ -516,6 +524,33 @@ export function runMerge(
   else if (baselineConflictChecker) ports.checkBaselineConflict = baselineConflictChecker;
   const result = runPrMerge({ repoRoot: fixture.work, pr: 1559, now: () => NOW, ports });
   return { result, merges: mergeCount };
+}
+
+export function expectGitFailureDenied(
+  testFixture: Fixture,
+  needles: string[],
+  fault: { active: boolean; needles: string[]; hits: number },
+): void {
+  fault.active = true;
+  fault.needles = needles;
+  fault.hits = 0;
+  const run = runMerge(testFixture);
+  expect(run.result.reason).toMatch(/^baseline_conflict_unknown:/);
+  expect(run.merges).toBe(0);
+  expect(fault.hits).toBe(1);
+}
+
+export function isScratchPreviewRoot(repoRoot: string, fixture: Fixture): boolean {
+  const candidate = resolve(repoRoot);
+  const samePath = (left: string, right: string) =>
+    process.platform === "win32"
+      ? resolve(left).toLowerCase() === resolve(right).toLowerCase()
+      : resolve(left) === resolve(right);
+  return (
+    samePath(dirname(candidate), fixture.scratchRoot) &&
+    !samePath(candidate, fixture.base) &&
+    !samePath(candidate, fixture.work)
+  );
 }
 
 export function cleanFixture(fixture: Fixture): void {
