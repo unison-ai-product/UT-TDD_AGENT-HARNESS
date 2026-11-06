@@ -20,7 +20,7 @@ issue: 1525
 - 一時ディレクトリに git repo を作り、`git worktree add` で linked worktree を作る。実 repo・実 `.git`・実ネットワークは使わない。
 - main の runtime は、テスト用に生成した小さな Release directory と anchor digest から既存の導入経路で入れる。キャッシュは一時 repo の `git-common-dir` 配下に置く。
 - launcher の行 (007 / 008) は、生成された launcher と guard の argv を子プロセスで実行し、stderr と exit code を観測する。
-- rollback 候補 (011) は、一時 repo の main + linked worktree と実 verified Release を用い、production の setup capture/restore transaction を通す。ネットワークを使わず、Linux / Windows の両方で実行できる構成にする。対象はこの一時 repo 内だけとする。
+- rollback 候補 (011) は、#1525 の worktree runtime 導入実装を前提に、一時 repo の main + linked worktree と実 verified Release を用い、production の setup capture/restore transaction を通す。ネットワークを使わず、Linux / Windows の両方で実行できる構成にする。対象はこの一時 repo 内だけとする。
 
 ## 3. 候補の oracle
 
