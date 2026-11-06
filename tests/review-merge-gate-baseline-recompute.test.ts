@@ -29,6 +29,7 @@ import {
   removeFixturePreviewWorktree,
   runMerge,
   SMALL_BASELINE,
+  separatedFile,
   smallFiles,
   TARGET,
   verifyFunctionExcessFixture,
@@ -206,17 +207,17 @@ describe.sequential("review merge gate baseline recompute (Issue #1559)", {
       fixtures.set(`selection-${key}`, buildGateSelectionFixture(key));
     }
 
-    const wrapperBaseline = '{\n  "src/alpha.ts": {"lines": 2, "functionExcess": null}\n}\n';
+    const wrapperBaseline = '{\n  "src/alpha.ts": {"lines": 10, "functionExcess": null}\n}\n';
     fixtures.set(
       "wrapper",
       buildFixture(
         {
-          [TARGET]: "const left = 1;\nconst right = 1;\n",
+          [TARGET]: separatedFile("const left = 1;", "const right = 1;"),
           [CODE_SIZE_BASELINE_PATH]: wrapperBaseline,
         },
         {
-          pr: { [TARGET]: "const left = 2;\nconst right = 1;\n" },
-          main: { [TARGET]: "const left = 1;\nconst right = 2;\n" },
+          pr: { [TARGET]: separatedFile("const left = 2;", "const right = 1;") },
+          main: { [TARGET]: separatedFile("const left = 1;", "const right = 2;") },
         },
       ),
     );

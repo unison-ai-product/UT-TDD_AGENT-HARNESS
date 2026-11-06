@@ -109,8 +109,18 @@ function functionRow(path: string, content: string): string {
 function functionBaseline(a: string, b: string): string {
   return `{
   "src/a.ts": ${a},
+${"\n".repeat(8)}
   "src/b.ts": ${b}
 }\n`;
+}
+
+export function separatedFile(firstLine: string, lastLine: string): string {
+  return [
+    firstLine,
+    ...Array.from({ length: 8 }, (_, index) => `// shared context ${index + 1}`),
+    lastLine,
+    "",
+  ].join("\n");
 }
 
 export function buildFunctionExcessFixture(): Fixture {
@@ -261,38 +271,38 @@ export function buildFixture(baseFiles: Record<string, string>, branchFiles: Bra
 
 export function buildGateSelectionFixture(key: "code" | "doc" | "both" | "none"): Fixture {
   const base = {
-    "src/alpha.ts": "base-src-a\nbase-src-b\n",
-    "docs/alpha.md": "base-doc-a\nbase-doc-b\n",
+    "src/alpha.ts": separatedFile("base-src-a", "base-src-b"),
+    "docs/alpha.md": separatedFile("base-doc-a", "base-doc-b"),
     "docs/governance/code-baseline.json": "{}\n",
     "docs/governance/doc-baseline.json": "{}\n",
   };
   if (key === "code") {
     return buildFixture(base, {
-      pr: { "src/alpha.ts": "pr-src\nbase-src-b\n" },
-      main: { "src/alpha.ts": "base-src-a\nmain-src\n" },
+      pr: { "src/alpha.ts": separatedFile("pr-src", "base-src-b") },
+      main: { "src/alpha.ts": separatedFile("base-src-a", "main-src") },
     });
   }
   if (key === "doc") {
     return buildFixture(base, {
-      pr: { "docs/alpha.md": "pr-doc\nbase-doc-b\n" },
-      main: { "docs/alpha.md": "base-doc-a\nmain-doc\n" },
+      pr: { "docs/alpha.md": separatedFile("pr-doc", "base-doc-b") },
+      main: { "docs/alpha.md": separatedFile("base-doc-a", "main-doc") },
     });
   }
   if (key === "both") {
     return buildFixture(base, {
       pr: {
-        "src/alpha.ts": "pr-src\nbase-src-b\n",
-        "docs/alpha.md": "pr-doc\nbase-doc-b\n",
+        "src/alpha.ts": separatedFile("pr-src", "base-src-b"),
+        "docs/alpha.md": separatedFile("pr-doc", "base-doc-b"),
       },
       main: {
-        "src/alpha.ts": "base-src-a\nmain-src\n",
-        "docs/alpha.md": "base-doc-a\nmain-doc\n",
+        "src/alpha.ts": separatedFile("base-src-a", "main-src"),
+        "docs/alpha.md": separatedFile("base-doc-a", "main-doc"),
       },
     });
   }
   return buildFixture(base, {
-    pr: { "src/alpha.ts": "pr-src\nbase-src-b\n" },
-    main: { "docs/alpha.md": "base-doc-a\nmain-doc\n" },
+    pr: { "src/alpha.ts": separatedFile("pr-src", "base-src-b") },
+    main: { "docs/alpha.md": separatedFile("base-doc-a", "main-doc") },
   });
 }
 
@@ -378,12 +388,12 @@ export function smallFiles(
 } {
   return {
     base: {
-      [TARGET]: "base-a\nbase-b\n",
+      [TARGET]: separatedFile("base-a", "base-b"),
       [SMALL_BASELINE]: '{"baseline":1}\n',
     },
     branches: {
-      pr: { [TARGET]: `${prLine}\nbase-b\n` },
-      main: { [TARGET]: `base-a\n${mainLine}\n` },
+      pr: { [TARGET]: separatedFile(prLine, "base-b") },
+      main: { [TARGET]: separatedFile("base-a", mainLine) },
     },
   };
 }
