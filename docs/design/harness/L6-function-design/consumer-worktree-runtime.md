@@ -28,7 +28,7 @@ consumer は runtime と launcher (`.ut-tdd/bin/ut-tdd.mjs`) を commit しな�
 | 既に別の版が入っている repo へ違う版を入れると `consumer_runtime_update_unsupported` で拒否される | #930 |
 | guard は block を stderr + exit 2 で返し、メッセージ本文は `process.stderr.write(decision.message)` で出る。stdin 読み取り・JSON 解析の失敗も同じ経路 (exit 2) である | `.claude/hooks/agent-guard.ts:34-49`、`:70` |
 | consumer 用の guard の argv は `.ut-tdd/bin/ut-tdd.mjs hook <guard>` で、launcher 自体が無いと node が `MODULE_NOT_FOUND` (exit 1、スタック) を出す。その場では案内文を出せる主体が存在しない | `src/lint/project-hook.ts:68-97` |
-| entrypoint 欠落時の launcher は exit 127 で fail-close する、と oracle `U-HOOKEXEC-008` が宣言している (現実装の absent は exit 78 であり、§5 の最後の項目で揃える) | `docs/design/harness/L6-function-design/function-spec.md:2310` |
+| entrypoint 欠落時の launcher は exit 127 で fail-close する、と oracle `U-HOOKEXEC-008` が宣言している (現実装の absent は exit 78 である。§5 の最後の項目の表で exit 2 に揃える) | `docs/design/harness/L6-function-design/function-spec.md:2310` |
 
 ## 3. 決定 1: worktree の入口 (`setup --worktree`)
 
@@ -36,7 +36,7 @@ consumer は runtime と launcher (`.ut-tdd/bin/ut-tdd.mjs`) を commit しな�
 
 1. **対象の判定**: `git rev-parse --git-dir` と `--git-common-dir` を `<path>` で解決し、両者が異なるときだけ linked worktree とする。main worktree (一致する) と git 管理外の path は、何も書かずに typed error `worktree_entry_not_linked` で拒否する (no-op にしない。main への誤実行を成功に見せないため。main の導入は従来の `setup --solo --consumer-runtime-release` のまま)。
 2. **正本の版**: main worktree (`git-common-dir` の親) の active pointer が指す bundle manifest の `identity` から `release_id` / `artifact_set_digest` / `compiled_esm_digest` を読む。これが worktree へ入れる唯一の版である。main に有効な activation が無いときは、書き込みなしで `worktree_entry_main_not_activated` を返し、先に main で setup するよう案内する。
-3. **共有キャッシュ**: 検証済みの Release directory は `<git-common-dir>/ut-tdd/runtime-cache/<release_id>/` に置く (worktree の外、`.git` 配下なので commit されない)。main の setup が Release の検証に成功したときにここへ複製する。`--worktree` はこのキャッシュだけを入力にする。キャッシュに無ければ `worktree_entry_cache_missing` で拒否し、`--consumer-runtime-release <dir> --expected-consumer-digest <digest>` を併記したときだけ、従来どおり検証したうえでその directory を使う。**ネットワークからの取得はしない。**
+3. **共有キャッシュ**: 検証済みの Release directory は `<git-common-dir>/ut-tdd/runtime-cache/<cache_key>/` に置く。`cache_key` は `release_id` (`rel-sha256:` + 小文字 hex 64 桁、`src/schema/release-manifest.ts` の `RELEASE_ID`) から固定 prefix を除いた hex 64 桁である。`release_id` は `:` を含み Windows ではディレクトリ名にできないため、そのまま path にしない。schema が prefix と桁数を固定しているので `release_id` と `cache_key` は 1 対 1 であり、衝突も復号の曖昧さも無い。main の identity の `release_id` が schema に合わなければ、key を作らず (ディレクトリも作らず) `worktree_entry_main_not_activated` で拒否する。キャッシュのディレクトリ名は信用の根拠にしない。中身の identity の `release_id` が key と合わない場合は、手順 4 の検証か pin 照合で落ちる。この版より前のキャッシュは存在しない (未実装の機能のため) ので、旧形式の移行は扱わない (worktree の外、`.git` 配下なので commit されない)。main の setup が Release の検証に成功したときにここへ複製する。`--worktree` はこのキャッシュだけを入力にする。キャッシュに無ければ `worktree_entry_cache_missing` で拒否し、`--consumer-runtime-release <dir> --expected-consumer-digest <digest>` を併記したときだけ、従来どおり検証したうえでその directory を使う。**ネットワークからの取得はしない。**
 4. **検証と導入**: キャッシュの asset を既存の Release 検証 (`verifyConsumerRuntimeReleaseAssets`) に通し、新しい worktree を consumer root として runtime を実体化する (identity は worktree ごとに作り直される)。導入後の identity の `release_id` / `artifact_set_digest` / `compiled_esm_digest` が手順 2 の値と 1 つでも違えば、書いたものを巻き戻して `worktree_entry_pin_mismatch` を返す。改ざんされたキャッシュは検証か pin 照合のどちらかで必ず落ちる。
 5. **pin を変えない**: main の active pointer、キャッシュ、他の worktree には書かない。違う版を入れる経路は無い (版の更新は #930 / #481)。worktree に別の版が既にあるときは `consumer_runtime_update_unsupported` のままにする。
 6. **成功時**: launcher (`.ut-tdd/bin/ut-tdd.mjs`) と runtime が worktree に揃い、guard が動く。成功の出力は導入した版と digest の 1 行である。
@@ -55,7 +55,16 @@ consumer は runtime と launcher (`.ut-tdd/bin/ut-tdd.mjs`) を commit しな�
 - `setup --worktree` は、成功する場合を除き、worktree・main・キャッシュのどれにも何も残さない (失敗時は巻き戻す)。
 - 入れる版は main の active pointer の版と常に一致する。キャッシュ・引数・環境変数から版を選べる経路は無い。
 - 案内の経路は常に exit 非 0 であり、`MODULE_NOT_FOUND` のスタックを block 理由にしない。
-- entrypoint 欠落の exit code は、実装時に `U-HOOKEXEC-008` の宣言 (127) と launcher の実装 (78 / 本書の 2) を 1 つの表に揃える。
+- **exit code の境界** (Issue #1525、2026-11-05 に確定):
+
+  | 状態 | exit | stderr |
+  |---|---|---|
+  | active pointer が無い (`consumer_runtime_absent`。launcher が project-local の entrypoint を解決できない場合を含む) | 2 | 符号と案内文 (§4) |
+  | launcher 自体が無い (guard の起動断片が検出する) | 2 | 案内文 (§4) |
+  | その他の deny 符号 (`consumer_runtime_digest_mismatch` など) | 78 | 符号のみ (従来どおり) |
+  | guard が確定 block を返す | 2 | block 理由 (従来どおり) |
+
+  exit 127 は使わない。`U-HOOKEXEC-008` が宣言していた「entrypoint 欠落時は exit 127」は、上の表の 1 行目 (exit 2) に置き換える。宣言とテスト (`tests/hook-native-launcher.test.ts` の `U-HOOKEXEC-008`、現状は 78 を確かめている) は、設計書保護の三段階に従い、#1525 の src を含まない昇格 PR で exit 2 の `it.fails` に改め、Green の実装 PR で `it` に戻す。
 
 ## 6. 範囲外
 
