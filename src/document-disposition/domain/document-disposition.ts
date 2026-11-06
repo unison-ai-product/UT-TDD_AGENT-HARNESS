@@ -110,11 +110,10 @@ export type DocumentDispositionValidation =
   | { readonly ok: true }
   | { readonly ok: false; readonly missingFields: readonly string[] };
 
-export function validateDocumentDisposition(
+function validateCommonDocumentDispositionFields(
   input: DocumentDispositionInput,
-  options: { readonly allowLegacyPlanReferences?: boolean } = {},
-): DocumentDispositionValidation {
-  const missing = validateApplicability(input.applicability);
+  missing: string[],
+): void {
   if (
     !["retain", "update", "merge", "supersede", "archive", "not_applicable"].includes(
       input.disposition,
@@ -126,23 +125,36 @@ export function validateDocumentDisposition(
   if (!["pending", "applied", "verified"].includes(input.applicationStatus)) {
     missing.push("application_status");
   }
+  if (input.issues?.some((issue) => !parseIssueUrl(issue))) missing.push("issues");
+}
+
+function validateNewDocumentDispositionReferences(
+  input: DocumentDispositionInput,
+  missing: string[],
+): void {
+  if (
+    ["update", "merge", "supersede", "archive"].includes(input.disposition) &&
+    input.targets.length === 0 &&
+    (input.issues?.length ?? 0) === 0
+  ) {
+    missing.push("targets_or_issues");
+  }
+  if ((input.planIds?.length ?? 0) > 0) missing.push("plan_ids");
+  if (nonEmpty(input.applicability.planId) && parseIssueUrl(input.applicability.issue ?? "")) {
+    missing.push("applicability.plan_id");
+  }
+}
+
+function validateLegacyReplayReferences(input: DocumentDispositionInput, missing: string[]): void {
   if (
     ["update", "merge", "supersede", "archive"].includes(input.disposition) &&
     input.targets.length === 0 &&
     (input.issues?.length ?? 0) === 0 &&
-    !(options.allowLegacyPlanReferences && (input.planIds?.length ?? 0) > 0)
+    (input.planIds?.length ?? 0) === 0
   ) {
     missing.push("targets_or_issues");
   }
-  if (!options.allowLegacyPlanReferences) {
-    if ((input.planIds?.length ?? 0) > 0) missing.push("plan_ids");
-    if (nonEmpty(input.applicability.planId) && parseIssueUrl(input.applicability.issue ?? "")) {
-      missing.push("applicability.plan_id");
-    }
-  }
-  if (input.issues?.some((issue) => !parseIssueUrl(issue))) missing.push("issues");
   if (
-    options.allowLegacyPlanReferences &&
     input.applicability.kind === "deferred" &&
     !input.applicability.issue &&
     nonEmpty(input.applicability.planId)
@@ -150,6 +162,16 @@ export function validateDocumentDisposition(
     const issueIndex = missing.indexOf("applicability.issue");
     if (issueIndex >= 0) missing.splice(issueIndex, 1);
   }
+}
+
+export function validateDocumentDisposition(
+  input: DocumentDispositionInput,
+  options: { readonly allowLegacyPlanReferences?: boolean } = {},
+): DocumentDispositionValidation {
+  const missing = validateApplicability(input.applicability);
+  validateCommonDocumentDispositionFields(input, missing);
+  if (options.allowLegacyPlanReferences) validateLegacyReplayReferences(input, missing);
+  else validateNewDocumentDispositionReferences(input, missing);
   missing.sort();
   return missing.length === 0 ? { ok: true } : { ok: false, missingFields: missing };
 }
