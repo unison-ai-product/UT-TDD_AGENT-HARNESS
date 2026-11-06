@@ -161,7 +161,7 @@ afterEach(() => {
 });
 
 describe("consumer G14 L0 charter doc_type_id (U-RCDEV-035)", () => {
-  it.fails("accepts a cited L0 charter doc_type_id without a PLAN-L0 document", () => {
+  it("accepts a cited L0 charter doc_type_id without a PLAN-L0 document", () => {
     const result = evaluate(consumerFixture());
     expect(result.applicable).toBe(true);
     expect(result.passed).toBe(true);
@@ -193,7 +193,7 @@ describe("consumer G14 L0 charter doc_type_id (U-RCDEV-035)", () => {
     expect(feedback.items[1]?.routed_to).toBe("https://github.com/example/consumer/issues/12");
   });
 
-  it.fails("rejects a VALUE row without an L0 charter doc_type_id citation", () => {
+  it("rejects a VALUE row without an L0 charter doc_type_id citation", () => {
     const root = consumerFixture();
     const slot = join(root, "docs/test-design/L14-operational-test-design.md");
     writeFileSync(
@@ -204,7 +204,7 @@ describe("consumer G14 L0 charter doc_type_id (U-RCDEV-035)", () => {
     expectL0CharterDocTypeIdCitationViolation(evaluate(root).messages);
   });
 
-  it.fails("reports a missing L0 charter source separately from citation policy", () => {
+  it("reports a missing L0 charter source separately from citation policy", () => {
     const root = consumerFixture();
     rmSync(join(root, "docs/design/L0-planning/consumer-charter.md"));
     const messages = evaluate(root).messages;
@@ -212,7 +212,7 @@ describe("consumer G14 L0 charter doc_type_id (U-RCDEV-035)", () => {
     expectL0CharterDocTypeIdCitationViolation(messages);
   });
 
-  it.fails("rejects a resolvable non-L0 doc_type_id as a charter citation", () => {
+  it("rejects a resolvable non-L0 doc_type_id as a charter citation", () => {
     const root = consumerFixture();
     write(
       root,

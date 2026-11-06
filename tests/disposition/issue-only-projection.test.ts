@@ -146,7 +146,7 @@ describe("U-DISPPTR-001 issue-only projection", () => {
     }
   });
 
-  it.fails("loads the issue-only item-target ledger without a plan_id header", () => {
+  it("loads the issue-only item-target ledger without a plan_id header", () => {
     const bundle = Object.fromEntries(
       issueOnlyCatalogPaths.map((catalogPath) => [
         catalogPath,
@@ -167,7 +167,7 @@ describe("U-DISPPTR-001 issue-only projection", () => {
     expect(loaded?.itemTargetEdges).toHaveLength(163);
   });
 
-  it.fails("projects every issue-only target column unchanged", () => {
+  it("projects every issue-only target column unchanged", () => {
     const db = openHarnessDb(":memory:");
     try {
       migrate(db);
