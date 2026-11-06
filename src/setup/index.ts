@@ -342,12 +342,12 @@ export async function installConsumerRuntimeRelease(input: {
     attestChannel: async () => attestation,
   });
   if (!aggregate.ok) throw new Error(`consumer_runtime_release_aggregate_${aggregate.error}`);
-  assertConsumerRuntimePinMatches(
-    input.expectedPin,
-    aggregate.plan.releaseId,
-    generation.artifact_digest,
-    generation.compiled_esm_digest,
-  );
+  assertConsumerRuntimePinMatches({
+    expectedPin: input.expectedPin,
+    releaseId: aggregate.plan.releaseId,
+    artifactSetDigest: generation.artifact_digest,
+    compiledEsmDigest: generation.compiled_esm_digest,
+  });
 
   const { receipt: nodeReceipt, operationId } = parseConsumerRuntimeReceipt({
     receiptBytes: assets.receiptBytes,
@@ -376,12 +376,12 @@ export async function installConsumerRuntimeRelease(input: {
       tag: input.tag,
       expectedConsumerDigest: input.expectedConsumerDigest,
       executingModulePath: input.executingModulePath,
-      expectedPin: createConsumerRuntimePin(
-        aggregate.plan.releaseId,
-        generation.artifact_digest,
-        generation.compiled_esm_digest,
-        input.executingModulePath,
-      ),
+      expectedPin: createConsumerRuntimePin({
+        releaseId: aggregate.plan.releaseId,
+        artifactSetDigest: generation.artifact_digest,
+        compiledEsmDigest: generation.compiled_esm_digest,
+        entryPath: input.executingModulePath,
+      }),
     });
   }
 
@@ -419,12 +419,12 @@ export async function installConsumerRuntimeRelease(input: {
     tag: input.tag,
     expectedConsumerDigest: input.expectedConsumerDigest,
     executingModulePath: input.executingModulePath,
-    expectedPin: createConsumerRuntimePin(
-      aggregate.plan.releaseId,
-      generation.artifact_digest,
-      generation.compiled_esm_digest,
-      input.executingModulePath,
-    ),
+    expectedPin: createConsumerRuntimePin({
+      releaseId: aggregate.plan.releaseId,
+      artifactSetDigest: generation.artifact_digest,
+      compiledEsmDigest: generation.compiled_esm_digest,
+      entryPath: input.executingModulePath,
+    }),
     setup: () => {
       if (input.runtimeOnly) return installConsumerRuntimeOnly(runtimeInput, consumerRoot);
       if (!input.setupDeps) throw new Error("consumer_runtime_setup_dependencies_missing");

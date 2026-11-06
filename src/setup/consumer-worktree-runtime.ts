@@ -48,31 +48,31 @@ export interface ConsumerRuntimePin {
   readonly entry_path: string;
 }
 
-export function createConsumerRuntimePin(
-  releaseId: string,
-  artifactSetDigest: string,
-  compiledEsmDigest: string,
-  entryPath: string,
-): ConsumerRuntimePin {
+export function createConsumerRuntimePin(input: {
+  readonly releaseId: string;
+  readonly artifactSetDigest: string;
+  readonly compiledEsmDigest: string;
+  readonly entryPath: string;
+}): ConsumerRuntimePin {
   return {
-    release_id: releaseId,
-    artifact_set_digest: artifactSetDigest,
-    compiled_esm_digest: compiledEsmDigest,
-    entry_path: entryPath,
+    release_id: input.releaseId,
+    artifact_set_digest: input.artifactSetDigest,
+    compiled_esm_digest: input.compiledEsmDigest,
+    entry_path: input.entryPath,
   };
 }
 
-export function assertConsumerRuntimePinMatches(
-  expectedPin: ConsumerRuntimePin | undefined,
-  releaseId: string,
-  artifactSetDigest: string,
-  compiledEsmDigest: string,
-): void {
+export function assertConsumerRuntimePinMatches(input: {
+  readonly expectedPin: ConsumerRuntimePin | undefined;
+  readonly releaseId: string;
+  readonly artifactSetDigest: string;
+  readonly compiledEsmDigest: string;
+}): void {
   if (
-    expectedPin &&
-    (releaseId !== expectedPin.release_id ||
-      artifactSetDigest !== expectedPin.artifact_set_digest ||
-      compiledEsmDigest !== expectedPin.compiled_esm_digest)
+    input.expectedPin &&
+    (input.releaseId !== input.expectedPin.release_id ||
+      input.artifactSetDigest !== input.expectedPin.artifact_set_digest ||
+      input.compiledEsmDigest !== input.expectedPin.compiled_esm_digest)
   )
     throw new ConsumerWorktreeRuntimeError("worktree_entry_pin_mismatch");
 }
