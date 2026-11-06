@@ -10,7 +10,7 @@ next_pair_freeze: L7
 issue: 1525
 ---
 
-> **L6 contract marker**: 本書は consumer の linked git worktree へ runtime を入れる入口と、runtime が無いときの guard 失敗の案内を凍結する (未実装の目標契約)。版の更新とロールバックは #930 / #481 の範囲であり、本書は扱わない。oracle (CANDIDATE-U-CWTRT-001〜) は `docs/test-design/harness/L7-consumer-worktree-runtime-test-design.md` が固定する。行番号は 2026-11-04 の `origin/main` で測った。
+> **L6 contract marker**: 本書は consumer の linked git worktree へ runtime を入れる入口と、runtime が無いときの guard 失敗の案内を凍結する (未実装の目標契約)。版の更新とロールバックは #930 / #481 の範囲であり、本書は扱わない。oracle (`U-CWTRT-001`〜`010`) は `docs/test-design/harness/L7-consumer-worktree-runtime-test-design.md` が固定する。行番号は 2026-11-04 の `origin/main` で測った。
 
 # consumer worktree の runtime 入口 — 関数設計 (issue #1525)
 
@@ -75,8 +75,8 @@ consumer は runtime と launcher (`.ut-tdd/bin/ut-tdd.mjs`) を commit しな�
 
 ## 7. 受け入れ
 
-- 新しい linked worktree で `setup --worktree` を 1 回流せば、guard hook が動く (候補 001 / 002)。
-- runtime の無い worktree で guard が止まったとき、実行すべきコマンドが block 理由として表示される (候補 007 / 008 / 009)。
+- 新しい linked worktree で `setup --worktree` を 1 回流せば、guard hook が動く (`U-CWTRT-001` / `002`)。
+- runtime の無い worktree で guard が止まったとき、実行すべきコマンドが block 理由として表示される (`U-CWTRT-007` / `008` / `009`)。
 - 実際の Claude Code で、runtime の無い worktree の Edit が案内つきで止まることを 1 回確かめた記録を含める。この確認は自動テストの oracle ではない。
 
 ## 8. 単位の契約 (DbC)
@@ -89,4 +89,4 @@ consumer は runtime と launcher (`.ut-tdd/bin/ut-tdd.mjs`) を commit しな�
 - pre: `worktreePath` は linked worktree の絶対パスである。main の active pointer が有効である (§3 手順 1、2)。
 - post: 成功時は launcher と runtime が揃い、入れた版は main の版と一致する。案内の経路は常に exit 2 で終わる (§4、§5)。
 - invariant: 失敗時は worktree・main・キャッシュのどれにも何も残さない。版を選べる入力は無い。`MODULE_NOT_FOUND` のスタックを block 理由にしない (§5)。
-- oracle: CANDIDATE-U-CWTRT-001〜009 が上記を固定する。
+- oracle: `U-CWTRT-001`〜`010` が上記を固定する。

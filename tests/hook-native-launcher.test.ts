@@ -117,7 +117,42 @@ const RECORDER = [
 ].join("\n");
 
 describe("Claude hook wrapper execution contract (issue #123 / PLAN-L7-522 S1-b)", () => {
-  it("U-HOOKEXEC-001: refuses to launch without the consumer-local sealed runtime", () => {
+  it("U-HOOKEXEC-001/008: absent-runtime fixtures reach the wrapper and do not record", () => {
+    const recorderOutput = join(temporaryDirectory(), "recorded.json");
+    const withRecorder = materializeWrapper(RECORDER);
+    const recorderResult = spawnSync(process.execPath, [withRecorder.wrapper, recorderOutput], {
+      cwd: withRecorder.root,
+      encoding: "utf8",
+      windowsHide: true,
+    });
+
+    expect(recorderResult.error).toBeUndefined();
+    expect(typeof recorderResult.status).toBe("number");
+    expect(recorderResult.stderr).toContain("consumer_runtime_absent");
+    expect(() => readFileSync(recorderOutput, "utf8")).toThrow();
+
+    const recorderOutputWithoutEntrypoint = join(
+      temporaryDirectory(),
+      "recorded-without-entrypoint.json",
+    );
+    const withoutEntrypoint = materializeWrapper(null);
+    const missingEntrypointResult = spawnSync(
+      process.execPath,
+      [withoutEntrypoint.wrapper, recorderOutputWithoutEntrypoint],
+      {
+        cwd: withoutEntrypoint.root,
+        encoding: "utf8",
+        windowsHide: true,
+      },
+    );
+
+    expect(missingEntrypointResult.error).toBeUndefined();
+    expect(typeof missingEntrypointResult.status).toBe("number");
+    expect(missingEntrypointResult.stderr).toContain("consumer_runtime_absent");
+    expect(() => readFileSync(recorderOutputWithoutEntrypoint, "utf8")).toThrow();
+  });
+
+  it.fails("U-HOOKEXEC-001: refuses to launch without the consumer-local sealed runtime", () => {
     const output = join(temporaryDirectory(), "result.json");
     const { root, wrapper } = materializeWrapper(RECORDER);
     const forwarded = ["plain", "contains spaces", 'quote"inside', "a&b", "日本語"];
@@ -130,12 +165,13 @@ describe("Claude hook wrapper execution contract (issue #123 / PLAN-L7-522 S1-b)
       windowsHide: true,
     });
 
-    expect(result.status, result.stderr).toBe(78);
+    expect(result.status, result.stderr).toBe(2);
     expect(result.stderr).toContain("consumer_runtime_absent");
+    expect(result.stderr).toContain("setup --worktree");
     expect(() => readFileSync(output, "utf8")).toThrow();
   });
 
-  it("U-HOOKEXEC-008: fails closed when no project-local entrypoint can be resolved", () => {
+  it.fails("U-HOOKEXEC-008: fails closed when no project-local entrypoint can be resolved", () => {
     const { root, wrapper } = materializeWrapper(null);
     const result = spawnSync(process.execPath, [wrapper, "should-not-run"], {
       cwd: root,
@@ -143,8 +179,9 @@ describe("Claude hook wrapper execution contract (issue #123 / PLAN-L7-522 S1-b)
       windowsHide: true,
     });
 
-    expect(result.status).toBe(78);
+    expect(result.status).toBe(2);
     expect(result.stderr).toContain("consumer_runtime_absent");
+    expect(result.stderr).toContain("setup --worktree");
   });
 
   it("U-HOOKEXEC-008: uses direct executable spawning and never delegates to a shell host", () => {
