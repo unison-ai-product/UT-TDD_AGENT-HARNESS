@@ -127,11 +127,17 @@ v4 候補 (`docs/governance/candidates/ut-tdd-concept-v4.0.md`) のチケット�
 触れないこと (例: `package.json` / lock、`.github/workflows/`、`docs/test-design/harness/L7-unit-test-design.md` や
 `function-spec.md`、`tests/gate-static.test.ts` のような共有 test-design、baseline を持つ gate の baseline ファイル
 `docs/governance/doc-split-baseline.json` と `docs/governance/code-size-baseline.json`)。当てはまらないものは直列の鎖に入れる。
-baseline ファイルは、PR が変えていなくても、merge gate の baseline_conflict (`src/feedback/baseline-conflict.ts`) が
-共有の面として扱う。そのため、gate の対象 (分割規則の対象の文書、size 規則の対象のコード・テスト) を足す・変えるチケットは、
-baseline ファイルに触れるものとして扱い、同じ鎖に入れる。並列のまま review すると、先の 1 本の merge で残りが DENY され、
-main の取り込みと再検が merge のたびに発生する (2026-11-05〜06 の実例: #1569 が 3 回 DENY された)。
-この扱いは、baseline_conflict が path の重なりだけで拒否している間の運用である。合成 tree で再計算する #1559 が
+merge gate の baseline_conflict (`src/feedback/baseline-conflict.ts` の `evaluateBaselineConflict`、契約は
+`docs/design/harness/L6-function-design/merge-gate-check-run-selection.md` §6.2) は、gate ごとに次の 2 つの組を
+競合として拒否する。この組になるチケット同士は、同じ鎖に入れる。
+
+- 同じ対象 path (分割規則の対象の文書、size 規則の対象のコード・テスト) を、両方が変える。
+- 一方がその gate の baseline ファイルを変え、もう一方がその gate の対象 path を 1 つでも変える。
+
+両方が baseline ファイルを変えず、別々の対象 path だけを変える組は拒否されないので、並列のままでよい。
+上の組を並列のまま review すると、先の 1 本が merge された時点で残りが DENY され、main の取り込みと再検が
+merge のたびに発生する (2026-11-05〜06 の実例: baseline ファイルを変える PR 同士を並列にしたため、#1569 が 3 回 DENY された)。
+この扱いは、baseline_conflict が path の組だけで拒否している間の運用である。合成 tree で再計算する #1559 が
 入ったら、本当に衝突する場合だけ拒否されるので、この段落を見直す。
 
 **空きは問題である**: slot の空きを、普通の待ちとして扱わない。どちらも問題として Issue コメントに記録する。
