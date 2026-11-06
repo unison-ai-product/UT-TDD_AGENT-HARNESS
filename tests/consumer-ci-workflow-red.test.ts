@@ -32,6 +32,10 @@ const HEAD_SNAPSHOT_ROOT = headSnapshotRoot();
 const SOURCE_WORKFLOW_PATH = join(HEAD_SNAPSHOT_ROOT, WORKFLOW_PATH);
 const SOURCE_POLICY_PATH = join(HEAD_SNAPSHOT_ROOT, "src", "lint", "github-ci-policy.ts");
 const SOURCE_WORKFLOW = readFileSync(SOURCE_WORKFLOW_PATH, "utf8");
+const SOURCE_TEMPLATE = readFileSync(
+  join(HEAD_SNAPSHOT_ROOT, "docs", "templates", "github", "common", "harness-check.yml"),
+  "utf8",
+);
 const SOURCE_POLICY = readFileSync(SOURCE_POLICY_PATH, "utf8");
 let cleanGitFixture = "";
 let dirtyGitFixture = "";
@@ -426,6 +430,17 @@ describe("consumer CI workflow registered Red oracles (#1522 / #1523)", () => {
     expect(guard?.run).toContain("--base-ref");
     expect(guard?.run).not.toContain("--commit-file");
     expect(guard?.run).not.toMatch(/git\s+log[^\n]*>\s*\S+/);
+  });
+
+  it("control: only pull_request events supply a PR title to the guard", () => {
+    const expected =
+      "$" + "{{ github.event_name == 'pull_request' && github.event.pull_request.title || '' }}";
+    for (const source of [generatedWorkflow(), SOURCE_WORKFLOW, SOURCE_TEMPLATE]) {
+      const workflow = parseWorkflow(source);
+      const guard = allSteps(workflow).find((step) => stepText(step).includes("github guard"));
+      expect(guard?.env?.PR_TITLE).toBe(expected);
+      expect(String(guard?.env?.PR_TITLE)).not.toContain("head_commit.message");
+    }
   });
 
   it("precondition: snapshot workflow and policy contain one source guard contract input", () => {

@@ -469,7 +469,7 @@ const RUNTIME_STEP_MANIFESTS: Record<(typeof RUNTIME_LEGS)[number], readonly obj
         HEAD_REF: githubExpression("github.head_ref || github.ref_name"),
         BASE_REF: githubExpression("github.base_ref || 'main'"),
         PR_TITLE: githubExpression(
-          "github.event.pull_request.title || github.event.head_commit.message || ''",
+          "github.event_name == 'pull_request' && github.event.pull_request.title || ''",
         ),
         PR_BODY: githubExpression("github.event.pull_request.body || ''"),
       },
