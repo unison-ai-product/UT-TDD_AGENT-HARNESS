@@ -121,7 +121,7 @@ describe("issue #1525 consumer worktree missing-runtime guard guidance", () => {
     expect(result.stderr).toContain("consumer_runtime_absent");
   });
 
-  it.fails("U-CWTRT-007: a present launcher gives setup guidance only for absent runtime", () => {
+  it("U-CWTRT-007: a present launcher gives setup guidance only for absent runtime", () => {
     const fixture = createHookFixture();
     expect(existsSync(fixture.launcherPath)).toBe(true);
     expect(
@@ -165,7 +165,7 @@ describe("issue #1525 consumer worktree missing-runtime guard guidance", () => {
     expect(result.stdout).toBe("");
   });
 
-  it.fails("U-CWTRT-008: absent launcher is handled before Node module resolution", () => {
+  it("U-CWTRT-008: absent launcher is handled before Node module resolution", () => {
     const fixture = createHookFixture();
     rmSync(fixture.launcherPath);
     expect(existsSync(fixture.launcherPath)).toBe(false);
@@ -182,7 +182,7 @@ describe("issue #1525 consumer worktree missing-runtime guard guidance", () => {
     expect(result.stdout).toBe("");
   });
 
-  it.fails("U-CWTRT-008: absent launcher is handled for the work guard", () => {
+  it("U-CWTRT-008: absent launcher is handled for the work guard", () => {
     const fixture = createHookFixture();
     rmSync(fixture.launcherPath);
     expect(existsSync(fixture.launcherPath)).toBe(false);
@@ -208,7 +208,7 @@ describe("issue #1525 consumer worktree missing-runtime guard guidance", () => {
     expect(result.stderr).toContain("consumer_runtime_absent");
   });
 
-  it.fails("U-CWTRT-009: missing-runtime guidance is a single stderr block reason", () => {
+  it("U-CWTRT-009: missing-runtime guidance is a single stderr block reason", () => {
     const fixture = createHookFixture();
     const result = runGeneratedHook(fixture, fixture.workGuard, {
       tool_name: "Edit",

@@ -29,6 +29,11 @@ import {
 
 let fixture: Awaited<ReturnType<typeof createConsumerWorktreeRuntimeFixture>>;
 
+function snapshotOptionalPath(path: string): string | null {
+  if (!existsSync(path)) return null;
+  return statSync(path).isDirectory() ? snapshotTree(path) : readFileSync(path).toString("hex");
+}
+
 describe("consumer worktree runtime setup entry Red (#1525)", () => {
   beforeAll(async () => {
     fixture = await createConsumerWorktreeRuntimeFixture();
@@ -182,11 +187,36 @@ describe("consumer worktree runtime setup entry Red (#1525)", () => {
     expect(snapshots.every((snapshot) => typeof snapshot === "string")).toBe(true);
   });
 
-  it.fails("U-CWTRT-001: installs main's pin and runs a guard through the worktree launcher", () => {
+  it("U-CWTRT-001: installs main's pin and runs a guard through the worktree launcher", () => {
     const worktree = fixture.linked["001"];
+    const targetRegularSetupPaths = [
+      join(worktree, ".ut-tdd", "harness.db"),
+      join(worktree, ".claude", "settings.json"),
+      join(worktree, ".claude", "hooks"),
+      join(worktree, ".codex", "hooks.json"),
+    ];
+    // These are absent in this clean linked-worktree fixture, not assumed from a
+    // generic consumer layout. Keep the precondition explicit before checking
+    // that runtime-only setup does not materialize ordinary setup state.
+    for (const path of targetRegularSetupPaths) expect(existsSync(path), path).toBe(false);
+
+    const mainSetupPaths = [
+      join(fixture.main, ".ut-tdd"),
+      join(fixture.main, ".claude"),
+      join(fixture.main, ".codex"),
+      join(fixture.main, "AGENTS.md"),
+      join(fixture.main, "CLAUDE.md"),
+      join(fixture.main, "ut-tdd.project.json"),
+    ];
+    const mainBefore = mainSetupPaths.map(snapshotOptionalPath);
+    const cacheBefore = snapshotTree(dirname(fixture.cache));
+
     const result = runConsumerWorktreeCommand(fixture.main, ["setup", "--worktree", worktree]);
     expect(result.status, `${result.stdout}\n${result.stderr}`).toBe(0);
     expect(existsSync(join(worktree, ".ut-tdd", "bin", "ut-tdd.mjs"))).toBe(true);
+    for (const path of targetRegularSetupPaths) expect(existsSync(path), path).toBe(false);
+    expect(mainSetupPaths.map(snapshotOptionalPath)).toEqual(mainBefore);
+    expect(snapshotTree(dirname(fixture.cache))).toBe(cacheBefore);
     const mainIdentity = runtimeIdentity(fixture.main);
     const installedIdentity = runtimeIdentity(worktree);
     expect(installedIdentity.release_id).toBe(mainIdentity.release_id);
@@ -198,7 +228,7 @@ describe("consumer worktree runtime setup entry Red (#1525)", () => {
     expect(guard.status, `${guard.stdout}\n${guard.stderr}`).toBe(0);
   });
 
-  it.fails("U-CWTRT-002: cache A succeeds without making any network call", () => {
+  it("U-CWTRT-002: cache A succeeds without making any network call", () => {
     rmSync(fixture.networkMarker, { force: true });
     const nodeOptions = [
       process.env.NODE_OPTIONS,
@@ -221,7 +251,7 @@ describe("consumer worktree runtime setup entry Red (#1525)", () => {
     expect(runtimeIdentity(fixture.linked["002-network"]).release_id).toBe(fixture.releaseId);
   });
 
-  it.fails("U-CWTRT-002: accepts the explicit pinned Release when cache is absent", () => {
+  it("U-CWTRT-002: accepts the explicit pinned Release when cache is absent", () => {
     const mainPointer = readFileSync(
       join(fixture.main, ".ut-tdd", "runtime", "activation", "active.json"),
     );
@@ -262,7 +292,7 @@ describe("consumer worktree runtime setup entry Red (#1525)", () => {
     }
   });
 
-  it.fails("U-CWTRT-002: missing cache without an explicit Release returns cache_missing", () => {
+  it("U-CWTRT-002: missing cache without an explicit Release returns cache_missing", () => {
     const cacheRoot = dirname(fixture.cache);
     const cacheBefore = snapshotTree(cacheRoot);
     const target = fixture.linked["002-empty"];
@@ -291,7 +321,7 @@ describe("consumer worktree runtime setup entry Red (#1525)", () => {
     expect(snapshotTree(cacheRoot)).toBe(cacheBefore);
   });
 
-  it.fails("U-CWTRT-002: explicit Release with an invalid anchor is rejected", () => {
+  it("U-CWTRT-002: explicit Release with an invalid anchor is rejected", () => {
     const cacheRoot = dirname(fixture.cache);
     const cacheBefore = snapshotTree(cacheRoot);
     const target = fixture.linked["002-anchor"];
@@ -332,7 +362,7 @@ describe("consumer worktree runtime setup entry Red (#1525)", () => {
     expect(snapshotTree(cacheRoot)).toBe(cacheBefore);
   });
 
-  it.fails("U-CWTRT-002: explicit valid Release B is rejected against main's pin A", () => {
+  it("U-CWTRT-002: explicit valid Release B is rejected against main's pin A", () => {
     const cacheRoot = dirname(fixture.cache);
     const cacheBefore = snapshotTree(cacheRoot);
     const target = fixture.linked["002-b"];
@@ -365,7 +395,7 @@ describe("consumer worktree runtime setup entry Red (#1525)", () => {
     expect(snapshotTree(cacheRoot)).toBe(cacheBefore);
   });
 
-  it.fails("U-CWTRT-003: rejects a tampered cached asset without partial runtime", () => {
+  it("U-CWTRT-003: rejects a tampered cached asset without partial runtime", () => {
     const target = join(fixture.cache, releaseArtifactFileNames(WORKTREE_RUNTIME_TAG).compiledEsm);
     const original = readFileSync(target);
     const worktree = fixture.linked["003"];
@@ -387,7 +417,7 @@ describe("consumer worktree runtime setup entry Red (#1525)", () => {
     }
   });
 
-  it.fails("U-CWTRT-004: refuses setup while main has no active runtime", () => {
+  it("U-CWTRT-004: refuses setup while main has no active runtime", () => {
     const active = join(fixture.main, ".ut-tdd", "runtime", "activation", "active.json");
     const saved = readFileSync(active);
     rmSync(active);
@@ -407,7 +437,7 @@ describe("consumer worktree runtime setup entry Red (#1525)", () => {
     }
   });
 
-  it.fails("U-CWTRT-005: cache A and B still install only main's pinned A", () => {
+  it("U-CWTRT-005: cache A and B still install only main's pinned A", () => {
     const cacheBefore = snapshotTree(dirname(fixture.cache));
     const existingBefore = snapshotTree(fixture.linked["005-existing"]);
     const mainPointer = readFileSync(
@@ -428,7 +458,7 @@ describe("consumer worktree runtime setup entry Red (#1525)", () => {
     expect(snapshotTree(fixture.linked["005-existing"])).toBe(existingBefore);
   });
 
-  it.fails("U-CWTRT-005: refuses to replace an existing worktree runtime pinned to B", () => {
+  it("U-CWTRT-005: refuses to replace an existing worktree runtime pinned to B", () => {
     const existing = fixture.linked["005-existing"];
     const identityBefore = runtimeIdentity(existing);
     const existingBefore = snapshotTree(existing);
@@ -444,7 +474,7 @@ describe("consumer worktree runtime setup entry Red (#1525)", () => {
     expect(readFileSync(pointer)).toEqual(pointerBefore);
   });
 
-  it.fails("U-CWTRT-006: rejects the main worktree without writing", () => {
+  it("U-CWTRT-006: rejects the main worktree without writing", () => {
     const before = readdirSync(fixture.main).sort();
     const mainStateBefore = snapshotTree(join(fixture.main, ".ut-tdd"));
     const cacheBefore = snapshotTree(dirname(fixture.cache));
@@ -456,7 +486,7 @@ describe("consumer worktree runtime setup entry Red (#1525)", () => {
     expect(snapshotTree(dirname(fixture.cache))).toBe(cacheBefore);
   });
 
-  it.fails("U-CWTRT-006: rejects a non-git path without writing", () => {
+  it("U-CWTRT-006: rejects a non-git path without writing", () => {
     const unmanaged = fixture.linked.unmanaged;
     const before = readdirSync(unmanaged).sort();
     const result = runConsumerWorktreeCommand(fixture.main, ["setup", "--worktree", unmanaged]);
