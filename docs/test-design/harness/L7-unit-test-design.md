@@ -2262,14 +2262,14 @@ cross-provider比較除去、E9/E11いずれかのgate除去を全てkillする�
 
 | U-ID | 対象 | oracle |
 |---|---|---|
-| `U-HOOKEXEC-001` | semantic invocation | executable と argv が別 field で保持され、空白・quote を含む token も join/split されない。 |
+| `U-HOOKEXEC-001` | semantic invocation | executable と argv が別 field で保持され、空白・quote を含む token も join/split されない。 consumer-local runtime の active pointer 不在は `consumer_runtime_absent` と案内文を stderr に出し exit 2 で fail-close する (other deny は exit 78)。 |
 | `U-HOOKEXEC-002` | Claude serializer | `command` は `node`、`args` は `.ut-tdd/bin/ut-tdd.mjs` と hook 固有 subcommand の shell-free token 配列になる。旧 `run-bun.ts` や Bun launcher は含めない。 |
 | `U-HOOKEXEC-003` | source Claude hooks | agent/work guards、session start/post-tool-use/summary、subagent-stop の全 6 hook が exec form である。 |
 | `U-HOOKEXEC-004` | policy preservation | guard は `onFailure: "block"`、観測/session hook は `onFailure` を省略した既存 fail-open policy を保持する (#1521)。 |
 | `U-HOOKEXEC-005` | Codex separation | Claude exec serializer の変更が Codex JSON shape を暗黙変更せず、両者は semantic invocation で等価比較される。 |
 | `U-HOOKEXEC-006` | setup / Pack parity | source、built-in、docs template、fresh consumer materialization の executable+argv が一致する。 |
 | `U-HOOKEXEC-007` | doctor fail-close | shell-form command、argv 欠落/追加/並替え、command spoofing、argv の shell operator を個別に検出する。 |
-| `U-HOOKEXEC-008` | Windows native smoke | project-local Node wrapper (`.ut-tdd/bin/ut-tdd.mjs`) が `spawnSync(process.execPath, ...)` の直接 executable spawn と `windowsHide: true` を使い、shell host token (`sh.exe` / `bash.exe` / `cmd.exe` / `powershell.exe` / `pwsh.exe` / dispatch 用 `conhost.exe`) を含まない。process-tree ancestry の実測はこの oracle の主張に含めない。entrypoint 欠落時は exit 127 で fail-close し、hook outcome は既存契約どおりである。 |
+| `U-HOOKEXEC-008` | Windows native smoke | project-local Node wrapper (`.ut-tdd/bin/ut-tdd.mjs`) が `spawnSync(process.execPath, ...)` の直接 executable spawn と `windowsHide: true` を使い、shell host token (`sh.exe` / `bash.exe` / `cmd.exe` / `powershell.exe` / `pwsh.exe` / dispatch 用 `conhost.exe`) を含まない。process-tree ancestry の実測はこの oracle の主張に含めない。entrypoint 欠落時は `setup --worktree` の案内を stderr に出して exit 2 で fail-close し、hook outcome は既存契約どおりである。 |
 | `U-HOOKEXEC-009` | Node TypeScript launcher floor | 無フラグ TypeScript execution の下限は Node 22.18 であり、`package.json#engines.node` はこの下限を満たす範囲（下限が 22.18 以上）でなければならない。22.6〜22.17を対応済みと宣言しない。`engines.node` の実際の範囲は `>=24.22.1 <25` で、22 系を対応範囲に含めない（`internal-processing.md` §Node toolchain authority、Issue #1255）。 |
 
 実行対応は `tests/hook-native-launcher.test.ts`、`tests/project-hook.test.ts`、
@@ -2283,7 +2283,7 @@ cross-provider比較除去、E9/E11いずれかのgate除去を全てkillする�
 
 Windows smoke は単なる exit code green では代替できない。本 slice の実測対象は
 `tests/hook-native-launcher.test.ts` が検査する project-local Node wrapper の直接 executable spawn、
-`windowsHide: true`、shell host token 不在、および欠落 entrypoint の exit 127 である。process-tree
+`windowsHide: true`、shell host token 不在、および欠落 entrypoint 時の `setup --worktree` 案内と exit 2 である。process-tree
 ancestry の捕捉や Bun の起動はこの test artifact／oracle の主張に含めない。
 
 ## 段階リリース channel manifest RED oracle (PLAN-L7-473、2026-08-05)
