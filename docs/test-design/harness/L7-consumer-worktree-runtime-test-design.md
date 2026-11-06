@@ -13,13 +13,14 @@ issue: 1525
 
 ## 1. 位置付け
 
-対になる設計文書は `docs/design/harness/L6-function-design/consumer-worktree-runtime.md` (未実装の目標契約) の §3 入口、§4 案内、§5 不変条件である。共有の `docs/test-design/harness/L7-unit-test-design.md` には索引行を足さない。本書が詳細の正本であり、`U-CWTRT-001`〜`010` を正式 oracle として宣言する。
+対になる設計文書は `docs/design/harness/L6-function-design/consumer-worktree-runtime.md` (未実装の目標契約) の §3 入口、§4 案内、§5 不変条件である。共有の `docs/test-design/harness/L7-unit-test-design.md` には索引行を足さない。本書が詳細の正本であり、`U-CWTRT-001`〜`010` を正式 oracle として宣言し、新規 install transaction rollback の追加契約を `CANDIDATE-U-CWTRT-011` として記録する。
 
 ## 2. fixture
 
 - 一時ディレクトリに git repo を作り、`git worktree add` で linked worktree を作る。実 repo・実 `.git`・実ネットワークは使わない。
 - main の runtime は、テスト用に生成した小さな Release directory と anchor digest から既存の導入経路で入れる。キャッシュは一時 repo の `git-common-dir` 配下に置く。
 - launcher の行 (007 / 008) は、生成された launcher と guard の argv を子プロセスで実行し、stderr と exit code を観測する。
+- rollback 候補 (011) は、一時 repo の main + linked worktree と実 verified Release を用い、production の setup capture/restore transaction を通す。ネットワークを使わず、Linux / Windows の両方で実行できる構成にする。対象はこの一時 repo 内だけとする。
 
 ## 3. 候補の oracle
 
@@ -35,8 +36,10 @@ issue: 1525
 | `U-CWTRT-008` | guard の起動断片 (launcher 欠落) | 入力: launcher 自体が無い worktree で、生成された consumer の agent-guard / work-guard の argv を実行する。期待: stderr に案内文 1 つ、exit 2、`MODULE_NOT_FOUND` を含まない。launcher があるときは従来の launcher を起動する。記録 / session hook の argv は従来のまま。反例: 記録 hook まで起動断片に置き換える実装、launcher の有無を見ずに常に案内を出す実装。 |
 | `U-CWTRT-009` | 案内の経路 | 入力: 007 / 008 の出力。期待: block 理由は guard と同じ stderr + exit 2 の経路 (`.claude/hooks/agent-guard.ts` の block と同じ)。案内文が 1 つのコマンドを名指しする。反例: stdout だけに出す実装。 |
 | `U-CWTRT-010` | キャッシュの key | 入力 (a): main の `release_id` が `rel-sha256:<hex 64 桁>` の正当な版 A。期待: キャッシュの置き場が `<git-common-dir>/ut-tdd/runtime-cache/<hex 64 桁>/` で、ディレクトリ名に `:` を含まず、Windows と Linux の両方で作成と読み込みが成功する (001 と同じ導入が通る)。入力 (b): main の identity の `release_id` を schema に合わない値 (prefix 違い、桁数違い、大文字 hex、`..` や区切り文字を含む値) にする。期待: `worktree_entry_main_not_activated` で、キャッシュ配下にディレクトリを作らず何も書かない。入力 (c): 版 A の key のディレクトリに版 B の正当な Release を置く。期待: 検証失敗または `worktree_entry_pin_mismatch` で拒否し、何も残さない。反例: `release_id` をそのままディレクトリ名にする実装 (Windows で作れない)、`:` を別の文字に置換して衝突の余地を残す実装、schema に合わない `release_id` から path を組み立てる実装、ディレクトリ名が key と一致すれば中身を照合しない実装。 |
+| `CANDIDATE-U-CWTRT-011` | runtime 公開後・launcher 公開前の transaction rollback | 入力: 一時 repo に main と linked worktree を作り、検証済み Release を使って production の capture/install/restore 経路から新規 install する。internal optional `ConsumerWorktreeSetupFault` の `afterRuntimePublishBeforeLauncher` callback 到達時に、runtime が実在し launcher がまだ未公開であることを前提 assert し、その callback から識別可能な例外を同期 throw する。期待: callback は1回到達し、setup はその失敗を返し、production rollback 後の linked worktree の runtime・launcher・その親 directory、および main の runtime / cache / 別 linked worktree の対象領域の存在・path構造・bytes・mode がすべて事前 snapshot と一致する。transaction が作った一時ファイルも残らない。初期状態が不在の場合と、runtime以外に既存ファイルがある場合を検証する。対照として fault seam 無しの同じ導入は成功して runtime と launcher が揃い、既に同じ版が導入済みの経路では seam が呼ばれないことを確かめる。反例: hook が到達しない (誤った境界に置かれた、または無視された)、launcher が hook より前に公開される、例外を成功扱いする、または rollback を省略・迂回して runtime / launcher / 親 directory / 一時ファイルのいずれかを残す実装。 |
 
 ## 4. 段の扱い
 
-- `U-CWTRT-001`〜`010` は正式 oracle である。登録＋Red の `it.fails` を維持し、実装 PR で実装完了したケースを `it` に戻す。
+- `U-CWTRT-001`〜`010` は既存の正式 oracle である。ここでは変更しない。登録＋Red の `it.fails` を維持し、実装 PR で実装完了したケースを `it` に戻す。
+- `CANDIDATE-U-CWTRT-011` は候補であり、昇格前に正式 oracle として扱わない。まず同期 fault を注入する `it.fails` を Red として登録し、前提確認と成功対照を `it.fails` の外で実施する。次に src を含まない昇格 PR で test-design の正式 ID とテストの引用を同時に改め、最後に Green 実装 PR で `it` に戻す。実装は新規 install のみ hook を 1 回通し、`already-installed` は hook を呼ばない。
 - 受け入れには、実際の Claude Code で runtime の無い worktree の Edit が案内つきで止まることを 1 回確かめた記録を含める (自動テストの oracle ではない)。
