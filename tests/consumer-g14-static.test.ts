@@ -15,6 +15,8 @@ interface MutableJsonRecord extends Record<string, unknown> {
   items?: MutableJsonRecord[];
 }
 
+type FeedbackFixture = { items: Array<{ routed_to: string }> };
+
 function write(root: string, path: string, content: string): void {
   const absolute = join(root, path);
   mkdirSync(join(absolute, ".."), { recursive: true });
@@ -27,6 +29,8 @@ function json(value: unknown): string {
 
 function consumerFixture(): string {
   const root = mkdtempSync(join(tmpdir(), "ut-tdd-g14-"));
+  const issue13 = "https://github.com/example/consumer/issues/13";
+  const issue12 = "https://github.com/example/consumer/issues/12";
   roots.push(root);
   write(
     root,
@@ -59,14 +63,8 @@ function consumerFixture(): string {
     ".ut-tdd/evidence/g14-operational/artifacts/feedback.json",
     json({
       items: [
-        {
-          summary: "onboarding 手順の短縮",
-          routed_to: "https://github.com/example/consumer/issues/13",
-        },
-        {
-          summary: "doctor 出力の整理",
-          routed_to: "https://github.com/example/consumer/issues/12",
-        },
+        { summary: "onboarding 手順の短縮", routed_to: issue13 },
+        { summary: "doctor 出力の整理", routed_to: issue12 },
       ],
     }),
   );
@@ -393,9 +391,7 @@ describe("consumer G14 right-arm static gate (U-RCDEV-035)", () => {
 
   it("fixture precondition: the PLAN document exists alongside Issue URL feedback routing", () => {
     const root = consumerFixture();
-    const feedback = JSON.parse(readFileSync(feedbackPath(root), "utf8")) as {
-      items: Array<{ routed_to: string }>;
-    };
+    const feedback = JSON.parse(readFileSync(feedbackPath(root), "utf8")) as FeedbackFixture;
     expect(existsSync(join(root, "docs/plans/PLAN-CONSUMER-01.md"))).toBe(true);
     expect(feedback.items[0]?.routed_to).toBe("https://github.com/example/consumer/issues/13");
     expect(feedback.items[1]?.routed_to).toBe("https://github.com/example/consumer/issues/12");
