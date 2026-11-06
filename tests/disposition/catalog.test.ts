@@ -188,7 +188,7 @@ describe("DocumentDispositionCatalog", () => {
     expect(rules(input)).toContain("catalog-item-target-incomplete");
   });
 
-  it.fails("U-DISP-004: defer requires an Issue instead of a legacy plan_id", () => {
+  it("U-DISP-004: defer requires an Issue instead of a legacy plan_id", () => {
     const input = fixture();
     input.sourceTargetEdges[0].targetType = "artifact_path";
     input.sourceTargetEdges[0].targetRef =

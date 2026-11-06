@@ -2,7 +2,7 @@ import type { CheckExpression, TableDef } from "./harness-db.ts";
 import { col, enumCheck, foreignKey, pk, requiredCol } from "./harness-db-table-builders.ts";
 
 const dispositions = ["adopt", "merge", "reference", "defer", "not_applicable", "reject"];
-const targetKinds = ["plan_alias", "artifact_family", "artifact_path", "target_slot"];
+const targetKinds = ["artifact_family", "artifact_path", "target_slot"];
 const itemStatuses = ["pending_review", ...dispositions];
 
 const isNull = (column: string, negate = false): CheckExpression => ({
