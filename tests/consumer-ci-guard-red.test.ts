@@ -416,7 +416,7 @@ describe("consumer github guard commit range contract (CICONS-006..010, 015..018
     spawnsVerified = true;
   });
 
-  it.fails("U-CICONS-006: derives subjects from base..HEAD despite a synthetic merge commit", () => {
+  it("U-CICONS-006: derives subjects from base..HEAD despite a synthetic merge commit", () => {
     if (!ready("006")) return;
     const outcome = result("006");
     expect(outcome.status).toBe(1);
@@ -425,7 +425,7 @@ describe("consumer github guard commit range contract (CICONS-006..010, 015..018
     );
   });
 
-  it.fails("U-CICONS-007: validates a Merge-prefixed PR title instead of skipping it", () => {
+  it("U-CICONS-007: validates a Merge-prefixed PR title instead of skipping it", () => {
     if (!ready("007")) return;
     const outcome = result("007");
     expect(outcome.status).toBe(1);
@@ -437,7 +437,7 @@ describe("consumer github guard commit range contract (CICONS-006..010, 015..018
     );
   });
 
-  it.fails("U-CICONS-008: skips Merge subjects but still evaluates valid and invalid range controls", () => {
+  it("U-CICONS-008: skips Merge subjects but still evaluates valid and invalid range controls", () => {
     if (!ready("008-valid") || !ready("008-invalid-control")) return;
     expect(result("008-valid").status).toBe(0);
     expect(result("008-valid").body.ok).toBe(true);
@@ -450,7 +450,7 @@ describe("consumer github guard commit range contract (CICONS-006..010, 015..018
     );
   });
 
-  it.fails("U-CICONS-009: fails closed when the requested base ref does not exist", () => {
+  it("U-CICONS-009: fails closed when the requested base ref does not exist", () => {
     if (!ready("009")) return;
     const outcome = result("009");
     expect(outcome.status).not.toBe(0);
@@ -469,7 +469,7 @@ describe("consumer github guard commit range contract (CICONS-006..010, 015..018
     );
   });
 
-  it.fails("U-CICONS-015: checks the whole range when the oldest of 26 commits is invalid", () => {
+  it("U-CICONS-015: checks the whole range when the oldest of 26 commits is invalid", () => {
     if (!ready("015")) return;
     const outcome = result("015");
     expect(outcome.status).toBe(1);
@@ -478,7 +478,7 @@ describe("consumer github guard commit range contract (CICONS-006..010, 015..018
     );
   });
 
-  it.fails("U-CICONS-016: excludes pre-merge-base commits but rejects in-range invalid commits", () => {
+  it("U-CICONS-016: excludes pre-merge-base commits but rejects in-range invalid commits", () => {
     if (!ready("016-valid") || !ready("016-invalid-control")) return;
     expect(result("016-valid").status).toBe(0);
     expect(result("016-valid").body.ok).toBe(true);
@@ -488,7 +488,7 @@ describe("consumer github guard commit range contract (CICONS-006..010, 015..018
     );
   });
 
-  it.fails("U-CICONS-017: prefers origin/base over stale local base, with fallback control", () => {
+  it("U-CICONS-017: prefers origin/base over stale local base, with fallback control", () => {
     if (!ready("017-origin") || !ready("017-local-control")) return;
     expect(result("017-origin").status).toBe(0);
     expect(result("017-origin").body.ok).toBe(true);
