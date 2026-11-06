@@ -26,7 +26,7 @@ function fixture(): CatalogInput {
         ordinal: 1,
         sourceTitle: "企画書",
         disposition: "merge",
-        targetRef: "PLAN-L0-01",
+        targetRef: "docs/design/harness/L5-detailed-design/physical-data.md",
         reason: "上流企画へ統合",
         rowDigest: digest("source"),
         manifestDigest: digest("manifest"),
@@ -59,8 +59,8 @@ function fixture(): CatalogInput {
       {
         edgeId: "SOURCE-TARGET-001",
         sourceId: "ZIP-DOC-001",
-        targetType: "plan_alias",
-        targetRef: "PLAN-L0-01",
+        targetType: "artifact_path",
+        targetRef: "docs/design/harness/L5-detailed-design/physical-data.md",
         disposition: "merge",
         rowDigest: digest("source-target"),
       },
@@ -72,7 +72,6 @@ function fixture(): CatalogInput {
         targetStatus: "pending_review",
         reason: "PO/TL review待ち",
         sourceDigest: digest("item-target"),
-        planId: "PLAN-L7-417-source-disposition-profile-projection",
       },
     ],
   };
@@ -175,9 +174,10 @@ describe("DocumentDispositionCatalog", () => {
     expect(DocumentDispositionCatalog.create(supportedSourceTargetFixture()).ok).toBe(true);
   });
 
-  it.fails("U-DISPPTR-002: rejects plan_alias in source-target catalog input", () => {
+  it("U-DISPPTR-002: rejects plan_alias in source-target catalog input", () => {
     const input = supportedSourceTargetFixture();
-    input.sourceTargetEdges[0].targetType = "plan_alias";
+    input.sourceTargetEdges[0].targetType =
+      "plan_alias" as unknown as CatalogInput["sourceTargetEdges"][number]["targetType"];
     expect(DocumentDispositionCatalog.create(input).ok).toBe(false);
   });
 
@@ -188,7 +188,7 @@ describe("DocumentDispositionCatalog", () => {
     expect(rules(input)).toContain("catalog-item-target-incomplete");
   });
 
-  it.fails("U-DISP-004: defer requires an Issue instead of a legacy plan_id", () => {
+  it("U-DISP-004: defer requires an Issue instead of a legacy plan_id", () => {
     const input = fixture();
     input.sourceTargetEdges[0].targetType = "artifact_path";
     input.sourceTargetEdges[0].targetRef =
@@ -217,7 +217,8 @@ describe("DocumentDispositionCatalog", () => {
     input.sources[0].disposition = "unknown" as "merge";
     input.sources[0].ordinal = 999;
     input.items[0].rowDigest = "not-a-digest";
-    input.sourceTargetEdges[0].targetType = "unknown" as "plan_alias";
+    input.sourceTargetEdges[0].targetType =
+      "unknown" as unknown as CatalogInput["sourceTargetEdges"][number]["targetType"];
     input.itemTargetEdges[0].targetStatus = "unknown" as "pending_review";
     expect(rules(input)).toEqual(
       expect.arrayContaining([
