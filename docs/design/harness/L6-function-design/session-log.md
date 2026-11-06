@@ -272,6 +272,18 @@ field は `type`・`command`・`timeout`・`statusMessage`・`async`・`addition
 4. **doctor (参考)**: doctor は PATH の `claude --version` が下限未満なら warn を出す。文言では「PATH の claude の版」と明記し、実行中の版と同じだとは主張しない。fail にはしない。PATH の版が下限以上で、実行中の版だけが下限未満のときは doctor は警告しない。その場合を知らせるのは方式 1 の警告である。
 5. **実画面での確認**: 方式 1 の警告が通常の画面に出ることは、unit test では確かめられない。下限未満の Claude Code と下限以上の Claude Code の両方の実機で確かめて、結果を Issue に記録する (`CANDIDATE-U-CCVER-006`)。
 
+**注入口と module (2026-11-06 追記、Issue #1561)**。テストが差し替える口を次に固定する。名前を変えるときは、本節の改訂として扱う。
+
+| 役割 | module と export | 形 |
+|---|---|---|
+| 下限の正本 | `src/runtime/claude-version-floor.ts` の `CLAUDE_CODE_VERSION_FLOOR` | `string` (`"2.1.295"`)。この module は定数だけを持ち、関数を持たない。 |
+| 版の比較 | `src/runtime/claude-version-check.ts` の `evaluateClaudeVersion(version: string | null): "ok" | "below" | "unknown"` | 下限は `claude-version-floor.ts` から import する (引数で受けない)。`x.y.z` の数値で比べ、読めない値は `"unknown"`。 |
+| transcript から版を読む | 同じ module の `readTranscriptClaudeVersion(transcriptPath: string | undefined): string | null` | 最後の message の行の `version` を返す。読めなければ `null`。 |
+| doctor の check | `src/doctor/toolchain.ts` の `checkClaudeVersionFloor(deps?: { readPathClaudeVersion?: () => string | null })` | 既定の `readPathClaudeVersion` は PATH の `claude --version` を呼ぶ。テストはこの引数で差し替え、実際の Claude Code を起動しない。 |
+| adapter の生成 | `src/setup/templates.ts` | 下限は `claude-version-floor.ts` から import して本文に埋める。 |
+
+下限の定数を関数と別の module に置くのは、`vi.mock` で定数の module を差し替えたときに、比較・doctor・adapter の生成がそろって追従することを確かめるためである (同じ module の中の参照は `vi.mock` では差し替わらない)。
+
 採らない方式。
 
 - SessionStart で版を読む方式: hook の stdin に版が無く、`source=startup` の時点では transcript に message の行がまだ無いことがある。

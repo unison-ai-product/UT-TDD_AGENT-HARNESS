@@ -20,7 +20,9 @@ guard の `onFailure` そのものは `docs/test-design/harness/L7-claude-hook-o
 ## 2. fixture の作り方
 
 - 一時ディレクトリに transcript の JSONL と session の state を作り、PostToolUse の hook 入力の `transcript_path` にその path を渡す。開発 repository の `.ut-tdd/`・`harness.db`・OneDrive を操作しない。
-- doctor の行は、`claude --version` を呼ぶ関数を stub で差し替える。実際の Claude Code を起動しない。
+- doctor の行は、`checkClaudeVersionFloor` の `readPathClaudeVersion` 引数で `claude --version` の読み取りを差し替える。実際の Claude Code を起動しない。
+- 005 の下限の差し替えは、`vi.mock("../src/runtime/claude-version-floor.ts", () => ({ CLAUDE_CODE_VERSION_FLOOR: "9.9.9" }))` で行う。注入口と module の名前は、L6 の「注入口と module」の表に従う。
+- Red の段では、これらの module と export はまだ無い。import の失敗で `it.fails` が通ってしまうと、偽の Red になる。そのため Red の PR は、前提のテスト (通常の `it`) で「対象の module を動的 import できること」を別に確かめ、本体の `it.fails` は import が成功した上での assertion の不一致だけで落ちるように書く。前提のテストは Red の段では `it.fails` にし、実装 PR で `it` に戻す。
 
 ## 3. 候補の oracle
 
@@ -29,7 +31,7 @@ guard の `onFailure` そのものは `docs/test-design/harness/L7-claude-hook-o
 | `CANDIDATE-U-CCVER-001` | 実行中の版の警告 | 入力: 最後の message の行の `version` が (a) `2.1.293`、(b) `2.1.295`、(c) `2.1.318`、(d) `2.2.0`、(e) `10.0.0`。期待: (a) だけ、stdout 全体が `JSON.parse` できる 1 つの object で、その `systemMessage` が警告 (版・下限・guard の失敗時の停止が効かないこと・更新の促し) を含む。(a) の stdout に `session-log: post-tool-use` の行は無い。(b)〜(e) の stdout は既存の `session-log: post-tool-use <id>` の行だけで、`systemMessage` を出さない。どれも exit 0。反例: 文字列として比べて (e) を下限未満と判定する実装。下限ちょうど (b) を警告する実装。警告のために exit を非 0 にする実装。警告を stderr だけに出す実装 (通常の画面に出ない)。既存の行と JSON を同じ stdout に混ぜる実装 (Claude Code が JSON として読めない)。 |
 | `CANDIDATE-U-CCVER-002` | 版を確かめられない | 入力: (a) `transcript_path` が無い、(b) 指す file が無い、(c) message の行に `version` が無い、(d) `version` が `x.y` 形式でない。期待: どれも、stdout が 1 つの JSON object で、その `systemMessage` が「Claude Code の版を確かめられない」を含む。exit 0。反例: 読めないときに黙って通す実装 (確かめられないことを知らせない)。読めないときに下限以上とみなす実装。 |
 | `CANDIDATE-U-CCVER-003` | 1 session に 1 回 | 入力: 同じ session_id で PostToolUse を 3 回、別の session_id で 1 回。transcript の版は下限未満。期待: 警告は session ごとに 1 回だけ (合計 2 回)。反例: tool の呼び出しごとに警告する実装。session をまたいで 1 回しか出さない実装。 |
-| `CANDIDATE-U-CCVER-004` | 下限の値と doctor | 入力: src の下限の定数、`docs/templates/adapter/CLAUDE.md`、`src/setup/templates.ts` の生成 adapter、doctor の check (stub の `claude --version` が `2.1.293` と `2.1.318`)。期待: (a) 文書と生成物に書かれた下限が定数と一致する。(b) doctor は `2.1.293` で warn、`2.1.318` で warn なし、どちらも fail にしない。warn の文言が「PATH の claude の版」と明記する。反例: 下限を文書と src に別々に書いて乖離させる実装。doctor を fail にする実装。PATH の版を実行中の版と称する文言。 |
+| `CANDIDATE-U-CCVER-004` | 下限の値と doctor | 入力: src の下限の定数、`docs/templates/adapter/CLAUDE.md`、`src/setup/templates.ts` の生成 adapter、doctor の check (stub の `claude --version` が `2.1.293` と `2.1.318`)。期待: (a) 文書と生成物に書かれた下限が `CLAUDE_CODE_VERSION_FLOOR` と一致する。(b) doctor (`checkClaudeVersionFloor`) は `2.1.293` で warn、`2.1.318` で warn なし、どちらも fail にしない。warn の文言が「PATH の claude の版」と明記する。反例: 下限を文書と src に別々に書いて乖離させる実装。doctor を fail にする実装。PATH の版を実行中の版と称する文言。 |
 | `CANDIDATE-U-CCVER-005` | 下限の参照関係 | 入力: (a) 下限の定数の module を `vi.mock` で `9.9.9` に差し替え、001 の (c) `2.1.318` の transcript で PostToolUse を呼ぶ。stub の `claude --version` が `2.1.318` で doctor の check を呼ぶ。`src/setup/templates.ts` で adapter の `CLAUDE.md` を生成する。(b) `src/` の下で下限の値の文字列 (`2.1.295`) を走査する。期待: (a) 警告が出る、doctor が warn を出す、生成した adapter の本文に `9.9.9` が書かれる。(b) 出現は定数を定義する file の 1 か所だけ。反例: 警告・doctor・adapter の生成がそれぞれ `2.1.295` を直接書き、使われない定数を別に置く実装 ((a) で警告も warn も出ず、生成物が `2.1.295` のまま。(b) で出現が複数)。 |
 | `CANDIDATE-U-CCVER-006` | 実画面での確認 (手動) | 手順: 本 repository の hook 設定のまま、(a) 下限未満の Claude Code (例 2.1.293) と (b) 下限以上の Claude Code (例 2.1.318) で新しい session を始め、tool を 1 回使う。期待: (a) は通常の画面に警告が 1 回だけ出て、2 回目の tool では出ない。(b) は出ない。どちらも tool の実行は止まらない。結果 (版・画面の記録・日時) を Issue #1561 に残す。反例: debug logging を有効にしないと見えない出し方。自動テストの対象にはしない。 |
 
