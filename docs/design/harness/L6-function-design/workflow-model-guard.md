@@ -1,7 +1,7 @@
 ---
 layer: L6
 artifact_type: design_doc
-status: draft
+status: confirmed
 sub_doc: function-spec
 artifact_role: topic_workflow_model_guard
 pair_artifact: docs/test-design/harness/L7-workflow-model-guard-test-design.md
