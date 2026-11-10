@@ -70,11 +70,11 @@ function requireMergeTreeSupport(repoRoot: string): void {
 }
 
 class PreviewSetupError extends Error {
-  constructor(
-    readonly reason: "preview_parent_unresolved" | "preview_dir_create_failed",
-    cause: unknown,
-  ) {
+  readonly reason: "preview_parent_unresolved" | "preview_dir_create_failed";
+
+  constructor(reason: "preview_parent_unresolved" | "preview_dir_create_failed", cause: unknown) {
     super(gitFailureReason(cause));
+    this.reason = reason;
     this.name = "PreviewSetupError";
   }
 }
