@@ -1,10 +1,7 @@
 /**
- * issue #693 Red (契約 PR + Red)。
+ * issue #693 windowsHide contract regression.
  * Contract: docs/design/harness/L6-function-design/windows-hide-default.md
  * Test design: docs/test-design/harness/L7-windows-hide-default-test-design.md
- *
- * Formal IDs are promoted by a docs/tests-only change; these it.fails cases
- * remain Red until a later implementation PR changes them to it.
  */
 import { execFileSync, spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
@@ -15,6 +12,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { resolveNodeBinary } from "../scripts/run-vitest-snapshot.ts";
 import { buildFullDoctorCheckDefinitions } from "../src/doctor/check-definitions.ts";
 import { nodeDoctorDeps } from "../src/doctor/runtime-state.ts";
+import { guardBootstrapHookArgs } from "../src/lint/project-hook.ts";
 import { buildCleanDistributionPlan, buildPackSyncPlan } from "../src/setup/distribution.ts";
 import { removeTestTree } from "./support/temp-tree.ts";
 
@@ -598,12 +596,9 @@ describe("issue #693 子プロセス windowsHide 既定 (Red)", () => {
       const consumerTemplates = [
         "docs/templates/adapter/.claude/settings.json",
         "docs/templates/adapter/.codex/hooks.json",
-      ];
+      ] as const;
       const claudeTemplatePath = consumerTemplates[0];
       const codexTemplatePath = consumerTemplates[1];
-      if (!claudeTemplatePath || !codexTemplatePath) {
-        throw new Error("Consumer template fixture paths are incomplete");
-      }
       const requiredSources = new Set(["src/runtime/windows-hide.ts", ...entries]);
       const plan = packPlan(sourcePaths);
       const packedPaths = plan.copyPlan.map((entry) => entry.artifactPath);
@@ -612,9 +607,9 @@ describe("issue #693 子プロセス windowsHide 既定 (Red)", () => {
       for (const template of consumerTemplates) expect(packedPaths).toContain(template);
       for (const entry of entries) expect(packedPaths).toContain(entry);
 
-      type ConsumerHook = { command?: string; args?: string[] };
+      type ConsumerHook = { command?: string; args?: string[]; matcher?: string };
       type ConsumerTemplate = {
-        hooks: Record<string, Array<{ hooks?: ConsumerHook[] }>>;
+        hooks: Record<string, Array<{ matcher?: string; hooks?: ConsumerHook[] }>>;
       };
       const packedTemplateContent = (artifactPath: string): string => {
         const artifact = plan.copyPlan.find((entry) => entry.artifactPath === artifactPath);
@@ -623,27 +618,38 @@ describe("issue #693 子プロセス windowsHide 既定 (Red)", () => {
         return readFileSync(join(root, artifact.sourcePath), "utf8");
       };
       const collectCommands = (template: ConsumerTemplate): ConsumerHook[] =>
-        Object.values(template.hooks).flatMap((events) =>
-          events.flatMap((event) => event.hooks ?? []),
+        Object.values(template.hooks).flatMap((entries) =>
+          entries.flatMap(({ matcher, hooks }) =>
+            (hooks ?? []).map((hook) => Object.assign(hook, { matcher })),
+          ),
         );
-      const claudeTemplate = JSON.parse(
-        packedTemplateContent(claudeTemplatePath),
-      ) as ConsumerTemplate;
-      const codexTemplate = JSON.parse(
-        packedTemplateContent(codexTemplatePath),
-      ) as ConsumerTemplate;
+      const [claudeTemplate, codexTemplate] = [claudeTemplatePath, codexTemplatePath].map(
+        (path) => JSON.parse(packedTemplateContent(path)) as ConsumerTemplate,
+      );
       const claudeCommands = collectCommands(claudeTemplate);
       const codexCommands = collectCommands(codexTemplate);
-      expect(claudeCommands.length).toBeGreaterThan(0);
-      expect(codexCommands.length).toBeGreaterThan(0);
-      expect(
-        claudeCommands.every(
-          (hook) =>
-            hook.command === "node" &&
-            hook.args?.[0] === ".ut-tdd/bin/ut-tdd.mjs" &&
-            !hook.args.some((arg) => arg.includes(".claude/hooks/")),
-        ),
-      ).toBe(true);
+      expect(claudeCommands.length * codexCommands.length).toBeGreaterThan(0);
+      const expectedGuards = new Map<string, "agent-guard" | "work-guard">([
+        ["Agent|Task", "agent-guard"],
+        ["Edit|Write|MultiEdit", "work-guard"],
+      ]);
+      const isCanonicalClaudeHook = (hook: ConsumerHook): boolean => {
+        const guard = expectedGuards.get(hook.matcher ?? "");
+        if (hook.command !== "node") return false;
+        if (guard)
+          return (
+            JSON.stringify(hook.args) === JSON.stringify(guardBootstrapHookArgs(guard)) &&
+            hook.args?.[1]?.includes("windowsHide:true") === true
+          );
+        return (
+          hook.args?.[0] === ".ut-tdd/bin/ut-tdd.mjs" &&
+          !hook.args.some((arg) => arg.includes(".claude/hooks/"))
+        );
+      };
+      expect(claudeCommands.filter((hook) => expectedGuards.has(hook.matcher ?? ""))).toHaveLength(
+        2,
+      );
+      expect(claudeCommands.every(isCanonicalClaudeHook)).toBe(true);
       expect(
         codexCommands.every(
           (hook) =>
@@ -656,14 +662,7 @@ describe("issue #693 子プロセス windowsHide 既定 (Red)", () => {
       const mutatedHook = collectCommands(mutatedClaude)[0];
       if (!mutatedHook) throw new Error("Claude consumer template has no hook command to mutate");
       mutatedHook.args = [".claude/hooks/session-log.ts"];
-      expect(
-        collectCommands(mutatedClaude).every(
-          (hook) =>
-            hook.command === "node" &&
-            hook.args?.[0] === ".ut-tdd/bin/ut-tdd.mjs" &&
-            !hook.args.some((arg) => arg.includes(".claude/hooks/")),
-        ),
-      ).toBe(false);
+      expect(collectCommands(mutatedClaude).every(isCanonicalClaudeHook)).toBe(false);
 
       const packedSources = plan.copyPlan.filter(({ artifactPath }) =>
         requiredSources.has(artifactPath),

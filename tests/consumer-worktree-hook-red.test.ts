@@ -1,5 +1,13 @@
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -88,8 +96,12 @@ function runGeneratedHook(
 function expectMissingRuntimeGuidance(output: string, fixture: HookFixture): void {
   const normalizedOutput = output.toLowerCase().replaceAll("\\", "/");
   expect(normalizedOutput).toContain("setup --worktree");
-  expect(normalizedOutput).toContain(fixture.mainRoot.toLowerCase().replaceAll("\\", "/"));
-  expect(normalizedOutput).toContain(fixture.worktreeRoot.toLowerCase().replaceAll("\\", "/"));
+  expect(normalizedOutput).toContain(
+    realpathSync.native(fixture.mainRoot).toLowerCase().replaceAll("\\", "/"),
+  );
+  expect(normalizedOutput).toContain(
+    realpathSync.native(fixture.worktreeRoot).toLowerCase().replaceAll("\\", "/"),
+  );
 }
 
 afterEach(() => {
