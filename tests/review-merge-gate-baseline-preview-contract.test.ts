@@ -135,42 +135,48 @@ describe.sequential("review merge gate baseline preview contract (Issue #1559)",
 
   it("U-RVMG-050: 同時previewは別pathを作り、既存directoryを保持する", async () => {
     const testFixture = buildFixture(smallFiles().base, smallFiles().branches);
-    const previewParent = join(testFixture.base, "parallel-preview-parent");
-    const barrierRoot = mkdtempSync(join(testFixture.base, "preview-barrier-"));
-    const existingDirectory = join(previewParent, "ut-tdd-baseline-preview-1559-existing");
-    mkdirSync(previewParent, { recursive: true });
-    mkdirSync(existingDirectory);
-    writeFileSync(join(existingDirectory, "keep.txt"), "keep\n", "utf8");
+    let previewParent: string | undefined;
+    let previewParentCreated = false;
+    let barrierRoot: string | undefined;
+    const workers: ReturnType<typeof startPreviewWorker>[] = [];
+    try {
+      previewParent = join(testFixture.base, "parallel-preview-parent");
+      barrierRoot = mkdtempSync(join(testFixture.base, "preview-barrier-"));
+      const existingDirectory = join(previewParent, "ut-tdd-baseline-preview-1559-existing");
+      mkdirSync(previewParent);
+      previewParentCreated = true;
+      mkdirSync(existingDirectory);
+      writeFileSync(join(existingDirectory, "keep.txt"), "keep\n", "utf8");
 
-    const repoRoots = ["repo-a", "repo-b"].map((name) => join(previewParent, name));
-    for (const repoRoot of repoRoots) {
-      execFileSync(
-        "git",
-        [
-          "clone",
-          "-q",
-          "-c",
-          "core.autocrlf=false",
-          join(testFixture.base, "origin.git"),
-          repoRoot,
-        ],
-        {
+      const repoRoots = ["repo-a", "repo-b"].map((name) => join(previewParent, name));
+      for (const repoRoot of repoRoots) {
+        execFileSync(
+          "git",
+          [
+            "clone",
+            "-q",
+            "-c",
+            "core.autocrlf=false",
+            join(testFixture.base, "origin.git"),
+            repoRoot,
+          ],
+          {
+            windowsHide: true,
+            stdio: ["ignore", "pipe", "pipe"],
+          },
+        );
+        execFileSync("git", ["-C", repoRoot, "checkout", "-q", "pr"], {
           windowsHide: true,
           stdio: ["ignore", "pipe", "pipe"],
-        },
-      );
-      execFileSync("git", ["-C", repoRoot, "checkout", "-q", "pr"], {
-        windowsHide: true,
-        stdio: ["ignore", "pipe", "pipe"],
-      });
-    }
-    const workers = repoRoots.map((repoRoot, index) =>
-      startPreviewWorker(repoRoot, testFixture.headSha, barrierRoot, String(index)),
-    );
-    const readyPaths = workers.map((_, index) => join(barrierRoot, `ready-${index}`));
-    try {
+        });
+      }
+      const readyPaths = [0, 1].map((index) => join(barrierRoot, `ready-${index}`));
+      const previewPaths: string[] = [];
+      for (const [index, repoRoot] of repoRoots.entries()) {
+        workers.push(startPreviewWorker(repoRoot, testFixture.headSha, barrierRoot, String(index)));
+      }
       await waitForPreviewWorkers(workers, readyPaths);
-      const previewPaths = readyPaths.map((path) => readFileSync(path, "utf8"));
+      previewPaths.push(...readyPaths.map((path) => readFileSync(path, "utf8")));
       expect(new Set(previewPaths).size).toBe(2);
       for (const previewPath of previewPaths) {
         expect(dirname(previewPath)).toBe(realpathSync.native(previewParent));
@@ -197,12 +203,30 @@ describe.sequential("review merge gate baseline preview contract (Issue #1559)",
       for (const previewPath of previewPaths) expect(existsSync(previewPath)).toBe(false);
       expect(existsSync(existingDirectory)).toBe(true);
     } finally {
-      writeFileSync(join(barrierRoot, "release"), "cleanup\n", "utf8");
-      for (const { child } of workers) if (child.exitCode === null) child.kill();
+      if (barrierRoot) {
+        try {
+          writeFileSync(join(barrierRoot, "release"), "cleanup\n", "utf8");
+        } catch {
+          // 途中失敗時も停止可能なworkerは以下で停止する。
+        }
+      }
+      for (const { child } of workers) {
+        if (child.exitCode === null) child.kill();
+      }
       await Promise.all(workers.map(({ done }) => done));
-      rmSync(barrierRoot, { recursive: true, force: true });
-      rmSync(previewParent, { recursive: true, force: true });
-      cleanFixture(testFixture);
+      try {
+        if (barrierRoot && existsSync(barrierRoot)) {
+          rmSync(barrierRoot, { recursive: true, force: true });
+        }
+      } finally {
+        try {
+          if (previewParentCreated && previewParent && existsSync(previewParent)) {
+            rmSync(previewParent, { recursive: true, force: true });
+          }
+        } finally {
+          cleanFixture(testFixture);
+        }
+      }
     }
   });
 

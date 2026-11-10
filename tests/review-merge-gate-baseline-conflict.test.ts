@@ -308,6 +308,8 @@ describe("review merge gate baseline conflict (Issue #1423)", { timeout: 120_000
       it(
         `CANDIDATE-U-RVMG-047: ${gate.name} ${label} は再計算後の最終可否と分けて競合検出する`,
         withFixture(plan, (fx) => {
+          // production adapter と同様、push 後の最新 main を検出する。
+          git(fx.work, "fetch", "-q", "origin", "+refs/heads/main:refs/remotes/origin/main");
           const mainSha = git(fx.work, "rev-parse", "origin/main^{commit}");
           const mergeBase = git(fx.work, "merge-base", fx.prHead, mainSha);
           const result = evaluateBaselineConflict(
