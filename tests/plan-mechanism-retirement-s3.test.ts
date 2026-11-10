@@ -80,7 +80,7 @@ function consumerFixture(): string {
     "| ケースID | family | 検証内容 | 合否基準 | トレース元 |",
     "|---|---|---|---|---|",
     "| OT-PLANRET-01 | OT | 日常運用の手順 | 失敗 0 | FR-L1-01 |",
-    "| OT-PLANRET-02 | VALUE | 導入価値の検証 | KPI 達成 | BR-01 / PLAN-L0-01 |",
+    "| OT-PLANRET-02 | VALUE | 導入価値の検証 | KPI 達成 | BR-01 / DOC-L0-CHARTER |",
     "",
   ].join("\n");
   writeFixture(root, "docs/test-design/L14-operational-test-design.md", content);
@@ -158,7 +158,7 @@ function evaluateG14(root: string) {
 function makeValueCase(root: string, citations: string): void {
   const slot = join(root, "docs/test-design/L14-operational-test-design.md");
   const content = readFileSync(slot, "utf8").replace(
-    "| OT-PLANRET-02 | VALUE | 導入価値の検証 | KPI 達成 | BR-01 / PLAN-L0-01 |",
+    "| OT-PLANRET-02 | VALUE | 導入価値の検証 | KPI 達成 | BR-01 / DOC-L0-CHARTER |",
     `| OT-PLANRET-02 | VALUE | 導入価値の検証 | KPI 達成 | ${citations} |`,
   );
   writeFileSync(slot, content, "utf8");
@@ -177,7 +177,7 @@ describe("PLAN mechanism retirement S3 Red", () => {
     expect(result.passed, result.messages.join("\n")).toBe(true);
   });
 
-  it.fails("CANDIDATE-U-PLANRET-001: accepts only the canonical GitHub Issue URL", () => {
+  it("CANDIDATE-U-PLANRET-001: accepts only the canonical GitHub Issue URL", () => {
     const cases = [
       {
         input: "https://github.com/o/r/issues/12",
@@ -198,7 +198,7 @@ describe("PLAN mechanism retirement S3 Red", () => {
     expect(actual).toEqual(cases.map(({ expected }) => expected));
   });
 
-  it.fails("CANDIDATE-U-PLANRET-003: accepts Issue URLs but rejects PLAN routing", () => {
+  it("CANDIDATE-U-PLANRET-003: accepts Issue URLs but rejects PLAN routing", () => {
     const root = consumerFixture();
     const feedbackPath = join(root, ".ut-tdd/evidence/g14-operational/artifacts/feedback.json");
     const feedback = JSON.parse(readFileSync(feedbackPath, "utf8")) as {
@@ -218,7 +218,7 @@ describe("PLAN mechanism retirement S3 Red", () => {
     expect(messages).not.toContain("does not exist");
   });
 
-  it.fails("CANDIDATE-U-PLANRET-004(a): accepts a design-root L0 doc_type_id citation", () => {
+  it("CANDIDATE-U-PLANRET-004(a): accepts a design-root L0 doc_type_id citation", () => {
     const root = consumerFixture();
     makeValueCase(root, "BR-01 / DOC-L0-CHARTER");
 
@@ -227,7 +227,7 @@ describe("PLAN mechanism retirement S3 Red", () => {
     expect(result.passed).toBe(true);
   });
 
-  it.fails("CANDIDATE-U-PLANRET-004(b): a resolvable PLAN-L0 citation is not an L0 citation", () => {
+  it("CANDIDATE-U-PLANRET-004(b): a resolvable PLAN-L0 citation is not an L0 citation", () => {
     const root = consumerFixture();
     makeValueCase(root, "BR-01 / PLAN-L0-01");
     const result = evaluateG14(root);
@@ -236,7 +236,7 @@ describe("PLAN mechanism retirement S3 Red", () => {
     expect(result.messages.join("\n")).toContain("does not cite L0");
   });
 
-  it.fails("CANDIDATE-U-PLANRET-004(c): VALUE error asks for a doc_type_id citation", () => {
+  it("CANDIDATE-U-PLANRET-004(c): VALUE error asks for a doc_type_id citation", () => {
     const root = consumerFixture();
     makeValueCase(root, "BR-01");
 
@@ -249,7 +249,7 @@ describe("PLAN mechanism retirement S3 Red", () => {
   afterEach(() => {
     for (const root of fixtureRoots.splice(0)) rmSync(root, { recursive: true, force: true });
   });
-  it.fails("CANDIDATE-U-PLANRET-005(a): normalizes Issue-backed defer", () => {
+  it("CANDIDATE-U-PLANRET-005(a): normalizes Issue-backed defer", () => {
     const result = normalizeDocumentApplicability({
       kind: "defer",
       reason: "後続対応",
@@ -268,7 +268,7 @@ describe("PLAN mechanism retirement S3 Red", () => {
     });
   });
 
-  it.fails("CANDIDATE-U-PLANRET-005(b): requires issue, not legacy plan_id", () => {
+  it("CANDIDATE-U-PLANRET-005(b): requires issue, not legacy plan_id", () => {
     const result = validateDocumentDisposition({
       baselinePath: "docs/a.md",
       disposition: "retain",
@@ -287,7 +287,7 @@ describe("PLAN mechanism retirement S3 Red", () => {
     expect(result).toEqual({ ok: false, missingFields: ["applicability.issue"] });
   });
 
-  it.fails("CANDIDATE-U-PLANRET-005(c): updates require a target or Issue", () => {
+  it("CANDIDATE-U-PLANRET-005(c): updates require a target or Issue", () => {
     const result = validateDocumentDisposition({
       baselinePath: "docs/a.md",
       disposition: "update",
@@ -333,7 +333,7 @@ describe("PLAN mechanism retirement S3 Red", () => {
     expect(recordedDigest).toBe("509a09c2bac0cc1d8cc74a8e359fb4de60b63d86a57b9ece992de6bbb060f91f");
   });
 
-  it.fails("CANDIDATE-U-PLANRET-005(e): rejects plan_alias as an unknown target kind", () => {
+  it("CANDIDATE-U-PLANRET-005(e): rejects plan_alias as an unknown target kind", () => {
     const input: CatalogInput = {
       manifestIdentity: { auditedOn: "2026-11-04", zipSha256: "a".repeat(64) },
       declaredCounts: {
@@ -358,7 +358,8 @@ describe("PLAN mechanism retirement S3 Red", () => {
           targetStatus: "adopt",
           reason: "既存記録",
           sourceDigest: "b".repeat(64),
-          targetKind: "plan_alias",
+          targetKind:
+            "plan_alias" as unknown as CatalogInput["itemTargetEdges"][number]["targetKind"],
           targetRef: "PLAN-L7-1-x",
         } as CatalogInput["itemTargetEdges"][number],
       ],

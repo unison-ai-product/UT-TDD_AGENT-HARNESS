@@ -574,14 +574,34 @@ Task-kind ベースの割当 (PO rule 2026-07-14、旧 tier 記述を supersede)
   GUI lane の指揮 = Terra (`gpt-6.1-terra`。フロントエンド・UI と設計の判断だけ Sol に相談する);
   超局所の難所の相談だけ = Astra (`gpt-6-astra`、常用しない)。指揮モデル別の振る舞いは
   `AGENTS.md` §Codex / Claude Code Harness の「あなたが○○なら」の表。
-- Claude: フロントデザイン/UI デザインの判断・レビュー/設計ドキュメント作成 = Opus (`claude-opus-5-5`);
-  決まった UI デザインの実装/ドキュメント修正 = Sonnet (`claude-sonnet-5-5`)
-  (指揮モデル別の相談先と委譲先は `.claude/CLAUDE.md` §委譲と判断層 の「あなたが○○なら」の表);
-  web 検索/doc パッチ = Haiku (`claude-haiku-5-5`)。Haiku は「基準が明示できる読み取りと編集」
-  (行番号・引用の確認、対象行が明示された文書編集) の標準 worker にしてよい。意味の判定と完了の判定は上位モデルか
-  control が確定し、成果物は非著者 review を通す。コードの worker 標準にする根拠はまだ無い
-  (実測 2026-11-02: 読み取り 3 本で誤り 0、実編集は対象 10 行を正解し誤書き換え 0。一方、前段の棚卸しは 7 行を誤分類し、
-  Issue 完了判定 68 件は 3 件誤り)。
+- Claude: 担当は次のとおり。指揮モデル別の相談先と委譲先は `.claude/CLAUDE.md` §委譲と判断層 の
+  「あなたが○○なら」の表を参照する。
+  - Opus (`claude-opus-5-5`): フロントデザイン/UI デザインの判断・レビュー、設計ドキュメント作成。
+  - Sonnet (`claude-sonnet-5-5`): 決まった UI デザインの実装、ドキュメント修正に加えて、**型が決まった書き物**。
+    例は closing review の発注文、Issue 本文、PR / Issue への返信、handover、設計文書の対象節が名指しされた改訂。
+  - Haiku (`claude-haiku-5-5`): web 検索、doc パッチに加えて、**読む・確かめる・集める作業の標準 worker**。
+    例は行番号・引用の確認、対象行が明示された文書編集、CI ログの失敗の要約、PR の差分と変更 path の重なりの確認、
+    Issue / PR / CI の状態確認、発注文や報告に入れる事実 (commit の一覧、diff の範囲、ファイルの有無) の収集、
+    grep での洗い出し。
+  - 指揮モデル (Fable / Opus) は、上の Sonnet と Haiku の担当を自分で行わず委ねる。
+  - 委譲するのは、独立した作業が複数あるとき、または 1 つのコンテキストに収まらない量を読むときである。
+    1 本の依存した鎖や、すでに自分のコンテキストにある内容で済む作業は委譲せず、自分で行う
+    (subagent は文脈を作り直し、報告を読み直す分の費用がかかる)。
+    この形の作業で費用を下げる手段は、委譲ではなく effort である。下の基準ラダーより高い effort で走っているなら
+    基準へ戻し、基準で足りる作業の effort を上げない (公式の計測では、この形の作業は、指揮モデル単独で effort を
+    下げたほうが、安い worker との組より得だった)。
+  - 依頼には、1 回で足りるように目的・対象の path / ID・判定の基準・返してほしい形を書く。
+    返ってきた結果は作り直さず、抜き取りで検収する。
+  - Haiku へ渡す文脈は 10 万トークン以内に収める (超えると単価が 5 倍になる。100 万トークンあたり
+    $0.10 / $0.50 が $0.50 / $2.50)。
+  - 変えない線引き: 意味の判定と完了の判定は上位モデルか control が確定し、成果物は非著者 review を通す。
+    コードの worker 標準にする根拠はまだ無い
+    (実測 2026-11-02: 読み取り 3 本で誤り 0、実編集は対象 10 行を正解し誤書き換え 0。一方、前段の棚卸しは 7 行を誤分類し、
+    Issue 完了判定 68 件は 3 件誤り)。
+  - 根拠 (#1599): Anthropic の公式文書 (Choosing the right model / Optimizing for cost and intelligence、
+    2026-11-10 確認) は、Haiku 5.5 の用途に subagent の作業を挙げ、指揮モデルと安い worker の組が単独より
+    得になった計測は「独立した作業が多いとき」と「1 コンテキストに収まらない量のとき」だけだとしている。
+    この数字は Anthropic 社内の計測で、この repo では未計測である。運用で誤りの件数を数えてから、担当の範囲を見直す。
 - 作業の守り方は 2 層に分ける (契約: `docs/design/harness/L6-function-design/agent-guard-delegation-boundary.md` §9)。
   **判断する層** (closing review・advisor・merge) は委譲経路 (`ut-tdd claude|codex --role <role>`)・
   review-guard・review custody・`ut-tdd pr merge` だけが持つ。**手を動かす層** (レーン内の並列、草稿・調査・編集)

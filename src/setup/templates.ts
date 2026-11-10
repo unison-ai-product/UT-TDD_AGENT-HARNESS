@@ -2,7 +2,7 @@ import { join } from "node:path";
 // Hook 配線の単一定義源: 生成 settings.json / hooks.json の command は project-hook lint の
 // wrapper 正規形から構築する (gate 要求と setup 生成物の再乖離防止、PLAN-RECOVERY-06)。
 import { codexCommandString } from "../lint/hook-invocation.ts";
-import { wrapperHookArgs } from "../lint/project-hook.ts";
+import { guardBootstrapHookArgs, wrapperHookArgs } from "../lint/project-hook.ts";
 // model ID は SSoT (src/team/model-policy.ts MODEL_IDS) 参照のみ。生 literal の二重保持は
 // 世代 drift の温床 (A-177 F-5 / PLAN-L7-256: templates が opus-4-7 のまま SSoT と乖離した実績)。
 import { MODEL_IDS } from "../team/model-policy.ts";
@@ -202,7 +202,7 @@ export const BUILTIN_GITHUB_TEMPLATES: TemplateSet = {
     "          {",
     '            "type": "command",',
     '            "command": "node",',
-    `            "args": ${JSON.stringify([...wrapperHookArgs("agent-guard")])},`,
+    `            "args": ${JSON.stringify([...guardBootstrapHookArgs("agent-guard")])},`,
     '            "timeout": 5,',
     '            "onFailure": "block",',
     '            "statusMessage": "agent-guard: generic subagent type and model check"',
@@ -215,7 +215,7 @@ export const BUILTIN_GITHUB_TEMPLATES: TemplateSet = {
     "          {",
     '            "type": "command",',
     '            "command": "node",',
-    `            "args": ${JSON.stringify([...wrapperHookArgs("work-guard")])},`,
+    `            "args": ${JSON.stringify([...guardBootstrapHookArgs("work-guard")])},`,
     '            "timeout": 5,',
     '            "onFailure": "block",',
     '            "statusMessage": "work-guard: foreign edit protection"',

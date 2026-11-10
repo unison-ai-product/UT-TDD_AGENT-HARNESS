@@ -7,10 +7,6 @@ import {
 } from "../../src/disposition/domain/target-resolver.ts";
 
 const registry: TargetRegistry = {
-  aliases: {
-    "PLAN-L0-01": ["PLAN-L0-01-vmodel-harness-upgrade-charter"],
-    "PLAN-L0-01-vmodel-harness-upgrade-charter": ["PLAN-L0-01-vmodel-harness-upgrade-charter"],
-  },
   pathAliases: { "a.md": ["docs/a.md"] },
   trackedPaths: new Set(["docs/a.md", "docs/family/a.md", "docs/family/b.md"]),
   familyMembers: {
@@ -58,7 +54,7 @@ describe("canonical target resolver", () => {
     });
   });
 
-  it.fails("U-DISPPTR-002: rejects retired plan_alias as an unknown target kind", () => {
+  it("U-DISPPTR-002: rejects retired plan_alias as an unknown target kind", () => {
     const result = resolveCanonicalTarget(
       { kind: "plan_alias" as unknown as TargetKind, ref: "PLAN-L0-01" },
       registry,

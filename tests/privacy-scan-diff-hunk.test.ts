@@ -162,7 +162,7 @@ describe("privacy scan diff hunk parsing", () => {
     ).toEqual([]);
   });
 
-  it.fails("U-PRIVDIFF-002: distinguishes an added hunk line beginning ++ from a +++ file header and retains it after a later deletion", () => {
+  it("U-PRIVDIFF-002: distinguishes an added hunk line beginning ++ from a +++ file header and retains it after a later deletion", () => {
     const result = analyzePrivacyScan({
       mode: "diff",
       units: redUnits,
@@ -217,7 +217,7 @@ describe("privacy scan diff hunk parsing", () => {
     ).toEqual([]);
   });
 
-  it.fails("U-PRIVDIFF-003: scans the added content after a --- deletion line in the same hunk, even when a later commit restores the old line", () => {
+  it("U-PRIVDIFF-003: scans the added content after a --- deletion line in the same hunk, even when a later commit restores the old line", () => {
     const result = analyzePrivacyScan({
       mode: "diff",
       units: replacementUnits,

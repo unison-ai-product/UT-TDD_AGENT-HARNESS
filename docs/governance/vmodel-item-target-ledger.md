@@ -13,13 +13,13 @@ baseline_revision: checked-zip-2026-07-10
 
 本書は163 semantic itemそれぞれのHARNESS target判断を保持するauthoring SSoTである。source→target edgeをruntimeで継承・推論してはならない。
 全itemをexactly once materializeし、未判断はrecord omissionではなく`pending_review`として明示する。target確定時はtarget kind/ref、判断理由、
-関連PLANを同じrowへ記録し、`verified`はdesign/runtime/test evidenceの別self-assessmentを通過するまで使用しない。
+必要な場合はIssue URLを同じrowへ記録し、`verified`はdesign/runtime/test evidenceの別self-assessmentを通過するまで使用しない。
 
 ## 2. item target判断台帳
 
 来歴: 全163行はもともと`plan_id`に`PLAN-L7-417-source-disposition-profile-projection`を記録していた。PLAN-L7-417はアーカイブ対象(#1165)であり、`plan_id`は`vmodel_item_target_edges.plan_id`のFK(`plan_registry`)を介してPLAN撤去を阻むため、`—`(未設定)へ置換した(#1168)。現状は全行`pending_review`で`defer`行は無く、`plan_id`は判断に使われていない。
 
-| edge_id | item_id | 項目名 | category_id | source_ref | source_digest | target_status | target_kind | target_ref | 判断理由 | plan_id |
+| edge_id | item_id | 項目名 | category_id | source_ref | source_digest | target_status | target_kind | target_ref | 判断理由 | issue |
 |---|---|---|---|---|---|---|---|---|---|---|
 | `ITEM-TARGET-QA-CHECKLIST` | `qa_checklist` | QA診断・品質チェックリスト | `test` | `ZIP-DOC-109` | `ee870401e2ecd1339fcacd22e8119b221bdd94f4128798bb9bf79393b9526205` | `pending_review` | — | — | PO/TL item-level target review待ち | — |
 | `ITEM-TARGET-REFACTORING` | `refactoring` | リファクタリング設計書 | `common` | `ZIP-DOC-108` | `5701fb6c018d040202e5976da45c3549320e62cde6f0c954ce289a8671b0407e` | `pending_review` | — | — | PO/TL item-level target review待ち | — |
@@ -189,5 +189,5 @@ baseline_revision: checked-zip-2026-07-10
 
 - item 163件 exactly once、重複/欠落0。
 - `pending_review` 0。adopt/merge/reference/defer/not_applicable/rejectの各判断はreason必須。
-- adopt/merge/reference/deferはtyped target、deferは実在PLAN必須。not_applicable/rejectは承認者と境界理由必須。
+- adopt/merge/reference/deferは現行のtyped target、deferは`parseIssueUrl`で解析できるIssue URL必須。not_applicable/rejectは承認者と境界理由必須。
 - runtime loaderは本表を読むだけでtargetを補完しない。DB drop/rebuild後のitem/target edge identityとdigestが一致する。

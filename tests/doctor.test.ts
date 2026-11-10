@@ -82,6 +82,7 @@ import { buildDoctorResult } from "../src/doctor/result.ts";
 import { analyzeGateRunCoverage, gateRunCoverageMessages } from "../src/lint/gate-run-coverage.ts";
 import { CODEX_GIT_ROOT_PREFIX } from "../src/lint/hook-invocation.ts";
 import type { AgentSlotsDeps, Slot } from "../src/runtime/agent-slots.ts";
+import { BUILTIN_GITHUB_TEMPLATES } from "../src/setup/templates.ts";
 import { stableId } from "../src/stable-id.ts";
 import {
   analyzeDesignDetectionStats,
@@ -1327,23 +1328,7 @@ describe("runDoctor", () => {
         ],
       },
     });
-    const claudeHook = (...args: string[]) => ({
-      type: "command",
-      command: "node",
-      args: [".ut-tdd/bin/ut-tdd.mjs", ...args],
-    });
-    const claudeHookJson = JSON.stringify({
-      hooks: {
-        PreToolUse: [
-          { hooks: [claudeHook("hook", "agent-guard")] },
-          { hooks: [claudeHook("hook", "work-guard")] },
-        ],
-        SessionStart: [{ hooks: [claudeHook("session", "start")] }],
-        PostToolUse: [{ hooks: [claudeHook("hook", "post-tool-use")] }],
-        Stop: [{ hooks: [claudeHook("session", "summary")] }],
-        SubagentStop: [{ hooks: [claudeHook("hook", "subagent-stop")] }],
-      },
-    });
+    const claudeHookJson = BUILTIN_GITHUB_TEMPLATES["adapter/.claude/settings.json"];
     const file = (path: string) => join("/repo", ...path.split("/"));
     const files = new Map<string, string>([
       [

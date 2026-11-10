@@ -29,7 +29,7 @@ describe("V-model physical schema definitions", () => {
         expect(column.notNull ?? false).toBe(
           !(
             table.name === "vmodel_item_target_edges" &&
-            ["target_kind", "target_ref", "plan_id"].includes(column.name)
+            ["target_kind", "target_ref", "issue"].includes(column.name)
           ),
         );
       }

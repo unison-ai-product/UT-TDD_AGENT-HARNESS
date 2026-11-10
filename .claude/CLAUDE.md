@@ -165,7 +165,7 @@ trade-off を記録した PLAN とする。spot-check で (a) この対象に該
 Sonnet 自身が worker tier なので、通常の作業は自分で行う (「あなたが○○なら」の表の Sonnet 行)。
 
 - 文書作成 = Sonnet (`claude-sonnet-5-5`)。実装 = Codex 側 worker (Luna `gpt-6-luna`)。
-  軽量探索・doc パッチ = Haiku 級。
+  読む・確かめる・集める作業 = Haiku (`claude-haiku-5-5`)。範囲の正本は `../CLAUDE.md` §Model / Effort Routing。
 - 判断ゲート (review / blind-review / qa / tl / security) は族内 frontier tier。
   正規委譲経路 (`ut-tdd codex|claude --role <role>`) がこの routing を機械強制する
   (`src/team/delegation-routing.ts`、未登録 role は fail-close)。
@@ -199,9 +199,10 @@ Sonnet 自身が worker tier なので、通常の作業は自分で行う (「�
 
 - Agent tool の subagent は手を動かす層 (草稿・調査・並列作業) であり、closing の権限を持たない。レビューの verdict・merge の根拠は
   委譲経路 (`ut-tdd claude|codex --role <role>`) と review custody だけが持つ (`../CLAUDE.md` §Model / Effort Routing の 2 層)。
-- 「通常の作業」は文書作成・決まった型での issue / PR 返信・決まった UI デザインの実装、「軽い作業」は
-  gh の状態確認・grep・CI の見張り・ログの要約。基準が明示できる読み取りと編集は Haiku に任せてよいが、
-  意味・完了の判定は任せない (`../CLAUDE.md` §Model / Effort Routing)。
+- 「通常の作業」は型が決まった書き物 (文書作成・決まった型での issue / PR 返信・発注文・handover) と
+  決まった UI デザインの実装、「軽い作業」は読む・確かめる・集める作業 (gh の状態確認・grep・CI の見張り・CI ログの要約・
+  diff の確認) である。意味・完了の判定は任せない。例は短く挙げただけで、範囲・委譲する形としない形・
+  Haiku の文脈上限の正本は `../CLAUDE.md` §Model / Effort Routing。
 - どの行でも変えないもの: モデル割当は Model / Effort Routing (`../CLAUDE.md`) と
   `src/team/delegation-routing.ts` の機械強制に従う。review の族分離 (Codex 著 → Claude Opus、
   Claude 著 → Codex Sol) は指揮モデルに依らない。PO へ上げてよい条件は `../CLAUDE.md`

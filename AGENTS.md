@@ -198,7 +198,7 @@ Model / effort routing defaults (task-kind ベース、PO rule 2026-07-14):
   `AGENTS.md` §Codex / Claude Code Harness の「あなたが○○なら」の表。
 - Claude: フロントデザイン/UI デザインの判断・レビュー/設計ドキュメント作成 = Opus (`claude-opus-5-5`);
   決まった UI デザインの実装/ドキュメント修正 = Sonnet (`claude-sonnet-5-5`);
-  web 検索/doc パッチ = Haiku (`claude-haiku-5-5`)。
+  web 検索/doc パッチ/読む・確かめる・集める作業 = Haiku (`claude-haiku-5-5`。詳細は `CLAUDE.md` §Model / Effort Routing)。
 - 並列の軽量レーンは Luna の subagent と Claude Haiku が担う (手を動かす層。closing の権限を持たない。正本: `CLAUDE.md` §Model / Effort Routing の 2 層)。
 - Effort はモデル別基準ラダー (PO rule 2026-07-28) が既定: Sol/Fable = `low`、
   Opus/Sonnet = `middle`、Luna = `high`。回答が浅い時は
