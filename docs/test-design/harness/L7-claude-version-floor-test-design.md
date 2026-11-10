@@ -30,6 +30,8 @@ guard の `onFailure` そのものは `docs/test-design/harness/L7-claude-hook-o
   - adapter の生成 (`src/setup/templates.ts`) と PostToolUse の hook (`src/cli.ts`) は、Red の段では変えない。
   これで、どの `it.fails` も import は成功し、assertion の不一致だけで落ちる。stub は実装 PR (Green) で実装に置き換える。前提を確かめるテストは、失敗を吸収する `it.fails` にはしない。
 
+- **hook を起動する環境 (2026-11-10 追記、#1561)**。001〜003 と 007 で `hook post-tool-use` を CLI の子 process として起動するときは、環境変数を明示して組む。001〜003 と 007 の (a) は Claude の環境とし、`CLAUDECODE=1` を設定し、`CODEX_SANDBOX` と `CODEX_HOME` を親の環境から引き継がない (削除する)。007 の (b)〜(d) は、その組の値だけを設定する。親の環境 (CI や Codex の shell) の値に結果が左右されないようにするためである。既存の Red のテスト (`tests/claude-version-floor.test.ts` の `invokePostToolUse`) は、いまは `{ ...process.env, CLAUDE_PROJECT_DIR: root }` で起動しており、この規則に合っていない。fixture の修正は、`CANDIDATE-U-CCVER-007` の昇格と Red の PR (src を含まない) で行う。001〜003 の assertion は変えず、起動する環境だけを直す。
+
 ## 3. 候補の oracle
 
 | ID | 対象 | 入力・期待・反例 |
@@ -40,6 +42,7 @@ guard の `onFailure` そのものは `docs/test-design/harness/L7-claude-hook-o
 | `U-CCVER-004` | 下限の値と doctor | 入力: src の下限の定数、`docs/templates/adapter/CLAUDE.md`、`src/setup/templates.ts` の生成 adapter、doctor の check (stub の `claude --version` が `2.1.293` と `2.1.318`)。期待: (a) 文書と生成物に書かれた下限が `CLAUDE_CODE_VERSION_FLOOR` と一致する。(b) doctor (`checkClaudeVersionFloor`) は `2.1.293` で warn、`2.1.318` で warn なし、どちらも fail にしない。warn の文言が「PATH の claude の版」と明記する。反例: 下限を文書と src に別々に書いて乖離させる実装。doctor を fail にする実装。PATH の版を実行中の版と称する文言。 |
 | `U-CCVER-005` | 下限の参照関係 | 入力: (a) 下限の定数の module を `vi.mock` で `9.9.9` に差し替え、同じテストの process の中で次の 3 つを呼ぶ。`evaluateClaudeVersion("2.1.318")`。`checkClaudeVersionFloor({ readPathClaudeVersion: () => "2.1.318" })`。`src/setup/templates.ts` の adapter の `CLAUDE.md` の生成。(b) `src/` の下で下限の値の文字列 (`2.1.295`) を走査する。期待: (a) `evaluateClaudeVersion` が `"below"` を返し、doctor が warn を出し、生成した adapter の本文に `9.9.9` が書かれる。(b) 出現は `src/runtime/claude-version-floor.ts` の 1 か所だけ。PostToolUse の hook (`src/cli.ts` の `hook post-tool-use`) は CLI の子 process で動き、`vi.mock` が届かないので、(a) では呼ばない。hook が下限を定数から得ていることは、(b) の走査 (hook が値を直接書けば出現が 2 か所以上になる) と、001 の CLI の挙動で確かめる。反例: 比較・doctor・adapter の生成がそれぞれ `2.1.295` を直接書き、使われない定数を別に置く実装 ((a) で `"ok"` を返し、warn が出ず、生成物が `2.1.295` のまま。(b) で出現が複数)。hook だけが `2.1.295` を直接書く実装 ((b) で出現が複数)。 |
 | `CANDIDATE-U-CCVER-006` | 実画面での確認 (手動) | 手順: 本 repository の hook 設定のまま、(a) 下限未満の Claude Code (例 2.1.293) と (b) 下限以上の Claude Code (例 2.1.318) で新しい session を始め、tool を 1 回使う。期待: (a) は通常の画面に警告が 1 回だけ出て、2 回目の tool では出ない。(b) は出ない。どちらも tool の実行は止まらない。結果 (版・画面の記録・日時) を Issue #1561 に残す。反例: debug logging を有効にしないと見えない出し方。自動テストの対象にはしない。 |
+| `CANDIDATE-U-CCVER-007` | 警告の対象の runtime (L6 の「対象の runtime」、2026-11-10、#1561) | 入力: `transcript_path` の無い PostToolUse の stdin で `hook post-tool-use` を CLI の子 process として起動する。環境変数の組を 4 通りにする。(a) `CLAUDECODE=1` だけ。(b) `CLAUDECODE=1` と `CODEX_SANDBOX`。(c) `CODEX_SANDBOX` だけ。(d) どれも無し。どの組でも `CLAUDE_PROJECT_DIR` は設定する。期待: (a) だけが stdout に「版を確かめられない」の `{"systemMessage":...}` を 1 つだけ出す。(b)(c)(d) は stdout が従来の `session-log: post-tool-use` の行だけで、`systemMessage` を出さない。どの組も exit 0。反例: `CLAUDE_PROJECT_DIR` の有無だけで判定する実装 ((b)(c)(d) でも警告が出る)。`CLAUDECODE` を見ない実装 ((d) で警告が出る)。テストレベル: CLI process。 |
 
 ## 4. 段の扱い
 

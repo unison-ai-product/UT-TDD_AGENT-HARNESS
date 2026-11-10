@@ -284,10 +284,17 @@ field は `type`・`command`・`timeout`・`statusMessage`・`async`・`addition
 
 下限の定数を関数と別の module に置くのは、`vi.mock` で定数の module を差し替えたときに、比較・doctor・adapter の生成がそろって追従することを確かめるためである (同じ module の中の参照は `vi.mock` では差し替わらない)。
 
+**対象の runtime (2026-11-10 追記、Issue #1561)**。`hook post-tool-use` は Claude と Codex が共有する。方式 1 の警告 (下限未満と「版を確かめられない」の両方) は、hook の process の環境変数が次の 2 つをともに満たすときだけ評価する。(1) `CLAUDECODE` が `"1"` である。(2) `CODEX_SANDBOX` と `CODEX_HOME` がどちらも設定されていない。満たさないときは評価せず、stdout は従来の `session-log: post-tool-use` の行のままにする。
+
+- 信号は `src/runtime/detect.ts` の `detectMode` が runtime の判定に使うものと同じである。新しい環境変数・設定項目・hook の引数は足さない。
+- 両方の信号がある場合 (Claude から起動した Codex が `CLAUDECODE` を継承した場合など) は Codex とみなし、評価しない。警告は助言であり、評価しない側に倒しても guard の判定は変わらない。逆に、利用者が `CODEX_HOME` を常に設定している環境では Claude でも警告が出ない。この見逃しは受け入れる (Codex の画面に Claude の警告を出す誤りより害が小さい)。
+- `CLAUDE_PROJECT_DIR` の有無は対象の判定に使わない。Claude から起動した Codex に継承されうるためである。
+- 対応する oracle は `docs/test-design/harness/L7-claude-version-floor-test-design.md` の `CANDIDATE-U-CCVER-007` である。
+
 採らない方式。
 
 - SessionStart で版を読む方式: hook の stdin に版が無く、`source=startup` の時点では transcript に message の行がまだ無いことがある。
 - わざと失敗する検査用の hook を置く方式: 新しい版では全 tool を止めて作業できなくなり、古い版では無音になる。
 - guard の内部エラーをすべて exit 2 にして版に頼らない方式: 古い版で効かなかったのは guard の script を起動できない場合であり、script の中で例外を捕まえても救えない。work-guard の「内部エラーは fail-open (exit 0)」は既存の契約で、本節では変えない。
 
-対応する自動テスト oracle は `docs/test-design/harness/L7-claude-version-floor-test-design.md` の `U-CCVER-001`〜`005` である。実画面での確認は、同書の `CANDIDATE-U-CCVER-006` を実装後に行う。
+対応する自動テスト oracle は `docs/test-design/harness/L7-claude-version-floor-test-design.md` の `U-CCVER-001`〜`005` と、対象の runtime の候補 `CANDIDATE-U-CCVER-007` である。実画面での確認は、同書の `CANDIDATE-U-CCVER-006` を実装後に行う。
