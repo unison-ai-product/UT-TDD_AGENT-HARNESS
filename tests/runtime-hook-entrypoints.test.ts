@@ -14,11 +14,10 @@ import { Worker } from "node:worker_threads";
 import { describe, expect, it, vi } from "vitest";
 import { BUILTIN_GITHUB_TEMPLATES } from "../src/setup/templates.ts";
 import { ensureTrackedProjectIdentity } from "./support/project-identity-fixture.ts";
-
+import { registerPlanret014LifecycleOracle } from "./support/planret-s4-runtime-oracle.ts";
 const sessionStartProbe = vi.hoisted(() => ({
   materializeCallback: null as null | ((repoRoot: string) => void),
 }));
-
 vi.mock("../src/shared/embedded-skills.ts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../src/shared/embedded-skills.ts")>();
   return {
@@ -33,8 +32,7 @@ vi.mock("../src/shared/embedded-skills.ts", async (importOriginal) => {
   };
 });
 
-const repoRoot = process.cwd();
-const cliPath = join(repoRoot, "src", "cli.ts");
+const repoRoot = process.cwd(), cliPath = join(repoRoot, "src", "cli.ts");
 const legacyEnvPrefix = ["HE", "LIX"].join("");
 const claudeProjectDir = `$${"{CLAUDE_PROJECT_DIR}"}`;
 
@@ -164,7 +162,6 @@ function writeFakeCodex(binDir: string): string {
   chmodSync(path, 0o755);
   return path;
 }
-
 function writeFakeClaude(binDir: string): string {
   mkdirSync(binDir, { recursive: true });
   const rawEnv = [legacyEnvPrefix, "ALLOW", "RAW", "CLAUDE"].join("_");
@@ -185,8 +182,7 @@ function writeFakeClaude(binDir: string): string {
   chmodSync(path, 0o755);
   return path;
 }
-
-describe("runtime hook entrypoints", () => {
+describe("runtime hook entrypoints", () => { registerPlanret014LifecycleOracle({ runCli, readSessionStartEvents });
   describe("U-SLOG-011: source開発repo自身の5記録hookを30秒にする", () => {
     it("U-SLOG-011: source開発repo自身の5記録hookを30秒にする", () => {
       const claude = JSON.parse(readFileSync(join(repoRoot, ".claude", "settings.json"), "utf8"));

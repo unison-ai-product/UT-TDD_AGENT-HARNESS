@@ -15,6 +15,7 @@ import {
   resolveGithubCiRuntimeProfile,
 } from "../src/lint/github-ci-policy.ts";
 import { removeTestTree } from "./support/temp-tree.ts";
+import { registerPlanret016Oracle } from "./support/planret-s4-review-custody-oracles.ts";
 
 const AGGREGATE_ALWAYS = "$" + "{{ always() }}";
 // PLAN-L7-455 (troubleshoot): doc-only lane 分岐の canonical if 条件式。
@@ -208,8 +209,7 @@ const SOURCE_WORKFLOW = readFileSync(
   "utf8",
 );
 const SOURCE_WORKFLOW_WITH_LANE = SOURCE_WORKFLOW;
-void LEGACY_SOURCE_WORKFLOW;
-void LEGACY_SOURCE_WORKFLOW_WITH_LANE;
+void [LEGACY_SOURCE_WORKFLOW, LEGACY_SOURCE_WORKFLOW_WITH_LANE];
 
 function replaceRequired(source: string, from: string | RegExp, to: string): string {
   expect(source).toMatch(
@@ -265,8 +265,8 @@ describe("Issue #1411 Node pin Red oracles", () => {
   const reviewAttestation = sourceDocs.find((doc) => doc.role === "attestation_runtime");
   const packTemplate = sourceDocs.find((doc) => doc.role === "pack_template");
 
-  if (!reviewAttestation || !packTemplate)
-    throw new Error("Issue #1411 requires the source attestation workflow and Pack template");
+  if (!reviewAttestation || !packTemplate) throw new Error("Issue #1411 requires the source attestation workflow and Pack template");
+  registerPlanret016Oracle(sourceDocs, reviewAttestation);
 
   it("U-CIPOL-040: review-attestation pins the reviewed Node version", () => {
     expect(nodeVersionFromWorkflow(reviewAttestation.content)).toBe("24.22.1");

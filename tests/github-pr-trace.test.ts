@@ -14,6 +14,35 @@ const VALID_FIELDS = {
 } as const;
 
 describe("github pr trace contract (PLAN-L7-451 W4)", () => {
+  it.fails("CANDIDATE-U-PLANRET-006: trace v2 はIssueだけに束縛し、PLAN fieldを拒否する", () => {
+    const fields = {
+      route_mode: "add-feature",
+      subject_head: "abc123def456abc123def456abc123def456abcd",
+      base_sha: "5eff8549",
+      issue_number: "97",
+    };
+    const block = renderPrTraceBlock(
+      fields as Parameters<typeof renderPrTraceBlock>[0],
+    );
+    expect(block).toContain("<!-- ut-tdd:trace/v2");
+    expect(block).not.toContain("plan_id:");
+    expect(validatePrTraceBody(`## 概要\n\n${block}\n`).ok).toBe(true);
+
+    const withPlan = `${block.replace("-->", "plan_id: PLAN-L7-451-retired\n-->")}`;
+    expect(validatePrTraceBody(`## 概要\n\n${withPlan}\n`).findings).toContainEqual(
+      expect.objectContaining({ code: "trace-key-unknown" }),
+    );
+    const missingIssue = block.replace("issue_number: 97\n", "");
+    expect(validatePrTraceBody(`## 概要\n\n${missingIssue}\n`).findings).toContainEqual(
+      expect.objectContaining({ code: "missing-issue-number" }),
+    );
+
+    const template = readFileSync(join(headSnapshotRoot(), ".github", "PULL_REQUEST_TEMPLATE.md"), "utf8");
+    expect(template).toContain("Closes #<issue-number>");
+    expect(template).toContain("ut-tdd:trace/v2");
+    expect(template).not.toMatch(/PLAN|plan_id|plan_revision|trace\/v1/iu);
+  });
+
   it("U-L7-451-W4-001: render が有効な trace block を生成し validate が受理する", () => {
     const block = renderPrTraceBlock(VALID_FIELDS);
     expect(block).toContain("<!-- ut-tdd:trace/v1");
