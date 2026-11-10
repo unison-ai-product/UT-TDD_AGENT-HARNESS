@@ -13,7 +13,7 @@ issue: 1600
 
 ## 1. 位置付け
 
-対になる設計文書は `docs/design/harness/L6-function-design/review-request-admission.md` の §4 方式、§5 失敗の扱い、§8 不変条件である。共有の `docs/test-design/harness/L7-unit-test-design.md` には索引行を足さない。本書は候補の oracle `CANDIDATE-U-RVADM-001`〜`012` を記録する。
+対になる設計文書は `docs/design/harness/L6-function-design/review-request-admission.md` の §4 方式、§5 失敗の扱い、§8 不変条件である。共有の `docs/test-design/harness/L7-unit-test-design.md` には索引行を足さない。本書は候補の oracle `CANDIDATE-U-RVADM-001`〜`013` を記録する。
 
 昇格の手順: src を含まない昇格 PR で、候補を正式 ID `U-RVADM-*` に改め、各ケースを `it.fails` として `tests/` に入れる (Red の実測を同じ PR に束縛する)。実装 PR は `it.fails` を `it` に戻す最小実装 (Green) を入れ、そのあとに Refactor の commit を足す。ID の接頭辞 `RVADM` は、既存の `RVATT` (attestation)・`RVMG` (merge gate) が委譲 CLI の入口を対象にしていないため新設した。
 
@@ -40,6 +40,7 @@ issue: 1600
 | `CANDIDATE-U-RVADM-010` | 二重防御と述語の共有 | 入力 (a): `beginReviewAttempt` を直接、同族の provider で呼ぶ。期待: 従来どおり `same_family_reviewer_denied`。入力 (b): 族分離の述語を受理の検査側だけ変える mutation。期待: 001 と 010 (a) のどちらかが赤くなる (判定が分岐しない)。反例: 受理の検査と `beginReviewAttempt` に別々の判定を書く実装。レベル: unit。 |
 | `CANDIDATE-U-RVADM-011` | dry-run も同じ受理の検査を通り、何も書かない | 入力: `--execute` なしで、001・004 の呼び出しを実行する。期待: execute 時と同じ reason で exit 非 0。正しい呼び出しの dry-run は計画を出して成功し、`.ut-tdd/review/` に何も書かない。反例: dry-run だけ受理の検査を飛ばす実装。レベル: unit。 |
 | `CANDIDATE-U-RVADM-012` | すでに残っている request は変えない | 入力: verdict の無い request が既に 1 件残っている状態で、別の HEAD に対する正しい呼び出しを実行する。期待: 既存の request の file は bytes が不変で、元の HEAD の gate は `pending_request_for_head` のまま。新しい HEAD の request は別に書かれる。反例: 受理の変更が既存の request を消す・書き換える実装。レベル: integration。 |
+| `CANDIDATE-U-RVADM-013` | 違反が重なる複合入力の検査順 | 入力: ほかの必須値は有効で `--review-revision=-bad --review-author-family foo`。期待: L6 §4.2 の全体の検査順 (既存の author family の検査が revision の形の検査より先) により `review_author_family_required` (`review_revision_invalid` ではない)、exit 非 0、request が 0 件。対照: `--review-author-family codex` に直した同じ入力は `review_revision_invalid`。反例: 新設の revision の形の検査を既存の author family の検査より先に置く実装。レベル: unit。 |
 
 ## 4. 既存テストとの関係
 

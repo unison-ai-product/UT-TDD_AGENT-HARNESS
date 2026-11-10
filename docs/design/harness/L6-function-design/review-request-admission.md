@@ -11,7 +11,7 @@ created: 2026-11-10
 issue: 1600
 ---
 
-> **L6 contract marker**: `admitReviewRequest(input) => ReviewRequestAdmission` は unit-test-granularity contract である (未実装の目標契約。関数名は実装で変えてよいが、受理の検査を 1 つの単位にまとめる)。本書は review の委譲 (`ut-tdd claude|codex --role <reviewer 系 role> --review-*`) が、入口の検査をすべて終えてから review request を custody へ書く順序と、入口の検査の拒否を request の残らない失敗として扱う規則を凍結する (未実装の目標契約)。oracle は `docs/test-design/harness/L7-review-request-admission-test-design.md` の `CANDIDATE-U-RVADM-001`〜`012` が固定する (正式 ID `U-RVADM-*` への昇格は、src を含まない昇格 PR で行う)。行番号は 2026-11-10 の `main` (`91ae6af99`) で測った。
+> **L6 contract marker**: `admitReviewRequest(input) => ReviewRequestAdmission` は unit-test-granularity contract である (未実装の目標契約。関数名は実装で変えてよいが、受理の検査を 1 つの単位にまとめる)。本書は review の委譲 (`ut-tdd claude|codex --role <reviewer 系 role> --review-*`) が、入口の検査をすべて終えてから review request を custody へ書く順序と、入口の検査の拒否を request の残らない失敗として扱う規則を凍結する (未実装の目標契約)。oracle は `docs/test-design/harness/L7-review-request-admission-test-design.md` の `CANDIDATE-U-RVADM-001`〜`013` が固定する (正式 ID `U-RVADM-*` への昇格は、src を含まない昇格 PR で行う)。行番号は 2026-11-10 の `main` (`91ae6af99`) で測った。
 
 # review request の受理順序 (入口の検査を書き込みの前に) - 機能設計 (Issue #1600)
 
@@ -88,8 +88,8 @@ merge gate は、exact HEAD の entry に verdict が 1 件でも無いと `pend
 
 request を custody に書く (`issueReviewRequest`) 前に、次の検査をすべて終える。1 つでも失敗したら、request も attempt も audit event も書かずに、typed reason を stderr へ出して exit 1 で終える。
 
-1. 既存の検査 (手順 1〜4) はそのまま前に置く。
-2. 値の形の検査 (§4.2)。
+1. 既存の検査 (§3.1 の手順 1〜4。author family の検査を含む) はそのまま最初に置く。
+2. 値の形の検査 (§4.2 の順 3〜4)。手順 1 の既存の検査 (§4.2 の順 1〜2 を含む) が先に当たる。
 3. 族分離: reviewer の provider が `authorFamily` の反対であること。`beginReviewAttempt` と同じ判定を共有の述語として取り出し、受理の検査と `beginReviewAttempt` の両方がそれを呼ぶ (正規化は 1 箇所。判定を 2 箇所に書き分けない)。
 4. model の下限: `isReviewFloorModel(provider, model)` を同じく共有の述語として前に置く。
 5. 実行計画が組み立てられること (手順 5、既存)。
@@ -102,14 +102,17 @@ dry-run (`--execute` なし) も同じ受理の検査を通す。dry-run が成�
 
 review identity の宣言 (`--review-*` のいずれかを渡した呼び出し) では、次を拒否する。
 
-| 入力 | reason | 備考 |
-|---|---|---|
-| `--review-revision` が空文字、または空白だけ | `review_head_required` | 既存の reason。渡されていない (三識別子の欠落) ときと同じ扱いで、採番しない |
-| `--review-revision` が `-` で始まる値 | `review_revision_invalid` | option の取り違え (§3.2) の検出。値を取る option に別の option 名が入った形を拒否する |
-| 余分な位置引数がある | `review_unexpected_argument` | 値が捨てられて意図と違う request になる形 (§3.2 の `codex`) を拒否する |
-| `--review-author-family` が `codex` / `claude` 以外 | `review_author_family_required` | 既存の reason。推定へ落とさない |
+| 順 | 入力 | reason | 備考 |
+|---|---|---|---|
+| 1 | `--review-revision` が空文字、または空白だけ | `review_head_required` | 既存の reason (§3.1 手順 2)。渡されていない (三識別子の欠落) ときと同じ扱いで、採番しない |
+| 2 | `--review-author-family` が `codex` / `claude` 以外 | `review_author_family_required` | 既存の reason (§3.1 手順 3)。推定へ落とさない |
+| 3 | `--review-revision` が `-` で始まる値 | `review_revision_invalid` | option の取り違え (§3.2) の検出。値を取る option に別の option 名が入った形を拒否する |
+| 4 | 余分な位置引数がある | `review_unexpected_argument` | 値が捨てられて意図と違う request になる形 (§3.2 の `codex`) を拒否する |
 
-違反が重なったときの優先順位は、検査の順序 (上の表の上から下、§4.1 の手順 1〜5 の順) とし、最初に当たった違反の reason だけを返す。`review_revision_invalid` は `review_unexpected_argument` より優先する。revision の値が option 名になった呼び出しでは、値が消えた原因は option の取り違えであり、revision の検査が先に原因を指すためである。実例 `--review-revision --review-author-family codex` (位置引数 `codex` が余る) は、この優先順位により `review_revision_invalid` を返す。
+検査順は全体で 1 つであり、§3.1 の手順 1〜4 (既存の挙動) を先、この表の順 3〜4 (新設) をその後、族分離・model の下限・実行計画 (§4.1 の手順 3〜5) をさらに後とする。既存の拒否の reason は、新設の検査の追加で変わらない (既存の挙動がより強い制約である)。違反が重なったときは、この全体の順で最初に当たった違反の reason だけを返す。
+
+- `review_revision_invalid` は `review_unexpected_argument` より優先する。revision の値が option 名になった呼び出しでは、値が消えた原因は option の取り違えであり、revision の検査が先に原因を指すためである。実例 `--review-revision --review-author-family codex` (author family は未指定で推定され有効、位置引数 `codex` が余る) は `review_revision_invalid` を返す。
+- 複合入力 `--review-revision=-bad --review-author-family foo` (ほかの必須値は有効) は、author family の検査 (順 2) が revision の形の検査 (順 3) より先なので `review_author_family_required` を返す。
 
 `--review-revision` を渡さない呼び出しの既存の挙動は変えない。`review_head_required` で拒否する (`delegation.ts:385`)。`rv1-` で始まらない通常の識別子 (人が付けた id) を渡したときに `canonicalizeReviewRequest` が `rv1-<digest>` を採番する挙動も、既存の正規の使い方なので変えない。拒否するのは、値が空であるか option の形をしている場合だけである。
 
