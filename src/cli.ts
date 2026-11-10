@@ -208,6 +208,11 @@ import {
 } from "./runtime/work-guard.ts";
 import { findReference } from "./search/index.ts";
 import {
+  handleConsumerWorktreeSetupOption,
+  invalidSetupMode,
+  reportExistingRuntime,
+} from "./setup/consumer-worktree-cli.ts";
+import {
   admitConsumerLocalRuntime,
   admitReleaseAggregate,
   type ConsumerLocalRuntimeAdmissionInput,
@@ -3822,6 +3827,7 @@ program
     "sealed consumer runtime input JSON emitted by the release materializer",
   )
   .option("--consumer-runtime-release <path>", "offline Pack consumer runtime Release directory")
+  .option("--worktree <path>", "install the main runtime pin into a linked worktree")
   .option(
     "--expected-consumer-digest <digest>",
     "external sha256 anchor for the Release checksum asset",
@@ -3838,20 +3844,10 @@ program
       consumerRuntimeInput?: string;
       consumerRuntimeRelease?: string;
       expectedConsumerDigest?: string;
+      worktree?: string;
     }) => {
-      if (opts.solo && opts.team) {
-        process.stderr.write("--solo と --team は同時指定できません (どちらか一方)\n");
-        process.exitCode = 1;
-        return;
-      }
       const teamCount = [opts.tlTeam, opts.qaTeam, opts.poTeam].filter(Boolean).length;
-      if (opts.team && teamCount === 0) {
-        process.stderr.write(
-          "--team requires --tl-team / --qa-team / --po-team so generated CODEOWNERS never ships with unresolved team placeholders.\n",
-        );
-        process.exitCode = 1;
-        return;
-      }
+      if (invalidSetupMode({ ...opts, teamCount })) return;
       if (teamCount > 0 && teamCount < 3) {
         process.stderr.write(
           "--tl-team / --qa-team / --po-team は 3 つとも指定してください (CODEOWNERS の @TODO 混入防止)\n",
@@ -3869,6 +3865,7 @@ program
         process.exitCode = 1;
         return;
       }
+      if (await handleConsumerWorktreeSetupOption({ ...opts, teamCount })) return;
       const phase = opts.solo ? "0-A" : opts.team ? "0-B" : undefined;
       const teams =
         teamCount === 3
@@ -3894,10 +3891,7 @@ program
             executingModulePath: fileURLToPath(import.meta.url),
             setupDeps: () => nodeSetupDeps(realpathSync.native(process.cwd())),
           });
-          if (result.status === "already-installed") {
-            process.stdout.write("consumer runtime: already installed (no writes)\n");
-            return;
-          }
+          if (reportExistingRuntime(result)) return;
           const r = result.setup;
           process.stdout.write(`phase: ${r.phase}\n`);
           for (const w of r.written) process.stdout.write(`  + ${w}\n`);

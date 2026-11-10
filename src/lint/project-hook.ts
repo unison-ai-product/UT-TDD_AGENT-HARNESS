@@ -154,6 +154,21 @@ export function wrapperHookArgs(id: RequiredProjectHookId): readonly string[] {
   return entry.wrapperArgs;
 }
 
+/**
+ * Claude guard preflight for the generated consumer wrapper. This is kept here
+ * so setup templates and the project-hook lint accept exactly the same source.
+ * Record/session hooks intentionally continue to invoke the launcher directly.
+ */
+export const MISSING_RUNTIME_GUARD_BOOTSTRAP =
+  'const fs=require("node:fs"),path=require("node:path"),cp=require("node:child_process");let root;try{root=fs.realpathSync.native(process.env.CLAUDE_PROJECT_DIR||cp.execFileSync("git",["rev-parse","--show-toplevel"],{encoding:"utf8"}).trim())}catch{root=path.resolve(process.cwd())}const launcher=path.resolve(root,".ut-tdd","bin","ut-tdd.mjs");if(fs.existsSync(launcher)){const result=cp.spawnSync(process.execPath,[launcher,...process.argv.slice(2)],{cwd:root,stdio:"inherit",windowsHide:true});if(result.error){console.error("consumer_runtime_resolution_denied");process.exit(78)}process.exit(result.status??1)}let mainLauncher="<main worktree>/.ut-tdd/bin/ut-tdd.mjs";let mainExplanation=" (resolve <main worktree> from git rev-parse --git-common-dir)";try{const common=path.resolve(root,cp.execFileSync("git",["rev-parse","--git-common-dir"],{cwd:root,encoding:"utf8"}).trim());mainLauncher=path.join(path.dirname(common),".ut-tdd","bin","ut-tdd.mjs");mainExplanation=""}catch{}const q=String.fromCharCode(34);console.error("consumer_runtime_absent: runtime is missing from this worktree. Run: node "+q+mainLauncher+q+" setup --worktree "+q+root+q+mainExplanation);process.exit(2)';
+
+export type ProjectGuardHookId = "agent-guard" | "work-guard";
+
+/** Claude-only argv used for the two blocking guards; Codex keeps wrapperHookArgs. */
+export function guardBootstrapHookArgs(id: ProjectGuardHookId): readonly string[] {
+  return ["-e", MISSING_RUNTIME_GUARD_BOOTSTRAP, ...wrapperHookArgs(id)];
+}
+
 const LEGACY_RUNTIME_NAME = ["he", "lix"].join("");
 const LEGACY_ENV_PREFIX = ["HE", "LIX_"].join("");
 export const FORBIDDEN_PATH_RE = new RegExp(
@@ -196,11 +211,15 @@ function isSourceForm(hook: HookCommand, required: RequiredProjectHook): boolean
 
 function isWrapperForm(hook: HookCommand, required: RequiredProjectHook): boolean {
   const invocation = parseHookInvocation(hook);
+  const args =
+    required.id === "agent-guard" || required.id === "work-guard"
+      ? guardBootstrapHookArgs(required.id)
+      : required.wrapperArgs;
   return (
     invocation !== null &&
     invocationEquals(invocation, {
       executable: "node",
-      args: [...required.wrapperArgs],
+      args: [...args],
     })
   );
 }

@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { CODEX_GIT_ROOT_PREFIX } from "../src/lint/hook-invocation.ts";
+import { guardBootstrapHookArgs } from "../src/lint/project-hook.ts";
 import { buildBranchProtectionPayload } from "../src/setup/branch-protection.ts";
 import {
   applyBranchProtection,
@@ -30,7 +31,6 @@ import {
   transformCleanDistributionArtifact,
 } from "../src/setup/index.ts";
 import { COMMON_FILES, type TemplateSet } from "../src/setup/templates.ts";
-import { MODEL_IDS } from "../src/team/model-policy.ts";
 
 /** in-memory file store + gh 呼び出し記録の mock deps (now 固定で決定論)。 */
 function mockDeps(
@@ -417,7 +417,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
             hooks: [
               expect.objectContaining({
                 command: "node",
-                args: [".ut-tdd/bin/ut-tdd.mjs", "hook", "agent-guard"],
+                args: [...guardBootstrapHookArgs("agent-guard")],
                 onFailure: "block",
               }),
             ],
@@ -427,7 +427,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
             hooks: [
               expect.objectContaining({
                 command: "node",
-                args: [".ut-tdd/bin/ut-tdd.mjs", "hook", "work-guard"],
+                args: [...guardBootstrapHookArgs("work-guard")],
                 onFailure: "block",
               }),
             ],
@@ -544,15 +544,14 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     };
     expect(claudeSettings.hooks.PreToolUse[0]?.hooks[0]).toMatchObject({
       command: "node",
-      args: [".ut-tdd/bin/ut-tdd.mjs", "hook", "agent-guard"],
+      args: [...guardBootstrapHookArgs("agent-guard")],
     });
     expect(codexHooks.hooks.PreToolUse[0]?.hooks[0]).toMatchObject({
       command: `node "${CODEX_GIT_ROOT_PREFIX}.ut-tdd/bin/ut-tdd.mjs" hook agent-guard`,
     });
   });
 
-  // The generated wrapper is a sealed Node entrypoint. Launch via Node directly and
-  // assert its fail-closed result when no active runtime pointer exists.
+  // Launch the sealed Node wrapper directly and verify fail-closed behavior when no active pointer exists.
   function runWrapperViaNode(cwd: string, args: string[]) {
     return spawnSync(process.execPath, args, { cwd, encoding: "utf8", windowsHide: true });
   }
@@ -612,9 +611,9 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
 
       const result = runWrapperViaNode(repo, [wrapperPath, "status"]);
 
-      expect(result.status).toBe(78);
+      expect(result.status).toBe(2);
       expect(result.stdout).toBe("");
-      expect(result.stderr).toContain("consumer_runtime_absent");
+      expect(result.stderr).toMatch(/consumer_runtime_absent[\s\S]*setup --worktree/);
     } finally {
       rmSync(repo, { recursive: true, force: true });
     }

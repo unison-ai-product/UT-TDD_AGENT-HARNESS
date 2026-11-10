@@ -633,11 +633,9 @@ describe("#418 Pack-only internal canary boundary (PR-1 / first layer)", () => {
         (hook) => hook.args.includes("work-guard"),
       );
       if (!claudeHook) throw new Error("generated Claude work-guard hook is missing");
-      const originalClaudeRegistration = JSON.stringify(claudeHook);
-      claudeHook.args = claudeHook.args.map((arg) =>
-        arg.replace(".ut-tdd/bin/ut-tdd.mjs", ".ut-tdd/bin/removed-ut-tdd.mjs"),
-      );
-      expect(JSON.stringify(claudeHook)).not.toBe(originalClaudeRegistration);
+      claudeHook.args = [".ut-tdd/bin/removed-ut-tdd.mjs", "hook", "work-guard"];
+      expect(claudeHook.args).not.toContain("-e");
+      expect(existsSync(join(fixture.consumerRoot, claudeHook.args[0]))).toBe(false);
       writeFileSync(claudeSettingsPath, `${JSON.stringify(claudeSettings, null, 2)}\n`, "utf8");
       const missingClaudeLauncher = runRegisteredWorkGuard(
         { command: claudeHook.command, args: claudeHook.args },
@@ -645,10 +643,11 @@ describe("#418 Pack-only internal canary boundary (PR-1 / first layer)", () => {
         env,
         normalPayload,
       );
-      // A missing launcher exits 1, which is not a hook block (exit 2).
-      // The generated registration above must instead pass the normal 0/2
-      // assertions; replacing that registration with this mutant makes it Red.
+      // The direct-launcher mutant executes the removed path and exits 1, not
+      // block 2. The real generated bootstrap registration already passed 0/2;
+      // replacing it with a missing bootstrap must fail that normal-path check.
       expect(missingClaudeLauncher.status, processDiagnostic(missingClaudeLauncher)).toBe(1);
+      expect(missingClaudeLauncher.stderr).toMatch(/(?:ERR_)?MODULE_NOT_FOUND|Cannot find module/);
       expect(`${missingClaudeLauncher.stderr}\n${missingClaudeLauncher.stdout}`).not.toContain(
         "[ut-tdd-work-guard] BLOCK:",
       );
