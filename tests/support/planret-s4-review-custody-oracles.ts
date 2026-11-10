@@ -61,7 +61,7 @@ export function registerPlanret007DecoderOracle(input: {
     expect(receipt).not.toHaveProperty("planId");
     expect(receipt).not.toHaveProperty("planRevision");
     expect(decodeReviewCustodyReceipt(text).ok).toBe(true);
-    const withPlan = {
+    const withPlan: Record<string, unknown> = {
       ...receipt,
       planId: "PLAN-L7-451-retired",
       planRevision: "5".repeat(64),

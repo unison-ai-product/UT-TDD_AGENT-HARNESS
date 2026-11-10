@@ -203,6 +203,7 @@ export function registerPlanret020Oracle(): void {
         exactHead: identity.exactHead,
         verdictPath: ".ut-tdd/review/verdicts/planret-s4.yml",
         recordedAt: "2026-11-10T00:00:00.000Z",
+        reason: "review_completed",
         provider: "codex",
         model: "gpt-6.1-sol",
         receiptFileDigest,
