@@ -290,4 +290,4 @@ field は `type`・`command`・`timeout`・`statusMessage`・`async`・`addition
 - わざと失敗する検査用の hook を置く方式: 新しい版では全 tool を止めて作業できなくなり、古い版では無音になる。
 - guard の内部エラーをすべて exit 2 にして版に頼らない方式: 古い版で効かなかったのは guard の script を起動できない場合であり、script の中で例外を捕まえても救えない。work-guard の「内部エラーは fail-open (exit 0)」は既存の契約で、本節では変えない。
 
-対応するテスト oracle は `docs/test-design/harness/L7-claude-version-floor-test-design.md` の `CANDIDATE-U-CCVER-001`〜`006` である。
+対応する自動テスト oracle は `docs/test-design/harness/L7-claude-version-floor-test-design.md` の `U-CCVER-001`〜`005` である。実画面での確認は、同書の `CANDIDATE-U-CCVER-006` を実装後に行う。

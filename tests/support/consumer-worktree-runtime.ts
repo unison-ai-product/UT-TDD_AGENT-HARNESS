@@ -92,7 +92,9 @@ export function runtimeIdentity(root: string): Record<string, string> {
   return bundle.identity;
 }
 
-export async function createConsumerWorktreeRuntimeFixture(): Promise<ConsumerWorktreeRuntimeFixture> {
+export async function createConsumerWorktreeRuntimeFixture(
+  extraLinkedIds: readonly string[] = [],
+): Promise<ConsumerWorktreeRuntimeFixture> {
   const pack = createCleanPack();
   const main = createConsumerProject("fixture/consumer-worktree-runtime");
   const rawInputPath = await writeConsumerRuntimeInput(pack, main);
@@ -142,6 +144,7 @@ export async function createConsumerWorktreeRuntimeFixture(): Promise<ConsumerWo
     "010-upper",
     "010-separator",
     "010-b",
+    ...extraLinkedIds,
   ]) {
     const path = join(worktreeBase, `linked-${id}`);
     git(main, ["worktree", "add", "-q", "-b", `candidate-${id}`, path, "HEAD"]);
