@@ -5,7 +5,7 @@ executed_at_layer: L7
 artifact_type: test_design
 pair_artifact: docs/design/harness/L6-function-design/consumer-worktree-runtime.md
 status: confirmed
-updated: 2026-11-04
+updated: 2026-11-10
 issue: 1525
 ---
 
@@ -13,7 +13,7 @@ issue: 1525
 
 ## 1. 位置付け
 
-対になる設計文書は `docs/design/harness/L6-function-design/consumer-worktree-runtime.md` (未実装の目標契約) の §3 入口、§4 案内、§5 不変条件である。共有の `docs/test-design/harness/L7-unit-test-design.md` には索引行を足さない。本書が詳細の正本であり、`U-CWTRT-001`〜`010` を正式 oracle として宣言し、新規 install transaction rollback の追加契約を `CANDIDATE-U-CWTRT-011` として記録する。
+対になる設計文書は `docs/design/harness/L6-function-design/consumer-worktree-runtime.md` (未実装の目標契約) の §3 入口、§4 案内、§5 不変条件である。共有の `docs/test-design/harness/L7-unit-test-design.md` には索引行を足さない。本書が詳細の正本であり、`U-CWTRT-001`〜`010` を正式 oracle として宣言し、新規 install transaction rollback の追加契約を `CANDIDATE-U-CWTRT-011` として記録する。2026-11-10 (Issue #1602) に、runtime 欠落時の launcher の三分割 (設計 §4) の oracle として `CANDIDATE-U-CWTRT-012`〜`015` を足した。
 
 ## 2. fixture
 
@@ -37,9 +37,14 @@ issue: 1525
 | `U-CWTRT-009` | 案内の経路 | 入力: 007 / 008 の出力。期待: block 理由は guard と同じ stderr + exit 2 の経路 (`.claude/hooks/agent-guard.ts` の block と同じ)。案内文が 1 つのコマンドを名指しする。反例: stdout だけに出す実装。 |
 | `U-CWTRT-010` | キャッシュの key | 入力 (a): main の `release_id` が `rel-sha256:<hex 64 桁>` の正当な版 A。期待: キャッシュの置き場が `<git-common-dir>/ut-tdd/runtime-cache/<hex 64 桁>/` で、ディレクトリ名に `:` を含まず、Windows と Linux の両方で作成と読み込みが成功する (001 と同じ導入が通る)。入力 (b): main の identity の `release_id` を schema に合わない値 (prefix 違い、桁数違い、大文字 hex、`..` や区切り文字を含む値) にする。期待: `worktree_entry_main_not_activated` で、キャッシュ配下にディレクトリを作らず何も書かない。入力 (c): 版 A の key のディレクトリに版 B の正当な Release を置く。期待: 検証失敗または `worktree_entry_pin_mismatch` で拒否し、何も残さない。反例: `release_id` をそのままディレクトリ名にする実装 (Windows で作れない)、`:` を別の文字に置換して衝突の余地を残す実装、schema に合わない `release_id` から path を組み立てる実装、ディレクトリ名が key と一致すれば中身を照合しない実装。 |
 | `CANDIDATE-U-CWTRT-011` | runtime 公開後・launcher 公開前の transaction rollback | 入力: 一時 repo に main と linked worktree を作り、検証済み Release を使って production の capture/install/restore 経路から新規 install する。internal optional `ConsumerWorktreeSetupFault` の `afterRuntimePublishBeforeLauncher` callback 到達時に、runtime が実在し launcher がまだ未公開であることを前提 assert し、その callback から識別可能な例外を同期 throw する。期待: callback は1回到達し、setup はその失敗を返し、production rollback 後の linked worktree の runtime・launcher・その親 directory、および main の runtime / cache / 別 linked worktree の対象領域の存在・path構造・bytes・mode がすべて事前 snapshot と一致する。transaction が作った一時ファイルも残らない。初期状態が不在の場合と、runtime以外に既存ファイルがある場合を検証する。対照として fault seam 無しの同じ導入は成功して runtime と launcher が揃い、既に同じ版が導入済みの経路では seam が呼ばれないことを確かめる。反例: hook が到達しない (誤った境界に置かれた、または無視された)、launcher が hook より前に公開される、例外を成功扱いする、または rollback を省略・迂回して runtime / launcher / 親 directory / 一時ファイルのいずれかを残す実装。 |
+| `CANDIDATE-U-CWTRT-012` | 欠落 × 記録 / session hook は fail-open (Issue #1602) | 入力: launcher はあるが active pointer が無い worktree で、生成された launcher を argv `session start` / `session summary` / `hook post-tool-use` / `hook claude-memory-wake` / `hook subagent-stop` の 5 通りで子プロセス実行する。期待: 各々 exit 0、stdout は空、stderr は `consumer_runtime_absent` の符号と案内を含む 1 行だけ。テストレベル: unit (生成 launcher の子プロセス実行)。反例: 記録 hook も exit 2 にする実装 (Stop / SubagentStop の続行の繰り返しと setup 誘導を生む)、stdout に出す実装、複数行の stderr を出す実装。 |
+| `CANDIDATE-U-CWTRT-013` | 欠落 × guard は block のまま (Issue #1602) | 入力: 同じ状態で argv `hook agent-guard` / `hook work-guard`。期待: 各々 exit 2、stderr に符号と案内文 (`setup --worktree <絶対パス>`) を含む。`U-CWTRT-007` / `009` と同じ観測であり、既存ケースの実装を共有してよい。テストレベル: unit。反例: 三分割の導入で guard まで exit 0 に寄せる実装。 |
+| `CANDIDATE-U-CWTRT-014` | 欠落 × 集合外は fail-close (Issue #1602) | 入力: 同じ状態で argv `status` と、未知の hook 名 (`hook unknown-hook`)、および argv 無し。期待: 各々 exit 0 でなく非 0 (案内文と exit 2)。他の deny 符号 (`consumer_runtime_digest_mismatch` など) は従来どおり exit 78 で、三分割の対象にならない。テストレベル: unit。反例: 欠落なら一律 exit 0 にする実装 (runtime が無いのに `status` が成功に見える偽の緑)、集合を前方一致や部分一致で広げる実装。 |
+| `CANDIDATE-U-CWTRT-015` | (b) の集合の単一定義源 (Issue #1602) | 入力: `src/lint/project-hook.ts` の hook 定義と `renderConsumerNodeWrapper()` の出力 (静的)。期待: (b) の集合が、`onFailure: "block"` を持たない hook の `wrapperArgs` の先頭 2 語 (launcher の後ろ) と過不足なく一致する。launcher の生成物が、その集合を生成時に埋め込んだもの以外に手書きの hook 名の一覧を持たない (hook 定義に無い名前の文字列リテラルの一覧が無い)。定義側に hook を足すと launcher の集合も変わる (定義を 1 つ増やした入力で生成し直して確かめる)。テストレベル: unit (静的照合)。反例: launcher に独自の一覧をべた書きして lint の定義と乖離する実装。 |
 
 ## 4. 段の扱い
 
 - `U-CWTRT-001`〜`010` は既存の正式 oracle である。ここでは変更しない。登録＋Red の `it.fails` を維持し、実装 PR で実装完了したケースを `it` に戻す。
 - `CANDIDATE-U-CWTRT-011` は候補であり、昇格前に正式 oracle として扱わない。まず同期 fault を注入する `it.fails` を Red として登録し、前提確認と成功対照を `it.fails` の外で実施する。次に src を含まない昇格 PR で test-design の正式 ID とテストの引用を同時に改め、最後に Green 実装 PR で `it` に戻す。実装は新規 install のみ hook を 1 回通し、`already-installed` は hook を呼ばない。
+- `CANDIDATE-U-CWTRT-012`〜`015` (Issue #1602) は候補であり、`CANDIDATE-U-CWTRT-011` と同じ手順で進める。src を含まない昇格 PR で接頭辞 `CANDIDATE-` を外した正式 ID に改めて Red (`it.fails`) を登録し、Green の実装 PR で `it` に戻す (設計書保護の三段階)。`CANDIDATE-U-CWTRT-013` は既存の `U-CWTRT-007` と観測が重なるため、実装時は共有の fixture を使い、重複する assert を増やさない。
 - 受け入れには、実際の Claude Code で runtime の無い worktree の Edit が案内つきで止まることを 1 回確かめた記録を含める (自動テストの oracle ではない)。
