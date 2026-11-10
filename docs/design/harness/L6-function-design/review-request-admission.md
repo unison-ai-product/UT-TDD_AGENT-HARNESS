@@ -109,6 +109,8 @@ review identity の宣言 (`--review-*` のいずれかを渡した呼び出し)
 | 余分な位置引数がある | `review_unexpected_argument` | 値が捨てられて意図と違う request になる形 (§3.2 の `codex`) を拒否する |
 | `--review-author-family` が `codex` / `claude` 以外 | `review_author_family_required` | 既存の reason。推定へ落とさない |
 
+違反が重なったときの優先順位は、検査の順序 (上の表の上から下、§4.1 の手順 1〜5 の順) とし、最初に当たった違反の reason だけを返す。`review_revision_invalid` は `review_unexpected_argument` より優先する。revision の値が option 名になった呼び出しでは、値が消えた原因は option の取り違えであり、revision の検査が先に原因を指すためである。実例 `--review-revision --review-author-family codex` (位置引数 `codex` が余る) は、この優先順位により `review_revision_invalid` を返す。
+
 `--review-revision` を渡さない呼び出しの既存の挙動は変えない。`review_head_required` で拒否する (`delegation.ts:385`)。`rv1-` で始まらない通常の識別子 (人が付けた id) を渡したときに `canonicalizeReviewRequest` が `rv1-<digest>` を採番する挙動も、既存の正規の使い方なので変えない。拒否するのは、値が空であるか option の形をしている場合だけである。
 
 ### 4.3 author family は渡された値を使う
