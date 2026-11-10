@@ -140,15 +140,17 @@ describe.sequential("review merge gate baseline preview contract (Issue #1559)",
     let barrierRoot: string | undefined;
     const workers: ReturnType<typeof startPreviewWorker>[] = [];
     try {
-      previewParent = join(testFixture.base, "parallel-preview-parent");
-      barrierRoot = mkdtempSync(join(testFixture.base, "preview-barrier-"));
-      const existingDirectory = join(previewParent, "ut-tdd-baseline-preview-1559-existing");
-      mkdirSync(previewParent);
+      const ownedPreviewParent = join(testFixture.base, "parallel-preview-parent");
+      previewParent = ownedPreviewParent;
+      const ownedBarrierRoot = mkdtempSync(join(testFixture.base, "preview-barrier-"));
+      barrierRoot = ownedBarrierRoot;
+      const existingDirectory = join(ownedPreviewParent, "ut-tdd-baseline-preview-1559-existing");
+      mkdirSync(ownedPreviewParent);
       previewParentCreated = true;
       mkdirSync(existingDirectory);
       writeFileSync(join(existingDirectory, "keep.txt"), "keep\n", "utf8");
 
-      const repoRoots = ["repo-a", "repo-b"].map((name) => join(previewParent, name));
+      const repoRoots = ["repo-a", "repo-b"].map((name) => join(ownedPreviewParent, name));
       for (const repoRoot of repoRoots) {
         execFileSync(
           "git",
@@ -170,16 +172,18 @@ describe.sequential("review merge gate baseline preview contract (Issue #1559)",
           stdio: ["ignore", "pipe", "pipe"],
         });
       }
-      const readyPaths = [0, 1].map((index) => join(barrierRoot, `ready-${index}`));
+      const readyPaths = [0, 1].map((index) => join(ownedBarrierRoot, `ready-${index}`));
       const previewPaths: string[] = [];
       for (const [index, repoRoot] of repoRoots.entries()) {
-        workers.push(startPreviewWorker(repoRoot, testFixture.headSha, barrierRoot, String(index)));
+        workers.push(
+          startPreviewWorker(repoRoot, testFixture.headSha, ownedBarrierRoot, String(index)),
+        );
       }
       await waitForPreviewWorkers(workers, readyPaths);
       previewPaths.push(...readyPaths.map((path) => readFileSync(path, "utf8")));
       expect(new Set(previewPaths).size).toBe(2);
       for (const previewPath of previewPaths) {
-        expect(dirname(previewPath)).toBe(realpathSync.native(previewParent));
+        expect(dirname(previewPath)).toBe(realpathSync.native(ownedPreviewParent));
         expect(basename(previewPath)).toMatch(/^ut-tdd-baseline-preview-1559-/);
         expect(existsSync(previewPath)).toBe(true);
       }
@@ -190,7 +194,7 @@ describe.sequential("review merge gate baseline preview contract (Issue #1559)",
         );
       }
 
-      writeFileSync(join(barrierRoot, "release"), "go\n", "utf8");
+      writeFileSync(join(ownedBarrierRoot, "release"), "go\n", "utf8");
       const results = await Promise.all(workers.map(({ done }) => done));
       for (const result of results) {
         expect(result.code, result.stderr).toBe(0);
