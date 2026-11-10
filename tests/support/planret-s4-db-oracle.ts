@@ -1,11 +1,16 @@
 import { createHash } from "node:crypto";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { expect, it } from "vitest";
 import { buildReviewCustodyReceipt, computeReceiptDigest, type CustodyReceiptDraft } from "../../src/feedback/review-custody.ts";
 import { canonicalize, type ReviewRequestIdentity } from "../../src/feedback/review-custody-canonical.ts";
-import { appendReviewCustodyAudit, isAttemptCompletedEvent, readReviewCustodyAudit } from "../../src/feedback/review-verdict-custody.ts";
+import {
+  appendReviewCustodyAudit,
+  isAttemptCompletedEvent,
+  readReviewCustodyAudit,
+  reviewVerdictPath,
+} from "../../src/feedback/review-verdict-custody.ts";
 import { ensureTrackedProjectIdentity } from "./project-identity-fixture.ts";
 import { HARNESS_DB_TABLES, schemaDdl } from "../../src/schema/harness-db.ts";
 import { openHarnessDb } from "../../src/state-db/index.ts";
@@ -196,17 +201,22 @@ export function registerPlanret020Oracle(): void {
       mkdirSync(join(root, ".ut-tdd", "review", "receipts"), { recursive: true });
       writeFileSync(receiptPath, receiptText, "utf8");
       const receiptFileDigest = createHash("sha256").update(receiptText, "utf8").digest("hex");
+      const verdictPath = reviewVerdictPath(root, requestDigest);
+      const verdictText = "verdict: PASS\n";
+      mkdirSync(dirname(verdictPath), { recursive: true });
+      writeFileSync(verdictPath, verdictText, "utf8");
       appendReviewCustodyAudit(root, {
         kind: "attempt_completed",
         requestDigest,
         attempt: 1,
         exactHead: identity.exactHead,
-        verdictPath: ".ut-tdd/review/verdicts/planret-s4.yml",
+        verdictPath,
         recordedAt: "2026-11-10T00:00:00.000Z",
         reason: "review_completed",
         provider: "codex",
         model: "gpt-6.1-sol",
         receiptFileDigest,
+        verdictDigest: createHash("sha256").update(verdictText, "utf8").digest("hex"),
         exitCode: 0,
       });
       const audit = readReviewCustodyAudit(root);
