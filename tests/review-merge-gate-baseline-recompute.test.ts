@@ -1,10 +1,9 @@
 /**
  * Issue #1559 Red: baseline conflict の merge preview 再計算 oracle。
  * 契約: docs/design/harness/L6-function-design/merge-gate-check-run-selection.md §6.6。
- * 注入境界は checkBaselineConflict(repoRoot, headSha, gates = BASELINE_GATES)。
+ * 注入境界は checkBaselineConflict(repoRoot, headSha, gates, pr)。
  */
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
 import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
 import {
   BASELINE_GATES,
@@ -12,7 +11,6 @@ import {
   evaluateBaselineConflict,
 } from "../src/feedback/baseline-conflict.ts";
 import { CODE_SIZE_BASELINE_PATH } from "../src/lint/code-size.ts";
-import { checkCodeSize } from "../src/lint/code-size-inputs.ts";
 import {
   buildFixture,
   buildFunctionExcessFixture,
@@ -21,19 +19,16 @@ import {
   canonicalPath,
   captureWorktreeObservation,
   changedPaths,
-  checkWithGates,
+  checkWithGates as checkWithGatesForPr,
   cleanFixture,
-  createPreviewWorktree,
   expectGateSelection,
   expectGitFailureDenied,
   type Fixture,
   type InjectedGate,
   injectedGate,
   isFixtureLinkedPreviewRoot,
-  removeFixturePreviewWorktree,
   runMerge,
   SMALL_BASELINE,
-  separatedFile,
   smallFiles,
   TARGET,
   verifyConflictAndCleanPreview,
@@ -105,7 +100,10 @@ vi.mock("node:child_process", async (importOriginal) => {
             }),
           ),
         );
-        gitFault.mergeBases.push({ sha: String(output).trim(), ...observation });
+        gitFault.mergeBases.push({
+          sha: String(output).trim(),
+          ...observation,
+        });
       }
       return output;
     },
@@ -113,7 +111,10 @@ vi.mock("node:child_process", async (importOriginal) => {
 });
 
 const fixtures = new Map<string, Fixture>();
-const wrapperPreviewTree = new Map<string, string>();
+
+function checkWithGates(repoRoot: string, headSha: string, gates: readonly InjectedGate[]) {
+  return checkWithGatesForPr(repoRoot, headSha, gates, 1559);
+}
 
 function fixture(key: string): Fixture {
   const value = fixtures.get(key);
@@ -208,45 +209,6 @@ describe.sequential("review merge gate baseline recompute (Issue #1559)", {
       fixtures.set(`selection-${key}`, buildGateSelectionFixture(key));
     }
 
-    const wrapperBaseline = '{\n  "src/alpha.ts": {"lines": null, "functionExcess": null}\n}\n';
-    fixtures.set(
-      "wrapper",
-      buildFixture(
-        {
-          [TARGET]: separatedFile("const left = 1;", "const right = 1;"),
-          [CODE_SIZE_BASELINE_PATH]: wrapperBaseline,
-        },
-        {
-          pr: { [TARGET]: separatedFile("const left = 2;", "const right = 1;") },
-          main: { [TARGET]: separatedFile("const left = 1;", "const right = 2;") },
-        },
-      ),
-    );
-    const wrapperFixture = fixture("wrapper");
-    wrapperPreviewTree.set(
-      "wrapper",
-      verifyConflictAndCleanPreview(wrapperFixture, [injectedGate(null)], () => {}),
-    );
-    const wrapperPreview = createPreviewWorktree(wrapperFixture);
-    try {
-      expect(checkCodeSize(wrapperPreview.path).ok).toBe(true);
-    } finally {
-      removeFixturePreviewWorktree(wrapperFixture, wrapperPreview.path);
-    }
-    expect(() => checkBaselineConflict(wrapperFixture.work, wrapperFixture.headSha)).not.toThrow();
-    const receiptPrerequisite = runMerge(wrapperFixture, true);
-    expect(receiptPrerequisite.result).toMatchObject({ ok: true, decision: "merge" });
-    expect(receiptPrerequisite.merges).toBe(1);
-    expect(receiptPrerequisite.result.receiptPath).not.toBeNull();
-    const receiptLines = readFileSync(receiptPrerequisite.result.receiptPath ?? "", "utf8")
-      .trim()
-      .split(/\r?\n/)
-      .map((line) => JSON.parse(line) as Record<string, unknown>);
-    expect(receiptLines).toContainEqual(
-      expect.objectContaining({ receiptKind: "merge_intent", headSha: wrapperFixture.headSha }),
-    );
-    expect(() => runMerge(wrapperFixture)).not.toThrow();
-
     const contentConflict = buildFixture(
       { [TARGET]: "base-line\n", [SMALL_BASELINE]: '{"baseline":1}\n' },
       { pr: { [TARGET]: "pr-line\n" }, main: { [TARGET]: "main-line\n" } },
@@ -305,7 +267,9 @@ describe.sequential("review merge gate baseline recompute (Issue #1559)", {
       () => {},
     );
     verifyFunctionExcessFixture(functionExcess);
-    expect(() => checkBaselineConflict(functionExcess.work, functionExcess.headSha)).not.toThrow();
+    expect(() =>
+      checkBaselineConflict(functionExcess.work, functionExcess.headSha, undefined, 1559),
+    ).not.toThrow();
     expect(() => runMerge(functionExcess)).not.toThrow();
 
     for (const needles of [["--version"], ["commit-tree"], ["worktree", "add"]]) {
@@ -347,43 +311,6 @@ describe.sequential("review merge gate baseline recompute (Issue #1559)", {
     expect(
       checkWithGates(fixture("small").work, fixture("small").headSha, [injectedGate(null)]),
     ).toBeNull();
-  });
-
-  it("U-RVMG-050: runPrMerge は preview receipt を記録して merge する", () => {
-    const testFixture = fixture("wrapper");
-    const run = runMerge(testFixture);
-    expect(run.result).toMatchObject({ ok: true, decision: "merge" });
-    expect(run.merges).toBe(1);
-    const receipts = readFileSync(run.result.receiptPath ?? "", "utf8")
-      .trim()
-      .split(/\r?\n/)
-      .map((line) => JSON.parse(line) as Record<string, unknown>);
-    const intent = receipts.find(
-      (receipt) => receipt.receiptKind === "merge_intent" && receipt.preview !== undefined,
-    );
-    expect(intent).toBeDefined();
-    const preview = intent?.preview as Record<string, unknown>;
-    expect(preview).toMatchObject({
-      mainSha: testFixture.mainSha,
-      headSha: testFixture.headSha,
-      treeSha: wrapperPreviewTree.get("wrapper"),
-    });
-    const otherCommitShas = Object.values(preview).filter(
-      (value): value is string =>
-        typeof value === "string" &&
-        /^[0-9a-f]{40,64}$/.test(value) &&
-        ![testFixture.mainSha, testFixture.headSha, wrapperPreviewTree.get("wrapper")].includes(
-          value,
-        ),
-    );
-    expect(otherCommitShas).toHaveLength(1);
-    const gateEntries = Object.values(preview).filter(Array.isArray).flat() as unknown[];
-    expect(gateEntries).toContainEqual(
-      expect.objectContaining({ name: "code-size", ok: true, findings: [] }),
-    );
-    expect(worktreePaths(testFixture.work).map(canonicalPath).sort()).toEqual(
-      testFixture.initialWorktreePaths.map(canonicalPath).sort(),
-    );
   });
 
   it("U-RVMG-051(a): baseline に無い上限超過 finding は拒否する", () => {

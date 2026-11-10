@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdtempSync, realpathSync, rmdirSync } from "node:fs";
+import { existsSync, mkdtempSync, realpathSync, rmSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 
 export interface BaselinePreviewFinding {
@@ -20,6 +20,8 @@ export interface BaselinePreview {
   treeSha: string;
   commitSha: string;
   gates: BaselinePreviewGateResult[];
+  cleanup?: "failed";
+  cleanupReason?: string;
 }
 
 export interface PreviewGate {
@@ -67,14 +69,36 @@ function requireMergeTreeSupport(repoRoot: string): void {
   }
 }
 
-function ownedPreviewPath(): string {
-  const devRoot = realpathSync.native("C:\\dev");
-  const path = resolve(mkdtempSync(join(devRoot, "ut-tdd-rvmg-preview-")));
-  if (dirname(path).toLowerCase() !== devRoot.toLowerCase()) {
-    rmdirSync(path);
-    throw new Error("preview_path_outside_dev_root");
+class PreviewSetupError extends Error {
+  constructor(
+    readonly reason: "preview_parent_unresolved" | "preview_dir_create_failed",
+    cause: unknown,
+  ) {
+    super(gitFailureReason(cause));
+    this.name = "PreviewSetupError";
   }
-  return path;
+}
+
+function previewParent(repoRoot: string): string {
+  try {
+    const topLevel = git(repoRoot, ["rev-parse", "--show-toplevel"]).trim();
+    if (!topLevel) throw new Error("repository_root_empty");
+    const realRoot = realpathSync.native(topLevel);
+    const parent = dirname(realRoot);
+    if (parent === realRoot) throw new Error("repository_root_is_filesystem_root");
+    return parent;
+  } catch (error) {
+    throw new PreviewSetupError("preview_parent_unresolved", error);
+  }
+}
+
+function ownedPreviewPath(repoRoot: string, pr: number): string {
+  const parent = previewParent(repoRoot);
+  try {
+    return mkdtempSync(join(parent, `ut-tdd-baseline-preview-${pr}-`));
+  } catch (error) {
+    throw new PreviewSetupError("preview_dir_create_failed", error);
+  }
 }
 
 function isRegisteredWorktree(repoRoot: string, previewPath: string): boolean {
@@ -83,11 +107,6 @@ function isRegisteredWorktree(repoRoot: string, previewPath: string): boolean {
     .split(/\r?\n/)
     .filter((line) => line.startsWith("worktree "))
     .some((line) => resolve(line.slice("worktree ".length)).toLowerCase() === expected);
-}
-
-function removePreviewWorktree(repoRoot: string, previewPath: string, registered: boolean): void {
-  if (registered) git(repoRoot, ["worktree", "remove", "--force", previewPath]);
-  if (existsSync(previewPath)) rmdirSync(previewPath);
 }
 
 function normalizeFindings(value: unknown): BaselinePreviewFinding[] {
@@ -107,15 +126,79 @@ function normalizeFindings(value: unknown): BaselinePreviewFinding[] {
   });
 }
 
+function evaluatePreviewGates(
+  previewPath: string,
+  gates: readonly PreviewGate[],
+  preview: BaselinePreview,
+): string | null {
+  let firstFindingReason: string | null = null;
+  for (const gate of gates) {
+    const checked = gate.check(previewPath);
+    const findings = normalizeFindings(checked.findings);
+    const ok = checked.ok === true && findings.length === 0;
+    preview.gates.push({ name: gate.name, ok, findings });
+    if (!ok && firstFindingReason === null) {
+      const findingKind = findings[0]?.kind ?? "gate-check-failed";
+      firstFindingReason = `baseline_conflict_recomputed:${gate.name}=${findingKind}`;
+    }
+  }
+  return firstFindingReason;
+}
+
+function cleanupPreviewWorktree(
+  repoRoot: string,
+  previewPath: string,
+  initiallyRegistered: boolean,
+): string[] {
+  const failures: string[] = [];
+  let pathExists = false;
+  let registered = initiallyRegistered;
+  try {
+    pathExists = existsSync(previewPath);
+  } catch (error) {
+    failures.push(`directory_inspect:${gitFailureReason(error)}`);
+  }
+  if (!registered && pathExists) {
+    try {
+      registered = isRegisteredWorktree(repoRoot, previewPath);
+    } catch (error) {
+      failures.push(`worktree_registration_check:${gitFailureReason(error)}`);
+      // The add may have registered this exact path before failing.
+      registered = true;
+    }
+  }
+  try {
+    git(repoRoot, ["worktree", "remove", "--force", previewPath]);
+  } catch (error) {
+    // A failed add can leave an owned directory that was never registered.
+    // In that case remove reports the expected absence; directory removal
+    // and prune still run below.
+    if (registered) failures.push(`worktree_remove:${gitFailureReason(error)}`);
+  }
+  try {
+    if (existsSync(previewPath)) rmSync(previewPath, { recursive: true, force: true });
+  } catch (error) {
+    failures.push(`directory_remove:${gitFailureReason(error)}`);
+  }
+  try {
+    git(repoRoot, ["worktree", "prune"]);
+  } catch (error) {
+    failures.push(`worktree_prune:${gitFailureReason(error)}`);
+  }
+  return failures;
+}
+
 /** Recompute only the conflicting gates against a temporary merge tree. */
 export function recomputeBaselinePreview(input: {
   repoRoot: string;
+  pr: number;
   mainSha: string;
   headSha: string;
   gates: readonly PreviewGate[];
 }): BaselinePreviewResult {
   let previewPath: string | null = null;
   let registered = false;
+  let candidatePreview: BaselinePreview | null = null;
   const calculate = (): BaselinePreviewResult => {
     try {
       requireMergeTreeSupport(input.repoRoot);
@@ -154,52 +237,52 @@ export function recomputeBaselinePreview(input: {
         throw new Error("preview_commit_invalid");
       }
 
-      previewPath = ownedPreviewPath();
+      const preview: BaselinePreview = {
+        mainSha: input.mainSha,
+        headSha: input.headSha,
+        treeSha,
+        commitSha,
+        gates: [],
+      };
+      candidatePreview = preview;
+      previewPath = ownedPreviewPath(input.repoRoot, input.pr);
       git(input.repoRoot, ["worktree", "add", "-q", "--detach", previewPath, commitSha]);
       registered = true;
-      const gateResults: BaselinePreviewGateResult[] = [];
-      for (const gate of input.gates) {
-        const checked = gate.check(previewPath);
-        const findings = normalizeFindings(checked.findings);
-        const ok = checked.ok === true && findings.length === 0;
-        gateResults.push({ name: gate.name, ok, findings });
-        if (!ok) {
-          const findingKind = findings[0]?.kind ?? "gate-check-failed";
-          return {
-            preview: null,
-            reason: `baseline_conflict_recomputed:${gate.name}=${findingKind}`,
-          };
-        }
-      }
-      return {
-        preview: {
-          mainSha: input.mainSha,
-          headSha: input.headSha,
-          treeSha,
-          commitSha,
-          gates: gateResults,
-        },
-        reason: null,
-      };
+      return { preview, reason: evaluatePreviewGates(previewPath, input.gates, preview) };
     } catch (error) {
-      return { preview: null, reason: `baseline_conflict_unknown:${gitFailureReason(error)}` };
+      const reason =
+        error instanceof PreviewSetupError
+          ? `baseline_conflict_unknown:${error.reason}`
+          : `baseline_conflict_unknown:${gitFailureReason(error)}`;
+      return { preview: candidatePreview, reason };
     }
   };
 
-  const result = calculate();
-  if (previewPath !== null) {
-    try {
-      // If worktree add failed after registration, detect that exact owned path
-      // before cleanup; never remove an unrelated directory recursively.
-      if (!registered && existsSync(previewPath)) {
-        registered = isRegisteredWorktree(input.repoRoot, previewPath);
+  let result: BaselinePreviewResult = { preview: null, reason: null };
+  try {
+    result = calculate();
+  } catch (error) {
+    result = {
+      preview: candidatePreview,
+      reason: `baseline_conflict_unknown:${gitFailureReason(error)}`,
+    };
+  } finally {
+    if (previewPath !== null) {
+      const cleanupFailures = cleanupPreviewWorktree(input.repoRoot, previewPath, registered);
+      if (cleanupFailures.length > 0) {
+        const cleanupReason = cleanupFailures.join("; ");
+        try {
+          process.stderr.write(`baseline preview cleanup failed: ${cleanupReason}\n`);
+        } catch {
+          // Diagnostics must not change the already calculated gate decision.
+        }
+        if (result.preview !== null) {
+          result = {
+            ...result,
+            preview: { ...result.preview, cleanup: "failed", cleanupReason },
+          };
+        }
       }
-      removePreviewWorktree(input.repoRoot, previewPath, registered);
-    } catch (error) {
-      return {
-        preview: null,
-        reason: `baseline_conflict_unknown:preview_cleanup_failed:${gitFailureReason(error)}`,
-      };
     }
   }
   return result;

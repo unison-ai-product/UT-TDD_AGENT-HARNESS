@@ -60,7 +60,7 @@ beforeEach(() => {
   } finally {
     removeFixturePreviewWorktree(fixture, preview.path);
   }
-  expect(() => checkBaselineConflict(fixture.work, fixture.headSha)).not.toThrow();
+  expect(() => checkBaselineConflict(fixture.work, fixture.headSha, undefined, 1559)).not.toThrow();
 }, 420_000);
 
 afterEach(() => {

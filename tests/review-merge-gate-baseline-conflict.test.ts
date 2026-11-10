@@ -19,6 +19,7 @@ import { dirname, join } from "node:path";
 import { Command } from "commander";
 import { describe, expect, it } from "vitest";
 import { registerPrMergeCommands } from "../src/cli/pr-merge.ts";
+import { BASELINE_GATES, evaluateBaselineConflict } from "../src/feedback/baseline-conflict.ts";
 import { type GhPrMergePorts, runPrMerge } from "../src/feedback/review-merge-gate.ts";
 
 const now = "2026-10-28T01:00:00.000Z";
@@ -81,6 +82,23 @@ function git(dir: string, ...args: string[]): string {
     const stderr = `${e.stderr ?? ""}${e.stdout ?? ""}`;
     throw new Error(`git ${args.join(" ")} failed: ${stderr}`);
   }
+}
+
+function changedPaths(dir: string, from: string, to: string): string[] {
+  const tokens = execFileSync("git", ["-C", dir, "diff", "-M", "--name-status", "-z", from, to], {
+    encoding: "utf8",
+    windowsHide: true,
+    stdio: ["ignore", "pipe", "pipe"],
+  })
+    .split("\0")
+    .filter((token) => token !== "");
+  const paths: string[] = [];
+  for (let index = 0; index < tokens.length; ) {
+    const pathCount = /^[RC]/.test(tokens[index] ?? "") ? 2 : 1;
+    paths.push(...tokens.slice(index + 1, index + 1 + pathCount));
+    index += 1 + pathCount;
+  }
+  return paths;
 }
 
 function configure(dir: string): void {
@@ -254,13 +272,6 @@ function withFixture(plan: Plan, body: (fx: Fixture) => void | Promise<void>) {
   };
 }
 
-function expectBaselineConflictDeny(run: ReturnType<typeof runMerge>): void {
-  expect(run.result.ok).toBe(false);
-  expect(run.result.decision).toBe("deny");
-  expect(run.result.reason).toMatch(/^baseline_conflict(?!_unknown)/);
-  expect(run.merges).toBe(0);
-}
-
 function expectUnknownDeny(run: ReturnType<typeof runMerge>): void {
   expect(run.result.ok).toBe(false);
   expect(run.result.reason).toMatch(/^baseline_conflict_unknown/);
@@ -271,29 +282,40 @@ const untouched: Plan = { pr: { touch: [OUT_OF_SCOPE] }, main: { touch: [OUT_OF_
 
 describe("review merge gate baseline conflict (Issue #1423)", { timeout: 120_000 }, () => {
   for (const gate of [DOC_SPLIT, CODE_SIZE]) {
-    const conflicts: Array<[string, Plan]> = [
+    const conflicts: Array<[string, Plan, string]> = [
       [
         "(a) PR と main が同じ対象ファイルを変更",
         { pr: { touch: [gate.target] }, main: { touch: [gate.target] } },
+        gate.target,
       ],
       [
         "(b) PR が baseline を変更し main が別の対象ファイルを変更",
         { pr: { touch: [gate.baseline] }, main: { touch: [gate.other] } },
+        gate.other,
       ],
       [
         "(c) main が baseline を変更し PR が対象ファイルを変更",
         { pr: { touch: [gate.target] }, main: { touch: [gate.baseline] } },
+        gate.target,
       ],
       [
         "(d) PR が対象ファイルを rename し main が旧 path を変更",
         { pr: { rename: [gate.target, gate.renamed] }, main: { touch: [gate.target] } },
+        gate.target,
       ],
     ];
-    for (const [label, plan] of conflicts) {
+    for (const [label, plan, conflictPath] of conflicts) {
       it(
-        `CANDIDATE-U-RVMG-047: ${gate.name} ${label} は baseline_conflict で deny し gh pr merge を呼ばない`,
+        `CANDIDATE-U-RVMG-047: ${gate.name} ${label} は再計算後の最終可否と分けて競合検出する`,
         withFixture(plan, (fx) => {
-          expectBaselineConflictDeny(runMerge(fx));
+          const mainSha = git(fx.work, "rev-parse", "origin/main^{commit}");
+          const mergeBase = git(fx.work, "merge-base", fx.prHead, mainSha);
+          const result = evaluateBaselineConflict(
+            changedPaths(fx.work, mergeBase, fx.prHead),
+            changedPaths(fx.work, mergeBase, mainSha),
+            BASELINE_GATES,
+          );
+          expect(result.conflicts).toEqual([{ gate: gate.name, paths: [conflictPath] }]);
         }),
       );
     }

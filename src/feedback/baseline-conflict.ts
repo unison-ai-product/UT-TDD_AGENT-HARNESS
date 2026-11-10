@@ -111,8 +111,9 @@ export function checkBaselineConflict(
   repoRoot: string,
   headSha: string,
   gates: readonly BaselineGate[] = BASELINE_GATES,
+  pr = 0,
 ): string | null {
-  return checkBaselineConflictWithPreview(repoRoot, headSha, gates).reason;
+  return checkBaselineConflictWithPreview(repoRoot, headSha, gates, pr).reason;
 }
 
 /** Path-level conflicts are re-evaluated against the synthetic merge tree. */
@@ -120,6 +121,7 @@ export function checkBaselineConflictWithPreview(
   repoRoot: string,
   headSha: string,
   gates: readonly BaselineGate[] = BASELINE_GATES,
+  pr = 0,
 ): BaselineConflictCheckResult {
   try {
     git(repoRoot, ["fetch", "-q", "origin", "+refs/heads/main:refs/remotes/origin/main"]);
@@ -143,6 +145,7 @@ export function checkBaselineConflictWithPreview(
     }
     const recomputed = recomputeBaselinePreview({
       repoRoot,
+      pr,
       mainSha,
       headSha,
       gates: previewGates,

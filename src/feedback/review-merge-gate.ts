@@ -308,6 +308,30 @@ function makeResult(input: {
   }
 }
 
+function buildMergedPreview(
+  preview: BaselinePreview | null,
+  ports: GhPrMergePorts,
+  pr: number,
+): MergeResultPreview | undefined {
+  if (preview === null) return undefined;
+  try {
+    const postMergeTreeSha = ports.readMergeCommitTree?.(pr) ?? null;
+    return {
+      ...preview,
+      postMergeTreeSha,
+      treeMatch: postMergeTreeSha === null ? "unknown" : postMergeTreeSha === preview.treeSha,
+      ...(postMergeTreeSha === null ? { postMergeTreeError: "merge_commit_tree_unavailable" } : {}),
+    };
+  } catch (error) {
+    return {
+      ...preview,
+      postMergeTreeSha: null,
+      treeMatch: "unknown",
+      postMergeTreeError: errorMessage(error),
+    };
+  }
+}
+
 export function runPrMerge(input: {
   repoRoot: string;
   pr: number;
@@ -318,11 +342,19 @@ export function runPrMerge(input: {
   let repoRoot = input.repoRoot;
   const deny = (
     reason: string,
-    from: Partial<Pick<MergeGateDecision, "headSha" | "verdict" | "authorizedEntry">> = {},
+    from: Partial<Pick<MergeGateDecision, "headSha" | "verdict" | "authorizedEntry">> & {
+      preview?: MergeResultPreview;
+    } = {},
   ): PrMergeResult => {
-    const { headSha = null, verdict = null, authorizedEntry = null } = from;
+    const { headSha = null, verdict = null, authorizedEntry = null, preview } = from;
     const result = { ok: false, pr: input.pr, headSha, verdict, decision: "deny", reason } as const;
-    return makeResult({ result, repoRoot, timestamp, authorizedEntry });
+    return makeResult({
+      result,
+      repoRoot,
+      timestamp,
+      authorizedEntry,
+      ...(preview === undefined ? {} : { preview }),
+    });
   };
   try {
     repoRoot = resolveRepositoryRoot(input.repoRoot);
@@ -360,9 +392,12 @@ export function runPrMerge(input: {
 
   const baselineCheck = input.ports.checkBaselineConflict
     ? { reason: input.ports.checkBaselineConflict(repoRoot, decision.headSha), preview: null }
-    : checkBaselineConflictWithPreview(repoRoot, decision.headSha);
+    : checkBaselineConflictWithPreview(repoRoot, decision.headSha, undefined, input.pr);
   if (baselineCheck.reason !== null) {
-    return deny(baselineCheck.reason, decision);
+    return deny(baselineCheck.reason, {
+      ...decision,
+      ...(baselineCheck.preview?.cleanup === "failed" ? { preview: baselineCheck.preview } : {}),
+    });
   }
 
   try {
@@ -400,28 +435,7 @@ export function runPrMerge(input: {
       authorizedEntry: decision.authorizedEntry,
     });
   }
-  let resultPreview: MergeResultPreview | undefined;
-  if (baselineCheck.preview !== null) {
-    const preview = baselineCheck.preview;
-    try {
-      const postMergeTreeSha = input.ports.readMergeCommitTree?.(input.pr) ?? null;
-      resultPreview = {
-        ...preview,
-        postMergeTreeSha,
-        treeMatch: postMergeTreeSha === null ? "unknown" : postMergeTreeSha === preview.treeSha,
-        ...(postMergeTreeSha === null
-          ? { postMergeTreeError: "merge_commit_tree_unavailable" }
-          : {}),
-      };
-    } catch (error) {
-      resultPreview = {
-        ...preview,
-        postMergeTreeSha: null,
-        treeMatch: "unknown",
-        postMergeTreeError: errorMessage(error),
-      };
-    }
-  }
+  const resultPreview = buildMergedPreview(baselineCheck.preview, input.ports, input.pr);
   return makeResult({
     result: {
       ok: true,

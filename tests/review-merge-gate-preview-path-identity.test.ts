@@ -1,7 +1,8 @@
-import { spawnSync } from "node:child_process";
-import { existsSync } from "node:fs";
-import { isAbsolute, resolve } from "node:path";
+import { execFileSync, spawnSync } from "node:child_process";
+import { existsSync, mkdirSync, realpathSync, symlinkSync, unlinkSync } from "node:fs";
+import { basename, dirname, isAbsolute, join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
+import { checkBaselineConflictWithPreview } from "../src/feedback/baseline-conflict.ts";
 import {
   buildFixture,
   canonicalGitCommonDir,
@@ -13,6 +14,43 @@ import {
   smallFiles,
   worktreePaths,
 } from "./fixtures/baseline-recompute-fixture.ts";
+
+function assertPreviewUsesResolvedRepoParent(repoRoot: string, fixture: Fixture): string {
+  const previewRoots: string[] = [];
+  const physicalRepoRoot = realpathSync.native(repoRoot);
+  const result = checkBaselineConflictWithPreview(
+    repoRoot,
+    fixture.headSha,
+    [
+      {
+        name: "code-size",
+        inScope: (path) => path === "src/alpha.ts",
+        baselinePath: "docs/governance/small-baseline.json",
+        check: (previewRoot) => {
+          previewRoots.push(previewRoot);
+          expect(existsSync(previewRoot)).toBe(true);
+          expect(existsSync(join(previewRoot, "node_modules"))).toBe(false);
+          expect(canonicalPath(dirname(realpathSync.native(previewRoot)))).toBe(
+            canonicalPath(dirname(physicalRepoRoot)),
+          );
+          return { ok: true, findings: [] };
+        },
+      },
+    ],
+    1559,
+  );
+
+  expect(result).toMatchObject({
+    reason: null,
+    preview: { gates: [{ name: "code-size", ok: true }] },
+  });
+  expect(previewRoots).toHaveLength(1);
+  const previewRoot = previewRoots[0];
+  if (!previewRoot) throw new Error("preview gate did not capture its repository root");
+  expect(basename(previewRoot)).toMatch(/^ut-tdd-baseline-preview-1559-/);
+  expect(existsSync(previewRoot)).toBe(false);
+  return previewRoot;
+}
 
 describe("review merge gate preview path identity", () => {
   it("Windows 8.3 alias and long git common paths have the same physical identity", ({ skip }) => {
@@ -115,6 +153,52 @@ describe("review merge gate preview path identity", () => {
       if (foreignPreview) fixture.ownedPreviewPaths.delete(foreignPreview.path);
       cleanFixture(fixture);
       if (foreignFixture) cleanFixture(foreignFixture);
+    }
+  });
+
+  it("uses the linked worktree's physical root parent for the preview", () => {
+    const sample = smallFiles();
+    const fixture = buildFixture(sample.base, sample.branches);
+    const linkedParent = join(fixture.base, "linked-parent");
+    const linkedRoot = join(linkedParent, "linked-repository");
+    mkdirSync(linkedParent, { recursive: true });
+    try {
+      execFileSync(
+        "git",
+        ["-C", fixture.work, "worktree", "add", "-q", "--detach", linkedRoot, fixture.headSha],
+        { windowsHide: true, stdio: ["ignore", "pipe", "pipe"] },
+      );
+      const before = worktreePaths(fixture.work).map(canonicalPath).sort();
+      assertPreviewUsesResolvedRepoParent(linkedRoot, fixture);
+      expect(worktreePaths(fixture.work).map(canonicalPath).sort()).toEqual(before);
+      expect(canonicalPath(linkedParent)).not.toBe(
+        canonicalPath(dirname(realpathSync.native(fixture.work))),
+      );
+    } finally {
+      cleanFixture(fixture);
+    }
+  });
+
+  it("uses the target repository's physical parent when invoked through a junction or symlink", () => {
+    const sample = smallFiles();
+    const fixture = buildFixture(sample.base, sample.branches);
+    const aliasParent = join(fixture.base, "alias-parent");
+    const alias = join(aliasParent, "repository-alias");
+    mkdirSync(aliasParent, { recursive: true });
+    try {
+      symlinkSync(fixture.work, alias, process.platform === "win32" ? "junction" : "dir");
+      const before = worktreePaths(fixture.work).map(canonicalPath).sort();
+      assertPreviewUsesResolvedRepoParent(alias, fixture);
+      expect(canonicalPath(dirname(realpathSync.native(alias)))).toBe(
+        canonicalPath(dirname(realpathSync.native(fixture.work))),
+      );
+      expect(canonicalPath(dirname(alias))).not.toBe(
+        canonicalPath(dirname(realpathSync.native(alias))),
+      );
+      expect(worktreePaths(fixture.work).map(canonicalPath).sort()).toEqual(before);
+    } finally {
+      if (existsSync(alias)) unlinkSync(alias);
+      cleanFixture(fixture);
     }
   });
 
