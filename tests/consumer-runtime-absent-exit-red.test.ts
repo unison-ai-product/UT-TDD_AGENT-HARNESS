@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -61,6 +61,8 @@ describe("issue #1602 consumer runtime absent exit split", () => {
       expect(result.status, argv.join(" ")).toBe(0);
       expect(result.stdout, argv.join(" ")).toBe("");
       expect(result.stderr, argv.join(" ")).toContain("consumer_runtime_absent");
+      expect(result.stderr, argv.join(" ")).toContain("setup --worktree");
+      expect(result.stderr, argv.join(" ")).toContain(realpathSync.native(fixture.root));
       expect(result.stderr.trim().split(/\r?\n/), argv.join(" ")).toHaveLength(1);
     }
   });
