@@ -1,5 +1,13 @@
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -88,8 +96,12 @@ function runGeneratedHook(
 function expectMissingRuntimeGuidance(output: string, fixture: HookFixture): void {
   const normalizedOutput = output.toLowerCase().replaceAll("\\", "/");
   expect(normalizedOutput).toContain("setup --worktree");
-  expect(normalizedOutput).toContain(fixture.mainRoot.toLowerCase().replaceAll("\\", "/"));
-  expect(normalizedOutput).toContain(fixture.worktreeRoot.toLowerCase().replaceAll("\\", "/"));
+  expect(normalizedOutput).toContain(
+    realpathSync.native(fixture.mainRoot).toLowerCase().replaceAll("\\", "/"),
+  );
+  expect(normalizedOutput).toContain(
+    realpathSync.native(fixture.worktreeRoot).toLowerCase().replaceAll("\\", "/"),
+  );
 }
 
 afterEach(() => {
@@ -121,7 +133,7 @@ describe("issue #1525 consumer worktree missing-runtime guard guidance", () => {
     expect(result.stderr).toContain("consumer_runtime_absent");
   });
 
-  it.fails("U-CWTRT-007: a present launcher gives setup guidance only for absent runtime", () => {
+  it("U-CWTRT-007: a present launcher gives setup guidance only for absent runtime", () => {
     const fixture = createHookFixture();
     expect(existsSync(fixture.launcherPath)).toBe(true);
     expect(
@@ -165,7 +177,7 @@ describe("issue #1525 consumer worktree missing-runtime guard guidance", () => {
     expect(result.stdout).toBe("");
   });
 
-  it.fails("U-CWTRT-008: absent launcher is handled before Node module resolution", () => {
+  it("U-CWTRT-008: absent launcher is handled before Node module resolution", () => {
     const fixture = createHookFixture();
     rmSync(fixture.launcherPath);
     expect(existsSync(fixture.launcherPath)).toBe(false);
@@ -182,7 +194,7 @@ describe("issue #1525 consumer worktree missing-runtime guard guidance", () => {
     expect(result.stdout).toBe("");
   });
 
-  it.fails("U-CWTRT-008: absent launcher is handled for the work guard", () => {
+  it("U-CWTRT-008: absent launcher is handled for the work guard", () => {
     const fixture = createHookFixture();
     rmSync(fixture.launcherPath);
     expect(existsSync(fixture.launcherPath)).toBe(false);
@@ -208,7 +220,7 @@ describe("issue #1525 consumer worktree missing-runtime guard guidance", () => {
     expect(result.stderr).toContain("consumer_runtime_absent");
   });
 
-  it.fails("U-CWTRT-009: missing-runtime guidance is a single stderr block reason", () => {
+  it("U-CWTRT-009: missing-runtime guidance is a single stderr block reason", () => {
     const fixture = createHookFixture();
     const result = runGeneratedHook(fixture, fixture.workGuard, {
       tool_name: "Edit",

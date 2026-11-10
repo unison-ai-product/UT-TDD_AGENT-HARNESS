@@ -13,6 +13,8 @@ import YAML from "yaml";
 import { removeTestTree } from "./support/temp-tree.ts";
 
 const repoRoot = process.cwd();
+const canonicalIssueUrl =
+  /^https:\/\/github\.com\/[A-Za-z0-9-]+\/[A-Za-z0-9._-]+\/issues\/[1-9][0-9]*$/;
 
 function read(relativePath: string): string {
   return readFileSync(resolve(repoRoot, relativePath), "utf8");
@@ -290,7 +292,6 @@ describe("checked Vモデル source assets", () => {
           layer: string;
           reason: string;
           allowed_pair_layers: string[];
-          required_backlinks: string[];
         }>;
       };
       layers: Array<{
@@ -301,7 +302,7 @@ describe("checked Vモデル source assets", () => {
         evidence_families: string[];
         exit_criteria: string;
         defect_routing: string;
-        verification_plan_id?: string;
+        verification_issue?: string;
         governance_artifact?: string;
         case_id_prefix?: string;
         evidence_manifest?: string;
@@ -328,7 +329,6 @@ describe("checked Vモデル source assets", () => {
       expect(exceptions.has(exception.layer)).toBe(true);
       expect(exception.reason).not.toBe("");
       expect(exception.allowed_pair_layers).toEqual(byLayer.get(exception.layer)?.pair_layers);
-      expect(exception.required_backlinks.length).toBeGreaterThan(0);
     }
     for (const entry of contract.layers) {
       if (exceptions.has(entry.layer)) continue;
@@ -337,7 +337,7 @@ describe("checked Vモデル source assets", () => {
       }
     }
     for (const entry of contract.layers.filter((layer) => Number(layer.layer.slice(1)) >= 8)) {
-      expect(entry.verification_plan_id).toMatch(`PLAN-${entry.layer}-`);
+      expect(entry.verification_issue).toMatch(canonicalIssueUrl);
       expect(entry.governance_artifact).toMatch(/^docs\//);
       expect(entry.case_id_prefix).toMatch(/^[A-Z]+-$/);
       expect(entry.evidence_manifest).toMatch(/^\.ut-tdd\/evidence\//);
@@ -644,7 +644,7 @@ describe("checked Vモデル source assets", () => {
       "target_kind",
       "target_ref",
       "判断理由",
-      "plan_id",
+      "issue",
     ]);
     expect(targetRows).toHaveLength(163);
     expect(new Set(targetRows.map((row) => row.item_id)).size).toBe(163);
@@ -656,32 +656,21 @@ describe("checked Vモデル source assets", () => {
     expect(targetRows.filter((row) => row.source_ref !== semanticSource.get(row.item_id))).toEqual(
       [],
     );
-    const allowedStatuses = new Set([
-      "pending_review",
-      "adopt",
-      "merge",
-      "reference",
-      "defer",
-      "not_applicable",
-      "reject",
-    ]);
+    const allowedStatuses = new Set(
+      "pending_review adopt merge reference defer not_applicable reject".split(" "),
+    );
     expect(targetRows.filter((row) => !allowedStatuses.has(row.target_status))).toEqual([]);
     expect(targetRows.filter((row) => !/^ITEM-TARGET-[A-Z0-9-]+$/.test(row.edge_id))).toEqual([]);
     expect(targetRows.filter((row) => !/^[a-f0-9]{64}$/.test(row.source_digest))).toEqual([]);
-    expect(targetRows.filter((row) => !row.判断理由 || !row.plan_id)).toEqual([]);
-    expect(
-      targetRows.filter(
-        (row) =>
-          row.target_status === "pending_review" &&
-          (row.target_kind !== "—" || row.target_ref !== "—"),
-      ),
-    ).toEqual([]);
-    expect(
-      targetRows.filter(
-        (row) =>
-          ["adopt", "merge", "reference", "defer"].includes(row.target_status) &&
-          (row.target_kind === "—" || row.target_ref === "—"),
-      ),
-    ).toEqual([]);
+    expect(targetRows.filter((row) => !row.判断理由 || !row.issue)).toEqual([]);
+    const pending = targetRows.filter((row) => row.target_status === "pending_review");
+    const pendingFields = pending.flatMap((row) => [row.target_kind, row.target_ref, row.issue]);
+    expect(pendingFields.every((value) => value === "—")).toBe(true);
+    const resolved = targetRows.filter((row) =>
+      ["adopt", "merge", "reference", "defer"].includes(row.target_status),
+    );
+    expect(resolved.every((row) => row.target_kind !== "—" && row.target_ref !== "—")).toBe(true);
+    const deferred = targetRows.filter((row) => row.target_status === "defer");
+    expect(deferred.every((row) => canonicalIssueUrl.test(row.issue))).toBe(true);
   });
 });

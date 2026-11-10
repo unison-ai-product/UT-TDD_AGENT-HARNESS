@@ -5,6 +5,7 @@ import { basename, join } from "node:path";
 import { gte, minVersion, validRange } from "semver";
 import { afterEach, describe, expect, it } from "vitest";
 import { CODEX_GIT_ROOT_PREFIX } from "../src/lint/hook-invocation.ts";
+import { MISSING_RUNTIME_GUARD_BOOTSTRAP } from "../src/lint/project-hook.ts";
 import { BUILTIN_GITHUB_TEMPLATES } from "../src/setup/templates.ts";
 import { removeTestTree } from "./support/temp-tree.ts";
 
@@ -152,7 +153,7 @@ describe("Claude hook wrapper execution contract (issue #123 / PLAN-L7-522 S1-b)
     expect(() => readFileSync(recorderOutputWithoutEntrypoint, "utf8")).toThrow();
   });
 
-  it.fails("U-HOOKEXEC-001: refuses to launch without the consumer-local sealed runtime", () => {
+  it("U-HOOKEXEC-001: refuses to launch without the consumer-local sealed runtime", () => {
     const output = join(temporaryDirectory(), "result.json");
     const { root, wrapper } = materializeWrapper(RECORDER);
     const forwarded = ["plain", "contains spaces", 'quote"inside', "a&b", "日本語"];
@@ -171,7 +172,7 @@ describe("Claude hook wrapper execution contract (issue #123 / PLAN-L7-522 S1-b)
     expect(() => readFileSync(output, "utf8")).toThrow();
   });
 
-  it.fails("U-HOOKEXEC-008: fails closed when no project-local entrypoint can be resolved", () => {
+  it("U-HOOKEXEC-008: fails closed when no project-local entrypoint can be resolved", () => {
     const { root, wrapper } = materializeWrapper(null);
     const result = spawnSync(process.execPath, [wrapper, "should-not-run"], {
       cwd: root,
@@ -331,8 +332,22 @@ describe("Claude hook wrapper execution contract (issue #123 / PLAN-L7-522 S1-b)
 
     expect(actual).toEqual({
       PreToolUse: [
-        ["node", ".ut-tdd/bin/ut-tdd.mjs", "hook", "agent-guard"],
-        ["node", ".ut-tdd/bin/ut-tdd.mjs", "hook", "work-guard"],
+        [
+          "node",
+          "-e",
+          MISSING_RUNTIME_GUARD_BOOTSTRAP,
+          ".ut-tdd/bin/ut-tdd.mjs",
+          "hook",
+          "agent-guard",
+        ],
+        [
+          "node",
+          "-e",
+          MISSING_RUNTIME_GUARD_BOOTSTRAP,
+          ".ut-tdd/bin/ut-tdd.mjs",
+          "hook",
+          "work-guard",
+        ],
       ],
       SessionStart: [["node", ".ut-tdd/bin/ut-tdd.mjs", "session", "start"]],
       PostToolUse: [["node", ".ut-tdd/bin/ut-tdd.mjs", "hook", "post-tool-use"]],

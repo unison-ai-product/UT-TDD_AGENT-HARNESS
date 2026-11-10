@@ -368,7 +368,7 @@ type ConsumerG9Manifest = {
     evidence_paths: string[];
     command_ids: string[];
   }[];
-  defer: { st_id: string; reason: string; plan_id: string }[];
+  defer: { st_id: string; reason: string; issue?: string }[];
   exit_criteria: {
     all_mandatory_passed: boolean;
     failed_mandatory_count: number;
@@ -1330,8 +1330,7 @@ describe("PR-G0 release-consumer gates", () => {
     const result = evaluateStaticGate({ gate: "G1", repoRoot: root });
     const messages = result.messages.join("\n");
 
-    expect(result.applicable).toBe(true);
-    expect(result.passed).toBe(false);
+    expect(result).toMatchObject({ applicable: true, passed: false });
     expect(messages).toContain(
       "required doc not created: docs/design/harness/L1-requirements/business-requirements.md",
     );
@@ -1430,8 +1429,7 @@ describe("PR-GR consumer G8 predicates", () => {
     const result = evaluateStaticGate({ gate: "G8", repoRoot: root });
     const messages = result.messages.join("\n");
 
-    expect(result.applicable).toBe(true);
-    expect(result.passed).toBe(true);
+    expect(result).toMatchObject({ applicable: true, passed: true });
     expect(messages).toContain("未判定 (review): QA/TL");
   });
 
@@ -1814,7 +1812,11 @@ describe("PR-G9 consumer G9 predicates", () => {
     expect(result.messages.join("\n")).toContain("untraced case ST-CONSUMER-01");
   });
 
-  it("U-RCDEV-030: rejects a defer to a missing PLAN (F)", () => {
+  it.each([
+    { kind: "missing", issue: undefined, legacy: false },
+    { kind: "invalid", issue: "PLAN-CONSUMER-LEGACY-01", legacy: false },
+    { kind: "legacy PLAN only", issue: undefined, legacy: true },
+  ])("U-RCDEV-030: rejects a $kind Issue URL on a defer (F)", ({ issue, legacy }) => {
     const root = fixtureRoot();
     writeConsumerG9Fixture(root);
     updateConsumerG9Manifest(root, (manifest) => {
@@ -1826,7 +1828,8 @@ describe("PR-G9 consumer G9 predicates", () => {
         {
           st_id: deferredId,
           reason: "Consumer fixture defer mutation",
-          plan_id: "PLAN-CONSUMER-MISSING-01",
+          ...(issue === undefined ? {} : { issue }),
+          ...(legacy ? { plan_id: "PLAN-CONSUMER-LEGACY-01" } : {}),
         },
       ];
     });
@@ -1838,21 +1841,16 @@ describe("PR-G9 consumer G9 predicates", () => {
     expect(result.messages.join("\n")).toContain("stale defer ST-CONSUMER-06");
   });
 
-  it("U-RCDEV-030: accepts a deferred ST row routed to an existing PLAN (F)", () => {
+  it("U-RCDEV-030: accepts a deferred ST row routed to a valid Issue URL (F)", () => {
     const root = fixtureRoot();
     writeConsumerG9Fixture(root);
-    writeFixtureDoc(root, "docs/plans/PLAN-CONSUMER-DEFER-01.md", "# Consumer defer plan\n");
     updateConsumerG9Manifest(root, (manifest) => {
       const deferredId = "ST-CONSUMER-06";
       manifest.mandatory_st_ids = manifest.mandatory_st_ids.filter((id) => id !== deferredId);
       manifest.deferred_st_ids = [deferredId];
       manifest.coverage = manifest.coverage.filter((entry) => entry.st_id !== deferredId);
       manifest.defer = [
-        {
-          st_id: deferredId,
-          reason: "Consumer fixture defers this row to its tracked plan",
-          plan_id: "PLAN-CONSUMER-DEFER-01",
-        },
+        { st_id: deferredId, reason: "Tracked issue", issue: "https://github.com/o/r/issues/1" },
       ];
     });
 

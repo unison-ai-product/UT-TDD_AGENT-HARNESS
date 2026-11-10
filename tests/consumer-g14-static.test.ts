@@ -39,8 +39,8 @@ function consumerFixture(): string {
   );
   write(
     root,
-    "docs/plans/PLAN-L0-01-consumer-charter.md",
-    "---\nplan_id: PLAN-L0-01-consumer-charter\n---\n",
+    "docs/design/L0-planning/consumer-charter.md",
+    "---\nlayer: L0\ndoc_type_id: DOC-L0-CHARTER\n---\n",
   );
   write(root, "docs/plans/PLAN-CONSUMER-01.md", "---\nplan_id: PLAN-CONSUMER-01\n---\n");
   const template = readFileSync(
@@ -52,7 +52,7 @@ function consumerFixture(): string {
     .replace("plan: docs/plans/PLAN-<id>.md", "plan: docs/plans/PLAN-CONSUMER-01.md")
     .replace(
       "| <記入> | <記入> | <記入> | <記入> | <記入> |",
-      "| OT-CONSUMER-01 | OT | 日常運用の手順 | 失敗 0 | FR-L1-01 |\n| OT-CONSUMER-02 | VALUE | 導入価値の検証 | KPI 達成 | BR-01 / PLAN-L0-01-consumer-charter |",
+      "| OT-CONSUMER-01 | OT | 日常運用の手順 | 失敗 0 | FR-L1-01 |\n| OT-CONSUMER-02 | VALUE | 導入価値の検証 | KPI 達成 | BR-01 / DOC-L0-CHARTER |",
     );
   write(root, "docs/test-design/L14-operational-test-design.md", content);
   write(root, "tests/fixtures/g14-consumer/operational-results.txt", "passed\n");
@@ -398,7 +398,7 @@ describe("consumer G14 right-arm static gate (U-RCDEV-035)", () => {
     expect(evaluate(root).passed).toBe(true);
   });
 
-  it.fails("m-G14g: a missing PLAN ID is rejected as not an Issue URL, not as missing", () => {
+  it("m-G14g: a missing PLAN ID is rejected as not an Issue URL, not as missing", () => {
     const root = consumerFixture();
     updateJson(feedbackPath(root), (value) => {
       requiredRecordAt(value.items, 0).routed_to = "PLAN-L9-999-missing";
@@ -408,7 +408,7 @@ describe("consumer G14 right-arm static gate (U-RCDEV-035)", () => {
     );
   });
 
-  it.fails("m-G14g: an existing PLAN ID is also rejected as not an Issue URL", () => {
+  it("m-G14g: an existing PLAN ID is also rejected as not an Issue URL", () => {
     const root = consumerFixture();
     updateJson(feedbackPath(root), (value) => {
       requiredRecordAt(value.items, 0).routed_to = "PLAN-CONSUMER-01";
@@ -426,7 +426,7 @@ describe("consumer G14 right-arm static gate (U-RCDEV-035)", () => {
     expect(evaluate(root).passed).toBe(false);
   });
 
-  it.fails("m-G14h: reports that a pull URL is not an Issue URL", () => {
+  it("m-G14h: reports that a pull URL is not an Issue URL", () => {
     const root = consumerFixture();
     updateJson(feedbackPath(root), (value) => {
       requiredRecordAt(value.items, 1).routed_to = "https://github.com/example/consumer/pull/12";
@@ -444,7 +444,7 @@ describe("consumer G14 right-arm static gate (U-RCDEV-035)", () => {
     expect(evaluate(root).passed).toBe(false);
   });
 
-  it.fails("m-G14i: reports that a number-only reference is not an Issue URL", () => {
+  it("m-G14i: reports that a number-only reference is not an Issue URL", () => {
     const root = consumerFixture();
     updateJson(feedbackPath(root), (value) => {
       requiredRecordAt(value.items, 1).routed_to = "#12";

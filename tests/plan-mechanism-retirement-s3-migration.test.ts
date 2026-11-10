@@ -53,7 +53,7 @@ describe("CANDIDATE-U-PLANRET-019 frozen v29 migration", () => {
     }
   });
 
-  it.fails("(1): migrate changes target definition and preserves both PLAN rows", () => {
+  it("(1): migrate changes target definition and preserves both PLAN rows", () => {
     const { db } = createLegacyDatabase();
     try {
       const result = migrate(db);
@@ -100,7 +100,7 @@ describe("CANDIDATE-U-PLANRET-019 frozen v29 migration", () => {
     expect(ledger).not.toContain("| plan_id |");
   });
 
-  it.fails("(2): issue-only catalog rebuild has no exception and projects one edge", () => {
+  it("(2): issue-only catalog rebuild has no exception and projects one edge", () => {
     const { root, db } = createLegacyDatabase();
     try {
       createIssueOnlyCatalogFixture(root);
@@ -169,7 +169,7 @@ describe("CANDIDATE-U-PLANRET-019 frozen v29 migration", () => {
     }
   });
 
-  it.fails("(3): re-migrate is unapplied and leaves complete state unchanged", () => {
+  it("(3): re-migrate is unapplied and leaves complete state unchanged", () => {
     const { root, db } = createLegacyDatabase();
     try {
       const first = migrate(db);
@@ -238,7 +238,7 @@ describe("CANDIDATE-U-PLANRET-019 frozen v29 migration", () => {
     }
   });
 
-  it.fails("(5): post-DROP failure preserves exact legacy schema, version, and rows", () => {
+  it("(5): post-DROP failure preserves exact legacy schema, version, and rows", () => {
     const { db } = createLegacyDatabase();
     try {
       const before = databaseState(db);
@@ -267,7 +267,7 @@ describe("CANDIDATE-U-PLANRET-019 frozen v29 migration", () => {
     }
   });
 
-  it.fails("(5): successful migrate changes only target rows and preserves unrelated state", () => {
+  it("(5): successful migrate changes only target rows and preserves unrelated state", () => {
     const { db } = createLegacyDatabase();
     try {
       const before = databaseState(db);
@@ -340,7 +340,7 @@ describe("CANDIDATE-U-PLANRET-019 frozen v29 migration", () => {
     }
   });
 
-  it.fails("(4): outer rebuild COMMIT failure restores schema, version, and all rows", () => {
+  it("(4): outer rebuild COMMIT failure restores schema, version, and all rows", () => {
     const { root, db } = createLegacyDatabase();
     try {
       const before = databaseState(db);

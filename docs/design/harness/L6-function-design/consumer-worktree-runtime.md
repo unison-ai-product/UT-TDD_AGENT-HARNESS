@@ -10,7 +10,7 @@ next_pair_freeze: L7
 issue: 1525
 ---
 
-> **L6 contract marker**: 本書は consumer の linked git worktree へ runtime を入れる入口と、runtime が無いときの guard 失敗の案内を凍結する (未実装の目標契約)。版の更新とロールバックは #930 / #481 の範囲であり、本書は扱わない。oracle (`U-CWTRT-001`〜`010`) は `docs/test-design/harness/L7-consumer-worktree-runtime-test-design.md` が固定する。行番号は 2026-11-04 の `origin/main` で測った。
+> **L6 contract marker**: 本書は consumer の linked git worktree へ runtime を入れる入口、runtime が無いときの guard 失敗の案内、および新規 install の launcher 公開前失敗に対する transaction rollback を凍結する (未実装の目標契約)。版の更新と別の版へのロールバックは #930 / #481 の範囲であり、本書は扱わない。oracle (`U-CWTRT-001`〜`010`) は `docs/test-design/harness/L7-consumer-worktree-runtime-test-design.md` が固定し、導入途中の rollback 境界の候補 oracle は同書が `CANDIDATE-U-CWTRT-011` として定義する。行番号は 2026-11-04 の `origin/main` で測った。
 
 # consumer worktree の runtime 入口 — 関数設計 (issue #1525)
 
@@ -53,6 +53,8 @@ consumer は runtime と launcher (`.ut-tdd/bin/ut-tdd.mjs`) を commit しな�
 ## 5. 不変条件 (DbC)
 
 - `setup --worktree` は、成功する場合を除き、worktree・main・キャッシュのどれにも何も残さない (失敗時は巻き戻す)。
+- 新規 install の transaction は runtime の capture から launcher の公開までを覆う。`installConsumerRuntimeFromSetup` が `result.ok` で成功を返した直後、launcher (`.ut-tdd/bin/ut-tdd.mjs`) を公開する前に、内部だけの optional injection 型 `ConsumerWorktreeSetupFault = (barrier: "afterRuntimePublishBeforeLauncher") => void` が設定されていれば、その barrier で transaction の `try` 内からちょうど 1 回呼ぶ。`setupConsumerWorktreeRuntime` から Release install と runtime-only transaction を通る内部 composition に渡せるようにし、本番の capture/restore を差し替えない。この seam は既定で未設定であり、通常経路の動作を変えない。同期 throw は launcher 公開前の失敗として同じ本番 capture/restore rollback に流し、worktree・main・cache・他 worktree を呼び出し前の状態へ戻す。restore 自体が失敗した場合は復元成功と偽らず `consumer_runtime_indeterminate` で fail-close する。利用者向け CLI / Pack API option や environment variable として公開しない。
+- fault seam は新規 install (`status: "installed"`) の境界専用である。Release installer が `already-installed` を返す idempotent 経路では呼ばず、既存 runtime を障害注入 rollback の対象にしない。launcher の通常公開と fault seam が無い場合の成功経路は従来どおりである。
 - 入れる版は main の active pointer の版と常に一致する。キャッシュ・引数・環境変数から版を選べる経路は無い。
 - 案内の経路は常に exit 非 0 であり、`MODULE_NOT_FOUND` のスタックを block 理由にしない。
 - **exit code の境界** (Issue #1525、2026-11-05 に確定):
@@ -89,4 +91,4 @@ consumer は runtime と launcher (`.ut-tdd/bin/ut-tdd.mjs`) を commit しな�
 - pre: `worktreePath` は linked worktree の絶対パスである。main の active pointer が有効である (§3 手順 1、2)。
 - post: 成功時は launcher と runtime が揃い、入れた版は main の版と一致する。案内の経路は常に exit 2 で終わる (§4、§5)。
 - invariant: 失敗時は worktree・main・キャッシュのどれにも何も残さない。版を選べる入力は無い。`MODULE_NOT_FOUND` のスタックを block 理由にしない (§5)。
-- oracle: `U-CWTRT-001`〜`010` が上記を固定する。
+- oracle: `U-CWTRT-001`〜`010` が既存の入口・案内契約を固定し、`CANDIDATE-U-CWTRT-011` が新規 install transaction rollback の契約候補を固定する。
