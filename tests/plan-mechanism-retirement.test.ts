@@ -350,8 +350,7 @@ describe("PLAN 機構の S4 退役", () => {
         );
         expect(origin[0].attributes?.description).toMatch(/canonical Issue URL/u);
       }
-      const header = raw.split(/\r?
-/u).slice(0, 6).join("\n");
+      const header = raw.split(/\r?\n/u).slice(0, 6).join("\n");
       expect(header).not.toMatch(/PLAN(?:-L\d+-| ID|[- ]input)/iu);
     }
   });
