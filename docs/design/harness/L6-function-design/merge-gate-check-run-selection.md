@@ -116,4 +116,4 @@ doc-split gate と code-size gate は、既存の超過を `docs/governance/*-ba
 
 ### §6.5 oracle 対応
 
-`CANDIDATE-U-RVMG-047`〜`049` を `docs/test-design/harness/L7-unit-test-design.md` の「同じ head の古い check run (Issue #1104)」の表に置く (§6 の oracle も同じ表に追記し、本書の対にする)。実テストは `tests/review-merge-gate.test.ts`。§6.6 の oracle は `docs/test-design/harness/L7-merge-baseline-recompute-test-design.md` の `U-RVMG-050`〜`054` に置く (共有の `L7-unit-test-design.md` には足さない)。047 の (a)〜(d) は doc-split / code-size の両 gate で競合を検出する期待を維持し、最終可否は §6.6 の再計算に従う。finding 0 件なら `U-RVMG-050` に従い許可し、合成衝突・finding・再計算失敗なら `U-RVMG-051` / `052` に従い拒否して merge を呼ばない。
+`CANDIDATE-U-RVMG-047`〜`049` を `docs/test-design/harness/L7-unit-test-design.md` の「同じ head の古い check run (Issue #1104)」の表に置く (§6 の oracle も同じ表に追記し、本書の対にする)。実テストは `tests/review-merge-gate-baseline-conflict.test.ts`。§6.6 の oracle は `docs/test-design/harness/L7-merge-baseline-recompute-test-design.md` の `U-RVMG-050`〜`054` に置く (共有の `L7-unit-test-design.md` には足さない)。047 の (a)〜(d) は doc-split / code-size の両 gate で競合を検出する期待を維持し、最終可否は §6.6 の再計算に従う。finding 0 件なら `U-RVMG-050` に従い許可し、合成衝突・finding・再計算失敗なら `U-RVMG-051` / `052` に従い拒否して merge を呼ばない。
