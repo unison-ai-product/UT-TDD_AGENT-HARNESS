@@ -10,7 +10,7 @@ next_pair_freeze: L7
 issue: 693
 ---
 
-> **L6 contract marker**: `applyWindowsHideDefault(childProcessModule) => void` と `analyzeWindowsHide(sources) => WindowsHideResult` は unit-test-granularity contract である。DbC pre/post/invariant は §7 にまとめる。oracle の索引は共有の `docs/test-design/harness/L7-unit-test-design.md` (§子プロセスの windowsHide 既定) に置き、詳細 (`U-WHIDE-001〜014`。#1607 の候補 `CANDIDATE-U-WHIDE-015` / `016` を含む) は専用の `docs/test-design/harness/L7-windows-hide-default-test-design.md` が固定する。
+> **L6 contract marker**: `applyWindowsHideDefault(childProcessModule) => void` と `analyzeWindowsHide(sources) => WindowsHideResult` は unit-test-granularity contract である。DbC pre/post/invariant は §7 にまとめる。oracle の索引は共有の `docs/test-design/harness/L7-unit-test-design.md` (§子プロセスの windowsHide 既定) に置き、詳細 (`U-WHIDE-001〜016`。015 / 016 は #1607 の候補を 2026-11-10 に正式昇格したもの) は専用の `docs/test-design/harness/L7-windows-hide-default-test-design.md` が固定する。
 
 # 子プロセスの windowsHide 既定 — 関数設計 (issue #693)
 
@@ -51,7 +51,7 @@ wrapper はプロセスごとに 1 回効けばよい。子プロセスを起動
 - `src/lint/project-hook.ts` の `MISSING_RUNTIME_GUARD_BOOTSTRAP` (guard hook の起動断片。`node -e` で実行される)。
 - `src/setup/consumer-runtime-absent-guidance.ts` の `CONSUMER_RUNTIME_ABSENT_WRAPPER_SOURCE` (`src/setup/consumer-node-runtime.ts` が生成する launcher に埋め込まれる)。launcher 本体を組み立てる `consumer-node-runtime.ts` の生成部分のうち `child_process` を呼ぶ箇所も対象に含める (本体の `spawnSync` は既に `windowsHide: true` を持つ)。
 
-これらの生成される source の中の `child_process` の呼び出し (`execFileSync` / `execSync` / `spawnSync` / `spawn` / `exec` / `execFile`) には、すべて `windowsHide: true` を literal で書く。生成元の定数・関数の文字列を、owner 側の offline test (`CANDIDATE-U-WHIDE-015` / `CANDIDATE-U-WHIDE-016`) で静的に検査する。2026-11-10 の実測で、`windowsHide` を欠く呼び出しは `execFileSync("git", …)` の 3 件 (起動断片に 2 件、launcher の source に 1 件) である。新しい環境変数・設定項目・差し替え口は足さない。
+これらの生成される source の中の `child_process` の呼び出し (`execFileSync` / `execSync` / `spawnSync` / `spawn` / `exec` / `execFile`) には、すべて `windowsHide: true` を literal で書く。生成元の定数・関数の文字列を、owner 側の offline test (`U-WHIDE-015` / `U-WHIDE-016`) で静的に検査する。2026-11-10 の実測で、`windowsHide` を欠く呼び出しは `execFileSync("git", …)` の 3 件 (起動断片に 2 件、launcher の source に 1 件) である。新しい環境変数・設定項目・差し替え口は足さない。
 
 **Pack 配布 (契約訂正)**: Pack の確認対象は、実際に出荷する bundled CLI と consumer adapter template に限る。`ut-tdd distribution sync-pack` の出荷集合で wrapper と CLI の入力 (`src/runtime/windows-hide.ts` / `src/cli.ts`) が揃い、CLI の副作用 import と consumer template の hook command が `.ut-tdd/bin/ut-tdd.mjs` を指すことを静的に確認する。これは bundle 入力と consumer template の配線確認であり、compiled bytes への wrapper 混入を証明しない。compiled artifact への混入は Green 工程で実 build/metafile を確認する。source repo の `.claude/hooks/*.ts` は Pack へ出荷しない。これらと、前段の単独起動 runner 例外を除く `scripts/` の source entry は §5(a) の source 検査で確認し、Pack の出荷集合には要求しない。欠落時は §5(a) と同じ finding で失敗させる。
 
@@ -71,7 +71,7 @@ doctor の check 名は `windows-hide`、CI の doctor (governance hard gates) �
 
 (b) **`windowsHide: false` の理由**: ソース中の `windowsHide: false` は、同じ行または直前の行に、空でない理由コメント (`// windows-hide: <理由>`) が必要である。無ければ finding `windows-hide-false-unexplained`。
 
-**生成される source は doctor では見ない** (2026-11-10 追記、#1607)。§3 の生成される source の中の `child_process` 呼び出しは、doctor の検査 (a)(b) の対象に加えない。検査は §3 が指す owner 側の offline test (`CANDIDATE-U-WHIDE-015` / `CANDIDATE-U-WHIDE-016`) が持つ。新しい doctor の check は足さない。
+**生成される source は doctor では見ない** (2026-11-10 追記、#1607)。§3 の生成される source の中の `child_process` 呼び出しは、doctor の検査 (a)(b) の対象に加えない。検査は §3 が指す owner 側の offline test (`U-WHIDE-015` / `U-WHIDE-016`) が持つ。新しい doctor の check は足さない。
 
 出力は違反ごとに `path:line:reason`、末尾に `checked=<走査ファイル数> entries=<入口数> falses=<windowsHide: false の数> violations=<違反数>`。走査対象は `src/`・`scripts/`・`.claude/hooks/`・`tests/` の `.ts` / `.mts` / `.mjs` / `.cjs` / `.js` (`node_modules/` と `docs/` は除く)。
 
