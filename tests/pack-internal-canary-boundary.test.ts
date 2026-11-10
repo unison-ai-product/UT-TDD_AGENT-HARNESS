@@ -5,6 +5,7 @@ import {
   mkdtempSync,
   readdirSync,
   readFileSync,
+  renameSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -625,32 +626,28 @@ describe("#418 Pack-only internal canary boundary (PR-1 / first layer)", () => {
         expect(`${forbidden.stderr}\n${forbidden.stdout}`).toContain("[ut-tdd-work-guard] BLOCK:");
       }
 
-      const claudeSettingsPath = join(fixture.consumerRoot, ".claude", "settings.json");
-      const claudeSettings = JSON.parse(readFileSync(claudeSettingsPath, "utf8")) as {
-        hooks: { PreToolUse: { hooks: { command: string; args: string[] }[] }[] };
-      };
-      const claudeHook = claudeSettings.hooks.PreToolUse.flatMap((item) => item.hooks).find(
-        (hook) => hook.args.includes("work-guard"),
-      );
-      if (!claudeHook) throw new Error("generated Claude work-guard hook is missing");
-      claudeHook.args = [".ut-tdd/bin/removed-ut-tdd.mjs", "hook", "work-guard"];
-      expect(claudeHook.args).not.toContain("-e");
-      expect(existsSync(join(fixture.consumerRoot, claudeHook.args[0]))).toBe(false);
-      writeFileSync(claudeSettingsPath, `${JSON.stringify(claudeSettings, null, 2)}\n`, "utf8");
-      const missingClaudeLauncher = runRegisteredWorkGuard(
-        { command: claudeHook.command, args: claudeHook.args },
-        fixture.consumerRoot,
-        env,
-        normalPayload,
-      );
-      // The direct-launcher mutant executes the removed path and exits 1, not
-      // block 2. The real generated bootstrap registration already passed 0/2;
-      // replacing it with a missing bootstrap must fail that normal-path check.
-      expect(missingClaudeLauncher.status, processDiagnostic(missingClaudeLauncher)).toBe(1);
-      expect(missingClaudeLauncher.stderr).toMatch(/(?:ERR_)?MODULE_NOT_FOUND|Cannot find module/);
-      expect(`${missingClaudeLauncher.stderr}\n${missingClaudeLauncher.stdout}`).not.toContain(
-        "[ut-tdd-work-guard] BLOCK:",
-      );
+      const claudeLauncher = join(fixture.consumerRoot, ".ut-tdd", "bin", "ut-tdd.mjs");
+      const savedClaudeLauncher = join(fixture.consumerRoot, ".ut-tdd", "bin", "saved-ut-tdd.mjs");
+      expect(existsSync(claudeLauncher)).toBe(true);
+      expect(existsSync(savedClaudeLauncher)).toBe(false);
+      renameSync(claudeLauncher, savedClaudeLauncher);
+      try {
+        expect(existsSync(claudeLauncher)).toBe(false);
+        const missingClaudeLauncher = runRegisteredWorkGuard(
+          hookCommands.claude,
+          fixture.consumerRoot,
+          env,
+          normalPayload,
+        );
+        expect(missingClaudeLauncher.status, processDiagnostic(missingClaudeLauncher)).toBe(2);
+        expect(missingClaudeLauncher.stderr).toContain("consumer_runtime_absent");
+        expect(missingClaudeLauncher.stderr).toContain("setup --worktree");
+        expect(missingClaudeLauncher.stderr).not.toContain("MODULE_NOT_FOUND");
+        expect(missingClaudeLauncher.stdout).toBe("");
+        expect(missingClaudeLauncher.stderr).not.toContain("[ut-tdd-work-guard] BLOCK:");
+      } finally {
+        renameSync(savedClaudeLauncher, claudeLauncher);
+      }
 
       const codexHooksPath = join(fixture.consumerRoot, ".codex", "hooks.json");
       const codexSettings = JSON.parse(readFileSync(codexHooksPath, "utf8")) as {
