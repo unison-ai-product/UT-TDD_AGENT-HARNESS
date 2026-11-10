@@ -38,7 +38,7 @@ issue: 1604
 | `CANDIDATE-U-WFGUARD-002` | unit | script: `agent("p", { model: "sonnet" })` のみ。env 未設定 | code 0 |
 | `CANDIDATE-U-WFGUARD-004` | unit | `meta.phases` の entry に `model: "haiku"` があり、agent() は全て `model: "sonnet"` を明示している | code 0。`meta.phases[].model` も検査され、許可値なら通る |
 | `CANDIDATE-U-WFGUARD-005` | unit | script: `agent("p", { model: "claude-haiku-5-5" })` と `{ model: "claude-sonnet-5-5" }`。さらに `{ model: " Haiku " }` (前後の空白・大文字) | 3 つとも code 0。全名は `normalizeModelFamily` の結果に従って通る。反例: 全名を一律に拒否する実装、大文字を拒否する実装 |
-| `CANDIDATE-U-WFGUARD-006` | unit | `tool_name` が `Workflow` でない envelope (例: `Bash`) | code 0 (W2) |
+| `CANDIDATE-U-WFGUARD-006` | unit | `tool_name` が `Workflow` でない envelope (例: `{"tool_name":"Bash","tool_input":{"command":"echo ok"}}`。`tool_input.script` は無い) | code 0 (W2)。matcher 外は `tool_input` を見ずに通す。反例: `script` が無いことを理由に拒否する実装 |
 | `CANDIDATE-U-WFGUARD-007` | hook process | `tool_input.script` に 001 の script。env を未設定にして hook を起動 | exit 0、stderr は空。反例: 通る呼び出しで stderr に出力する実装 |
 
 ### 3.2 拒否する例 (exit 2 と reason)

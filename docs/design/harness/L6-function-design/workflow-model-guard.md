@@ -132,7 +132,7 @@ stderr は `[ut-tdd-guard] BLOCK: <reason>: <何が拒否されたか>。<直し
 
 - `evaluateWorkflowGuard(input) => { code: 0 | 2, message?: string, reason?: Reason }`。
 - pre: `input` は JSON として解析済みの値、または解析に失敗したことを示す印である。
-- post: code 0 のとき、`tool_input.script` だけがあり、その中のすべての `agent()` は固定の形 (第 2 引数が object literal) で、最上位の `model` が haiku / sonnet の literal であり、`meta` の中の `model` も haiku / sonnet の literal であり、`agent` / `workflow` の識別子に直接の呼び出し以外の出現が無く、`workflow(` の呼び出しが無い。それ以外はすべて code 2 と §7 のどれか 1 つの reason である。
+- post: `tool_name` が `Workflow` でない入力 (matcher 外) は、`tool_input` を見ずに code 0 を返す (§4 W2)。`tool_name` が `Workflow` の入力では、code 0 のとき、`tool_input.script` だけがあり、その中のすべての `agent()` は固定の形 (第 2 引数が object literal) で、最上位の `model` が haiku / sonnet の literal であり、`meta` の中の `model` も haiku / sonnet の literal であり、`agent` / `workflow` の識別子に直接の呼び出し以外の出現が無く、`workflow(` の呼び出しが無い。`Workflow` のそれ以外はすべて code 2 と §7 のどれか 1 つの reason である (W1 の入力不正も code 2)。
 - invariant:
   - 純粋である。JavaScript を実行しない。fs も環境変数も読まない。
   - **例外・迂回の経路を持たない**。環境変数・marker file・引数での bypass を設けない (agent-guard の `UT_TDD_ALLOW_RAW_AGENT` に当たるものは無い)。W1 を含め、どの block も無条件である。
