@@ -294,7 +294,7 @@ describe("Claude Code version floor warning (Issue #1561)", () => {
     expect(readFileSync(eventPath, "utf8")).toContain('"session_id":"ccver-precondition"');
   });
 
-  it.fails("CANDIDATE-U-CCVER-001: warns only below the floor using one hook JSON object", () => {
+  it.fails("U-CCVER-001: warns only below the floor using one hook JSON object", () => {
     const violations: string[] = [];
     for (const [index, { latest, result }] of prepared.cases001.entries()) {
       if (index === 0) {
@@ -320,7 +320,7 @@ describe("Claude Code version floor warning (Issue #1561)", () => {
     expect(violations).toEqual([]);
   });
 
-  it.fails("CANDIDATE-U-CCVER-002: reports when the running Claude version cannot be read", () => {
+  it.fails("U-CCVER-002: reports when the running Claude version cannot be read", () => {
     const violations: string[] = [];
     for (const { name, result } of prepared.cases002) {
       if (
@@ -333,7 +333,7 @@ describe("Claude Code version floor warning (Issue #1561)", () => {
     expect(violations).toEqual([]);
   });
 
-  it.fails("CANDIDATE-U-CCVER-003: emits the warning once per session", () => {
+  it.fails("U-CCVER-003: emits the warning once per session", () => {
     const sessionIds = ["ccver-003-a", "ccver-003-a", "ccver-003-a", "ccver-003-b"];
     const violations: string[] = [];
     const outputs = prepared.outputs003;
@@ -355,7 +355,7 @@ describe("Claude Code version floor warning (Issue #1561)", () => {
     expect(violations).toEqual([]);
   });
 
-  it.fails("CANDIDATE-U-CCVER-004: keeps the floor consistent and doctor advisory", async () => {
+  it.fails("U-CCVER-004: keeps the floor consistent and doctor advisory", async () => {
     const violations: string[] = [];
     if (!prepared.case004.adapterDoc.includes(prepared.case004.floor)) {
       violations.push("adapter doc must contain the shared floor");
@@ -377,7 +377,7 @@ describe("Claude Code version floor warning (Issue #1561)", () => {
     expect(violations).toEqual([]);
   });
 
-  it.fails("CANDIDATE-U-CCVER-005: makes the shared floor authoritative across seams", async () => {
+  it.fails("U-CCVER-005: makes the shared floor authoritative across seams", async () => {
     const violations: string[] = [];
     if (prepared.case005.evaluated !== "below") {
       violations.push("comparison must follow the mocked shared floor");
