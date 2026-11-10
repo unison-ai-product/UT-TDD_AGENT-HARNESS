@@ -38,7 +38,7 @@ issue: 1604
 | `CANDIDATE-U-WFGUARD-002` | unit | script: `agent("p", { model: "sonnet" })` のみ。env 未設定 | code 0 |
 | `CANDIDATE-U-WFGUARD-004` | unit | `meta.phases` の entry に `model: "haiku"` があり、agent() は全て `model: "sonnet"` を明示している | code 0。`meta.phases[].model` も検査され、許可値なら通る |
 | `CANDIDATE-U-WFGUARD-005` | unit | script: `agent("p", { model: "claude-haiku-5-5" })` と `{ model: "claude-sonnet-5-5" }`。さらに `{ model: " Haiku " }` (前後の空白・大文字) | 3 つとも code 0。全名は `normalizeModelFamily` の結果に従って通る。反例: 全名を一律に拒否する実装、大文字を拒否する実装 |
-| `CANDIDATE-U-WFGUARD-006` | unit | `tool_name` が `Workflow` でない envelope (例: `{"tool_name":"Bash","tool_input":{"command":"echo ok"}}`。`tool_input.script` は無い) | code 0 (W2)。matcher 外は `tool_input` を見ずに通す。反例: `script` が無いことを理由に拒否する実装 |
+| `CANDIDATE-U-WFGUARD-006` | unit | W1 を通過した、文字列の `tool_name` が `Workflow` 以外の envelope (例: `{"tool_name":"Bash","tool_input":{"command":"echo ok"}}`。`tool_input.script` は無い) | code 0 (W2)。matcher 外は `tool_input` を見ずに通す。反例: `script` が無いことを理由に拒否する実装、`{"tool_name":1}` のように文字列でない `tool_name` まで通す実装 (これは 023 (d) で code 2) |
 | `CANDIDATE-U-WFGUARD-007` | hook process | `tool_input.script` に 001 の script。env を未設定にして hook を起動 | exit 0、stderr は空。反例: 通る呼び出しで stderr に出力する実装 |
 
 ### 3.2 拒否する例 (exit 2 と reason)
@@ -65,7 +65,7 @@ issue: 1604
 
 | ID | レベル | 入力 | 期待 |
 |---|---|---|---|
-| `CANDIDATE-U-WFGUARD-023` | hook process | stdin が (a) 空 (b) 壊れた JSON (c) `{}` (`tool_name` 無し) (d) `{"tool_name": 1}` | 各々 exit 2、stderr に `workflow_guard_input_invalid`。反例: 空 stdin を「入力無し」として通す実装 |
+| `CANDIDATE-U-WFGUARD-023` | hook process | stdin が (a) 空 (b) 壊れた JSON (c) `{}` (`tool_name` 無し) (d) `{"tool_name": 1}` | 各々 exit 2、stderr に `workflow_guard_input_invalid` (W1。`tool_name` が文字列でない (d) は W2 の matcher 外には当たらない)。反例: 空 stdin を「入力無し」として通す実装 |
 | `CANDIDATE-U-WFGUARD-024` | hook process | opus の script を渡し、環境変数 `UT_TDD_ALLOW_RAW_AGENT=1`、`UT_TDD_ALLOW_FOREIGN_EDIT=1`、および `.ut-tdd/state/foreign-edit-override` に理由を書いた marker を置いて起動する | 全てで exit 2。bypass の経路が無い。反例: agent-guard の bypass を流用する実装 |
 | `CANDIDATE-U-WFGUARD-025` | hook process | 008 / 010 / 014 / 030 / 031 / 033 / 034 の拒否ケース | stderr が `[ut-tdd-guard] BLOCK: <reason>:` で始まる 1 行で、設計 §7 の表の「直し方」の文を含む。`workflow_model_not_allowed` は「haiku か sonnet」と「Agent tool か委譲経路」の両方に触れる。反例: 符号だけで直し方が無い実装、複数行の出力 |
 | `CANDIDATE-U-WFGUARD-026` | static | `src/runtime/workflow-guard.ts` と `.claude/hooks/workflow-guard.ts` の source text | `evaluateAgentGuard` を呼ばず、`UT_TDD_ALLOW_*` の環境変数名を含まず、`eval` / `Function(` / `vm` を使わず (JavaScript を実行しない)、`child_process` を使う場合は `windowsHide: true` を literal で持つ。hook の最初の import が `windows-hide.ts` である。判定は `normalizeModelFamily` を import して共有し、許可 family の独自の表を持たない |

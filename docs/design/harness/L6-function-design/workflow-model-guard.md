@@ -55,7 +55,7 @@ Claude Code の Workflow tool (ultracode を含む) は、script の `agent()` �
 `evaluateWorkflowGuard` は次の順で最初に当たった規則で終わる。
 
 1. **W1**: stdin が空・JSON として解析できない・`tool_name` が文字列でない → `workflow_guard_input_invalid` (exit 2)。
-2. **W2**: `tool_name` が `Workflow` でない → exit 0 (matcher 外。通常は届かない)。
+2. **W2** (W1 を通過した入力だけに適用する。`tool_name` は文字列と確定している): `tool_name` が `Workflow` 以外の文字列 → `tool_input` を見ずに exit 0 (matcher 外。通常は届かない)。文字列でない `tool_name` はここに届かず、W1 で拒否される。
 3. **W3 (script の取得)**:
    - `tool_input.scriptPath` がある (script の有無を問わない) → `workflow_script_unreadable`。`scriptPath` が指す実体を hook は読まず、中身を確かめられないものは通さない。`script` と `scriptPath` が両方ある呼び出しも、どちらが実行されるか未実測 (§2 の 1) なので拒否する。実測後の改訂で、読んで検査する経路を足してよい。
    - `tool_input.script` が非空の文字列ならそれを使う。
@@ -122,7 +122,7 @@ stderr は `[ut-tdd-guard] BLOCK: <reason>: <何が拒否されたか>。<直し
 | `workflow_agent_opts_invalid` | `agent()` の第 2 引数が object literal でない、または最上位に spread・computed key・model の重複がある | agent() の第 2 引数は object literal で直接書き、spread や変数の opts を使わない。 |
 | `workflow_identifier_aliased` | `agent` / `workflow` が直接の呼び出し以外の位置にある (別名化・引数渡し・プロパティ参照) | agent() は直接呼び、別名や引数として渡さない。 |
 | `workflow_script_unreadable` | script を取得できない、`scriptPath` や `name` だけで渡された、または走査できない | script を直接渡す (scriptPath と name だけの呼び出しは、実測まで使えない)。 |
-| `workflow_guard_input_invalid` | stdin が壊れている、`tool_name` が無い | hook の入力を検証できない。続く場合は hook の配線を確認する。 |
+| `workflow_guard_input_invalid` | W1 の条件に当たる (stdin が空、JSON として解析できない、`tool_name` が文字列でない) | hook の入力を検証できない。続く場合は hook の配線を確認する。 |
 | `workflow_nested_not_scannable` | `workflow(` の呼び出しがある | 入れ子の workflow は使わず、1 つの script にまとめる。 |
 | `workflow_agent_type_not_allowed` | `agentType` の指定がある | agentType を外し、model を haiku か sonnet にする。 |
 
@@ -132,7 +132,7 @@ stderr は `[ut-tdd-guard] BLOCK: <reason>: <何が拒否されたか>。<直し
 
 - `evaluateWorkflowGuard(input) => { code: 0 | 2, message?: string, reason?: Reason }`。
 - pre: `input` は JSON として解析済みの値、または解析に失敗したことを示す印である。
-- post: `tool_name` が `Workflow` でない入力 (matcher 外) は、`tool_input` を見ずに code 0 を返す (§4 W2)。`tool_name` が `Workflow` の入力では、code 0 のとき、`tool_input.script` だけがあり、その中のすべての `agent()` は固定の形 (第 2 引数が object literal) で、最上位の `model` が haiku / sonnet の literal であり、`meta` の中の `model` も haiku / sonnet の literal であり、`agent` / `workflow` の識別子に直接の呼び出し以外の出現が無く、`workflow(` の呼び出しが無い。`Workflow` のそれ以外はすべて code 2 と §7 のどれか 1 つの reason である (W1 の入力不正も code 2)。
+- post: 判定は §4 の順の場合分けである。(a) W1 の条件に当たる入力 (stdin が空・JSON として解析できない・`tool_name` が文字列でない。`{"tool_name":1}` を含む) は、code 2 と reason `workflow_guard_input_invalid`。(b) W1 を通過し、文字列の `tool_name` が `Workflow` 以外の入力 (matcher 外) は、`tool_input` を見ずに code 0 (§4 W2)。(c) `tool_name` が `Workflow` の入力では、code 0 のとき、`tool_input.script` だけがあり、その中のすべての `agent()` は固定の形 (第 2 引数が object literal) で、最上位の `model` が haiku / sonnet の literal であり、`meta` の中の `model` も haiku / sonnet の literal であり、`agent` / `workflow` の識別子に直接の呼び出し以外の出現が無く、`workflow(` の呼び出しが無い。(c) のそれ以外はすべて code 2 と §7 のどれか 1 つの reason である。code 0 になるのは (b) と (c) の条件を満たす入力だけである。
 - invariant:
   - 純粋である。JavaScript を実行しない。fs も環境変数も読まない。
   - **例外・迂回の経路を持たない**。環境変数・marker file・引数での bypass を設けない (agent-guard の `UT_TDD_ALLOW_RAW_AGENT` に当たるものは無い)。W1 を含め、どの block も無条件である。
