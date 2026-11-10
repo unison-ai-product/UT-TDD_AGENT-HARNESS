@@ -633,7 +633,10 @@ export function gateSelectionGates(calls: string[]): InjectedGate[] {
 export function expectGateSelection(testFixture: Fixture, expected: string[]): void {
   const calls: string[] = [];
   expect(
-    checkWithGates(testFixture.work, testFixture.headSha, gateSelectionGates(calls), 1559),
+    checkWithGates(testFixture.work, testFixture.headSha, {
+      gates: gateSelectionGates(calls),
+      pr: 1559,
+    }),
   ).toBeNull();
   expect(calls.sort()).toEqual(expected);
 }
@@ -641,8 +644,7 @@ export function expectGateSelection(testFixture: Fixture, expected: string[]): v
 export const checkWithGates = checkBaselineConflict as unknown as (
   repoRoot: string,
   headSha: string,
-  gates: readonly InjectedGate[],
-  pr: number,
+  options: { gates: readonly InjectedGate[]; pr: number },
 ) => string | null;
 
 function seedPassReview(root: string, headSha: string): void {

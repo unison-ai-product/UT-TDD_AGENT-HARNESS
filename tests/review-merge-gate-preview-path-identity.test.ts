@@ -18,10 +18,9 @@ import {
 function assertPreviewUsesResolvedRepoParent(repoRoot: string, fixture: Fixture): string {
   const previewRoots: string[] = [];
   const physicalRepoRoot = realpathSync.native(repoRoot);
-  const result = checkBaselineConflictWithPreview(
-    repoRoot,
-    fixture.headSha,
-    [
+  const result = checkBaselineConflictWithPreview(repoRoot, fixture.headSha, {
+    pr: 1559,
+    gates: [
       {
         name: "code-size",
         inScope: (path) => path === "src/alpha.ts",
@@ -37,8 +36,7 @@ function assertPreviewUsesResolvedRepoParent(repoRoot: string, fixture: Fixture)
         },
       },
     ],
-    1559,
-  );
+  });
 
   expect(result).toMatchObject({
     reason: null,

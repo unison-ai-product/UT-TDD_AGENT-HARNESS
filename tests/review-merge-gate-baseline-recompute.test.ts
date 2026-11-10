@@ -1,7 +1,7 @@
 /**
  * Issue #1559 Red: baseline conflict の merge preview 再計算 oracle。
  * 契約: docs/design/harness/L6-function-design/merge-gate-check-run-selection.md §6.6。
- * 注入境界は checkBaselineConflict(repoRoot, headSha, gates, pr)。
+ * 注入境界は checkBaselineConflict(repoRoot, headSha, { gates, pr })。
  */
 import { execFileSync } from "node:child_process";
 import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
@@ -21,9 +21,8 @@ import {
   changedPaths,
   checkWithGates as checkWithGatesForPr,
   cleanFixture,
-  expectGateSelection,
-  expectGitFailureDenied,
   type Fixture,
+  gateSelectionGates,
   type InjectedGate,
   injectedGate,
   isFixtureLinkedPreviewRoot,
@@ -113,7 +112,7 @@ vi.mock("node:child_process", async (importOriginal) => {
 const fixtures = new Map<string, Fixture>();
 
 function checkWithGates(repoRoot: string, headSha: string, gates: readonly InjectedGate[]) {
-  return checkWithGatesForPr(repoRoot, headSha, gates, 1559);
+  return checkWithGatesForPr(repoRoot, headSha, { gates, pr: 1559 });
 }
 
 function fixture(key: string): Fixture {
@@ -268,7 +267,7 @@ describe.sequential("review merge gate baseline recompute (Issue #1559)", {
     );
     verifyFunctionExcessFixture(functionExcess);
     expect(() =>
-      checkBaselineConflict(functionExcess.work, functionExcess.headSha, undefined, 1559),
+      checkBaselineConflict(functionExcess.work, functionExcess.headSha, { pr: 1559 }),
     ).not.toThrow();
     expect(() => runMerge(functionExcess)).not.toThrow();
 
@@ -372,11 +371,25 @@ describe.sequential("review merge gate baseline recompute (Issue #1559)", {
   });
 
   it("U-RVMG-052(c): commit-tree / worktree 失敗時は unknown で拒否する", () => {
-    expectGitFailureDenied(fixture("small"), ["commit-tree"], gitFault);
+    const testFixture = fixture("small");
+    gitFault.active = true;
+    gitFault.needles = ["commit-tree"];
+    gitFault.hits = 0;
+    const run = runMerge(testFixture);
+    expect(run.result.reason).toMatch(/^baseline_conflict_unknown:/);
+    expect(run.merges).toBe(0);
+    expect(gitFault.hits).toBe(1);
   });
 
   it("U-RVMG-052(c): worktree add 失敗時は unknown で拒否する", () => {
-    expectGitFailureDenied(fixture("small"), ["worktree", "add"], gitFault);
+    const testFixture = fixture("small");
+    gitFault.active = true;
+    gitFault.needles = ["worktree", "add"];
+    gitFault.hits = 0;
+    const run = runMerge(testFixture);
+    expect(run.result.reason).toMatch(/^baseline_conflict_unknown:/);
+    expect(run.merges).toBe(0);
+    expect(gitFault.hits).toBe(1);
   });
 
   it("U-RVMG-052(d): gate check 例外は unknown で拒否する", () => {
@@ -397,21 +410,37 @@ describe.sequential("review merge gate baseline recompute (Issue #1559)", {
   });
 
   it("U-RVMG-053(a): code-size のみ再計算する", () => {
-    expectGateSelection(fixture("selection-code"), ["code-size"]);
+    const testFixture = fixture("selection-code");
+    const calls: string[] = [];
+    const reason = checkWithGates(testFixture.work, testFixture.headSha, gateSelectionGates(calls));
+    expect(reason).toBeNull();
+    expect(calls).toEqual(["code-size"]);
   });
 
   it("U-RVMG-053(b): doc-split のみ再計算する", () => {
-    expectGateSelection(fixture("selection-doc"), ["doc-split"]);
+    const testFixture = fixture("selection-doc");
+    const calls: string[] = [];
+    const reason = checkWithGates(testFixture.work, testFixture.headSha, gateSelectionGates(calls));
+    expect(reason).toBeNull();
+    expect(calls).toEqual(["doc-split"]);
   });
 
   it("U-RVMG-053(c): 両gateを再計算する", () => {
-    expectGateSelection(fixture("selection-both"), ["code-size", "doc-split"]);
+    const testFixture = fixture("selection-both");
+    const calls: string[] = [];
+    const reason = checkWithGates(testFixture.work, testFixture.headSha, gateSelectionGates(calls));
+    expect(reason).toBeNull();
+    expect(calls).toEqual(["code-size", "doc-split"]);
   });
 
   it("U-RVMG-053(d): 非競合時は再計算しない", () => {
     gitFault.mergeTreeCalls = [];
     gitFault.commitTreeCalls = [];
-    expectGateSelection(fixture("selection-none"), []);
+    const testFixture = fixture("selection-none");
+    const calls: string[] = [];
+    const reason = checkWithGates(testFixture.work, testFixture.headSha, gateSelectionGates(calls));
+    expect(reason).toBeNull();
+    expect(calls).toEqual([]);
     expect(gitFault.mergeTreeCalls).toEqual([]);
     expect(gitFault.commitTreeCalls).toEqual([]);
   });

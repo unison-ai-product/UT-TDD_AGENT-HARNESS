@@ -392,7 +392,7 @@ export function runPrMerge(input: {
 
   const baselineCheck = input.ports.checkBaselineConflict
     ? { reason: input.ports.checkBaselineConflict(repoRoot, decision.headSha), preview: null }
-    : checkBaselineConflictWithPreview(repoRoot, decision.headSha, undefined, input.pr);
+    : checkBaselineConflictWithPreview(repoRoot, decision.headSha, { pr: input.pr });
   if (baselineCheck.reason !== null) {
     return deny(baselineCheck.reason, {
       ...decision,

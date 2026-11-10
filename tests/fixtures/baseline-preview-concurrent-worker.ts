@@ -8,10 +8,9 @@ if (!repoRoot || !headSha || !barrierRoot || !workerId) {
 }
 
 let previewRoot = "";
-const result = checkBaselineConflictWithPreview(
-  repoRoot,
-  headSha,
-  [
+const result = checkBaselineConflictWithPreview(repoRoot, headSha, {
+  pr: 1559,
+  gates: [
     {
       name: "code-size",
       inScope: (path) => path === "src/alpha.ts",
@@ -31,7 +30,6 @@ const result = checkBaselineConflictWithPreview(
       },
     },
   ],
-  1559,
-);
+});
 
 process.stdout.write(`${JSON.stringify({ result, previewRoot })}\n`);

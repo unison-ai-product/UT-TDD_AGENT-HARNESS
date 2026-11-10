@@ -9,7 +9,6 @@ import {
   writeFileSync,
 } from "node:fs";
 import { basename, dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { checkBaselineConflictWithPreview } from "../src/feedback/baseline-conflict.ts";
 import { CODE_SIZE_BASELINE_PATH } from "../src/lint/code-size.ts";
@@ -27,23 +26,34 @@ import {
 } from "./fixtures/baseline-recompute-fixture.ts";
 
 function startPreviewWorker(repoRoot: string, headSha: string, barrierRoot: string, id: string) {
-  const workerPath = fileURLToPath(
-    new URL("./fixtures/baseline-preview-concurrent-worker.ts", import.meta.url),
+  const entry = 'await import("./tests/fixtures/baseline-preview-concurrent-worker.ts");';
+  const child = spawn(
+    process.execPath,
+    ["--input-type=module", "-e", entry, "worker", repoRoot, headSha, barrierRoot, id],
+    {
+      windowsHide: true,
+      stdio: ["ignore", "pipe", "pipe"],
+    },
   );
-  const child = spawn(process.execPath, [workerPath, repoRoot, headSha, barrierRoot, id], {
-    cwd: repoRoot,
-    windowsHide: true,
-    stdio: ["ignore", "pipe", "pipe"],
-  });
   let stdout = "";
   let stderr = "";
+  let spawnError: string | null = null;
   child.stdout.setEncoding("utf8").on("data", (chunk: string) => (stdout += chunk));
   child.stderr.setEncoding("utf8").on("data", (chunk: string) => (stderr += chunk));
-  const done = new Promise<{ code: number | null; stdout: string; stderr: string }>((resolve) => {
-    child.on("close", (code) => resolve({ code, stdout, stderr }));
-    child.on("error", (error) => resolve({ code: null, stdout, stderr: `${stderr}${error}` }));
+  const done = new Promise<{
+    code: number | null;
+    signal: NodeJS.Signals | null;
+    stdout: string;
+    stderr: string;
+  }>((resolve) => {
+    child.on("close", (code) => resolve({ code, signal: child.signalCode, stdout, stderr }));
+    child.on("error", (error) => {
+      spawnError = error.stack ?? String(error);
+      stderr += `spawn error: ${spawnError}`;
+      resolve({ code: null, signal: child.signalCode, stdout, stderr });
+    });
   });
-  return { child, done };
+  return { child, done, diagnostics: () => ({ spawnError, stdout, stderr }) };
 }
 
 async function waitForPreviewWorkers(
@@ -53,12 +63,24 @@ async function waitForPreviewWorkers(
   const deadline = Date.now() + 60_000;
   while (Date.now() < deadline) {
     if (readyPaths.every(existsSync)) return;
-    if (workers.some(({ child }) => child.exitCode !== null)) {
-      throw new Error("a concurrent preview worker exited before reaching its gate");
+    const exited = workers.find(
+      ({ child, diagnostics }) => child.exitCode !== null || diagnostics().spawnError !== null,
+    );
+    if (exited) {
+      const result = await exited.done;
+      throw new Error(
+        `preview worker failed before reaching its gate: exitCode=${result.code} signal=${result.signal}; stderr=${JSON.stringify(result.stderr)}; stdout=${JSON.stringify(result.stdout)}`,
+      );
     }
     await new Promise((resolve) => setTimeout(resolve, 25));
   }
-  throw new Error("concurrent preview workers did not both reach their gates");
+  const workerOutput = workers
+    .map(({ child, diagnostics }, index) => {
+      const state = diagnostics();
+      return `worker[${index}] exitCode=${child.exitCode} signal=${child.signalCode} spawnError=${JSON.stringify(state.spawnError)} stderr=${JSON.stringify(state.stderr)} stdout=${JSON.stringify(state.stdout)}`;
+    })
+    .join("; ");
+  throw new Error(`preview workers did not reach both gates before timeout: ${workerOutput}`);
 }
 
 describe.sequential("review merge gate baseline preview contract (Issue #1559)", {
@@ -92,12 +114,10 @@ describe.sequential("review merge gate baseline preview contract (Issue #1559)",
         );
         return originalCheck(previewRoot);
       };
-      const checked = checkBaselineConflictWithPreview(
-        testFixture.work,
-        testFixture.headSha,
-        [gate],
-        1559,
-      );
+      const checked = checkBaselineConflictWithPreview(testFixture.work, testFixture.headSha, {
+        gates: [gate],
+        pr: 1559,
+      });
       expect(checked).toMatchObject({
         reason: null,
         preview: { gates: [{ name: "code-size", ok: true }] },
@@ -197,10 +217,20 @@ describe.sequential("review merge gate baseline preview contract (Issue #1559)",
       writeFileSync(join(ownedBarrierRoot, "release"), "go\n", "utf8");
       const results = await Promise.all(workers.map(({ done }) => done));
       for (const result of results) {
-        expect(result.code, result.stderr).toBe(0);
-        const output = JSON.parse(result.stdout.trim()) as {
+        expect(
+          result.code,
+          `preview worker exitCode=${result.code} signal=${result.signal}; stderr=${JSON.stringify(result.stderr)}; stdout=${JSON.stringify(result.stdout)}`,
+        ).toBe(0);
+        let output: {
           result: { reason: string | null; preview: { gates: Array<{ ok: boolean }> } | null };
         };
+        try {
+          output = JSON.parse(result.stdout.trim()) as typeof output;
+        } catch (error) {
+          throw new Error(
+            `preview worker emitted invalid JSON: ${String(error)}; exitCode=${result.code} signal=${result.signal}; stderr=${JSON.stringify(result.stderr)}; stdout=${JSON.stringify(result.stdout)}`,
+          );
+        }
         expect(output.result.reason).toBeNull();
         expect(output.result.preview?.gates).toMatchObject([{ ok: true }]);
       }
@@ -302,10 +332,9 @@ describe.sequential("review merge gate baseline preview contract (Issue #1559)",
     const testFixture = buildGateSelectionFixture("both");
     const calls: string[] = [];
     try {
-      const result = checkBaselineConflictWithPreview(
-        testFixture.work,
-        testFixture.headSha,
-        [
+      const result = checkBaselineConflictWithPreview(testFixture.work, testFixture.headSha, {
+        pr: 1559,
+        gates: [
           {
             name: "code-size",
             inScope: (path) => path === "src/alpha.ts",
@@ -328,8 +357,7 @@ describe.sequential("review merge gate baseline preview contract (Issue #1559)",
             },
           },
         ],
-        1559,
-      );
+      });
 
       expect(calls).toEqual(["code-size", "doc-split"]);
       expect(result.reason).toBe("baseline_conflict_recomputed:code-size=code-size-required");

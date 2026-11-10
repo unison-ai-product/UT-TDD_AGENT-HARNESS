@@ -77,6 +77,11 @@ export interface BaselineConflictCheckResult {
   preview: BaselinePreview | null;
 }
 
+export interface BaselineConflictOptions {
+  gates?: readonly BaselineGate[];
+  pr?: number;
+}
+
 function conflictReason(conflicts: readonly BaselineConflict[]): string {
   return `baseline_conflict:${conflicts.map((c) => `${c.gate}=${c.paths.join("|")}`).join(";")}`;
 }
@@ -110,19 +115,18 @@ function changedPaths(repoRoot: string, from: string, to: string): string[] {
 export function checkBaselineConflict(
   repoRoot: string,
   headSha: string,
-  gates: readonly BaselineGate[] = BASELINE_GATES,
-  pr = 0,
+  options: BaselineConflictOptions = {},
 ): string | null {
-  return checkBaselineConflictWithPreview(repoRoot, headSha, gates, pr).reason;
+  return checkBaselineConflictWithPreview(repoRoot, headSha, options).reason;
 }
 
 /** Path-level conflicts are re-evaluated against the synthetic merge tree. */
 export function checkBaselineConflictWithPreview(
   repoRoot: string,
   headSha: string,
-  gates: readonly BaselineGate[] = BASELINE_GATES,
-  pr = 0,
+  options: BaselineConflictOptions = {},
 ): BaselineConflictCheckResult {
+  const { gates = BASELINE_GATES, pr = 0 } = options;
   try {
     git(repoRoot, ["fetch", "-q", "origin", "+refs/heads/main:refs/remotes/origin/main"]);
     const mainSha = git(repoRoot, ["rev-parse", "origin/main^{commit}"]);
