@@ -30,6 +30,8 @@ guard の `onFailure` そのものは `docs/test-design/harness/L7-claude-hook-o
   - adapter の生成 (`src/setup/templates.ts`) と PostToolUse の hook (`src/cli.ts`) は、Red の段では変えない。
   これで、どの `it.fails` も import は成功し、assertion の不一致だけで落ちる。stub は実装 PR (Green) で実装に置き換える。前提を確かめるテストは、失敗を吸収する `it.fails` にはしない。
 
+- **hook を起動する環境 (2026-11-10 追記、#1561)**。001〜003 と 007 で `hook post-tool-use` を CLI の子 process として起動するときは、環境変数を明示して組む。001〜003 と 007 の (a) は Claude の環境とし、`CLAUDECODE=1` を設定し、`CODEX_SANDBOX` と `CODEX_HOME` を親の環境から引き継がない (削除する)。007 の (b)〜(d) は、その組の値だけを設定する。親の環境 (CI や Codex の shell) の値に結果が左右されないようにするためである。既存の Red のテスト (`tests/claude-version-floor.test.ts` の `invokePostToolUse`) は、いまは `{ ...process.env, CLAUDE_PROJECT_DIR: root }` で起動しており、この規則に合っていない。fixture の修正は、`CANDIDATE-U-CCVER-007` の昇格と Red の PR (src を含まない) で行う。001〜003 の assertion は変えず、起動する環境だけを直す。
+
 ## 3. 候補の oracle
 
 | ID | 対象 | 入力・期待・反例 |
