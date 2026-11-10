@@ -25,7 +25,7 @@ issue: 1364
 - 走査の行 (012・013) は、§3 の各行が指定する `docs/plans/` と design root の文書だけを置いた temp directory を repo root として使う。`docs/plans/` を置くのは、PLAN を走査しなくなったことを確かめるためである。実 repo のファイルは読まない。
 - DB の行 (008) は temp directory に harness.db を作り、registry に登録の無い表を手で作ってから `migrate` と rebuild の truncate を流す。実際の `.ut-tdd/harness.db` と台帳 DB には触れない。
 - 移行の行 (019) は、旧版の DDL を手で書き直さない。その段の base commit で `schemaDdl()` が出す文字列をそのまま fixture に保存し、temp の harness.db をそれで作る。実際の `.ut-tdd/harness.db` には触れない。
-- 静的な行 (009、014〜018) は実 repo の tracked file を読むので、`src/doctor/test-repository-isolation.ts` の登録が要る。
+- 静的な行 (009、014〜018、025) は実 repo の tracked file を読むので、`src/doctor/test-repository-isolation.ts` の登録が要る。
 - 1 つの行は規則を 1 本だけ殺すように、入力の書き方を 1 つだけ変える。
 
 ## 3. oracle 宣言の一覧
@@ -39,6 +39,7 @@ issue: 1364
 | `CANDIDATE-U-PLANRET-005` | S3 | 文書処分の正規化に (a) `deferred` で `issue` が Issue URL、(b) `deferred` で `plan_id` だけ、(c) `update` で `targets` も `issues` も空、(d) 既に記録された `plan_ids` を持つ記録の digest の再計算、(e) item target の kind が `plan_alias` | (a) ok、(b) `applicability.issue` の欠落、(c) `targets_or_issues` の欠落、(d) 記録済みの digest と一致する、(e) 未知の kind として拒否され、他の kind に変換されない | 新しい記録に `plan_id` を許す / 既存の digest を変える / `plan_alias` を受け続ける / `plan_alias` を Issue の別名に黙って変換する |
 | `CANDIDATE-U-PLANRET-006` | S4 | `renderPrTraceBlock` / `validatePrTraceBody` に (a) `route_mode`・`subject_head`・`base_sha`・`issue_number` だけ、(b) (a) に `plan_id` を足した本文、(c) `issue_number` の欠落 | (a) marker `ut-tdd:trace/v2` の block を返し検証 ok、(b) 未知の key の finding、(c) `missing-issue-number` | `plan_id` を必須に残す / v1 の marker を出す / 未知の key を黙って通す |
 | `CANDIDATE-U-PLANRET-007` | S4 | custody receipt の検証に (a) v2 で `planId` / `planRevision` を持たない receipt、(b) (a) に `planId` を足した receipt、(c) `prNumber` だけ異なる receipt | (a) ok、(b) 未知の field で拒否、(c) `prNumber` の subject mismatch。mismatch の比較に `planId` / `planRevision` の組は無い | PLAN の field を必須に残す / 未知の field を通す / PR の束縛を外す |
+| `CANDIDATE-U-PLANRET-025` | S4 | tracked の Recovery / Reverse / Redesign / Incident / NFR failure form を YAML として読み、label・description・placeholder と先頭コメントは各 tracked file の raw text で確認する | Recovery / Reverse / Redesign の各々が必須 `origin_issue` を1つ持ち、label・placeholder・description が canonical Issue URL を案内し、`origin_plan` / `origin_revision` の欄は5 formのどれにも無い。5 form すべてに必須 `reentry_target` が1つあり、id / required は維持され、label が `Reentry target (Forward 再合流先 Issue / layer)`、description が Issue URL または layer を案内する。5 form の label・description・placeholder・先頭コメントに PLAN ID や PLAN 入力の案内が残らない。Recovery / Reverse / Redesign の既存フォーム検査も `origin_issue` を要求する。Parent Issue と他の必須項目、blank issue 禁止は維持する。form の `required` は空欄防止であり、入力 URL の形式や参照先の実在を保証しない | いずれかの form に旧 `origin_plan` / `origin_revision` を残す / 必須 origin を `origin_plan` に戻す / origin_issue を欠落・任意化する / reentry_target を欠落・任意化するか PLAN 案内へ戻す / label・description・placeholder・先頭コメントに PLAN 案内を残す / 他の必須項目や親子欄を落とす |
 | `CANDIDATE-U-PLANRET-008` | S7 | temp の harness.db に、registry に無い `plan_registry` (行 3 件) と `schedule_entries` (行 2 件) を作り、`migrate` を 2 回流してから rebuild の truncate (`clearRebuildableProjectionTables`) を流す | 2 表は存在し、列と行数 (3 件、2 件) が変わらない。`missingTables` と `rowCounts` に 2 表が出ない。`migrate` の戻り値の `tables` には残る | 登録の無い表を DROP・ALTER・DELETE する / 名前つき再作成の一覧に PLAN 用の表を足す |
 | `CANDIDATE-U-PLANRET-009` | S2 | `drive-db-registration` の退役の確認: src・tests・`.github` の tracked file と doctor の check 定義 | (a) `drive-db-registration` の check ID が full doctor の出力 ID と profile に無い、(b) `src/lint/drive-db-registration.ts`・`src/state-db/drive-registration.ts` と PLAN の fingerprint 収集 (`collectCurrentPlanRegistryFingerprint`) が無い、(c) `package.json` の `test:db` と `src/lint/runtime-portability.ts` が退役したテストを指していない、(d) `mode_catalog_unmapped` を維持する場合は、mode catalog の既存の検査が `unmappedModeCatalogDocs` の差分を違反にし、`drive-db-registration` の名では出ない、(e) 新しい orphan 検査 (`workflow_orphans`・`model_orphans`・`skill_*_orphans`) が無い | check や登録を一部だけ残す / orphan 検査を別名で作り直す / `LEGACY_REQUIRED_MODES` のフォールバックを残す / `mode_catalog_unmapped` を黙って落とす |
 | `U-PLANRET-010` | S2 | `analyzeDbCurrency` に (a) DB のある stats、(b) `null` | (a) ok で違反の種類に PLAN 由来のものが無い、(b) `missing_db` | PLAN の比較を残す / DB 不在を通す |
@@ -55,6 +56,7 @@ issue: 1364
 
 ## 4. 昇格と引用の方針
 
+- 025 の Green 実装時に既存 `tests/github-repository-policy.test.ts` の `U-L7-451-W5-001` が要求する3 form の欄名を `origin_issue` に同期し、他の必須欄と blank issue 禁止の既存検査を維持する。
 - 各段の Red PR は、その段の行 (表の「段」の列) の候補 ID をテスト名に引用する。1 本の PR が別の段の行を引用しない。
 - S1・S5・S8 のように振る舞いを足さない段の行 (015、014 の S5 部分) は、退役の PR で `it` として入れてよい (退役前の main では成り立たないので `it.fails` の Red にしない)。
 - 001 は S3 の Red PR が、`src/shared/issue-ref.ts` に `parseIssueUrl` の最小の stub (型だけ契約どおりで、常に `null` を返す) を置き、(a)〜(j) の 10 入力を 1 つの表駆動の `it.fails` で確かめる。stub が無いと import の失敗で落ち、入力ごとの `it.fails` にすると `null` を期待する 9 件が stub で通ってしまうので、どちらも意図した assertion で落ちる Red にならない。Green の PR が stub を実装に置き換える。

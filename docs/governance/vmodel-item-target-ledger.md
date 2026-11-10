@@ -13,7 +13,7 @@ baseline_revision: checked-zip-2026-07-10
 
 本書は163 semantic itemそれぞれのHARNESS target判断を保持するauthoring SSoTである。source→target edgeをruntimeで継承・推論してはならない。
 全itemをexactly once materializeし、未判断はrecord omissionではなく`pending_review`として明示する。target確定時はtarget kind/ref、判断理由、
-関連PLANを同じrowへ記録し、`verified`はdesign/runtime/test evidenceの別self-assessmentを通過するまで使用しない。
+必要な場合はIssue URLを同じrowへ記録し、`verified`はdesign/runtime/test evidenceの別self-assessmentを通過するまで使用しない。
 
 ## 2. item target判断台帳
 
@@ -189,5 +189,5 @@ baseline_revision: checked-zip-2026-07-10
 
 - item 163件 exactly once、重複/欠落0。
 - `pending_review` 0。adopt/merge/reference/defer/not_applicable/rejectの各判断はreason必須。
-- adopt/merge/reference/deferはtyped target、deferは実在PLAN必須。not_applicable/rejectは承認者と境界理由必須。
+- adopt/merge/reference/deferは現行のtyped target、deferは`parseIssueUrl`で解析できるIssue URL必須。not_applicable/rejectは承認者と境界理由必須。
 - runtime loaderは本表を読むだけでtargetを補完しない。DB drop/rebuild後のitem/target edge identityとdigestが一致する。
