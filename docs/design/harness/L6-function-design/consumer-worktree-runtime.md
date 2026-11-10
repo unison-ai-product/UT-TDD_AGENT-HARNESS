@@ -22,7 +22,7 @@ consumer は runtime と launcher (`.ut-tdd/bin/ut-tdd.mjs`) を commit しな�
 
 | 前提 | 根拠 |
 | --- | --- |
-| launcher は `renderConsumerNodeWrapper()` が生成し、`.ut-tdd/bin/ut-tdd.mjs` へ書かれる。active pointer (`.ut-tdd/runtime/activation/active.json`) が無いと `consumer_runtime_absent` の符号だけを stderr に出して exit 78 で終わる (案内文は無い) | `src/setup/consumer-node-runtime.ts:628-640`、`src/setup/index.ts:762` |
+| launcher は `renderConsumerNodeWrapper()` が生成し、`.ut-tdd/bin/ut-tdd.mjs` へ書かれる。active pointer (`.ut-tdd/runtime/activation/active.json`) が無いと `consumer_runtime_absent` の符号だけを stderr に出して exit 78 で終わる (案内文は無い)。#1525 の時点の実測であり、現行の契約は §4・§5 (absent は exit 2 と案内、#1602 で hook の種類による三分割) | `src/setup/consumer-node-runtime.ts:628-640`、`src/setup/index.ts:762` |
 | launcher は bundle の `identity.consumer_root` / `runtime_root` が自身の位置と一致することを検査し、子プロセスの cwd を launcher の持ち主の root に固定する。bundle は worktree ごとの identity に束縛され、別 checkout からのコピーは通らない | `src/setup/consumer-node-runtime.ts:660-663`、`:725` |
 | runtime の導入は `setup --solo --consumer-runtime-release <dir> --expected-consumer-digest <digest>` (オフラインの Release directory + 外部 anchor) だけで、`--worktree` に相当する入口は無い。cwd の realpath を consumer root として使う | `src/cli.ts:4036-4050`、`:4100-4118` |
 | 既に別の版が入っている repo へ違う版を入れると `consumer_runtime_update_unsupported` で拒否される | #930 |
@@ -45,10 +45,16 @@ consumer は runtime と launcher (`.ut-tdd/bin/ut-tdd.mjs`) を commit しな�
 
 案内は「実行すべきコマンドを 1 つ名指しする 1 つの文」で、guard の block 理由として Claude Code の UI へ届く。届く経路は既存の guard と同じ stderr + exit 2 である (§2)。
 
-- **launcher が存在する場合**: `consumer_runtime_absent` のときだけ、符号に加えて案内文を stderr に出し、exit 2 で終える (他の deny 符号は従来どおり符号と exit 78 のまま)。
-- **launcher 自体が無い場合**: node の `MODULE_NOT_FOUND` を避けるため、consumer の guard hook (agent-guard / work-guard の 2 つだけ) の起動を、launcher の有無を先に見る固定の起動断片 (`node -e` の短い bootstrap、source は template と lint が共有する定数 1 つ) に置き換える。launcher が無ければ案内文を stderr に出して exit 2、有れば従来どおり launcher を起動する。記録 / session hook は変えない (fail-open のまま)。
+- **launcher が存在する場合** (2026-11-10 改訂、Issue #1602): `consumer_runtime_absent` のとき、launcher は `process.argv` の launcher の後ろの先頭 2 語で扱いを 3 つに分ける。他の deny 符号 (`consumer_runtime_digest_mismatch` など) は従来どおり符号のみと exit 78 のままで、分岐しない。
+  - (a) **guard**: 先頭 2 語が `hook agent-guard` / `hook work-guard`。従来どおり、符号に加えて案内文を stderr に出し、exit 2 (block) で終える。
+  - (b) **記録 / session hook**: 先頭 2 語が `session start` / `session summary` / `hook post-tool-use` / `hook claude-memory-wake` / `hook subagent-stop` のいずれか。stderr に符号と案内を 1 行だけ出し、exit 0 (fail-open) で終える。stdout には何も出さない。理由: これらの hook は block を意図しない。Claude Code では Stop / SubagentStop の exit 2 は「停止を阻止し、stderr を Claude に渡して続行させる」意味になり、launcher は stdin の `stop_hook_active` を読まないため、停止のたびに続行が繰り返されうる。PostToolUse の exit 2 も stderr を Claude に返す。さらに stderr が `setup --worktree` の実行指示なので、Claude に setup を実行させる誘導になる。
+  - (c) **それ以外** (`status` などの CLI の直接起動、未知の hook 名): 従来どおり案内文と exit 2。exit 0 にしない (runtime が無いのに `status` が成功に見える偽の緑を防ぐ)。
+  - (b) の集合の正本は `src/lint/project-hook.ts` の hook 定義 (`wrapperArgs`) のうち、`onFailure: "block"` を持たないものである。launcher の生成時 (`renderConsumerNodeWrapper`) にその集合を埋め込む。launcher の中に別の手書きの一覧を持たない。
+  - argv を信頼してよい根拠: guard の argv は project-hook lint が機械で固定している。lint の対象外の利用者独自の hook 登録は (c) に落ちるので、fail-close 側になる。
+  - Codex: consumer の `.codex/hooks.json` (setup が `wrapperHookArgs` で生成する) は guard も記録 hook も launcher を直接起動するので、同じ三分割が効く。(b) の exit 0 は hook を素通りさせるだけで、runtime による意味の違いは問題にならない。Codex の guard の exit 2 の扱いは既存のまま変えない。
+- **launcher 自体が無い場合**: node の `MODULE_NOT_FOUND` を避けるため、consumer の guard hook (agent-guard / work-guard の 2 つだけ) の起動を、launcher の有無を先に見る固定の起動断片 (`node -e` の短い bootstrap、source は template と lint が共有する定数 1 つ) に置き換える。launcher が無ければ案内文を stderr に出して exit 2、有れば従来どおり launcher を起動する。記録 / session hook (§4 の (b) の集合) は起動断片に置き換えない。launcher が無ければ node の `MODULE_NOT_FOUND` で exit 1 になり、block しない (exit 2 ではない)。launcher はあるが runtime が無い場合は上の (b) により fail-open になる。2026-11-10 改訂 (Issue #1602): 旧文の「fail-open のまま」は、launcher が runtime 欠落で exit 2 を返す経路があったため実際には成り立っていなかった。この三分割で成り立つ形にした。
 - **案内文の中身**: この worktree に runtime が無いこと、と次のコマンド 1 つ。`node <main worktree>/.ut-tdd/bin/ut-tdd.mjs setup --worktree <この worktree の絶対パス>`。main worktree の path は `git rev-parse --git-common-dir` から求め、求められなければコマンドの `<main worktree>` を文中で説明する。
-- **fail-close は保つ**: 案内は常に非 0 で終わる (exit 2)。案内を出すために exit 0 へ寄せない。
+- **fail-close は保つ**: guard (a) と CLI の直接起動 (c) の案内は常に非 0 で終わる (exit 2)。案内を出すために exit 0 へ寄せない。exit 0 にするのは (b) の記録 / session hook だけである (2026-11-10 改訂、Issue #1602)。
 
 ## 5. 不変条件 (DbC)
 
@@ -56,12 +62,14 @@ consumer は runtime と launcher (`.ut-tdd/bin/ut-tdd.mjs`) を commit しな�
 - 新規 install の transaction は runtime の capture から launcher の公開までを覆う。`installConsumerRuntimeFromSetup` が `result.ok` で成功を返した直後、launcher (`.ut-tdd/bin/ut-tdd.mjs`) を公開する前に、内部だけの optional injection 型 `ConsumerWorktreeSetupFault = (barrier: "afterRuntimePublishBeforeLauncher") => void` が設定されていれば、その barrier で transaction の `try` 内からちょうど 1 回呼ぶ。`setupConsumerWorktreeRuntime` から Release install と runtime-only transaction を通る内部 composition に渡せるようにし、本番の capture/restore を差し替えない。この seam は既定で未設定であり、通常経路の動作を変えない。同期 throw は launcher 公開前の失敗として同じ本番 capture/restore rollback に流し、worktree・main・cache・他 worktree を呼び出し前の状態へ戻す。restore 自体が失敗した場合は復元成功と偽らず `consumer_runtime_indeterminate` で fail-close する。利用者向け CLI / Pack API option や environment variable として公開しない。
 - fault seam は新規 install (`status: "installed"`) の境界専用である。Release installer が `already-installed` を返す idempotent 経路では呼ばず、既存 runtime を障害注入 rollback の対象にしない。launcher の通常公開と fault seam が無い場合の成功経路は従来どおりである。
 - 入れる版は main の active pointer の版と常に一致する。キャッシュ・引数・環境変数から版を選べる経路は無い。
-- 案内の経路は常に exit 非 0 であり、`MODULE_NOT_FOUND` のスタックを block 理由にしない。
+- guard (a) と CLI の直接起動 (c) の案内の経路は常に exit 非 0 であり、`MODULE_NOT_FOUND` のスタックを block 理由にしない。記録 / session hook (b) は exit 0 で、block にならない (2026-11-10、Issue #1602)。
 - **exit code の境界** (Issue #1525、2026-11-05 に確定):
 
   | 状態 | exit | stderr |
   |---|---|---|
-  | active pointer が無い (`consumer_runtime_absent`。launcher が project-local の entrypoint を解決できない場合を含む) | 2 | 符号と案内文 (§4) |
+  | active pointer が無い (`consumer_runtime_absent`。launcher が project-local の entrypoint を解決できない場合を含む) × guard (`hook agent-guard` / `hook work-guard`) | 2 | 符号と案内文 (§4 (a)) |
+  | 同 × 記録 / session hook (`session start` / `session summary` / `hook post-tool-use` / `hook claude-memory-wake` / `hook subagent-stop`)。2026-11-10 追加 (Issue #1602) | 0 | 符号と案内の 1 行のみ。stdout は空 (§4 (b)) |
+  | 同 × それ以外 (`status` などの CLI の直接起動、未知の hook 名)。2026-11-10 追加 (Issue #1602) | 2 | 符号と案内文 (§4 (c)) |
   | launcher 自体が無い (guard の起動断片が検出する) | 2 | 案内文 (§4) |
   | その他の deny 符号 (`consumer_runtime_digest_mismatch` など) | 78 | 符号のみ (従来どおり) |
   | guard が確定 block を返す | 2 | block 理由 (従来どおり) |
@@ -72,7 +80,7 @@ consumer は runtime と launcher (`.ut-tdd/bin/ut-tdd.mjs`) を commit しな�
 
 - 版の更新とロールバック (#930 / #481)。
 - main worktree 向けの共有 runtime (main は従来の setup のまま)。
-- Codex の hook (`.codex/hooks.json`)。
+- Codex の hook (`.codex/hooks.json`) の新規配線。ただし launcher の三分割 (§4) は Codex が launcher を直接起動する経路にもそのまま効く (Issue #1602)。
 - Release asset のネットワーク取得。
 
 ## 7. 受け入れ
@@ -89,6 +97,6 @@ consumer は runtime と launcher (`.ut-tdd/bin/ut-tdd.mjs`) を commit しな�
 - `renderRuntimeAbsentGuidance(mainWorktree, worktreePath) => string`: runtime が無いときに guard が stderr へ出す案内文 (実行すべきコマンド 1 つ、§4)。
 
 - pre: `worktreePath` は linked worktree の絶対パスである。main の active pointer が有効である (§3 手順 1、2)。
-- post: 成功時は launcher と runtime が揃い、入れた版は main の版と一致する。案内の経路は常に exit 2 で終わる (§4、§5)。
+- post: 成功時は launcher と runtime が揃い、入れた版は main の版と一致する。guard と CLI の直接起動の案内の経路は exit 2 で終わり、記録 / session hook は exit 0 で終わる (§4、§5。2026-11-10 改訂、Issue #1602)。
 - invariant: 失敗時は worktree・main・キャッシュのどれにも何も残さない。版を選べる入力は無い。`MODULE_NOT_FOUND` のスタックを block 理由にしない (§5)。
-- oracle: `U-CWTRT-001`〜`010` が既存の入口・案内契約を固定し、`CANDIDATE-U-CWTRT-011` が新規 install transaction rollback の契約候補を固定する。
+- oracle: `U-CWTRT-001`〜`010` が既存の入口・案内契約を固定し、`CANDIDATE-U-CWTRT-011` が新規 install transaction rollback の契約候補を固定する。`CANDIDATE-U-CWTRT-012`〜`015` が runtime 欠落時の launcher の三分割 (§4、Issue #1602) を固定する。
