@@ -117,9 +117,13 @@ function deps(root: string, files = wrapperParityFiles(root)): RuntimeSurfaceDep
   };
 }
 
+function sourceRepoRoot(): string {
+  return process.cwd();
+}
+
 describe("doctor runtime surface checks", () => {
   it.fails("CANDIDATE-U-PLANRET-014: runtime-surface wrapper check does not require PLAN metadata", () => {
-    const root = process.cwd();
+    const root = sourceRepoRoot();
     const files = wrapperParityFiles(root, {
       "src/runtime/adapter.ts":
         "const args = CODEX_STDIN_ARGS; return { stdin: intent.task };",
@@ -131,7 +135,7 @@ describe("doctor runtime surface checks", () => {
   });
 
   it("keeps wrapper parity independent from DoctorDeps shape", () => {
-    const root = process.cwd();
+    const root = sourceRepoRoot();
 
     const result = checkCodexWrapperParity(deps(root));
 

@@ -13,6 +13,17 @@ const VALID_FIELDS = {
   issue_number: "97",
 } as const;
 
+function headPrTemplates(): [string, string] {
+  const root = headSnapshotRoot();
+  return [
+    readFileSync(join(root, ".github", "PULL_REQUEST_TEMPLATE.md"), "utf8"),
+    readFileSync(
+      join(root, "docs", "templates", "github", "common", "PULL_REQUEST_TEMPLATE.md"),
+      "utf8",
+    ),
+  ];
+}
+
 describe("github pr trace contract (PLAN-L7-451 W4)", () => {
   it.fails("CANDIDATE-U-PLANRET-006: trace v2 はIssueだけに束縛し、PLAN fieldを拒否する", () => {
     const fields = {
@@ -37,7 +48,7 @@ describe("github pr trace contract (PLAN-L7-451 W4)", () => {
       expect.objectContaining({ code: "missing-issue-number" }),
     );
 
-    const template = readFileSync(join(headSnapshotRoot(), ".github", "PULL_REQUEST_TEMPLATE.md"), "utf8");
+    const [template] = headPrTemplates();
     expect(template).toContain("Closes #<issue-number>");
     expect(template).toContain("ut-tdd:trace/v2");
     expect(template).not.toMatch(/PLAN|plan_id|plan_revision|trace\/v1/iu);
@@ -110,14 +121,7 @@ describe("github pr trace contract (PLAN-L7-451 W4)", () => {
   });
 
   it("U-L7-451-W4-006: source/common PR templates require an Issue for every Forward PR", () => {
-    const root = headSnapshotRoot();
-    const templates = [
-      readFileSync(join(root, ".github", "PULL_REQUEST_TEMPLATE.md"), "utf8"),
-      readFileSync(
-        join(root, "docs", "templates", "github", "common", "PULL_REQUEST_TEMPLATE.md"),
-        "utf8",
-      ),
-    ];
+    const templates = headPrTemplates();
     for (const template of templates) {
       expect(template).toContain("Closes #<issue-number>");
       expect(template).not.toMatch(/通常 Forward.*Issue.*(?:不要|省略)/u);
