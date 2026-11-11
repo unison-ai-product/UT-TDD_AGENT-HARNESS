@@ -99,7 +99,7 @@ Codex では `## 設計判断依頼` の markdown 選択肢表で等価に出力
 「PO 判断必須」「PO 承認待ち」「PO が決める」と記載して作業を止める前に、必ず
 `ut-tdd advisor --decision <kind> --current-model <current-model> --execute --task "<判断内容>"`
 で第三者判断を得る。設計・進行・優先順位・UI/UX は
-`claude-fable-5-1`、実装方式・技術的トラブルシュートは `gpt-6.1-sol` へrouteする
+`claude-fable-5-2`、実装方式・技術的トラブルシュートは `gpt-6.1-sol` へrouteする
 (正規の `--decision design|progress|uiux|implementation|troubleshooting` を使う)。
 advisor結果は前提をrepo実測で検証し、下記の高影響境界に該当せず、既存の層・責務・契約から
 一意に決まるなら、AIランタイムが技術判断として決定・記録して作業を継続する。advisor相談を
@@ -628,7 +628,7 @@ Task-kind ベースの割当 (PO rule 2026-07-14、旧 tier 記述を supersede)
 - advisor (PO rule 2026-07-29、2026-07-14 の行列を supersede): **技術判断**
   (実装方式 / トラブルシューティング) は `gpt-6.1-sol` 一次 (fallback Fable)、
   **設計・進行判断** (設計方式 / レーン選択 / 優先順位 / 段取り) と
-  **デザイン/UI 判断** は `claude-fable-5-1` 一次 (次点 `gpt-6.1-sol`)。
+  **デザイン/UI 判断** は `claude-fable-5-2` 一次 (次点 `gpt-6.1-sol`)。
   判断種別は `--decision design|progress|implementation|troubleshooting|uiux`
   で明示でき、省略時は task 文から推論する (進行語は technical 語より優先)。
   迷う場合は `ut-tdd advisor --task "..." --current-model <model>` を使い、
