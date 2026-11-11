@@ -363,6 +363,22 @@ export function parseSnapshotRunnerArgs(args: readonly string[]): SnapshotRunner
     };
   }
 
+  if (separatorIndex >= 0) {
+    const misplacedPath = args
+      .slice(separatorIndex + 1)
+      .find((token) => token.startsWith("tests/") || token.endsWith(".test.ts"));
+    if (misplacedPath) {
+      return {
+        kind: "unknown-option",
+        args,
+        token: misplacedPath,
+        message:
+          `Snapshot runner test path ${JSON.stringify(misplacedPath)} appears after --. ` +
+          "Move test paths before --; arguments after -- are passed to Vitest.",
+      };
+    }
+  }
+
   return { kind: "run", args };
 }
 
