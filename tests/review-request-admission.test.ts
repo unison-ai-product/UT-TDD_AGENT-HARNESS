@@ -9,7 +9,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { Command } from "commander";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { registerDelegationCommands } from "../src/cli/delegation.ts";
@@ -18,7 +18,11 @@ import {
   type ReviewAttestationRequest,
 } from "../src/feedback/review-attestation.ts";
 import { runPrMerge } from "../src/feedback/review-merge-gate.ts";
-import { beginReviewAttempt } from "../src/feedback/review-verdict-custody.ts";
+import { REVIEW_VERDICT_FILE_ENV } from "../src/feedback/review-verdict-contract.ts";
+import {
+  beginReviewAttempt,
+  readReviewCustodyAudit,
+} from "../src/feedback/review-verdict-custody.ts";
 import { removeTestTree } from "./support/temp-tree.ts";
 
 // issue #1600: review request は入口の検査をすべて終えてから custody へ書く。
@@ -56,6 +60,40 @@ interface CliResult {
 }
 
 type SpawnResult = { status: number | null; signal: null; error?: Error };
+interface SpawnCall {
+  args: readonly string[];
+  input?: unknown;
+  env?: NodeJS.ProcessEnv;
+}
+
+const ENVELOPE_KEYS = [
+  "schema_version",
+  "request_digest",
+  "attempt",
+  "pr",
+  "exact_head",
+  "review_revision",
+  "reviewer_provider",
+  "reviewer_model",
+  "invocation_nonce",
+];
+
+// 正しい reviewer の代役: 委譲された task に注入された custody envelope をそのまま verdict file の
+// 先頭へ書き写し、VERDICT: PASS を続ける。投影 (receipt の発行) は CLI 側の正規の手順が行う。
+const passingReviewer = (call: SpawnCall): SpawnResult => {
+  const text = [...call.args, String(call.input ?? "")].join("\n");
+  const lines: string[] = [];
+  for (const key of ENVELOPE_KEYS) {
+    const match = new RegExp(`^\\W*${key}:[ \\t]*(\\S+)`, "m").exec(text);
+    if (!match) return { status: 1, signal: null };
+    lines.push(`${key}: ${match[1]}`);
+  }
+  const verdictFile = call.env?.[REVIEW_VERDICT_FILE_ENV];
+  if (!verdictFile) return { status: 1, signal: null };
+  mkdirSync(dirname(verdictFile), { recursive: true });
+  writeFileSync(verdictFile, `${lines.join("\n")}\nVERDICT: PASS\n`, "utf8");
+  return { status: 0, signal: null };
+};
 
 const okSpawn = (): SpawnResult => ({ status: 0, signal: null });
 const failLaunch = (): SpawnResult => ({
@@ -80,7 +118,7 @@ function runCli(
   provider: "claude" | "codex",
   runtime: "claude" | "codex",
   args: string[],
-  spawn: () => SpawnResult = okSpawn,
+  spawn: (call: SpawnCall) => SpawnResult = okSpawn,
 ): CliResult {
   detected.currentRuntime = runtime;
   const program = new Command();
@@ -96,9 +134,13 @@ function runCli(
     taskFileOptionDescription: "read task text from file",
     writeHandoverWarnings: () => {},
     now: () => NOW,
-    spawnSync: () => {
+    spawnSync: (_command, args, options) => {
       spawnCalls += 1;
-      return spawn();
+      return spawn({
+        args: args as readonly string[],
+        input: (options as { input?: unknown } | undefined)?.input,
+        env: (options as { env?: NodeJS.ProcessEnv } | undefined)?.env,
+      });
     },
   });
   const stderr: string[] = [];
@@ -191,26 +233,6 @@ function gate(head = HEAD) {
   });
 }
 
-function writePassReceipt(request: Record<string, unknown>, reviewerFamily: "claude" | "codex") {
-  const receipts = join(root, ".ut-tdd", "review", "receipts");
-  mkdirSync(receipts, { recursive: true });
-  writeFileSync(
-    join(receipts, "synthetic-pass.json"),
-    JSON.stringify({
-      memoryId: request.memoryId,
-      pr: request.pr,
-      head: request.exactHead,
-      reviewRevision: request.reviewRevision,
-      reviewerFamily,
-      kind: "verdict",
-      verdict: "PASS",
-      blockingFindings: [],
-      at: "2026-11-11T01:30:00.000Z",
-    }),
-    "utf8",
-  );
-}
-
 function expectRejectedWithoutWrite(result: CliResult, reason: string): void {
   expect(result.exitCode).toBe(1);
   expect(result.stderr).toContain(reason);
@@ -233,7 +255,7 @@ describe("review request admission (issue #1600)", () => {
     expect(reviewFiles()).toEqual([]);
   });
 
-  it("U-RVADM-002: model の下限の拒否は request を残さない (CLI の入口では routing が先に拒否する)", () => {
+  it.fails("U-RVADM-002: model の下限の拒否は typed reason reviewer_model_below_floor を出し、request を残さない", () => {
     const result = runCli("claude", "codex", [
       ...base(true),
       "--model",
@@ -243,7 +265,7 @@ describe("review request admission (issue #1600)", () => {
       "--review-author-family",
       "codex",
     ]);
-    expectRejectedWithoutWrite(result, "below the review floor");
+    expectRejectedWithoutWrite(result, "reviewer_model_below_floor");
   });
 
   it("U-RVADM-003: 空文字の revision は採番せず review_head_required で拒否する", () => {
@@ -333,24 +355,24 @@ describe("review request admission (issue #1600)", () => {
     expectRejectedWithoutWrite(result, "review_author_family_required");
   });
 
-  it("U-RVADM-007: 対照 - 正しい request に PASS receipt があれば merge gate は pending で止めない", () => {
-    runCli("claude", "claude", [
-      ...base(true),
-      "--review-revision",
-      "r1",
-      "--review-author-family",
-      "codex",
-    ]);
-    const requests = readRequests();
-    expect(requests).toHaveLength(1);
-    // PASS receipt は custody の正規投影ではなく合成の stand-in (verdict の file 契約は Green で通す)。
-    writePassReceipt(requests[0] as Record<string, unknown>, "claude");
+  it("U-RVADM-007: 対照 - 正しい request に reviewer の PASS verdict を正規の手順で投影すると merge gate が ok になる", () => {
+    const result = runCli(
+      "claude",
+      "claude",
+      [...base(true), "--review-revision", "r1", "--review-author-family", "codex"],
+      passingReviewer,
+    );
+    expect(result.exitCode).toBe(0);
+    expect(requestFiles()).toHaveLength(1);
+    expect(reviewFiles().filter((file) => file.startsWith("receipts/"))).toHaveLength(1);
     const decision = gate();
     expect(decision.reason).not.toContain("pending_request_for_head");
     expect(decision.reason).not.toContain("verdict_missing");
+    expect(decision.ok).toBe(true);
+    expect(decision.decision).toBe("merge");
   });
 
-  it.fails("U-RVADM-007: 事象の実例 - 拒否された呼び出しのあとも正しい request の PASS で通る", () => {
+  it.fails("U-RVADM-007: 事象の実例 - 拒否された呼び出しのあとも正しい request の PASS で merge gate が ok になる", () => {
     const incident = runCli("claude", "claude", [
       ...base(true),
       "--review-revision",
@@ -358,19 +380,17 @@ describe("review request admission (issue #1600)", () => {
       "codex",
     ]);
     expect(incident.exitCode).toBe(1);
-    runCli("claude", "claude", [
-      ...base(true),
-      "--review-revision",
-      "r1",
-      "--review-author-family",
-      "codex",
-    ]);
-    const correct = readRequests().find((request) => request.authorFamily === "codex");
-    expect(correct).toBeDefined();
-    writePassReceipt(correct as Record<string, unknown>, "claude");
+    const correct = runCli(
+      "claude",
+      "claude",
+      [...base(true), "--review-revision", "r1", "--review-author-family", "codex"],
+      passingReviewer,
+    );
+    expect(correct.exitCode).toBe(0);
     const decision = gate();
     expect(decision.reason).not.toContain("pending_request_for_head");
-    expect(decision.reason).not.toContain("verdict_missing");
+    expect(decision.ok).toBe(true);
+    expect(decision.decision).toBe("merge");
   });
 
   it("U-RVADM-008: 受理のあとに reviewer の起動が失敗したら request が残り merge を止める", () => {
@@ -387,6 +407,22 @@ describe("review request admission (issue #1600)", () => {
     expect(decision.ok).toBe(false);
     expect(decision.reason).toContain("pending_request_for_head");
     expect(decision.reason).toContain("verdict_missing");
+  });
+
+  it("U-RVADM-008: 同じ identity を CLI から再実行すると attempt が足されて完了し、gate が ok になる", () => {
+    const args = [...base(true), "--review-revision", "r1", "--review-author-family", "codex"];
+    const first = runCli("claude", "codex", args, failLaunch);
+    expect(first.exitCode).not.toBe(0);
+    expect(requestFiles()).toHaveLength(1);
+    const retry = runCli("claude", "codex", args, passingReviewer);
+    expect(retry.exitCode).toBe(0);
+    expect(requestFiles()).toHaveLength(1);
+    const attempts = readReviewCustodyAudit(root).map((event) => event.attempt);
+    expect(attempts).toContain(1);
+    expect(attempts).toContain(2);
+    const decision = gate();
+    expect(decision.ok).toBe(true);
+    expect(decision.decision).toBe("merge");
   });
 
   it("U-RVADM-009: verdict の無い正規の request は従来どおり merge を止める", () => {
