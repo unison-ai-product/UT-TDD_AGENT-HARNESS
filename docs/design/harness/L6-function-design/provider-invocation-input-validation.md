@@ -27,11 +27,7 @@ CLIからprovider invocationを組み立てる前にmodel / reasoning effortを�
 | 値 | 正本 | M1契約 |
 |---|---|---|
 | model override | `src/schema/team.ts` の `modelOverrideSchema` | 既存の受理集合をそのまま使用する。新しいmodel文法・aliasを足さず、受理集合を狭めない。 |
-| reasoning effort | `src/schema/team.ts` の `reasoningEffortSchema` | 受理集合は `low` / `medium` / `middle` / `high` / `xhigh` / `max` とする (`max` を追加。issue #733)。ただし `max` は Claude 専用とし、provider が codex で effort が `max` のときは `provider_effort_invalid` で拒否する (§2.0)。既存の`medium` / `middle`正規化を保つ。 |
-
-### 2.0 Claude へ渡す effort を下げない (issue #733)
-
-Claude Code CLI は `--effort <level>` として `low, medium, high, xhigh, max` を受理する (実測 2026-11-11: Claude Code 2.1.293 の `claude --help`)。したがって `buildAdapterPlan` は、Claude へ渡す effort を `middle` → `medium` の語彙変換以外では変えない。`xhigh` は `xhigh` のまま、`max` は `max` のまま argv (`--effort`) と env (`CLAUDE_EFFORT_ENV`) へ渡し、`xhigh` を `high` へ下げる旧挙動は廃する。Codex 向けの挙動 (`middle` → `medium`、他はそのまま) は変えない。`max` は Claude 専用である。provider が codex で effort が `max` のときは、`resolveDelegationRouting` と `buildAdapterPlan` の両方の入口で `provider_effort_invalid` として拒否する。理由は、Codex の `model_reasoning_effort` への `max` の実機受理が未測定であり、未測定の値を通さないためである。実測して受理が確認できたときは、別の契約改訂で開く。schema にない値 (例: `extreme`、空文字) は引き続き `provider_effort_invalid` で拒否する。
+| reasoning effort | `src/schema/team.ts` の `reasoningEffortSchema` | 受理集合は `low` / `medium` / `middle` / `high` / `xhigh` / `max` とする (`max` を追加。issue #733)。既存の`medium` / `middle`正規化を保つ。Claude Code CLI は `--effort` として `low, medium, high, xhigh, max` を受理する (実測 2026-11-11: Claude Code 2.1.293 の `claude --help`)。したがってClaudeへ渡すeffortは`middle`→`medium`以外では下げず、`xhigh` / `max` はそのまま argv (`--effort`) と env (`CLAUDE_EFFORT_ENV`) へ渡す。Codexの挙動は変えない。`max` はClaude専用で、providerがcodexでeffortが`max`のときは`resolveDelegationRouting`と`buildAdapterPlan`の両入口で`provider_effort_invalid`として拒否する (Codexの`max`の実機受理が未測定のため。測ったら別の改訂で開く)。 |
 
 省略値 (`undefined`) は任意入力として許可する。空文字列や既存schemaに適合しない値は拒否する。schemaを複製したり、CLIごとに別の受理集合を定義したりしない。`[1m]`のような個別入力を根拠に受理文法を追加・変更しない。
 

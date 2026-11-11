@@ -600,8 +600,6 @@ describe("L7 CLI surface closure", () => {
     }
   }, 20_000);
 
-  // Red (issue #733): Claude の xhigh は high へ下げず、そのまま argv へ渡す。
-  // 現行 src は high へ下げるため失敗する (期待される失敗: payload.effort "high" が "xhigh" と不一致)。
   it.fails("keeps claude runtime command dry-run registered through delegation helper", () => {
     const fake = withFakeProviderEnv("claude");
     try {

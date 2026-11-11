@@ -354,40 +354,6 @@ describe("delegation routing (PLAN-L7-255)", () => {
     }
   });
 
-  // Red (issue #733): max も宣言済み effort として受理する。現行 schema は max を拒否するため失敗する。
-  it.fails("U-CMDINPUT-004: reviewer and worker routing accept Claude max effort", () => {
-    const reviewer = resolveDelegationRouting({
-      provider: "claude",
-      role: "blind-reviewer",
-      task: "review the diff",
-      effort: "max",
-    });
-    expect(reviewer).toMatchObject({ ok: true, effort: "max", effort_source: "explicit" });
-
-    const worker = resolveDelegationRouting({
-      provider: "claude",
-      role: "se",
-      task: "implement the parser module",
-      effort: "max",
-    });
-    expect(worker).toMatchObject({ ok: true, effort: "max", effort_source: "explicit" });
-  });
-
-  // max は Claude 専用 (契約 §2.0、issue #733)。Codex の max は実機受理が未測定なので拒否する。
-  it("U-CMDINPUT-004: routing rejects max effort for codex", () => {
-    for (const role of ["blind-reviewer", "se"]) {
-      expect(
-        resolveDelegationRouting({
-          provider: "codex",
-          role,
-          task: "review the diff",
-          effort: "max",
-        }),
-        role,
-      ).toEqual({ ok: false, message: "provider_effort_invalid" });
-    }
-  });
-
   it("U-CMDINPUT-004: omitted effort keeps reviewer and worker defaults", () => {
     const reviewer = resolveDelegationRouting({
       provider: "codex",

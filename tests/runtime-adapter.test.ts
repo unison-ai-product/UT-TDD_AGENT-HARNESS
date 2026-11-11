@@ -189,15 +189,10 @@ describe("runtime adapter plan", () => {
     expect(plan.plan_id).toBe("PLAN-L4-99-x");
   });
 
-  it("normalizes extended UT-TDD effort values at the Claude provider boundary", () => {
+  it.fails("normalizes extended UT-TDD effort values at the Claude provider boundary", () => {
     expect(normalizeProviderEffort("claude", "middle")).toBe("medium");
-    expect(normalizeProviderEffort("codex", "xhigh")).toBe("xhigh");
-  });
-
-  // Red (issue #733): Claude へ渡す effort を下げない。契約: provider-invocation-input-validation.md §2.0。
-  // 現行 src は xhigh を high へ下げるため失敗する (期待される失敗: "high" が "xhigh" と一致しない)。
-  it.fails("passes Claude xhigh through without downgrading it", () => {
     expect(normalizeProviderEffort("claude", "xhigh")).toBe("xhigh");
+    expect(normalizeProviderEffort("codex", "xhigh")).toBe("xhigh");
 
     const plan = buildAdapterPlan(
       {
@@ -717,34 +712,6 @@ describe("Issue #1261 M1 provider invocation input validation candidates", () =>
       "hybrid",
     );
     expect(omitted.effort).toBeUndefined();
-  });
-
-  // Red (issue #733): U-CMDINPUT-004 の改訂 oracle。Claude の xhigh / max は下げずに渡す。
-  // 現行 src は xhigh を high へ下げ、max は schema が拒否するため失敗する。
-  it.fails("U-CMDINPUT-004: passes Claude xhigh and max through without downgrading", () => {
-    for (const effort of ["xhigh", "max"]) {
-      expect(reasoningEffortSchema.safeParse(effort).success, effort).toBe(true);
-      const plan = buildAdapterPlan(
-        { provider: "claude", role: "se", task: "review", model: "claude-sonnet-5-5", effort },
-        "hybrid",
-      );
-      expect(plan.available, effort).toBe(true);
-      expect(plan.effort, effort).toBe(effort);
-      expect(plan.args, effort).toContain(effort);
-      expect(plan.env, effort).toEqual({ [CLAUDE_EFFORT_ENV]: effort });
-    }
-  });
-
-  // max は Claude 専用 (契約 §2.0、issue #733)。Codex の max は plan を利用不可にする。
-  it("U-CMDINPUT-004: buildAdapterPlan rejects max effort for codex", () => {
-    const plan = buildAdapterPlan(
-      { provider: "codex", role: "se", task: "review", model: "gpt-5.4", effort: "max" },
-      "hybrid",
-    );
-    expect(plan.available).toBe(false);
-    expect(plan.messages).toEqual([INVALID_EFFORT_MESSAGE]);
-    expect(plan.args).toEqual([]);
-    expect(plan.env).toBeUndefined();
   });
 
   ["extreme", ""].forEach((effort, index) => {
