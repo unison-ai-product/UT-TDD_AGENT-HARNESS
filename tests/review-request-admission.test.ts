@@ -241,7 +241,7 @@ function expectRejectedWithoutWrite(result: CliResult, reason: string): void {
 }
 
 describe("review request admission (issue #1600)", () => {
-  it.fails("U-RVADM-001: 族分離の拒否は request を残さない", () => {
+  it("U-RVADM-001: 族分離の拒否は request を残さない", () => {
     const result = runCli("claude", "claude", [
       ...base(true),
       "--review-revision",
@@ -255,7 +255,7 @@ describe("review request admission (issue #1600)", () => {
     expect(reviewFiles()).toEqual([]);
   });
 
-  it.fails("U-RVADM-002: model の下限の拒否は typed reason reviewer_model_below_floor を出し、request を残さない", () => {
+  it("U-RVADM-002: model の下限の拒否は typed reason reviewer_model_below_floor を出し、request を残さない", () => {
     const result = runCli("claude", "codex", [
       ...base(true),
       "--model",
@@ -279,7 +279,7 @@ describe("review request admission (issue #1600)", () => {
     expectRejectedWithoutWrite(result, "review_head_required");
   });
 
-  it.fails("U-RVADM-003: 空白だけの revision は採番せず review_head_required で拒否する", () => {
+  it("U-RVADM-003: 空白だけの revision は採番せず review_head_required で拒否する", () => {
     const result = runCli("claude", "codex", [
       ...base(true),
       "--review-revision",
@@ -290,7 +290,7 @@ describe("review request admission (issue #1600)", () => {
     expectRejectedWithoutWrite(result, "review_head_required");
   });
 
-  it.fails("U-RVADM-004: 値が option 名になる revision は review_revision_invalid で拒否する (a)", () => {
+  it("U-RVADM-004: 値が option 名になる revision は review_revision_invalid で拒否する (a)", () => {
     const result = runCli("claude", "codex", [
       ...base(true),
       "--review-revision",
@@ -299,7 +299,7 @@ describe("review request admission (issue #1600)", () => {
     expectRejectedWithoutWrite(result, "review_revision_invalid");
   });
 
-  it.fails("U-RVADM-004: 事象の実例 (値が消えて位置引数が余る) は review_revision_invalid を優先する (b)", () => {
+  it("U-RVADM-004: 事象の実例 (値が消えて位置引数が余る) は review_revision_invalid を優先する (b)", () => {
     const result = runCli("claude", "claude", [
       ...base(true),
       "--review-revision",
@@ -309,7 +309,7 @@ describe("review request admission (issue #1600)", () => {
     expectRejectedWithoutWrite(result, "review_revision_invalid");
   });
 
-  it.fails("U-RVADM-005: 余分な位置引数は review_unexpected_argument で拒否する", () => {
+  it("U-RVADM-005: 余分な位置引数は review_unexpected_argument で拒否する", () => {
     const result = runCli("claude", "codex", [
       ...base(true),
       "--review-revision",
@@ -372,7 +372,7 @@ describe("review request admission (issue #1600)", () => {
     expect(decision.decision).toBe("merge");
   });
 
-  it.fails("U-RVADM-007: 事象の実例 - 拒否された呼び出しのあとも正しい request の PASS で merge gate が ok になる", () => {
+  it("U-RVADM-007: 事象の実例 - 拒否された呼び出しのあとも正しい request の PASS で merge gate が ok になる", () => {
     const incident = runCli("claude", "claude", [
       ...base(true),
       "--review-revision",
@@ -465,7 +465,7 @@ describe("review request admission (issue #1600)", () => {
     expect(reviewFiles()).toEqual([]);
   });
 
-  it.fails("U-RVADM-011: dry-run も族分離の拒否を入口で返し、何も書かない", () => {
+  it("U-RVADM-011: dry-run も族分離の拒否を入口で返し、何も書かない", () => {
     const result = runCli("claude", "claude", [
       ...base(false),
       "--review-revision",
@@ -476,7 +476,7 @@ describe("review request admission (issue #1600)", () => {
     expectRejectedWithoutWrite(result, "same_family_reviewer_denied");
   });
 
-  it.fails("U-RVADM-011: dry-run も option の取り違えを入口で拒否する", () => {
+  it("U-RVADM-011: dry-run も option の取り違えを入口で拒否する", () => {
     const result = runCli("claude", "claude", [
       ...base(false),
       "--review-revision",
@@ -522,7 +522,7 @@ describe("review request admission (issue #1600)", () => {
     expectRejectedWithoutWrite(result, "review_author_family_required");
   });
 
-  it.fails("U-RVADM-013: 対照 - author family が有効なら revision の形で review_revision_invalid になる", () => {
+  it("U-RVADM-013: 対照 - author family が有効なら revision の形で review_revision_invalid になる", () => {
     const result = runCli("claude", "codex", [
       ...base(true),
       "--review-revision=-bad",
