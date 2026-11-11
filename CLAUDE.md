@@ -579,7 +579,7 @@ Task-kind ベースの割当 (PO rule 2026-07-14、旧 tier 記述を supersede)
   難所の worker に Sonnet を置き、Opus は判断と検証、Fable は PO 前のエスカレーションと大規模設計の相談役にする。
   目的はコストを下げ、速度と精度を上げること)。指揮モデル別の相談先と委譲先は `.claude/CLAUDE.md` §委譲と判断層 の
   「あなたが○○なら」の表を参照する。
-  - Fable (`claude-fable-5-1`): PO 前のエスカレーションと大規模設計の相談役 (`ut-tdd advisor`)。
+  - Fable (`claude-fable-5-2`): PO 前のエスカレーションと大規模設計の相談役 (`ut-tdd advisor`)。
   - Opus (`claude-opus-5-5`): 指揮のときは判断と検証に専念する (順序・方式・FLAG の扱いの判断、worker の成果物の検収)。
     成果物は自分で書き下ろさない。フロントデザイン/UI デザインの判断・レビューも担う。
   - Sonnet (`claude-sonnet-5-5`): **難所の worker**。自明でない実装、設計ドキュメントの起草、
@@ -589,6 +589,7 @@ Task-kind ベースの割当 (PO rule 2026-07-14、旧 tier 記述を supersede)
     決まった型の PR / Issue 本文・返信・handover、通常の文書修正、基準が明示できるコード・テストの編集。
     例は行番号・引用の確認、対象行が明示された文書編集、PR の差分と変更 path の重なりの確認、
     commit の一覧・diff の範囲・ファイルの有無の収集。
+    この既定は Agent tool で worker を出すときの運用の既定である。正規委譲経路 (`ut-tdd claude --role <role>`) の worker の機械の既定は `selectTeamModel` (`src/team/model-policy.ts`) のままで、実装・テストは Sonnet、設計は Opus に振られる。正規委譲経路で Haiku か Sonnet を使うときは `--model` で明示する。
   - 指揮モデル (Fable / Opus) は、手を動かす作業を自分で行わず、既定では Haiku、難所は Sonnet へ委ねる。
   - 委譲するのは、独立した作業が複数あるとき、または 1 つのコンテキストに収まらない量を読むときである。
     1 本の依存した鎖や、すでに自分のコンテキストにある内容で済む作業は委譲せず、自分で行う
@@ -603,7 +604,7 @@ Task-kind ベースの割当 (PO rule 2026-07-14、旧 tier 記述を supersede)
   - 変えない線引き: 意味の判定と完了の判定は上位モデルか control が確定し、成果物は非著者 review を通す。
     なお 2026-11-02 の実測 (読み取り 3 本で誤り 0、実編集は対象 10 行を正解し誤書き換え 0。一方、前段の棚卸しは 7 行を
     誤分類し、Issue 完了判定 68 件は 3 件誤り) を根拠にした「コードの worker 標準にする根拠はまだ無い」という制限は、
-    PO 2026-11-11 の決定で置き換えた。基準が明示できるコード・テストの編集も Haiku の既定とし、基準が全部は明示できない
+    PO 2026-11-11 の決定で置き換えた。基準が明示できるコード・テストの編集も Haiku の既定 (Agent tool の運用の既定。機械の routing は上記のとおり) とし、基準が全部は明示できない
     作業と意味の判定は Sonnet か上位モデルへ上げる。誤りの件数は引き続き数える。
   - 根拠 (#1599): Anthropic の公式文書 (Choosing the right model / Optimizing for cost and intelligence、
     2026-11-10 確認) は、Haiku 5.5 の用途に subagent の作業を挙げ、指揮モデルと安い worker の組が単独より
