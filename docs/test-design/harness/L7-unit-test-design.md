@@ -93,7 +93,7 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 | U-SLOG-004 | `onStop` | session 終了で `.ut-tdd/logs/plan/<plan_id>.digest.json` が生成/更新、常に 0 / **plan_id=null のみの session は digest を書かない** |
 | U-SLOG-005 | `onSessionStart` | session_start event を append し常に 0 (fail-open)、I/O 失敗でも throw しない |
 | U-SLOG-006 | `setActivePlan`/`activePlanUpdatedAt`/`activePlanStale`/`onPostToolUse` (IMP-078 gap②③) | setActivePlan が current-plan 2 行目に updated_at を刻む (1 行目=plan_id 不変、resolveActivePlan は 1 行目読取) / activePlanStale が maxHours 超で true・旧形式 (timestamp 無し 1 行) は false (後方互換) / onPostToolUse の git commit が `headCommit` hash を commit event target に載せる (未供給は target 無し=旧挙動) |
-| U-SLOG-007 | `src/cli.ts session start` / `hook post-tool-use` / `session summary` + `.claude/settings.json` + `ut-tdd codex --execute` | Claude settings の SessionStart/PostToolUse/Stop が `.claude/hooks/session-log.ts` 直接実装ではなく package-local `src/cli.ts` entrypoint を指す / temp repo で `ut-tdd plan use` → `session start` → `hook post-tool-use` → `session summary` を実行すると `.ut-tdd/logs/plan/<plan_id>.digest.json` が生成され、session_start/tool_use と touched file が集計される / fake `codex` を PATH に置いた temp repo で `ut-tdd codex --execute` と `ut-tdd codex --task-file <path> --execute` を実行すると、Codex wrapper も同じ session lifecycle を記録し、legacy source raw Codex guard との共存用に `legacy source_ALLOW_RAW_CODEX=1` + `legacy source_RAW_CODEX_REASON=ut-tdd-runtime-adapter-wrapper` を渡す / `ut-tdd codex --plan <id> --execute` は `<id>` を session-log の plan_id に使い、provider CLI へ `--plan-id` を渡さない |
+| U-SLOG-007 | `src/cli.ts session start` / `hook post-tool-use` / `session summary` + `.claude/settings.json` + `ut-tdd codex --execute` | Claude settings の SessionStart/PostToolUse/Stop が `.claude/hooks/session-log.ts` 直接実装ではなく package-local `src/cli.ts` entrypoint を指す / PLAN marker がない temp repo で明示 session ID を使うと、session_start/tool_use/session_end event が同じ `session_id` と `plan_id=null` で記録され、U-SLOG-004 に従い PLAN digest は生成されない / fake `codex` を PATH に置いた temp repo で `ut-tdd codex --execute` と `ut-tdd codex --task-file <path> --execute` を実行すると、Codex wrapper も current-plan / branch を解決せず PLAN-free lifecycle を記録し、legacy source raw Codex guard との共存用に `legacy source_ALLOW_RAW_CODEX=1` + `legacy source_RAW_CODEX_REASON=ut-tdd-runtime-adapter-wrapper` を渡す / CLI `--plan` による lifecycle の PLAN 指定は退役し、内部 adapter API の `intent.planId` は U-ADAPTER-001 の対象として維持する |
 | U-SLOG-008 | `compressPlanDigest` (event 単位 high-watermark、PLAN-L7-80) | `session_watermarks[sid]` = その session の matching event を畳み済み件数として持ち、同一 session が複数回 summarize (複数 Stop) されてもログ伸長分の増分のみ計上する (旧 session 単位 fold は 2 回目以降を全 skip = 過少計上) / 増分なし再適用は idempotent / pre-L7-80 digest (session_watermarks 無し) は migration として既計上分 (ts <= updated_at) を再計上せず新規分のみ計上する |
 | U-SLOG-009 | `renderEscalationSignals` (SessionStart surface cap) | escalation signal が 0 件なら空文字 / total 件数は header に保持 / 既定上限または指定 `maxSignals` 件だけを列挙 / `maxSignals<=0` は無制限 escape hatch / 残件は breadcrumb で示し、直前 session log 調査へ誘導する / STOP・root cause 文言は維持 |
 | U-SLOG-010 | Pack consumer lifecycle hook timeout budget (Issue #1057) | consumer template と built-in asset の Claude PostToolUse/Stop、Codex SessionStart/PostToolUse/Stop を30秒にする。Claude SessionStartは既存30秒。source開発repo設定の記録hookはU-SLOG-011が扱う。agent/work guards、SubagentStop、Claude memory-wakeは対象外で不変。host deadlineによる強制終了時は記録未保証・fail-openで、自動retry/queueを設けない。`tests/runtime-hook-entrypoints.test.ts` の静的な外側 `describe` がformal citationを提供し、内側 `it.fails` は対象5 hookの設定値をRedで固定する。hostの強制終了自体はunit testで再現せず、durabilityを保証しない。 |
@@ -138,17 +138,17 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 ### §1.8 U-HOVER (handover 記録機構由来、PLAN-L6-06 add-design / handover-mechanism.md §2-§3)
 | U-ID | 検証対象 | oracle (DbC) |
 |---|---|---|
-| U-HOVER-001 | `resolveHandoverScope` | **never throws**。current-plan state 有 → `active_plan` 解決 / `.ut-tdd/logs/plan/*.digest.json` を `listDir` で集約 / **壊れ JSON 行・不在は skip** / 無 → `{active_plan:null, digests:[]}` |
+| U-HOVER-001 | `resolveHandoverScope` | **never throws**。current-plan / branch に依存せず `active_plan:null` / `.ut-tdd/logs/plan/*.digest.json` は `listDir` で集約し、過去 PLAN digest 読取りは S7 まで維持 / **壊れ JSON 行・不在は skip** / digest があっても `active_plan:null` |
 | U-HOVER-002 | `buildPointer` | **純関数**。`digest_summary` = 対象 digest の commits/files/failures **件数**集計 / **`digests` 非空なら active_plan の null/非 null に関わらず集計 / `digests` 空のときのみ `digest_summary=null`** / `active_plan` は scope 値を透過 (null 可) / `updated_at=now`。**edge: `active_plan=null` だが `digests` 非空 → digest_summary は集計値 (null にしない)** |
 | U-HOVER-005 | `handoverStale` | **純関数**。`updated_at=null`/parse 不能 → true / 24h 超 → true / 24h 以内 → false / **境界 (now-updated_at=24h ちょうど) は stale でない (`>` 判定)** / **具体 oracle: `now`/`updated_at` を UTC ISO8601 で与え `Date.parse` 数値差分で判定 (辞書順比較でない)** |
 | U-HOVER-006 | `setActivePlan` + `inferPlanFromCommit` | `setActivePlan` が `.ut-tdd/state/current-plan` を書き `resolveActivePlan` が同値を読む (**round-trip**) / **`null`+`removeFile` 有 → file 削除で clear / `null`+`removeFile` 無 → 空文字書込 → `resolveActivePlan` が空文字を null 相当に落とす (両 clear 経路を検証)** / `inferPlanFromCommit`: `PLAN-L6-06-...` 抽出 / 非該当文字列 → null / **`-F -` heredoc 様 (本文に PLAN 文字列なし) → null** |
-| U-HOVER-007 | `runHandover` (orchestration) | **`dryRun=true` → 何も書かない (`written=[]`、非破壊)** / 通常 → CURRENT.json 更新 (md の追記・`content` の返却は §5.1 で撤去。散文を作らない契約は U-STCHAN-019 が持つ) / **`complete=true` → CURRENT.json の `status==="completed"` かつ `active_plan === (args.planId ?? scope.active_plan)`** |
+| U-HOVER-007 | `runHandover` (orchestration) | **`dryRun=true` → 何も書かない (`written=[]`、非破壊)** / 通常 → CURRENT.json 更新 (md の追記・`content` の返却は §5.1 で撤去。散文を作らない契約は U-STCHAN-019 が持つ) / **`complete=true` → CURRENT.json の `status==="completed"` かつ新規 pointer の `active_plan===null`** (PLAN を解決せず、legacy scope / marker の値を引き継がない) |
 | U-HOVER-008 | `sameFamilyPlan` / `dedupeDigests` (IMP-048) | `sameFamilyPlan`: 同一 id → true / bare ⊂ slug (`-` 境界付き prefix) → true / `bare が slug の prefix だが `-` 境界でない (例: `PLAN-L7-0` vs `PLAN-L7-04`) → false (誤マッチ防止)` / 無関係 → false / **対称 (a,b)=(b,a)**。`dedupeDigests`: 同 family の bare/slug ゴーストを **最長 id** へ union 集約 (commits/files_touched/sessions の union、files_touched は重複除去) / 無関係 PLAN は別 group のまま残す / **推移的マージ: bare 無しで slug 2 種 + bare が後着でも全部 1 group へ収束 (順序非依存)** |
-| U-HOVER-009 | `resolveHandoverScope` scopeToActive (IMP-048) | 既定 (option 無し): `dedupeDigests` のみ → bare/slug は 1 件に畳まれ別 PLAN は残る (digest 数 = family 数 + 無関係 PLAN 数) / `scopeToActive: true`: **active family の digest のみへ絞る** / **scopeToActive だが active family が digest に無い → 全件 fallback (空 handover 回避)** |
-| U-HOVER-010 | `readPointer` / `checkHandoverDiscipline` (IMP-047) | `readPointer`: 不在 → null / 壊れ JSON → null / 正常 → object。`checkHandoverDiscipline`: **活動なし (digest 空) → 警告ゼロ (規律対象外)** / 活動あり + CURRENT.json 不在 → `"handover 未生成"` warn / 活動あり + fresh pointer (同 family) → 警告ゼロ / 活動あり + stale pointer → `"stale"` を含む warn / 活動あり + pointer が別 plan → `"drift"` を含む warn / **活動あり + fresh pointer だが `active_plan=null` (完了済正常形) → drift 無音 (I-2: null は family 比較から除外)** |
+| U-HOVER-009 | `resolveHandoverScope` (IMP-048、S4 で部分改訂) | active family への絞込み (`scopeToActive`) は撤回。常に `dedupeDigests` を行い bare/slug は 1 family に畳み、無関係 family の digest は残す (digest 数 = family 数)。session scope は U-HOVER-012 で維持する。`scopeToActive` API option と `handover --scope-active` / `plan complete --scope-active` は S4 で撤去 |
+| U-HOVER-010 | `readPointer` / `checkHandoverDiscipline` (IMP-047、S4 で部分改訂) | `readPointer`: 不在 → null / 壊れ JSON → null / 正常 → object。`checkHandoverDiscipline`: **digest 活動なし → 警告ゼロ** / digest 活動あり + CURRENT.json 不在 → `"handover 未生成"` warn / digest 活動あり + fresh pointer → 警告ゼロ (pointer の `active_plan` に依存しない) / digest 活動あり + stale pointer → `"stale"` を含む warn。current-plan marker stale 警告と PLAN family drift 判定は撤回する。新規 `active_plan:null` でも missing / stale 警告を維持する |
 | U-HOVER-011 | `checkHandoverBypass` の署名照合 (IMP-078 gap①、state-channel-consolidation §5.2) | pointer 不在 → 警告ゼロ (discipline 担当) / `generated_by` 欠落 (手書き pointer) → `"bypass"` warn / `generated_by` 一致 + `latest_doc` なしの pointer → 警告ゼロ。md 照合 (`latest_doc` の `# Session Handover` 数 > `doc_entry_count` → `"mismatch"` warn) と `countHandoverEntries` は §5.1 の撤去対象 (`latest_doc` / `doc_entry_count` の廃止に伴い oracle から外す。旧 pointer の残骸が md を持っていても警告しない契約は U-STCHAN-021 が持つ) |
 | U-HOVER-012 | `resolveHandoverScope` scopeToSession / `latestSessionId` (IMP-078 gap④) | `scopeToSession`: 指定 session が触れた digest のみへ絞る / 該当無し → 全件 fallback (空 handover 回避)。`latestSessionId`: session jsonl 群から最新 event ts の session_id を返す / 不在 → null / 壊れ行 skip。runHandover の readPlanMeta family 解決 (gap⑤) は、`readPlanMeta` が scaffold の §1 を描く専用部品で §5.1 の撤去対象のため oracle から外した |
-| U-HOVER-015 | `runHandover` marker reconcile (drift 恒久解消、PLAN-L7-83) | **`complete=true` → `current-plan` marker を clear** (`resolveActivePlan→null`) し `checkHandoverDiscipline` が drift を出さない / **`--plan X` の in_progress → marker = X へ同期** (override 由来 drift 解消) / **plain in_progress (`--plan` 無し) → marker 無変更** (無駄書き回避) / **`dryRun=true` → marker を書かない** (非破壊不変)。reconcile した marker path は `written` に計上 (透明性) |
+| U-HOVER-015 | `runHandover` marker reconcile (PLAN-L7-83、S4 で部分改訂) | **`complete=true` → `current-plan` marker を clear** (`resolveActivePlan→null`) / **plain in_progress → marker 無変更** / **`dryRun=true` → marker を書かない** (非破壊不変)。退役する `--plan` による marker 同期 oracle は撤回する。reconcile する場合は marker path を `written` に計上 (透明性) |
 
 ### §1.8.1 U-MEMORY (共有 memory / PLAN-L7-189)
 
@@ -683,7 +683,7 @@ SMB/NFS/OneDrive をまたぐ strict lease、heartbeat、clock-skew 耐性は主
 
 | U-ID | 対象関数 | DbC oracle |
 |---|---|---|
-| U-PHOVER-001 | `buildProviderHandover` | Claude↔Codex の from/to が異なる package を生成 / active_plan・summary 必須 / secret 風 token は sanitize |
+| U-PHOVER-001 | `buildProviderHandover` (S4 契約) | Claude↔Codex の from/to が異なる package を生成 / 生成入力 `activePlan` は必須でない / 出力 `active_plan` field は `null` / summary 必須 / secret 風 token は sanitize。reader は過去 package の string `active_plan` を S7 まで保持して読む |
 | U-PHOVER-002 | `runProviderHandover` | `.ut-tdd/handover/provider/<id>.json` + `CURRENT.json` を書く / dry-run は非書込 |
 | U-GATE-001 | `evaluateGateReview` (hybrid) | judgment gate は `review_kind=cross_agent` + workerModel≠reviewerModel で pass / 同一 model は fail |
 | U-GATE-002 | `evaluateGateReview` (single runtime) | claude-only/codex-only は checklist 必須、欠落・fail・根拠なし n-a で fail、揃えば `cross_agent_review=unavailable` |
@@ -691,7 +691,7 @@ SMB/NFS/OneDrive をまたぐ strict lease、heartbeat、clock-skew 耐性は主
 | U-GATE-004 | `evaluateStaticGate` unknown/review-only | 未登録 gate は deterministic static check 不在で fail-close / `G0.5`・`R4` は既知の review-tier gate として static n-a + pass |
 | U-GATE-005 | `evaluateStaticGate` deterministic failure | G1/G3/G7 などの静的検査が I/O / parse 失敗で実行できない場合は throw せず `violation` + fail-close |
 | U-GATE-006 | `ut-tdd gate --checklist` | checklist YAML 読込・parse 失敗は CLI crash ではなく review checklist violation として gate failure |
-| U-GATE-007 | `ut-tdd gate --plan --session` / `writeGateRunEvidence` | gate 判定後に `.ut-tdd/gate_runs/*.json` が作成され、`gate_id`、`plan_id`、`status`、`session_id`、`command`、`checks[]`、`source=ut-tdd gate` を持つ。証跡書込は gate verdict を変えない。 |
+| U-GATE-007 | `ut-tdd gate --session` / `writeGateRunEvidence` | PLAN を解決せず、明示 `--session` を使った gate 判定後に `.ut-tdd/gate_runs/*.json` が作成され、`gate_id`、`plan_id=null`、`status`、`session_id`、`command`、`checks[]`、`source=ut-tdd gate` を持つ。証跡書込は gate verdict を変えない。 |
 | U-GATE-008 | `writeGateRunEvidence` failure boundary | `.ut-tdd/gate_runs` 書込失敗は `gate_run_evidence_warning` として surface されるが、`evaluateGateReview` / `evaluateStaticGate` の合成結果と exit code を変更しない。 |
 | U-GATE-009 | `writeGateRunEvidence` no-clobber publish | 別 process から同じ ID を並行 publish すると一方だけ成功、他方は `EEXIST` 警告で exit/verdict 不変。完成 temp を同一 filesystem 上に `.tmp-*` (reader の `*.json` glob 外) で書き hard link publish。link 失敗・非対応・その他書込失敗は警告のみで未 publish・exit/verdict 不変 (fallback なし)。link 失敗の注入が発火したことと link 前に残した temp の実在を assert する。実際に crash させ retry し、final に不完全 JSON が現れず、残った temp を retry が削除せず projection reader も証跡として読まないことを確認する。**未証明の4軸** (EEXIST 固有 warning 時の exit/verdict 不変、link 失敗注入の発火、link 前の `.tmp-*` 実在、実 crash 後の retry と temp 保持) は #1468 で候補 ID を割り当てて Red → Green し、そこで証明する。 |
 | U-GATE-010 | `buildGateRunEvidence` ID / path と旧形式読込 | 新規 ID は `gate-run:${compactSlug(gateId)}:${sha256([gateId, checkedAt, sessionId ?? "", process.pid].join(":")).slice(0, 12)}` とし PLAN 値を含めず、path は UTF-8 ID の SHA-256 小文字 hex のみから決める。別 ID の hash collision は拒否。旧 `<gate>-<timestamp>-<hash>.json` も読み、新旧で同じ ID なら拒否。**未証明の2軸** (異なる ID 間で実際に起きる SHA-256 衝突の拒否、ASCII でない ID の hash 経路) は #1468 の追記範囲に含め、候補 ID を割り当てて Red → Green し、そこで証明する。 |
@@ -701,7 +701,7 @@ SMB/NFS/OneDrive をまたぐ strict lease、heartbeat、clock-skew 耐性は主
 | U-TEAMRUN-001 | `validateTeamRun` | hybrid 以外は fail / hybrid で worker(se) と reviewer(tl/qa) が別 provider なら pass |
 | U-TEAMRUN-002 | `validateTeamRun` | 同一 role/provider 重複、worker/reviewer 同一 provider は fail |
 | U-TEAMRUN-003 | `recommendTeamLaunch` + `buildTeamRunPlan` | `team suggest` が返す critical definition は `se -> tl -> qa` の依存順へ正規化され、全 member が high effort selection を持つ。member prompt は resolved `provider` を header に出し、`model_family` 推奨ラベルと runtime provider を混同しない |
-| U-ADAPTER-001 | `buildAdapterPlan` | `ut-tdd codex` / `ut-tdd claude` dry-run command plan を mode に基づき available 判定 / Codex provider args は `exec -`、Claude provider args は Claude Code print-mode の `--print --input-format text` / 両 provider とも prompt 本文は `plan.stdin` に保持し argv へ渡さない / `--plan` は harness metadata として保持し provider CLI へ渡さない |
+| U-ADAPTER-001 | `buildAdapterPlan` | `ut-tdd codex` / `ut-tdd claude` dry-run command plan を mode に基づき available 判定 / Codex provider args は `exec -`、Claude provider args は Claude Code print-mode の `--print --input-format text` / 両 provider とも prompt 本文は `plan.stdin` に保持し argv へ渡さない / `AdapterIntent.planId` は任意の harness metadata として `plan.plan_id` に保持し、provider CLI args へ追加しない。CLI `--plan` flag の契約は含めない |
 
 ### §1.22 U-DESC (descent-obligation ledger 由来、PLAN-L6-35 add-design / descent-obligation.md §1-§4、FR-L1-03)
 
@@ -879,8 +879,8 @@ SMB/NFS/OneDrive をまたぐ strict lease、heartbeat、clock-skew 耐性は主
 
 ### 2026-06-09 Runtime Adapter Lifecycle Test Addendum
 
-- U-SLOG-007 extends the shared CLI and adapter wrapper oracle: explicit `--plan <id>` lifecycle runs must produce a plan digest with `session_start`, `tool_use`, and `session_end` counts for `<id>`.
-- U-SLOG-007 also asserts `--plan <id>` remains harness metadata and is not forwarded as `--plan-id` or raw plan text to Codex / Claude provider CLI args.
+- U-SLOG-007 は shared CLI と adapter wrapper の PLAN-free lifecycle を検証する。current-plan / branch を解決せず、session_start / tool_use / session_end の event が同一 session ID と `plan_id=null` で記録され、PLAN digest を生成しない。
+- CLI `--plan` flag は退役する。内部 `buildAdapterPlan(intent.planId)` の metadata 保持と provider への非転送は U-ADAPTER-001 で維持し、U-SLOG-007 の lifecycle / digest 要件には含めない。
 
 ### 2026-06-15 Skill Evaluation Oracle (FR-L1-36, PLAN-L7-53)
 
@@ -2489,29 +2489,12 @@ blobs、F0aはsource/tree/merge SHA、predecessor integrity digest、exact 8 Git
 reviewer family/model/verdictは入力にしてもadmissionへ影響せず、欠落・不一致は`legacy_evidence_unavailable`とする。
 cutover unit pairはPLAN-L7-458 `CAND-CUTOVER-001..009`を正本とし、genesis、reducer、edge guard、
 wrong evidence、replay、skip/reverse、digest mutation、projection直接更新、production activation admissionを
-`tests/cutover-transition.test.ts`の正式ID family `U-CUTOVER-{001–009}`へ固定する。candidate段階では
+退役前は`tests/cutover-transition.test.ts`の正式ID family `U-CUTOVER-{001–009}`へ固定する計画だった (退役・削除済み、#1122)。candidate段階では
 正式oracleを宣言せず、各test実装とRed実測の同一commitで個別IDへ昇格する。review+admission済みD0 draft下の非activation
 F0a/F0b/F0c build/verifyとQ0 fixture/detector workはslice FSM順序内で許可し、production activation、
 hook/runtime switch、Bun final deletion、cutoverだけをL6 confirmed+D0 admissionまで禁止する。
 
-Issue #540 の実装commitでは、上記candidateを次の判別可能な正式oracleへ昇格する。
-`U-CUTOVER-001`はgenesis exactly-once、`002`は4 edgeの隣接fold、`003`はowner/ancestry、
-`004`はadmission authority/attestation、`005`はskip/stale/replay、`006`は独立digest mutation、
-`007`はlength-frame決定性、`008`はtransaction fault時partial write 0、`009`はL6/Q0 direct
-reference authorityを検証する。各negativeは対象外のdigestを正規再計算したfixtureを使い、別guardの偶発Redで
-当該predicateを証明しない。
-
-| Oracle ID | 判別対象 |
-| --- | --- |
-| `U-CUTOVER-001` | genesis exactly-once と二重 genesis の拒否 |
-| `U-CUTOVER-002` | 4 edge の隣接 transition と reducer fold |
-| `U-CUTOVER-003` | evidence producer owner と revision ancestry |
-| `U-CUTOVER-004` | admission authority、attestation、execution mode、prior receipt |
-| `U-CUTOVER-005` | skip、stale、replay、reverse transition と stale CAS loser の拒否（head への二重 contender は append ちょうど1件） |
-| `U-CUTOVER-006` | receipt、evidence、admission の独立 digest mutation |
-| `U-CUTOVER-007` | length-frame と RFC 8785 canonicalization の決定性 |
-| `U-CUTOVER-008` | transaction fault 時の partial write 0 |
-| `U-CUTOVER-009` | L6 confirmation、Q0 admission、slice admission の authority 再利用 |
+> **歴史的退役**: 正式 oracle `U-CUTOVER-001..009` は退役した。対象の `tests/cutover-transition.test.ts` と `src/schema/cutover-transition.ts` / `src/runtime/cutover-transition.ts` は 2026-11-11 (#1122) に物理削除済みで、再導入の計画は無い (退役理由は L5 internal-processing.md §Node切替receipt chain)。
 
 `CAND-CUTOVER-003/005`は`CUTOVER-EVIDENCE-REGISTRY-v1`を唯一のoracleとし、F0a/F0b/F0c receiptの
 各slice commit subjectをfixture化する。candidate HEADが全commitのdescendantなら受理し、stale/replay/
@@ -2625,8 +2608,7 @@ wrong registry row/revision、issued_at期限外、wrong authority/key、forgery
 mismatchを個別negativeにする。
 ReviewLane exact 12/self除外11-field、SliceAdmission exact 8/self除外7-field orderをmutation pairにする。
 evidence set tupleとduplicate keyは`producer_owner_id,attestation_producer`を使い、未定義`producer_id`を拒否する。
-cutover 3 functionsは`src/schema/cutover-transition.ts`→`src/runtime/cutover-transition.ts`→
-`tests/cutover-transition.test.ts`、`admitNodeSlice`は`src/schema/node-slice-admission.ts`→
+cutover 3 functionsは退役・削除済み (#1122)。`admitNodeSlice`は`src/schema/node-slice-admission.ts`→
 `src/runtime/node-slice-admission.ts`→`tests/node-slice-admission.test.ts`へ固定する。
 
 test名とPLAN traceは`tests/node-self-host-bootstrap.test.ts`へ固定する。正式IDは上記同commit昇格条件を
