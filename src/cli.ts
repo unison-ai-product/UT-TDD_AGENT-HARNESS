@@ -3675,25 +3675,21 @@ github
 
 const githubPr = github
   .command("pr")
-  .description("typed PR trace contract — <!-- ut-tdd:trace/v1 --> block (PLAN-L7-451 W4)");
+  .description("typed PR trace contract — <!-- ut-tdd:trace/v2 --> block");
 
 githubPr
   .command("render")
   .description("PR body へ貼る trace block を生成する (手入力しない)")
-  .requiredOption("--plan <planId>", "PLAN ID (PLAN-L7-451 など)")
   .requiredOption("--route-mode <mode>", "route mode (add-feature / recovery / reverse など)")
   .option("--head <sha>", "subject HEAD SHA (default: git rev-parse HEAD)")
   .option("--base <sha>", "base SHA (default: git rev-parse origin/main)")
-  .option("--plan-revision <n>", "PLAN revision")
   .option("--episode-id <id>", "execution episode ID (Forward 外のみ)")
   .requiredOption("--issue-number <n>", "GitHub issue number")
   .action(
     (opts: {
-      plan: string;
       routeMode: string;
       head?: string;
       base?: string;
-      planRevision?: string;
       episodeId?: string;
       issueNumber: string;
     }) => {
@@ -3701,11 +3697,9 @@ githubPr
         const resolve = (ref: string): string =>
           execFileSync("git", ["rev-parse", ref], { encoding: "utf8" }).trim();
         const block = renderPrTraceBlock({
-          plan_id: opts.plan,
           route_mode: opts.routeMode,
           subject_head: opts.head ?? resolve("HEAD"),
           base_sha: opts.base ?? resolve("origin/main"),
-          plan_revision: opts.planRevision,
           episode_id: opts.episodeId,
           issue_number: opts.issueNumber,
         });
@@ -3732,7 +3726,7 @@ githubPr
     if (opts.json) {
       process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
     } else if (result.ok) {
-      process.stdout.write(`pr trace — OK (plan_id=${result.fields.plan_id})\n`);
+      process.stdout.write(`pr trace — OK (issue_number=${result.fields.issue_number})\n`);
     } else {
       process.stdout.write("pr trace — FAIL\n");
       for (const finding of result.findings) {
