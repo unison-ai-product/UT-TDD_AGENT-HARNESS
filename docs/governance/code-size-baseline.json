@@ -123,7 +123,7 @@
   "tests/release-manifest.test.ts": { "lines": 549, "functionExcess": null },
   "tests/release-promotion-rollback-gate.test.ts": { "lines": 1222, "functionExcess": null },
   "tests/resource-kernel-pair-mapping.test.ts": { "lines": 640, "functionExcess": null },
-  "tests/review-attestation.test.ts": { "lines": 797, "functionExcess": null },
+  "tests/review-attestation.test.ts": { "lines": 796, "functionExcess": null },
   "tests/review-custody.test.ts": { "lines": 943, "functionExcess": null },
   "tests/review-dispatch.test.ts": { "lines": 1073, "functionExcess": null },
   "tests/review-evidence.test.ts": { "lines": 698, "functionExcess": null },
