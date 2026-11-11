@@ -1,5 +1,4 @@
-# PLAN-L7-451 W5: Forward escape (Recovery) Issue Form。項目は PLAN-L6-83 の
-# Issue 本文規定 (origin 4-tuple / escape reason / drive model / reentry target) 準拠。
+# Recovery Issue Form for a Forward escape episode.
 # 人間がここで書いた内容は Ledger の正本を直接更新しない (drift/command candidate 扱い)。
 name: Recovery
 description: 壊れた不変条件からの回復 episode を起票する (Forward escape)
@@ -31,18 +30,13 @@ body:
     validations:
       required: true
   - type: input
-    id: origin_plan
+    id: origin_issue
     attributes:
-      label: Origin PLAN ID
-      placeholder: PLAN-L7-xxx
+      label: Origin Issue URL
+      description: 起点となった既存 GitHub Issue の canonical Issue URL。Parent Issue 欄とは別の由来参照。
+      placeholder: https://github.com/<owner>/<repo>/issues/<number>
     validations:
       required: true
-  - type: input
-    id: origin_revision
-    attributes:
-      label: Origin PLAN revision
-    validations:
-      required: false
   - type: textarea
     id: observed_state
     attributes:
@@ -82,6 +76,7 @@ body:
   - type: input
     id: reentry_target
     attributes:
-      label: Reentry target (Forward 再合流先 PLAN / layer)
+      label: Reentry target (Forward 再合流先 Issue / layer)
+      description: Forward へ再合流する Issue URL または layer を記入する
     validations:
       required: true

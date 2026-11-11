@@ -312,7 +312,7 @@ describe("PLAN 機構の S4 退役", () => {
     }
   });
 
-  it.fails("U-PLANRET-025: Issue Form の起点・再合流先はIssueで案内する", () => {
+  it("U-PLANRET-025: Issue Form の起点・再合流先はIssueで案内する", () => {
     const formDir = join(snapshotRoot, ".github/ISSUE_TEMPLATE");
     const config = parseYaml(readFileSync(join(formDir, "config.yml"), "utf8")) as {
       blank_issues_enabled?: boolean;
