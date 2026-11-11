@@ -27,7 +27,7 @@ describe("normalizeModelFamily", () => {
       haiku: "claude-haiku-5-5",
       sonnet: "claude-sonnet-5-5",
       opus: "claude-opus-5-5",
-      fable: "claude-fable-5-1",
+      fable: "claude-fable-5-2",
     });
   });
 
@@ -40,6 +40,7 @@ describe("normalizeModelFamily", () => {
     // Legacy model IDs remain normalizable; this is not the active guard catalog.
     expect(normalizeModelFamily("claude-fable-5")).toBe("fable");
     expect(normalizeModelFamily("claude-fable-5-1")).toBe("fable");
+    expect(normalizeModelFamily("claude-fable-5-2")).toBe("fable");
     expect(normalizeModelFamily("claude-opus-5-5")).toBe("opus");
     expect(normalizeModelFamily("claude-sonnet-5-5")).toBe("sonnet");
     expect(normalizeModelFamily("claude-haiku-5-5")).toBe("haiku");

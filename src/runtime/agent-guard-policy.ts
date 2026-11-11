@@ -34,7 +34,7 @@ export const CLAUDE_MODEL_FAMILY_CATALOG = {
   haiku: "claude-haiku-5-5",
   sonnet: "claude-sonnet-5-5",
   opus: "claude-opus-5-5",
-  fable: "claude-fable-5-1",
+  fable: "claude-fable-5-2",
 } as const;
 
 export const AGENT_GUARD_BYPASS_HINT =

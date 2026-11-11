@@ -107,7 +107,23 @@ doc-split gate と code-size gate は、既存の超過を `docs/governance/*-ba
 | code-size の計算 | 21.1 秒 |
 | doc-split の計算 | 8.6 秒 |
 
-合計は約 41 秒で、DENY 1 回で増える往復 (CI 13〜14 分と再検) より小さい。一時 worktree を新しく作る場合は、作成と削除の時間が加わる。実装の PR は、wrapper の中で計った時間を本節に追記する。
+合計は約 41 秒で、DENY 1 回で増える往復 (CI 13〜14 分と再検) より小さい。一時 worktree を新しく作る場合は、作成と削除の時間が加わる。実装 PR の merge 後に、docs-only PR で wrapper の実測を本節へ追記する。
+
+**wrapper の実測 (#1617、2026-11-11)**
+
+計測対象は PR #1617 の exact HEAD `b6634323bfeaec3d7bafdef4974cec70711edb4e`、比較元 `origin/main` は `aa35998266a1b554b1fd66a1cdd3fb096bed0f34`。Windows x64 (10.0.26300)、Node v24.22.1、Git 2.52.0.windows.1 での単発測定である。外部 probe が実 wrapper `recomputeBaselinePreview` を1回呼び、呼出し中の `builtinGit` / `fs` と実際の `BASELINE_GATES` の check 境界を観測した。GitHub 上の merge 自体は実行していない。
+
+| 区間 | 時間 |
+|---|---:|
+| `recomputeBaselinePreview` wrapper 全体 | 16,529.019 ms |
+| 合成 (`merge-tree` + `commit-tree`) | 565.523 ms |
+| 展開 (`mkdtemp` + `worktree add`) | 4,358.400 ms |
+| gate checks 合計 | 5,928.695 ms |
+| └ doc-split | 1,391.921 ms |
+| └ code-size | 4,536.774 ms |
+| 後始末 (`worktree remove` から `prune` 終了まで) | 5,440.310 ms |
+
+両 gate の finding は 0 件で、計測前後の対象 HEAD と `origin/main` は不変、tracked tree は clean だった。一時 path と worktree 登録も残っていない。この値は指定した HEAD / main の単発測定であり、現在の HEAD / main の性能上限を示すものではない。
 
 #### 保証と限界
 

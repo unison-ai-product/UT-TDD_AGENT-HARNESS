@@ -14,6 +14,8 @@ import {
   REQUIRED_AGGREGATE_COMMAND,
   resolveGithubCiRuntimeProfile,
 } from "../src/lint/github-ci-policy.ts";
+import { workflowNodeVersion } from "./support/github-workflow-fixture.ts";
+import { registerPlanret016Oracle } from "./support/planret-s4-review-custody-oracles.ts";
 import { removeTestTree } from "./support/temp-tree.ts";
 
 const AGGREGATE_ALWAYS = "$" + "{{ always() }}";
@@ -208,8 +210,7 @@ const SOURCE_WORKFLOW = readFileSync(
   "utf8",
 );
 const SOURCE_WORKFLOW_WITH_LANE = SOURCE_WORKFLOW;
-void LEGACY_SOURCE_WORKFLOW;
-void LEGACY_SOURCE_WORKFLOW_WITH_LANE;
+void [LEGACY_SOURCE_WORKFLOW, LEGACY_SOURCE_WORKFLOW_WITH_LANE];
 
 function replaceRequired(source: string, from: string | RegExp, to: string): string {
   expect(source).toMatch(
@@ -249,17 +250,6 @@ function docs(source = SOURCE_WORKFLOW, pack = PACK_WORKFLOW): GithubWorkflowDoc
   ];
 }
 
-function nodeVersionFromWorkflow(content: string): unknown {
-  const parsed = parseYaml(content) as {
-    jobs?: Record<string, { steps?: { uses?: unknown; with?: Record<string, unknown> }[] }>;
-  };
-  for (const job of Object.values(parsed.jobs ?? {})) {
-    const setupNode = job.steps?.find((step) => step.uses === "actions/setup-node@v4");
-    if (setupNode) return setupNode.with?.["node-version"];
-  }
-  return undefined;
-}
-
 describe("Issue #1411 Node pin Red oracles", () => {
   const sourceDocs = loadGithubCiPolicyDocs({ repoRoot: REPO_ROOT, runtimeProfile: "source" });
   const reviewAttestation = sourceDocs.find((doc) => doc.role === "attestation_runtime");
@@ -267,15 +257,16 @@ describe("Issue #1411 Node pin Red oracles", () => {
 
   if (!reviewAttestation || !packTemplate)
     throw new Error("Issue #1411 requires the source attestation workflow and Pack template");
+  registerPlanret016Oracle(sourceDocs, reviewAttestation);
 
   it("U-CIPOL-040: review-attestation pins the reviewed Node version", () => {
-    expect(nodeVersionFromWorkflow(reviewAttestation.content)).toBe("24.22.1");
+    expect(workflowNodeVersion(reviewAttestation.content)).toBe("24.22.1");
   });
 
   it("U-CIPOL-041: Pack policy fixture mirrors the template's reviewed Node pin", () => {
     const reviewedNodeVersion = "24.22.1";
-    const fixtureVersion = nodeVersionFromWorkflow(PACK_WORKFLOW);
-    const templateVersion = nodeVersionFromWorkflow(packTemplate.content);
+    const fixtureVersion = workflowNodeVersion(PACK_WORKFLOW);
+    const templateVersion = workflowNodeVersion(packTemplate.content);
 
     expect(templateVersion).toBe(reviewedNodeVersion);
     expect(fixtureVersion).toBe(reviewedNodeVersion);
