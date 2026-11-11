@@ -2,6 +2,16 @@ import { describe, expect, it } from "vitest";
 import { parseSnapshotRunnerArgs } from "../scripts/run-vitest-snapshot.ts";
 
 describe("snapshot runner test path arguments", () => {
+  it.fails("rejects a tests/*.test.ts path after the separator", () => {
+    const args = ["--", "tests/x.test.ts"];
+
+    expect(parseSnapshotRunnerArgs(args)).toMatchObject({
+      kind: "unknown-option",
+      token: "tests/x.test.ts",
+      message: expect.stringContaining("before --"),
+    });
+  });
+
   it.fails("rejects a tests/ path after the separator", () => {
     const args = ["--", "tests/nested/runner-arg.txt"];
 
