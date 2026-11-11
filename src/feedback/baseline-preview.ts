@@ -188,6 +188,107 @@ function cleanupPreviewWorktree(
   return failures;
 }
 
+interface BaselinePreviewState {
+  previewPath: string | null;
+  registered: boolean;
+  candidatePreview: BaselinePreview | null;
+}
+
+function calculateBaselinePreview(
+  input: {
+    repoRoot: string;
+    pr: number;
+    mainSha: string;
+    headSha: string;
+    gates: readonly PreviewGate[];
+  },
+  state: BaselinePreviewState,
+): BaselinePreviewResult {
+  try {
+    requireMergeTreeSupport(input.repoRoot);
+    let treeSha: string;
+    try {
+      const output = git(input.repoRoot, [
+        "merge-tree",
+        "--write-tree",
+        input.mainSha,
+        input.headSha,
+      ]);
+      treeSha = output.split(/\r?\n/)[0]?.trim() ?? "";
+    } catch (error) {
+      // merge-tree exits 1 for a content conflict. Path-level conflict reporting
+      // remains owned by the caller, so no conflict is treated as a clean tree.
+      if (errorStatus(error) === 1) {
+        return { preview: null, reason: "merge_tree_content_conflict" };
+      }
+      throw error;
+    }
+    if (!/^[0-9a-f]{40,64}$/i.test(treeSha)) {
+      throw new Error("merge_tree_output_invalid");
+    }
+
+    const commitSha = git(input.repoRoot, [
+      "-c",
+      "user.name=UT-TDD baseline preview",
+      "-c",
+      "user.email=ut-tdd-baseline-preview@example.invalid",
+      "commit-tree",
+      treeSha,
+      "-p",
+      input.mainSha,
+      "-p",
+      input.headSha,
+      "-m",
+      "UT-TDD baseline preview",
+    ]).trim();
+    if (!/^[0-9a-f]{40,64}$/i.test(commitSha)) {
+      throw new Error("preview_commit_invalid");
+    }
+
+    const preview: BaselinePreview = {
+      mainSha: input.mainSha,
+      headSha: input.headSha,
+      treeSha,
+      commitSha,
+      gates: [],
+    };
+    state.candidatePreview = preview;
+    state.previewPath = ownedPreviewPath(input.repoRoot, input.pr);
+    git(input.repoRoot, ["worktree", "add", "-q", "--detach", state.previewPath, commitSha]);
+    state.registered = true;
+    return { preview, reason: evaluatePreviewGates(state.previewPath, input.gates, preview) };
+  } catch (error) {
+    const reason =
+      error instanceof PreviewSetupError
+        ? `baseline_conflict_unknown:${error.reason}`
+        : `baseline_conflict_unknown:${gitFailureReason(error)}`;
+    return { preview: state.candidatePreview, reason };
+  }
+}
+
+function cleanupBaselinePreview(
+  repoRoot: string,
+  state: BaselinePreviewState,
+  result: BaselinePreviewResult,
+): BaselinePreviewResult {
+  if (state.previewPath === null) return result;
+
+  const cleanupFailures = cleanupPreviewWorktree(repoRoot, state.previewPath, state.registered);
+  if (cleanupFailures.length === 0) return result;
+
+  const cleanupReason = cleanupFailures.join("; ");
+  try {
+    process.stderr.write(`baseline preview cleanup failed: ${cleanupReason}\n`);
+  } catch {
+    // Diagnostics must not change the already calculated gate decision.
+  }
+  if (result.preview === null) return result;
+  return {
+    ...result,
+    preview: { ...result.preview, cleanup: "failed", cleanupReason },
+  };
+}
+
 /** Recompute only the conflicting gates against a temporary merge tree. */
 export function recomputeBaselinePreview(input: {
   repoRoot: string;
@@ -196,98 +297,21 @@ export function recomputeBaselinePreview(input: {
   headSha: string;
   gates: readonly PreviewGate[];
 }): BaselinePreviewResult {
-  let previewPath: string | null = null;
-  let registered = false;
-  let candidatePreview: BaselinePreview | null = null;
-  const calculate = (): BaselinePreviewResult => {
-    try {
-      requireMergeTreeSupport(input.repoRoot);
-      let treeSha: string;
-      try {
-        const output = git(input.repoRoot, [
-          "merge-tree",
-          "--write-tree",
-          input.mainSha,
-          input.headSha,
-        ]);
-        treeSha = output.split(/\r?\n/)[0]?.trim() ?? "";
-      } catch (error) {
-        // merge-tree exits 1 for a content conflict. Path-level conflict reporting
-        // remains owned by the caller, so no conflict is treated as a clean tree.
-        if (errorStatus(error) === 1) {
-          return { preview: null, reason: "merge_tree_content_conflict" };
-        }
-        throw error;
-      }
-      if (!/^[0-9a-f]{40,64}$/i.test(treeSha)) {
-        throw new Error("merge_tree_output_invalid");
-      }
-
-      const commitSha = git(input.repoRoot, [
-        "-c",
-        "user.name=UT-TDD baseline preview",
-        "-c",
-        "user.email=ut-tdd-baseline-preview@example.invalid",
-        "commit-tree",
-        treeSha,
-        "-p",
-        input.mainSha,
-        "-p",
-        input.headSha,
-        "-m",
-        "UT-TDD baseline preview",
-      ]).trim();
-      if (!/^[0-9a-f]{40,64}$/i.test(commitSha)) {
-        throw new Error("preview_commit_invalid");
-      }
-
-      const preview: BaselinePreview = {
-        mainSha: input.mainSha,
-        headSha: input.headSha,
-        treeSha,
-        commitSha,
-        gates: [],
-      };
-      candidatePreview = preview;
-      previewPath = ownedPreviewPath(input.repoRoot, input.pr);
-      git(input.repoRoot, ["worktree", "add", "-q", "--detach", previewPath, commitSha]);
-      registered = true;
-      return { preview, reason: evaluatePreviewGates(previewPath, input.gates, preview) };
-    } catch (error) {
-      const reason =
-        error instanceof PreviewSetupError
-          ? `baseline_conflict_unknown:${error.reason}`
-          : `baseline_conflict_unknown:${gitFailureReason(error)}`;
-      return { preview: candidatePreview, reason };
-    }
+  const state: BaselinePreviewState = {
+    previewPath: null,
+    registered: false,
+    candidatePreview: null,
   };
-
   let result: BaselinePreviewResult = { preview: null, reason: null };
   try {
-    result = calculate();
+    result = calculateBaselinePreview(input, state);
   } catch (error) {
     result = {
-      preview: candidatePreview,
+      preview: state.candidatePreview,
       reason: `baseline_conflict_unknown:${gitFailureReason(error)}`,
     };
   } finally {
-    if (previewPath !== null) {
-      const cleanupFailures = cleanupPreviewWorktree(input.repoRoot, previewPath, registered);
-      if (cleanupFailures.length > 0) {
-        const cleanupReason = cleanupFailures.join("; ");
-        try {
-          process.stderr.write(`baseline preview cleanup failed: ${cleanupReason}\n`);
-        } catch {
-          // Diagnostics must not change the already calculated gate decision.
-        }
-        if (result.preview !== null) {
-          result = {
-            ...result,
-            preview: { ...result.preview, cleanup: "failed", cleanupReason },
-          };
-        }
-      }
-    }
+    result = cleanupBaselinePreview(input.repoRoot, state, result);
   }
   return result;
 }
