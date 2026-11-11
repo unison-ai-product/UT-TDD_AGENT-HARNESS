@@ -735,6 +735,18 @@ describe("Issue #1261 M1 provider invocation input validation candidates", () =>
     }
   });
 
+  // max は Claude 専用 (契約 §2.0、issue #733)。Codex の max は plan を利用不可にする。
+  it("U-CMDINPUT-004: buildAdapterPlan rejects max effort for codex", () => {
+    const plan = buildAdapterPlan(
+      { provider: "codex", role: "se", task: "review", model: "gpt-5.4", effort: "max" },
+      "hybrid",
+    );
+    expect(plan.available).toBe(false);
+    expect(plan.messages).toEqual([INVALID_EFFORT_MESSAGE]);
+    expect(plan.args).toEqual([]);
+    expect(plan.env).toBeUndefined();
+  });
+
   ["extreme", ""].forEach((effort, index) => {
     describe(`M1 invalid effort fixture ${index + 1}`, () => {
       it("U-CMDINPUT-004: static invalid-effort label", () => {
