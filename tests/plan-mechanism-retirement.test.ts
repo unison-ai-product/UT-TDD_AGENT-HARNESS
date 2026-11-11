@@ -253,7 +253,7 @@ describe("PLAN 機構の S1 退役", () => {
 });
 
 describe("PLAN 機構の S4 退役", () => {
-  it.fails("U-PLANRET-014: task分類・routingとskill推薦にPLAN入力optionを残さない", () => {
+  it("U-PLANRET-014: task分類・routingとskill推薦にPLAN入力optionを残さない", () => {
     const cliSource = readFileSync(join(snapshotRoot, "src/cli.ts"), "utf8");
     const classifyOptions = commandOptionSurface(cliSource, "task", "classify").all;
     const routeOptions = commandOptionSurface(cliSource, "task", "route").all;
