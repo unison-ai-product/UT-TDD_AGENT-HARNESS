@@ -72,7 +72,7 @@
   "src/workflow/routing-contracts.ts": { "lines": 612, "functionExcess": 15 },
   "tests/agent-guard-delegation-boundary.test.ts": { "lines": 788, "functionExcess": null },
   "tests/bun-permanent-ban.test.ts": { "lines": 704, "functionExcess": null },
-  "tests/claude-memory-wake.test.ts": { "lines": 950, "functionExcess": null },
+  "tests/claude-memory-wake.test.ts": { "lines": 949, "functionExcess": null },
   "tests/claude-wake-generation-upgrade.test.ts": { "lines": 503, "functionExcess": null },
   "tests/cli-surface.test.ts": { "lines": 1616, "functionExcess": null },
   "tests/codex-hook-adapter.test.ts": { "lines": 666, "functionExcess": null },
