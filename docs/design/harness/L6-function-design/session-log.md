@@ -284,10 +284,19 @@ field は `type`・`command`・`timeout`・`statusMessage`・`async`・`addition
 
 下限の定数を関数と別の module に置くのは、`vi.mock` で定数の module を差し替えたときに、比較・doctor・adapter の生成がそろって追従することを確かめるためである (同じ module の中の参照は `vi.mock` では差し替わらない)。
 
+**対象の runtime (2026-11-10 追記、Issue #1561)**。`hook post-tool-use` は Claude と Codex が共有する。方式 1 の警告 (下限未満と「版を確かめられない」の両方) は、hook の process の環境変数が次の 2 つをともに満たすときだけ評価する。(1) `CLAUDECODE` が `"1"` である。(2) `CODEX_SANDBOX` と `CODEX_HOME` がどちらも設定されていない。満たさないときは評価せず、stdout は従来の `session-log: post-tool-use` の行のままにする。
+
+- 信号は `src/runtime/detect.ts` の `detectMode` が runtime の判定に使うものと同じである。新しい環境変数・設定項目・hook の引数は足さない。
+- 両方の信号がある場合 (Claude から起動した Codex が `CLAUDECODE` を継承した場合など) は Codex とみなし、評価しない。警告は助言であり、評価しない側に倒しても guard の判定は変わらない。逆に、利用者が `CODEX_HOME` を常に設定している環境では Claude でも警告が出ない。この見逃しは受け入れる (Codex の画面に Claude の警告を出す誤りより害が小さい)。
+- `CLAUDE_PROJECT_DIR` の有無は対象の判定に使わない。Claude から起動した Codex に継承されうるためである。
+- 対応する oracle は `docs/test-design/harness/L7-claude-version-floor-test-design.md` の `U-CCVER-007` である。
+
+**marker を書けないとき (2026-11-11 追記、Issue #1561)**。「1 session に 1 回」の警告済みの印を作る・書く処理が、`EEXIST` 以外のどのエラーで失敗しても、版の警告は出し続ける (hook が動くたびに出す)。印を書けないことを理由に黙る側へ倒さない。警告の目的は、古い Claude では guard が fail-open になることを知らせることであり、印を書けないときに黙るほうが、警告が繰り返されるより害が大きいためである。版の警告 (下限未満と「版を確かめられない」) は従来どおり stdout の単一の `{"systemMessage":...}` JSON で出し、印の保存に失敗しても、同じ session の以後の呼び出しで毎回出す。印の保存の失敗 (`EEXIST` 以外) の診断は stderr に出す (警告を stderr へ移さない)。どちらの場合も hook の exit code と判定は変えない。`EEXIST` は「すでに警告済み」を意味するので、従来どおり出さない。対応する oracle は `U-CCVER-008` である。
+
 採らない方式。
 
 - SessionStart で版を読む方式: hook の stdin に版が無く、`source=startup` の時点では transcript に message の行がまだ無いことがある。
 - わざと失敗する検査用の hook を置く方式: 新しい版では全 tool を止めて作業できなくなり、古い版では無音になる。
 - guard の内部エラーをすべて exit 2 にして版に頼らない方式: 古い版で効かなかったのは guard の script を起動できない場合であり、script の中で例外を捕まえても救えない。work-guard の「内部エラーは fail-open (exit 0)」は既存の契約で、本節では変えない。
 
-対応する自動テスト oracle は `docs/test-design/harness/L7-claude-version-floor-test-design.md` の `U-CCVER-001`〜`005` である。実画面での確認は、同書の `CANDIDATE-U-CCVER-006` を実装後に行う。
+対応する自動テスト oracle は `docs/test-design/harness/L7-claude-version-floor-test-design.md` の `U-CCVER-001`〜`005` と `U-CCVER-007`〜`008` である。実画面での確認は、同書の `CANDIDATE-U-CCVER-006` を実装後に行う。
