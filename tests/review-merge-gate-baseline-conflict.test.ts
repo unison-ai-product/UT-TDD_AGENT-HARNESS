@@ -8,16 +8,18 @@ import { execFileSync } from "node:child_process";
 import {
   appendFileSync,
   chmodSync,
+  cpSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
+  readFileSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { Command } from "commander";
-import { describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { registerPrMergeCommands } from "../src/cli/pr-merge.ts";
 import { BASELINE_GATES, evaluateBaselineConflict } from "../src/feedback/baseline-conflict.ts";
 import { type GhPrMergePorts, runPrMerge } from "../src/feedback/review-merge-gate.ts";
@@ -107,6 +109,18 @@ function configure(dir: string): void {
   git(dir, "config", "core.autocrlf", "false");
 }
 
+/** clone の .git/config が持つ origin の絶対 path を、複製先の bare repo へ書き換える (git を起動しない)。 */
+function repointOrigin(clone: string, origin: string): void {
+  const configPath = join(clone, ".git", "config");
+  const text = readFileSync(configPath, "utf8");
+  const next = text.replace(
+    /^(\s*url = ).*$/m,
+    (_m, head: string) => `${head}${origin.replaceAll("\\", "/")}`,
+  );
+  if (next === text) throw new Error(`origin url not found in ${configPath}`);
+  writeFileSync(configPath, next, "utf8");
+}
+
 function writeFile(dir: string, path: string, line: string): void {
   const full = join(dir, path);
   mkdirSync(dirname(full), { recursive: true });
@@ -129,9 +143,11 @@ interface Fixture {
   mergedTip: string;
 }
 
-/** bare origin + work (PR branch) + other (main を進める側)。work の origin/main は取り込むまで古いまま。 */
-function buildFixture(plan: Plan): Fixture {
-  const base = mkdtempSync(join(tmpdir(), "ut-tdd-bconf-"));
+let templateDir = "";
+
+/** 全 test 共通の土台 (bare origin + base commit を push 済みの work と other) を 1 回だけ作る。 */
+function buildTemplate(): string {
+  const base = mkdtempSync(join(tmpdir(), "ut-tdd-bconf-tpl-"));
   const origin = join(base, "origin.git");
   const work = join(base, "work");
   const other = join(base, "other");
@@ -151,6 +167,26 @@ function buildFixture(plan: Plan): Fixture {
     stdio: "ignore",
   });
   configure(other);
+  return base;
+}
+
+beforeAll(() => {
+  templateDir = buildTemplate();
+});
+
+afterAll(() => {
+  if (templateDir) rmSync(templateDir, { recursive: true, force: true });
+});
+
+/** 土台を複製した isolated fixture。work の origin/main は取り込むまで古いまま。 */
+function buildFixture(plan: Plan): Fixture {
+  const base = mkdtempSync(join(tmpdir(), "ut-tdd-bconf-"));
+  cpSync(templateDir, base, { recursive: true });
+  const origin = join(base, "origin.git");
+  const work = join(base, "work");
+  const other = join(base, "other");
+  repointOrigin(work, origin);
+  repointOrigin(other, origin);
   git(work, "checkout", "-q", "-b", "pr");
   applyEdit(work, plan.pr, "pr");
   applyEdit(other, plan.main, "main");
