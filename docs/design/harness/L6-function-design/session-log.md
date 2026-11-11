@@ -291,7 +291,7 @@ field は `type`・`command`・`timeout`・`statusMessage`・`async`・`addition
 - `CLAUDE_PROJECT_DIR` の有無は対象の判定に使わない。Claude から起動した Codex に継承されうるためである。
 - 対応する oracle は `docs/test-design/harness/L7-claude-version-floor-test-design.md` の `U-CCVER-007` である。
 
-**marker を書けないとき (2026-11-11 追記、Issue #1561)**。「1 session に 1 回」の警告済みの印を作る・書く処理が、`EEXIST` 以外のどのエラーで失敗しても、版の警告は出し続ける (hook が動くたびに出す)。印を書けないことを理由に黙る側へ倒さない。警告の目的は、古い Claude では guard が fail-open になることを知らせることであり、印を書けないときに黙るほうが、警告が繰り返されるより害が大きいためである。警告は stderr だけに出し、印の I/O の失敗は hook の exit code と判定を変えない。`EEXIST` は「すでに警告済み」を意味するので、従来どおり出さない。対応する oracle は `CANDIDATE-U-CCVER-008` である。
+**marker を書けないとき (2026-11-11 追記、Issue #1561)**。「1 session に 1 回」の警告済みの印を作る・書く処理が、`EEXIST` 以外のどのエラーで失敗しても、版の警告は出し続ける (hook が動くたびに出す)。印を書けないことを理由に黙る側へ倒さない。警告の目的は、古い Claude では guard が fail-open になることを知らせることであり、印を書けないときに黙るほうが、警告が繰り返されるより害が大きいためである。版の警告 (下限未満と「版を確かめられない」) は従来どおり stdout の単一の `{"systemMessage":...}` JSON で出し、印の保存に失敗しても、同じ session の以後の呼び出しで毎回出す。印の保存の失敗 (`EEXIST` 以外) の診断は stderr に出す (警告を stderr へ移さない)。どちらの場合も hook の exit code と判定は変えない。`EEXIST` は「すでに警告済み」を意味するので、従来どおり出さない。対応する oracle は `CANDIDATE-U-CCVER-008` である。
 
 採らない方式。
 
