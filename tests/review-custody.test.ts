@@ -307,7 +307,7 @@ describe("D3 trusted custody receipt", () => {
       { ...valid, extraField: "unexpected" },
       Object.fromEntries(Object.entries(valid).filter(([key]) => key !== "issuer")),
       { ...valid, prNumber: "283" },
-      { ...valid, schemaVersion: "review-custody/v2" },
+      { ...valid, schemaVersion: "review-custody/v1" },
     ];
     const outcomes = corrupted.map((entry) => decodeReviewCustodyReceipt(JSON.stringify(entry)));
     expect(outcomes.map((outcome) => outcome.ok)).toEqual([false, false, false, false]);
