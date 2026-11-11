@@ -83,7 +83,7 @@ function digest(over: Partial<PlanDigestRef> = {}): PlanDigestRef {
 }
 
 describe("U-HOVER-001 resolveHandoverScope", () => {
-  it("current-plan 有 → active_plan 解決 / digest 群を集約", () => {
+  it("current-plan marker があっても active_plan=null / digest 群を集約", () => {
     const deps = mockDeps();
     deps.files.set(currentPlanPath, "PLAN-L7-04-handover-mechanism");
     deps.files.set(
@@ -91,7 +91,7 @@ describe("U-HOVER-001 resolveHandoverScope", () => {
       JSON.stringify(digest()),
     );
     const scope = resolveHandoverScope(deps);
-    expect(scope.active_plan).toBe("PLAN-L7-04-handover-mechanism");
+    expect(scope.active_plan).toBeNull();
     expect(scope.digests).toHaveLength(1);
   });
 
@@ -122,6 +122,7 @@ describe("U-HOVER-002 buildPointer", () => {
       status: "in_progress",
       now: NOW,
     });
+    expect(p.active_plan).toBeNull();
     expect(p.digest_summary).toEqual({ commits: 2, files: 1, failures: 1 });
     expect(p.updated_at).toBe(NOW);
   });
@@ -139,6 +140,7 @@ describe("U-HOVER-002 buildPointer", () => {
       status: "in_progress",
       now: NOW,
     });
+    expect(p.active_plan).toBeNull();
     expect(p.digest_summary).toBeNull();
   });
 });
@@ -238,7 +240,7 @@ describe("U-HOVER-008 sameFamilyPlan / dedupeDigests (IMP-048)", () => {
   });
 });
 
-describe("U-HOVER-009 resolveHandoverScope scopeToActive (IMP-048)", () => {
+describe("U-HOVER-009 resolveHandoverScope digests (IMP-048)", () => {
   function seededMulti(): ReturnType<typeof mockDeps> {
     const deps = mockDeps();
     deps.files.set(currentPlanPath, "PLAN-L7-04-handover-mechanism");
@@ -257,26 +259,9 @@ describe("U-HOVER-009 resolveHandoverScope scopeToActive (IMP-048)", () => {
     return deps;
   }
 
-  it("既定 (scopeToActive 無し): dedup のみ → bare/slug は 1 件に畳まれ別 PLAN は残る", () => {
+  it("active family filter 無しで dedup し、無関係な PLAN も残す", () => {
     const scope = resolveHandoverScope(seededMulti());
     expect(scope.digests).toHaveLength(2); // L7-04 family (1) + L7-05 (1)
-  });
-
-  it("scopeToActive: active family の digest のみへ絞る", () => {
-    const scope = resolveHandoverScope(seededMulti(), { scopeToActive: true });
-    expect(scope.digests).toHaveLength(1);
-    expect(scope.digests[0].plan_id).toBe("PLAN-L7-04-handover-mechanism");
-  });
-
-  it("scopeToActive だが active family が digest に無い → 全件 fallback (空 handover 回避)", () => {
-    const deps = mockDeps();
-    deps.files.set(currentPlanPath, "PLAN-L9-99-nonexistent");
-    deps.files.set(
-      join(digestDir, "PLAN-L7-05-biome-debt.digest.json"),
-      JSON.stringify(digest({ plan_id: "PLAN-L7-05-biome-debt" })),
-    );
-    const scope = resolveHandoverScope(deps, { scopeToActive: true });
-    expect(scope.digests).toHaveLength(1);
   });
 });
 
@@ -319,9 +304,9 @@ describe("U-HOVER-010 readPointer / checkHandoverDiscipline (IMP-047)", () => {
     expect(w[0]).toContain("handover 未生成");
   });
 
-  it("活動あり + fresh pointer (同 family) → 警告ゼロ", () => {
+  it("活動あり + fresh null pointer → 警告ゼロ", () => {
     const deps = withActivity();
-    deps.files.set(pointerPath, JSON.stringify(pointer()));
+    deps.files.set(pointerPath, JSON.stringify(pointer({ active_plan: null })));
     expect(checkHandoverDiscipline(deps)).toEqual([]);
   });
 
@@ -335,16 +320,9 @@ describe("U-HOVER-010 readPointer / checkHandoverDiscipline (IMP-047)", () => {
     expect(w.some((m) => m.includes("stale"))).toBe(true);
   });
 
-  it("活動あり + pointer が別 plan を指す → drift warn", () => {
+  it("活動あり + fresh legacy pointer の active_plan は警告判定に使わない", () => {
     const deps = withActivity();
     deps.files.set(pointerPath, JSON.stringify(pointer({ active_plan: "PLAN-L7-05-biome-debt" })));
-    const w = checkHandoverDiscipline(deps);
-    expect(w.some((m) => m.includes("drift"))).toBe(true);
-  });
-
-  it("活動あり + fresh pointer だが active_plan=null (完了済正常形) → drift 無音 (I-2)", () => {
-    const deps = withActivity();
-    deps.files.set(pointerPath, JSON.stringify(pointer({ active_plan: null })));
     expect(checkHandoverDiscipline(deps)).toEqual([]);
   });
 });
@@ -365,7 +343,7 @@ describe("U-HOVER-007 runHandover", () => {
     const before = new Map(deps.files);
     const r = runHandover({ date: "2026-06-04", dryRun: true }, deps);
     expect(r.written).toEqual([]);
-    expect(r.pointer.active_plan).toBe("PLAN-L7-04-handover-mechanism");
+    expect(r.pointer.active_plan).toBeNull();
     expect(deps.files).toEqual(before); // 非破壊
   });
 
@@ -376,15 +354,12 @@ describe("U-HOVER-007 runHandover", () => {
     expect([...deps.files.keys()].some((p) => p.includes(join("docs", "handover")))).toBe(false);
   });
 
-  it("complete=true → CURRENT.json status=completed かつ active_plan=planId", () => {
+  it("complete=true → CURRENT.json status=completed かつ active_plan=null", () => {
     const deps = seeded();
-    runHandover(
-      { date: "2026-06-04", complete: true, planId: "PLAN-L7-04-handover-mechanism" },
-      deps,
-    );
+    runHandover({ date: "2026-06-04", complete: true }, deps);
     const pointer = JSON.parse(deps.files.get(pointerPath) ?? "{}");
     expect(pointer.status).toBe("completed");
-    expect(pointer.active_plan).toBe("PLAN-L7-04-handover-mechanism");
+    expect(pointer.active_plan).toBeNull();
   });
 
   // IMP-078 gap①: runHandover は generated_by 署名を刻む。
@@ -397,7 +372,7 @@ describe("U-HOVER-007 runHandover", () => {
   });
 });
 
-describe("U-HOVER-015 runHandover marker reconcile (drift 恒久解消、PLAN-L7-83)", () => {
+describe("U-HOVER-015 runHandover marker reconcile (PLAN-L7-83)", () => {
   function seededMarker(plan = "PLAN-L7-04-handover-mechanism"): ReturnType<typeof mockDeps> {
     const deps = mockDeps();
     deps.files.set(currentPlanPath, plan);
@@ -408,12 +383,9 @@ describe("U-HOVER-015 runHandover marker reconcile (drift 恒久解消、PLAN-L7
     return deps;
   }
 
-  it("complete=true → marker を clear し checkHandoverDiscipline が drift を出さない", () => {
+  it("complete=true → marker を clear", () => {
     const deps = seededMarker();
-    runHandover(
-      { date: "2026-06-04", complete: true, planId: "PLAN-L7-04-handover-mechanism" },
-      deps,
-    );
+    runHandover({ date: "2026-06-04", complete: true }, deps);
     // marker は空 = clear (resolveActivePlan → null)。
     const sdeps: SessionLogDeps = {
       repoRoot: "/repo",
@@ -425,17 +397,9 @@ describe("U-HOVER-015 runHandover marker reconcile (drift 恒久解消、PLAN-L7
       listDir: () => [],
     };
     expect(resolveActivePlan(sdeps)).toBeNull();
-    // 完了後は active plan 無し → discipline は drift を含む警告ゼロ。
-    expect(checkHandoverDiscipline(deps).some((w) => w.includes("drift"))).toBe(false);
   });
 
-  it("in_progress + --plan X → marker を X へ同期 (override drift 解消)", () => {
-    const deps = seededMarker("PLAN-L7-04-handover-mechanism");
-    runHandover({ date: "2026-06-04", planId: "PLAN-L7-99-other" }, deps);
-    expect((deps.files.get(currentPlanPath) ?? "").split("\n")[0]).toBe("PLAN-L7-99-other");
-  });
-
-  it("plain in_progress (--plan 無し) → marker 無変更 (無駄書きしない)", () => {
+  it("plain in_progress → marker 無変更 (無駄書きしない)", () => {
     const deps = seededMarker("PLAN-L7-04-handover-mechanism");
     runHandover({ date: "2026-06-04" }, deps);
     expect(deps.files.get(currentPlanPath)).toBe("PLAN-L7-04-handover-mechanism");
@@ -443,10 +407,7 @@ describe("U-HOVER-015 runHandover marker reconcile (drift 恒久解消、PLAN-L7
 
   it("dryRun → marker を書かない (非破壊不変)", () => {
     const deps = seededMarker("PLAN-L7-04-handover-mechanism");
-    runHandover(
-      { date: "2026-06-04", complete: true, planId: "PLAN-L7-04-handover-mechanism", dryRun: true },
-      deps,
-    );
+    runHandover({ date: "2026-06-04", complete: true, dryRun: true }, deps);
     expect(deps.files.get(currentPlanPath)).toBe("PLAN-L7-04-handover-mechanism");
   });
 });

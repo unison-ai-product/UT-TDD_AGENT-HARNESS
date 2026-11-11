@@ -1146,7 +1146,7 @@ describe("checkHandover (doctor handover staleness surface)", () => {
 });
 
 describe("checkHandoverDisciplineMessages", () => {
-  it("fresh CURRENT still surfaces drift when active_plan differs from current plan", () => {
+  it("fresh CURRENT does not surface PLAN family drift", () => {
     const files = new Map([
       [currentPlanPath, "PLAN-L5-08-harness-db-feedback\n2026-06-03T23:50:00.000Z"],
       [
@@ -1174,7 +1174,7 @@ describe("checkHandoverDisciplineMessages", () => {
       ],
     ]);
     const messages = checkHandoverDisciplineMessages(deps({ files }));
-    expect(messages.some((m) => m.includes("drift"))).toBe(true);
+    expect(messages.some((m) => m.includes("drift"))).toBe(false);
   });
 
   it("runDoctor surfaces handover discipline as warning-only", () => {
