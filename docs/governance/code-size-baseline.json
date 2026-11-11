@@ -1,5 +1,5 @@
 {
-  "src/cli.ts": { "lines": 4031, "functionExcess": 111 },
+  "src/cli.ts": { "lines": 4001, "functionExcess": 111 },
   "src/cli/delegation.ts": { "lines": 555, "functionExcess": 214 },
   "src/cli/distribution.ts": { "lines": 1147, "functionExcess": 352 },
   "src/cli/review-live.ts": { "lines": null, "functionExcess": 25 },

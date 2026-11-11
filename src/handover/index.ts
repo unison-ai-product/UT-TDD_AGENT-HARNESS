@@ -13,7 +13,6 @@ import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { computeOutstandingWork } from "../lint/outstanding.ts";
 import {
-  activePlanStale,
   inferPlanFromCommit,
   nodeDeps,
   resolveActivePlan,
@@ -147,21 +146,13 @@ export function dedupeDigests(raw: PlanDigestRef[]): PlanDigestRef[] {
 }
 
 /**
- * U-HOVER-001: current-plan + 直近 digest 群から対象 PLAN・digest を集める。never throws。
- * resolveActivePlan (session-log) を current-plan 解決に再利用 (state→branch→null)。
- * IMP-048: 収集後は常に dedup (bare/slug ゴースト除去)。opts.scopeToActive で active family へ絞る。
+ * U-HOVER-001: PLAN を解決せず、既存 digest 群だけを集める。never throws。
+ * IMP-048: 収集後は常に dedup (bare/slug ゴースト除去)。session scope は維持する。
  */
 export function resolveHandoverScope(
   deps: HandoverDeps,
   opts: HandoverScopeOpts = {},
 ): HandoverScope {
-  let active_plan: string | null = null;
-  try {
-    // resolveActivePlan は SessionLogDeps を要求するが readText/repoRoot のみ使う経路。
-    active_plan = resolveActivePlan(toSessionDeps(deps));
-  } catch {
-    active_plan = null;
-  }
   const raw: PlanDigestRef[] = [];
   try {
     const dir = join(deps.repoRoot, PLAN_DIGEST_DIR);
@@ -187,18 +178,12 @@ export function resolveHandoverScope(
     const scoped = digests.filter((d) => d.sessions?.includes(sid));
     if (scoped.length > 0) digests = scoped;
   }
-  if (opts.scopeToActive && active_plan) {
-    const ap = active_plan;
-    const scoped = digests.filter((d) => sameFamilyPlan(d.plan_id, ap));
-    // active family が digest に無い場合は全件にフォールバック (空 handover を避ける)。
-    if (scoped.length > 0) digests = scoped;
-  }
-  return { active_plan, digests };
+  return { active_plan: null, digests };
 }
 
 /**
- * U-HOVER-002: 純関数。digest_summary は digests 非空なら active_plan の null/非 null に関わらず集計、
- * 空のときのみ null。digest_summary=null は「digest 不在」を意味し active_plan 未設定とは独立。
+ * U-HOVER-002: 純関数。digest_summary は digests 非空なら active_plan と独立して集計し、
+ * 空のときのみ null。新規 pointer の active_plan は常に null。
  */
 export function buildPointer(input: BuildPointerInput): HandoverPointer {
   const { scope, status, now } = input;
@@ -211,7 +196,7 @@ export function buildPointer(input: BuildPointerInput): HandoverPointer {
         }
       : null;
   return {
-    active_plan: scope.active_plan,
+    active_plan: null,
     status,
     digest_summary,
     updated_at: now,
@@ -245,39 +230,24 @@ export function readPointer(deps: {
 }
 
 /**
- * IMP-047: handover-on-completion 規律の機械 surface (fail-open, 純判定)。
- * PLAN 活動 (active_plan + digest あり) があるのに CURRENT.json が未生成/stale/別 plan を指す場合に
- * warning を返す。Stop-hook / plan lint / doctor が共有する。空配列 = 規律 OK。
- * 「PLAN 完了/節目なのに handover 追記なし」を agent 記憶でなく機械が surface する (§6.8.5)。
+ * IMP-047: digest 活動があるのに CURRENT.json が未生成/stale の場合に warning を返す。
+ * Stop-hook / plan lint / doctor が共有する。空配列 = 規律 OK。
  */
 export function checkHandoverDiscipline(deps: HandoverDeps, maxHours = 24): string[] {
   const warnings: string[] = [];
   const scope = resolveHandoverScope(deps);
   // 活動が無ければ規律対象外 (digest 不在 = まだ何もしていない)。
-  if (!scope.active_plan || scope.digests.length === 0) return warnings;
-  // IMP-078 gap②: current-plan marker が古い → 解決した active_plan が最新作業を指していない恐れ。
-  if (activePlanStale(toSessionDeps(deps), deps.now(), maxHours)) {
-    warnings.push(
-      `active-plan marker stale: current-plan が ${maxHours}h 以上未更新 (解決値 ${scope.active_plan} が最新作業と乖離の恐れ) → \`ut-tdd plan use <id>\` で更新`,
-    );
-  }
+  if (scope.digests.length === 0) return warnings;
   const pointer = readPointer(deps);
   if (!pointer) {
     warnings.push(
-      `handover 未生成: active plan ${scope.active_plan} の活動があるが CURRENT.json が無い → \`ut-tdd handover\` を実行`,
+      `handover 未生成: digest 活動があるが CURRENT.json が無い → \`ut-tdd handover\` を実行`,
     );
     return warnings;
   }
   if (handoverStale(pointer.updated_at, deps.now(), maxHours)) {
     warnings.push(
-      `handover stale: CURRENT.json が ${maxHours}h 以上未更新 (active=${scope.active_plan}) → \`ut-tdd handover\` で更新`,
-    );
-  }
-  // I-2: pointer.active_plan=null は complete=true + planId 省略時の正常形 (完了済で active 無し)。
-  // drift は「別 PLAN を指している」ケースのみ問題なので非 null 時だけ判定する (null は無音で正常)。
-  if (pointer.active_plan !== null && !sameFamilyPlan(pointer.active_plan, scope.active_plan)) {
-    warnings.push(
-      `handover ポインタ drift: CURRENT.json は ${pointer.active_plan} を指すが現 active は ${scope.active_plan} → \`ut-tdd handover\` で同期`,
+      `handover stale: CURRENT.json が ${maxHours}h 以上未更新 → \`ut-tdd handover\` で更新`,
     );
   }
   return warnings;
@@ -308,22 +278,16 @@ export function checkHandoverBypass(deps: HandoverDeps): string[] {
 /**
  * orchestration。scope → pointer → CURRENT.json 更新 (dry-run は書かない)。
  * 書くのは `.ut-tdd/handover/CURRENT.json` だけ (散文 scaffold の生成は #1062 段階6 で停止)。
- * complete=true → status=completed + active_plan = args.planId ?? scope.active_plan。
- * 書込後に current-plan marker を pointer へ reconcile する (complete→clear / --plan→sync) ので drift は構造的に残らない。
+ * 新規 pointer は active_plan:null。complete=true の marker clear は維持する。
  */
 export function runHandover(args: HandoverArgs, deps: HandoverDeps): HandoverResult {
   const scope = resolveHandoverScope(deps, {
-    scopeToActive: args.scopeToActive,
     scopeToSession: args.sessionId,
   });
   const status: HandoverStatus = args.complete ? "completed" : "in_progress";
-  const effectiveScope: HandoverScope = {
-    active_plan: args.planId ?? scope.active_plan,
-    digests: scope.digests,
-  };
   // PLAN-L7-98 (Q1): 未了の正の集計を CURRENT.json へ additive 記録 (session 再開時に「完了主張」を機械照合可能に)。
   const pointer: HandoverPointer = {
-    ...buildPointer({ scope: effectiveScope, status, now: deps.now() }),
+    ...buildPointer({ scope, status, now: deps.now() }),
     generated_by: GENERATED_BY,
     outstanding: computeOutstandingWork(deps.repoRoot),
   };
@@ -332,14 +296,10 @@ export function runHandover(args: HandoverArgs, deps: HandoverDeps): HandoverRes
   if (!args.dryRun) {
     writePointer(pointer, deps);
     written.push(POINTER_PATH);
-    // PLAN-L7-83: drift 恒久解消。CURRENT.json を書いたら current-plan marker も coherent に保つ。
-    // complete → marker clear、--plan 明示の in_progress → その plan へ同期、plain in_progress は無変更。
+    // complete → marker clear。plain in_progress は marker 無変更。
     const sdeps = toSessionDeps(deps);
     if (status === "completed") {
       setActivePlan(null, sdeps);
-      written.push(CURRENT_PLAN_REL);
-    } else if (args.planId) {
-      setActivePlan(args.planId, sdeps);
       written.push(CURRENT_PLAN_REL);
     }
   }
@@ -347,9 +307,7 @@ export function runHandover(args: HandoverArgs, deps: HandoverDeps): HandoverRes
 }
 
 /**
- * resolveActivePlan/setActivePlan が要求する SessionLogDeps 形へ橋渡し (readText/writeText/repoRoot のみ使用)。
- * currentBranch は null 固定 — handover scope は current-plan state のみを正本とし、branch fallback は使わない
- * (handover は branch=main の solo/main 直で動くのが主用途で branch から PLAN は読めないため、意図的)。
+ * setActivePlan が要求する SessionLogDeps 形へ橋渡し (readText/writeText/repoRoot のみ使用)。
  */
 function toSessionDeps(deps: HandoverDeps): SessionLogDeps {
   return {
