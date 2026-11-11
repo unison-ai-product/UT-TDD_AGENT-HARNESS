@@ -4,6 +4,8 @@
  * 注入境界は checkBaselineConflict(repoRoot, headSha, { gates, pr })。
  */
 import { execFileSync } from "node:child_process";
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
 import {
   BASELINE_GATES,
@@ -310,6 +312,80 @@ describe.sequential("review merge gate baseline recompute (Issue #1559)", {
     expect(
       checkWithGates(fixture("small").work, fixture("small").headSha, [injectedGate(null)]),
     ).toBeNull();
+  });
+
+  it("U-RVMG-050: global identityなしでもpreviewを作りcaller configを変更しない", () => {
+    const small = smallFiles();
+    const identityFixture = buildFixture(small.base, small.branches);
+    const globalConfigPath = join(identityFixture.base, "isolated-global.gitconfig");
+    const configPath = join(identityFixture.work, ".git", "config");
+    try {
+      execFileSync(
+        "git",
+        ["-C", identityFixture.work, "config", "--local", "--unset-all", "user.name"],
+        {
+          windowsHide: true,
+          stdio: ["ignore", "pipe", "pipe"],
+        },
+      );
+      execFileSync(
+        "git",
+        ["-C", identityFixture.work, "config", "--local", "--unset-all", "user.email"],
+        {
+          windowsHide: true,
+          stdio: ["ignore", "pipe", "pipe"],
+        },
+      );
+      execFileSync(
+        "git",
+        ["-C", identityFixture.work, "config", "--local", "user.useConfigOnly", "true"],
+        {
+          windowsHide: true,
+          stdio: ["ignore", "pipe", "pipe"],
+        },
+      );
+
+      vi.stubEnv("GIT_CONFIG_GLOBAL", globalConfigPath);
+      vi.stubEnv("GIT_CONFIG_NOSYSTEM", "1");
+      for (const key of [
+        "GIT_AUTHOR_NAME",
+        "GIT_AUTHOR_EMAIL",
+        "GIT_COMMITTER_NAME",
+        "GIT_COMMITTER_EMAIL",
+        "EMAIL",
+      ]) {
+        vi.stubEnv(key, undefined);
+      }
+
+      for (const identity of ["GIT_AUTHOR_IDENT", "GIT_COMMITTER_IDENT"]) {
+        expect(() =>
+          execFileSync("git", ["-C", identityFixture.work, "var", identity], {
+            encoding: "utf8",
+            windowsHide: true,
+            stdio: ["ignore", "pipe", "pipe"],
+          }),
+        ).toThrow();
+      }
+
+      expect(existsSync(globalConfigPath)).toBe(false);
+      const configBefore = readFileSync(configPath);
+      const calls: string[] = [];
+      expect(
+        checkWithGates(identityFixture.work, identityFixture.headSha, [
+          injectedGate(null, { calls }),
+        ]),
+      ).toBeNull();
+      expect(calls).toEqual(["fixture-gate"]);
+      expect(gitFault.commitTreeCalls).toHaveLength(1);
+      expect(readFileSync(configPath)).toEqual(configBefore);
+      expect(existsSync(globalConfigPath)).toBe(false);
+      expect(worktreePaths(identityFixture.work).map(canonicalPath).sort()).toEqual(
+        identityFixture.initialWorktreePaths.map(canonicalPath).sort(),
+      );
+    } finally {
+      vi.unstubAllEnvs();
+      cleanFixture(identityFixture);
+    }
   });
 
   it("U-RVMG-051(a): baseline に無い上限超過 finding は拒否する", () => {

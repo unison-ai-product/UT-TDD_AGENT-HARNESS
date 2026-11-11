@@ -224,6 +224,10 @@ export function recomputeBaselinePreview(input: {
       }
 
       const commitSha = git(input.repoRoot, [
+        "-c",
+        "user.name=UT-TDD baseline preview",
+        "-c",
+        "user.email=ut-tdd-baseline-preview@example.invalid",
         "commit-tree",
         treeSha,
         "-p",

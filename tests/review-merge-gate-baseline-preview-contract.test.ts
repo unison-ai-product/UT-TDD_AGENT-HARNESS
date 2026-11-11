@@ -187,14 +187,6 @@ describe.sequential("review merge gate baseline preview contract (Issue #1559)",
             stdio: ["ignore", "pipe", "pipe"],
           },
         );
-        execFileSync("git", ["-C", repoRoot, "config", "user.email", "fixture@example.test"], {
-          windowsHide: true,
-          stdio: ["ignore", "pipe", "pipe"],
-        });
-        execFileSync("git", ["-C", repoRoot, "config", "user.name", "fixture"], {
-          windowsHide: true,
-          stdio: ["ignore", "pipe", "pipe"],
-        });
         execFileSync("git", ["-C", repoRoot, "checkout", "-q", "pr"], {
           windowsHide: true,
           stdio: ["ignore", "pipe", "pipe"],
