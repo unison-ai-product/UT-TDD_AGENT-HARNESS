@@ -99,4 +99,4 @@ consumer は runtime と launcher (`.ut-tdd/bin/ut-tdd.mjs`) を commit しな�
 - pre: `worktreePath` は linked worktree の絶対パスである。main の active pointer が有効である (§3 手順 1、2)。
 - post: 成功時は launcher と runtime が揃い、入れた版は main の版と一致する。guard と CLI の直接起動の案内の経路は exit 2 で終わり、記録 / session hook は exit 0 で終わる (§4、§5。2026-11-10 改訂、Issue #1602)。
 - invariant: 失敗時は worktree・main・キャッシュのどれにも何も残さない。版を選べる入力は無い。`MODULE_NOT_FOUND` のスタックを block 理由にしない (§5)。
-- oracle: `U-CWTRT-001`〜`010` が既存の入口・案内契約を固定し、`CANDIDATE-U-CWTRT-011` が新規 install transaction rollback の契約候補を固定する。`CANDIDATE-U-CWTRT-012`〜`015` が runtime 欠落時の launcher の三分割 (§4、Issue #1602) を固定する。
+- oracle: `U-CWTRT-001`〜`010` が既存の入口・案内契約を固定し、`CANDIDATE-U-CWTRT-011` が新規 install transaction rollback の契約候補を固定する。`U-CWTRT-012`〜`015` が runtime 欠落時の launcher の三分割 (§4、Issue #1602) を固定する (2026-11-10 に候補 ID から正式 ID へ昇格、Issue #1602)。

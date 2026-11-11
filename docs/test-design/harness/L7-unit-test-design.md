@@ -3222,7 +3222,7 @@ oracle の詳細 (入力・期待・殺す mutation) は専用の
 | --- | --- | --- |
 | U-WHIDE-001〜007 | wrapper の既定規則・ESM named import・引数形・明示 false の保持・冪等・呼び出し側 object の不変 | 専用文書 §3 |
 | U-WHIDE-008〜012 | doctor の入口 import 検査・false の理由コメント・順序非依存・実 repo | 専用文書 §3 |
-| U-WHIDE-013〜014 | Pack の配布集合・既存テストへの影響 | 専用文書 §3 |
+| U-WHIDE-013〜016 | Pack の配布集合・既存テストへの影響・生成される source の windowsHide の静的検査 (#1607) | 専用文書 §3 |
 
 上表の ID は正式 oracle への参照であり、詳細な宣言は専用文書に一度だけ置く。
 
