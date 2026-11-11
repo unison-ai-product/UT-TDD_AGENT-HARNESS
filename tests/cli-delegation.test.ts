@@ -95,6 +95,26 @@ describe("CLI delegation adapter execution env", () => {
 });
 
 describe("CLI delegation command registration", () => {
+  it.fails("U-PLANRET-014: provider delegation accepts task text without --plan", () => {
+    const program = new Command();
+    registerDelegationCommands(program, {
+      gitBranch: () => "work/test",
+      gitHead: () => "abc1234",
+      resolveTaskText: (opts) => opts.task ?? null,
+      resolveSkillContextInjection: () => undefined,
+      runSessionStartSideEffects: () => {},
+      taskFileOptionDescription: "read task text from file",
+      writeHandoverWarnings: () => {},
+    });
+
+    for (const provider of ["codex", "claude"]) {
+      const command = program.commands.find((candidate) => candidate.name() === provider);
+      expect(command?.options.map((option) => option.long)).not.toContain("--plan");
+      expect(command?.options.map((option) => option.long)).toContain("--task");
+      expect(command?.options.map((option) => option.long)).toContain("--task-file");
+    }
+  });
+
   it("registers codex and claude runtime adapter commands with governed overrides", () => {
     const program = new Command();
     registerDelegationCommands(program, {

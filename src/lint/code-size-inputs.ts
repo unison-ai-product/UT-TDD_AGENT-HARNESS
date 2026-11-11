@@ -12,6 +12,7 @@ import {
   CODE_SIZE_BASELINE_PATH,
   type CodeRename,
   type CodeSizeBaseline,
+  type CodeSizeFinding,
   type CodeSizeSource,
   classifyCodeFile,
   codeSizeMessages,
@@ -147,17 +148,28 @@ function loadCurrentBaseline(repoRoot: string): CodeSizeBaseline | null {
 }
 
 /** code-size gate の判定。ok と、人が読む行 (finding と分割先の指示と summary) を返す。 */
-export function checkCodeSize(repoRoot: string): { messages: string[]; ok: boolean } {
+export function checkCodeSize(repoRoot: string): {
+  messages: string[];
+  ok: boolean;
+  findings: CodeSizeFinding[];
+} {
   const messages: string[] = [];
+  const adapterFindings: CodeSizeFinding[] = [];
   let ok = true;
   const loaded = loadCodeSizeSources(repoRoot);
   for (const path of loaded.unreadable) {
     messages.push(`${path}:code-size-input-unreadable:read-failed`);
+    adapterFindings.push({ path, kind: "code-size-input-unreadable", reason: "read-failed" });
     ok = false;
   }
   const current = loadCurrentBaseline(repoRoot);
   if (current === null) {
     messages.push(`${CODE_SIZE_BASELINE_PATH}:code-size-baseline-base-unreadable:working-tree`);
+    adapterFindings.push({
+      path: CODE_SIZE_BASELINE_PATH,
+      kind: "code-size-baseline-base-unreadable",
+      reason: "working-tree",
+    });
     ok = false;
   }
   const previous = loadPreviousCodeSizeBaseline(repoRoot);
@@ -167,6 +179,11 @@ export function checkCodeSize(repoRoot: string): { messages: string[]; ok: boole
     previousBaseline = previous.baseline;
   } else if (previous.kind === "unreadable") {
     messages.push(`${CODE_SIZE_BASELINE_PATH}:code-size-baseline-base-unreadable:merge-base`);
+    adapterFindings.push({
+      path: CODE_SIZE_BASELINE_PATH,
+      kind: "code-size-baseline-base-unreadable",
+      reason: "merge-base",
+    });
     ok = false;
   } else {
     const measured = loadCodeSizeMergeBaseMeasures(repoRoot, Object.keys(current ?? {}));
@@ -175,6 +192,11 @@ export function checkCodeSize(repoRoot: string): { messages: string[]; ok: boole
   const renamed = loadRenamedCodeFiles(repoRoot);
   if (renamed.kind === "unreadable") {
     messages.push(`${CODE_SIZE_BASELINE_PATH}:code-size-baseline-base-unreadable:rename-input`);
+    adapterFindings.push({
+      path: CODE_SIZE_BASELINE_PATH,
+      kind: "code-size-baseline-base-unreadable",
+      reason: "rename-input",
+    });
     ok = false;
   }
   const input = {
@@ -186,5 +208,5 @@ export function checkCodeSize(repoRoot: string): { messages: string[]; ok: boole
   };
   const result = analyzeCodeSize(input);
   messages.push(...codeSizeMessages(input, result));
-  return { messages, ok: ok && result.ok };
+  return { messages, ok: ok && result.ok, findings: [...result.findings, ...adapterFindings] };
 }

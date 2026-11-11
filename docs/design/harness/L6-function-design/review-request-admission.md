@@ -11,7 +11,7 @@ created: 2026-11-10
 issue: 1600
 ---
 
-> **L6 contract marker**: `admitReviewRequest(input) => ReviewRequestAdmission` は unit-test-granularity contract である (未実装の目標契約。関数名は実装で変えてよいが、受理の検査を 1 つの単位にまとめる)。本書は review の委譲 (`ut-tdd claude|codex --role <reviewer 系 role> --review-*`) が、入口の検査をすべて終えてから review request を custody へ書く順序と、入口の検査の拒否を request の残らない失敗として扱う規則を凍結する (未実装の目標契約)。oracle は `docs/test-design/harness/L7-review-request-admission-test-design.md` の `CANDIDATE-U-RVADM-001`〜`013` が固定する (正式 ID `U-RVADM-*` への昇格は、src を含まない昇格 PR で行う)。行番号は 2026-11-10 の `main` (`91ae6af99`) で測った。
+> **L6 contract marker**: `admitReviewRequest(input) => ReviewRequestAdmission` は unit-test-granularity contract である (未実装の目標契約。関数名は実装で変えてよいが、受理の検査を 1 つの単位にまとめる)。本書は review の委譲 (`ut-tdd claude|codex --role <reviewer 系 role> --review-*`) が、入口の検査をすべて終えてから review request を custody へ書く順序と、入口の検査の拒否を request の残らない失敗として扱う規則を凍結する (未実装の目標契約)。oracle は `docs/test-design/harness/L7-review-request-admission-test-design.md` の `U-RVADM-001`〜`013` が固定する (正式 ID `U-RVADM-*` への昇格は、src を含まない昇格 PR で 2026-11-11 に行った)。行番号は 2026-11-10 の `main` (`91ae6af99`) で測った。
 
 # review request の受理順序 (入口の検査を書き込みの前に) - 機能設計 (Issue #1600)
 
