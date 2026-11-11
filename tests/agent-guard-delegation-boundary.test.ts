@@ -195,7 +195,7 @@ describe("issue #1002 agent-guard と委譲の境界", () => {
 
   it("U-AGBOUND-009: Agent tool では型によらず fable を使えない", () => {
     for (const type of GENERIC) {
-      for (const model of ["fable", "claude-fable-5-1"]) {
+      for (const model of ["fable", "claude-fable-5-2"]) {
         const result = run("Agent", { subagent_type: type, model });
         expect(result.code, `${type}/${model}`).toBe(2);
         expect(result.message, `${type}/${model}`).toMatch(/Agent tool.*fable/);
@@ -563,7 +563,7 @@ describe("issue #1002 agent-guard と委譲の境界", () => {
     expect(check("claude", "claude-haiku-5-5")).toBe(false);
     expect(check("claude", "claude-sonnet-5-5")).toBe(false);
     expect(check("claude", "claude-opus-5-5")).toBe(true);
-    expect(check("claude", "claude-fable-5-1")).toBe(true);
+    expect(check("claude", "claude-fable-5-2")).toBe(true);
     expect(check("codex", "gpt-6-luna")).toBe(false);
     expect(check("codex", "gpt-6.1-sol")).toBe(true);
     expect(check("claude", "unknown-model")).toBe(false);
@@ -594,7 +594,7 @@ describe("issue #1002 agent-guard と委譲の境界", () => {
       }
       for (const [provider, model] of [
         ["claude", "claude-opus-5-5"],
-        ["claude", "claude-fable-5-1"],
+        ["claude", "claude-fable-5-2"],
         ["codex", "gpt-6.1-sol"],
       ] as const) {
         const result = route(provider, role, model);
