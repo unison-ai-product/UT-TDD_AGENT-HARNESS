@@ -1441,10 +1441,9 @@ plan
 
 plan
   .command("complete [id]")
-  .description("active PLAN を completed handover として記録し、current-plan を clear")
+  .description("completed handover を記録し、current-plan を clear")
   .option("--dry-run", "handover を生成するが書き込まない")
-  .option("--scope-active", "active plan family の digest のみで handover を生成")
-  .action((id: string | undefined, opts: { dryRun?: boolean; scopeActive?: boolean }) => {
+  .action((_id: string | undefined, opts: { dryRun?: boolean }) => {
     const date = new Date().toISOString().slice(0, 10);
     const deps = nodeHandoverDeps(process.cwd());
     const r = runHandover(
@@ -1452,8 +1451,6 @@ plan
         date,
         dryRun: Boolean(opts.dryRun),
         complete: true,
-        scopeToActive: Boolean(opts.scopeActive),
-        ...(id ? { planId: id } : {}),
       },
       deps,
     );
@@ -1465,13 +1462,9 @@ plan
 
 const handover = program
   .command("handover")
-  .description(
-    "session-log PLAN digest から機械ポインタ CURRENT.json を生成 (要件 §6.8.5。散文 scaffold の生成は停止)",
-  )
+  .description("既存 digest から機械ポインタ CURRENT.json を生成")
   .option("--dry-run", "書き込まず内容のみ表示")
-  .option("--complete", "status=completed として記録 (PLAN 完了時)")
-  .option("--plan <id>", "明示 active PLAN (省略時 current-plan/branch から解決)")
-  .option("--scope-active", "§1-§2 を active plan family の digest のみへ絞る (IMP-048 ノイズ低減)")
+  .option("--complete", "status=completed として記録")
   .option(
     "--scope-session",
     "§1-§2 を直近 session が触れた digest のみへ絞る (IMP-078 gap④ 前 session 混入排除)",
@@ -1481,14 +1474,7 @@ const handover = program
     "session scope に使う session_id を明示 (省略時 --scope-session で直近を推定)",
   )
   .action(
-    (opts: {
-      dryRun?: boolean;
-      complete?: boolean;
-      plan?: string;
-      scopeActive?: boolean;
-      scopeSession?: boolean;
-      session?: string;
-    }) => {
+    (opts: { dryRun?: boolean; complete?: boolean; scopeSession?: boolean; session?: string }) => {
       const date = new Date().toISOString().slice(0, 10);
       const deps = nodeHandoverDeps(process.cwd());
       // IMP-078 gap④: --session 明示 > --scope-session 推定 (latestSessionId) > なし。
@@ -1499,9 +1485,7 @@ const handover = program
           date,
           dryRun: Boolean(opts.dryRun),
           complete: Boolean(opts.complete),
-          scopeToActive: Boolean(opts.scopeActive),
           ...(sessionId ? { sessionId } : {}),
-          ...(opts.plan ? { planId: opts.plan } : {}),
         },
         deps,
       );
@@ -1522,7 +1506,6 @@ providerHandover
   .requiredOption("--from <runtime>", "claude or codex")
   .requiredOption("--to <runtime>", "claude or codex")
   .requiredOption("--summary <text>", "handover context summary")
-  .option("--plan <id>", "active PLAN (defaults to current-plan/branch resolution)")
   .option("--budget <text>", "budget or constraint summary")
   .option("--next-action <text...>", "next actions")
   .option("--file <path...>", "relevant files")
@@ -1533,7 +1516,6 @@ providerHandover
         from: ProviderRuntime;
         to: ProviderRuntime;
         summary: string;
-        plan?: string;
         budget?: string;
         nextAction?: string[];
         file?: string[];
@@ -1542,27 +1524,15 @@ providerHandover
       cmd: Command,
     ) => {
       const localOpts = cmd.opts() as typeof opts;
-      const chainPlan = optionFromCommandChain<string>(cmd, "plan");
       const chainBudget = optionFromCommandChain<string>(cmd, "budget");
       const chainNextAction = optionFromCommandChain<string[]>(cmd, "nextAction");
       const chainFile = optionFromCommandChain<string[]>(cmd, "file");
       const chainDryRun = optionFromCommandChain<boolean>(cmd, "dryRun");
-      const planId =
-        localOpts.plan ??
-        opts.plan ??
-        chainPlan ??
-        resolveActivePlan(nodeDeps(process.cwd(), gitBranch));
-      if (!planId) {
-        process.stderr.write("provider handover requires --plan or active current-plan\n");
-        process.exitCode = 1;
-        return;
-      }
       try {
         const result = runProviderHandover(
           {
             from: opts.from,
             to: opts.to,
-            activePlan: planId,
             budget: localOpts.budget ?? opts.budget ?? chainBudget ?? null,
             summary: opts.summary,
             nextActions: localOpts.nextAction ?? opts.nextAction ?? chainNextAction ?? [],
@@ -1594,7 +1564,7 @@ providerHandover
     if (opts.json) process.stdout.write(`${JSON.stringify(current, null, 2)}\n`);
     else {
       process.stdout.write(
-        `provider handover: ${current.handover_id} ${current.from}->${current.to} plan=${current.active_plan}\n`,
+        `provider handover: ${current.handover_id} ${current.from}->${current.to} plan=${current.active_plan ?? "-"}\n`,
       );
     }
   });
