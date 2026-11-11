@@ -29,6 +29,11 @@ import {
   type RunnerEnvironment,
 } from "../src/feedback/review-custody-runner.ts";
 import { analyzeReviewDispatch } from "../src/feedback/review-dispatch.ts";
+import {
+  createRunnerEnvironment,
+  createRunnerPullRequestFactory,
+  registerPlanret007Oracles,
+} from "./support/planret-s4-review-custody-oracles.ts";
 
 const REPOSITORY = "unison-ai-product/UT-TDD_AGENT-HARNESS";
 const HEAD = "a".repeat(40);
@@ -40,9 +45,8 @@ const PLAN_REVISION = "1".repeat(64);
 const JUDGMENT_DIGEST = "2".repeat(64);
 const PROVIDER_EVIDENCE_REF = `d3b:${"3".repeat(64)}`;
 const WORKFLOW_REF = `${REPOSITORY}/.github/workflows/review-attestation.yml@refs/heads/main`;
-const ISSUER = "https://token.actions.githubusercontent.com";
-const RUN_ID = "17123456789";
-
+const ISSUER = "https://token.actions.githubusercontent.com",
+  RUN_ID = "17123456789";
 const REQUEST_IDENTITY: ReviewRequestIdentity = {
   schemaVersion: "review-request/v1",
   memoryId: "project-review-pr-283-exact-head",
@@ -202,9 +206,15 @@ function admissionInput(overrides: Partial<CustodyAdmissionInput> = {}): Custody
   };
 }
 
+const runnerPullRequest = createRunnerPullRequestFactory({
+  repository: REPOSITORY,
+  headSha: HEAD,
+  mergeSha: MERGE_SHA,
+});
 function runnerEnvironment(input: {
   readonly pullRequest: Record<string, unknown>;
   readonly mergeMethod?: string;
+  readonly includePlanMetadata?: boolean;
 }): { env: RunnerEnvironment; written: () => string | null } {
   const values: Record<string, string> = {
     GITHUB_REPOSITORY: REPOSITORY,
@@ -223,41 +233,16 @@ function runnerEnvironment(input: {
     GITHUB_RUN_ATTEMPT: "1",
     UT_TDD_CUSTODY_RECEIPT_PATH: "review-custody-receipt.json",
   };
-  if (input.mergeMethod !== undefined) values.UT_TDD_CUSTODY_MERGE_METHOD = input.mergeMethod;
-  const stdout = JSON.stringify(input.pullRequest);
-  let output: string | null = null;
-  return {
-    env: {
-      get: (name) => values[name],
-      runGh: () => ({ status: 0, stdout }),
-      readFile: () => {
-        throw new Error("not used by issue");
-      },
-      writeFile: (_path, content) => {
-        output = content;
-      },
-      log: () => undefined,
-    },
-    written: () => output,
-  };
+  return createRunnerEnvironment(values, input);
 }
-
-function runnerPullRequest(input: {
-  readonly merged: boolean;
-  readonly mergedAt?: string;
-}): Record<string, unknown> {
-  return {
-    number: 283,
-    state: input.merged ? "closed" : "open",
-    merged: input.merged,
-    merged_at: input.mergedAt ?? null,
-    merge_commit_sha: input.merged ? MERGE_SHA : null,
-    base: { ref: "main" },
-    head: { sha: HEAD, repo: { full_name: REPOSITORY } },
-  };
-}
-
 describe("D3 trusted custody receipt", () => {
+  registerPlanret007Oracles({
+    buildText,
+    admissionInput,
+    expectation,
+    runnerEnvironment,
+    runnerPullRequest,
+  });
   it("U-RVGHA-D3C-001: 機械 custody が全て valid でも family authority 不在なら unverified_family で custody_admitted を出さない", async () => {
     const decision = await admitReviewCustody(admissionInput());
     expect(decision).toEqual({
