@@ -642,15 +642,15 @@ slice admission流用、skip、同一edge二重approvedを拒否する。
 > 根拠: #487はsealed edgeもtyped receiptも持たないまま2026-09-18にclose (PR #651)、#152 / #153は
 > 2026-09-25に後継 (PLAN-L7-458 / PLAN-L7-462) で完了としてclose、Node authorityは
 > `package.json` `utTdd.nodeAuthority = "sealed"`と`docs/governance/repository-structure.md`で宣言済み。
-> chain writer (`src/runtime/cutover-transition.ts`の`initializeCutoverChain` / `appendCutoverTransition`)の
-> 呼び出し元はテストのみで、これを計画するopen issue / PLANは存在しない。
+> chain writer (`initializeCutoverChain` / `appendCutoverTransition`)の呼び出し元はテストのみで、
+> これを計画するopen issue / PLANは存在しなかった。
 > 以下の記述は退役前の設計の履歴として残し、実装の根拠にしない。
 > **現行のまま有効な部分**: `SliceAdmissionReceipt`は`src/schema/node-slice-admission.ts` /
 > `src/runtime/node-slice-admission.ts`で実装済みであり、`AttestedReceiptEnvelope<SliceAdmissionReceipt>`、
 > `ReviewBundleReceipt`、`CandidateAuthorshipReceipt`、`CaseManifestObject`の封印規則とともに有効のままとする
 > `ReviewBundleReceipt` は slice admission の d0 が必要な kind として参照しており (`src/schema/node-slice-admission.ts:71`)、slice admission の一部として有効のまま残る。`CandidateAuthorshipReceipt` は src にも tests にも実装と参照が無い (2026-10-13 時点の `git grep`)。本注記では退役を判断せず、tests からしか呼ばれない module の扱いと一緒に #592 (D2) で判定する。
-> `src/schema/cutover-transition.ts` / `src/runtime/cutover-transition.ts`とそのテストの削除は#592 (D2 / D3)が所管し、
-> 本注記は削除を行わない。
+> `src/schema/cutover-transition.ts` / `src/runtime/cutover-transition.ts`と`tests/cutover-transition.test.ts`は
+> 2026-11-11に#1122 (#592 D2 / D3の一部)で削除済みである。
 > **名前衝突の注意**: `src/state-db/projection-writer.ts`の`projectGithubReviewLaneReceipts`はGitHub review lane
 > のprojectionであり、退役した`ReviewLaneReceipt`とは別物である。
 
