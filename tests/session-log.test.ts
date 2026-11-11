@@ -266,7 +266,7 @@ describe("session-log (PLAN-L7-01 add-impl / U-SLOG)", () => {
     const deps = mockDeps({ currentBranch: () => "add/session-log" });
     expect(onSessionStart({ session_id: "s1" }, deps)).toBe(0);
     expect(deps.files.get(sessionPath("s1"))).toContain('"event_type":"session_start"');
-    expect(deps.files.get(sessionPath("s1"))).toContain('"plan_id":"session-log"');
+    expect(deps.files.get(sessionPath("s1"))).toContain('"plan_id":null');
 
     const throwing = mockDeps({
       appendLine: () => {

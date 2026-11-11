@@ -95,13 +95,12 @@ describe("CLI delegation adapter execution env", () => {
 });
 
 describe("CLI delegation command registration", () => {
-  it.fails("U-PLANRET-014: provider delegation accepts task text without --plan", () => {
+  it("U-PLANRET-014: provider delegation accepts task text without --plan", () => {
     const program = new Command();
     registerDelegationCommands(program, {
       gitBranch: () => "work/test",
       gitHead: () => "abc1234",
       resolveTaskText: (opts) => opts.task ?? null,
-      resolveSkillContextInjection: () => undefined,
       runSessionStartSideEffects: () => {},
       taskFileOptionDescription: "read task text from file",
       writeHandoverWarnings: () => {},
@@ -121,7 +120,6 @@ describe("CLI delegation command registration", () => {
       gitBranch: () => "work/test",
       gitHead: () => "abc1234",
       resolveTaskText: (opts) => opts.task ?? null,
-      resolveSkillContextInjection: () => undefined,
       runSessionStartSideEffects: () => {},
       taskFileOptionDescription: "read task text from file",
       writeHandoverWarnings: () => {},
@@ -135,7 +133,6 @@ describe("CLI delegation command registration", () => {
         "--role",
         "--task",
         "--task-file",
-        "--plan",
         "--model",
         "--effort",
         "--review-pr",

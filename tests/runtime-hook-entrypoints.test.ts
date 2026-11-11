@@ -4,6 +4,7 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   rmSync,
   writeFileSync,
@@ -61,6 +62,16 @@ function readSessionStartEvents(root: string, sessionId: string): Array<Record<s
     .split(/\r?\n/)
     .filter(Boolean)
     .map((line) => JSON.parse(line) as Record<string, unknown>);
+}
+
+function expectPlanFreeLifecycle(root: string, sessionId: string): void {
+  const events = readSessionStartEvents(root, sessionId);
+  expect(events.map((event) => event.event_type).sort()).toEqual([
+    "session_end",
+    "session_start",
+    "tool_use",
+  ]);
+  expect(events.every((event) => event.plan_id === null)).toBe(true);
 }
 
 async function runCapturedSessionStart(
@@ -282,13 +293,10 @@ describe("runtime hook entrypoints", () => {
     });
   });
 
-  it("U-835-007: shared CLI session/hook commands record a PLAN digest in a temp repo", () => {
+  it("U-835-007: shared CLI session/hook commands record a plan-free lifecycle in a temp repo", () => {
     const cwd = mkdtempSync(join(tmpdir(), "ut-tdd-hook-"));
     try {
       ensureTrackedProjectIdentity(cwd, "fixture/runtime-hook-entrypoints");
-      const start = runCli(cwd, ["plan", "use", "PLAN-L4-13"]);
-      expect(start.status).toBe(0);
-
       const sessionStart = runCli(cwd, ["session", "start"], {
         hook_event_name: "SessionStart",
         session_id: "s-cli",
@@ -313,14 +321,10 @@ describe("runtime hook entrypoints", () => {
       expect(stop.status).toBe(0);
       expect(stop.stdout).toContain("session-log: summary s-cli");
 
-      const digest = JSON.parse(
-        readFileSync(join(cwd, ".ut-tdd", "logs", "plan", "PLAN-L4-13.digest.json"), "utf8"),
+      expectPlanFreeLifecycle(cwd, "s-cli");
+      expect(existsSync(join(cwd, ".ut-tdd", "logs", "plan", "PLAN-L4-13.digest.json"))).toBe(
+        false,
       );
-      expect(digest.plan_id).toBe("PLAN-L4-13");
-      expect(digest.sessions).toEqual(["s-cli"]);
-      expect(digest.files_touched).toEqual(["Edit src/cli.ts"]);
-      expect(digest.event_counts.session_start).toBe(1);
-      expect(digest.event_counts.tool_use).toBe(1);
     } finally {
       rmSync(cwd, { recursive: true, force: true });
     }
@@ -520,7 +524,7 @@ describe("runtime hook entrypoints", () => {
     }
   });
 
-  it("U-835-006: the real session-start action preserves its explicit session ID and current plan", async () => {
+  it("U-835-006: the real session-start action preserves its session ID without resolving current-plan", async () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-session-start-identity-"));
     const sessionId = "issue835-exact-session-006";
     const planId = "PLAN-L7-835-windows-sessionstart-contract";
@@ -537,7 +541,7 @@ describe("runtime hook entrypoints", () => {
       expect(eventsAtSideEffectEntry).toContainEqual(
         expect.objectContaining({
           session_id: sessionId,
-          plan_id: planId,
+          plan_id: null,
           event_type: "session_start",
         }),
       );
@@ -621,7 +625,7 @@ describe("runtime hook entrypoints", () => {
     }
   });
 
-  it("ut-tdd codex --plan records wrapper lifecycle without forwarding plan flags to Codex", () => {
+  it("ut-tdd codex records wrapper lifecycle without resolving a current PLAN", () => {
     const cwd = mkdtempSync(join(tmpdir(), "ut-tdd-codex-plan-"));
     const binDir = join(cwd, "bin");
     try {
@@ -634,37 +638,27 @@ describe("runtime hook entrypoints", () => {
 
       const run = runCli(
         cwd,
-        [
-          "codex",
-          "--role",
-          "se",
-          "--task",
-          "implement explicit plan",
-          "--plan",
-          "PLAN-L4-77-adapter",
-          "--execute",
-        ],
+        ["codex", "--role", "se", "--task", "implement without plan metadata", "--execute"],
         undefined,
         env,
       );
       expect(run.status).toBe(0);
 
-      const digest = JSON.parse(
-        readFileSync(
-          join(cwd, ".ut-tdd", "logs", "plan", "PLAN-L4-77-adapter.digest.json"),
-          "utf8",
-        ),
+      expect(
+        existsSync(join(cwd, ".ut-tdd", "logs", "plan", "PLAN-L4-77-adapter.digest.json")),
+      ).toBe(false);
+      const sessionFile = readdirSync(join(cwd, ".ut-tdd", "logs", "session")).find((name) =>
+        name.startsWith("codex-"),
       );
-      expect(digest.plan_id).toBe("PLAN-L4-77-adapter");
-      expect(digest.event_counts.session_start).toBe(1);
-      expect(digest.event_counts.tool_use).toBe(1);
-      expect(digest.event_counts.session_end).toBe(1);
+      expect(sessionFile).toBeDefined();
+      if (!sessionFile) throw new Error("codex wrapper session log was not created");
+      expectPlanFreeLifecycle(cwd, sessionFile.replace(/\.jsonl$/u, ""));
       const called = readFileSync(join(cwd, "codex-called.txt"), "utf8");
       expect(called).toContain("exec");
       expect(called).not.toContain("--plan-id");
       expect(called).not.toContain("PLAN-L4-77-adapter");
       const stdinText = readFileSync(join(cwd, "codex-stdin.txt"), "utf8");
-      expect(stdinText).toContain("implement explicit plan");
+      expect(stdinText).toContain("implement without plan metadata");
       expect(stdinText).not.toContain("UT-TDD context injection");
     } finally {
       rmSync(cwd, { recursive: true, force: true });
@@ -684,31 +678,15 @@ describe("runtime hook entrypoints", () => {
 
       const run = runCli(
         cwd,
-        [
-          "claude",
-          "--role",
-          "docs",
-          "--task",
-          "review explicit plan",
-          "--plan",
-          "PLAN-L4-78-adapter",
-          "--execute",
-        ],
+        ["claude", "--role", "docs", "--task", "review without plan metadata", "--execute"],
         undefined,
         env,
       );
       expect(run.status).toBe(0);
 
-      const digest = JSON.parse(
-        readFileSync(
-          join(cwd, ".ut-tdd", "logs", "plan", "PLAN-L4-78-adapter.digest.json"),
-          "utf8",
-        ),
-      );
-      expect(digest.plan_id).toBe("PLAN-L4-78-adapter");
-      expect(digest.event_counts.session_start).toBe(1);
-      expect(digest.event_counts.tool_use).toBe(1);
-      expect(digest.event_counts.session_end).toBe(1);
+      expect(
+        existsSync(join(cwd, ".ut-tdd", "logs", "plan", "PLAN-L4-78-adapter.digest.json")),
+      ).toBe(false);
       const called = readFileSync(join(cwd, "claude-called.txt"), "utf8");
       expect(called).toContain("--print");
       expect(called).toContain("--input-format");
@@ -716,7 +694,7 @@ describe("runtime hook entrypoints", () => {
       expect(called).not.toMatch(/(^|\s)"?-p"?(\s|$)/);
       expect(called).not.toContain("review explicit plan");
       const stdinText = readFileSync(join(cwd, "claude-stdin.txt"), "utf8");
-      expect(stdinText).toContain("review explicit plan");
+      expect(stdinText).toContain("review without plan metadata");
       expect(called).not.toContain("--role");
       expect(called).not.toContain("--task");
       expect(called).not.toContain("--plan-id");
@@ -767,8 +745,6 @@ describe("runtime hook entrypoints", () => {
           "--mode",
           "hybrid",
           "--execute",
-          "--plan",
-          "PLAN-L4-79-team-wrapper",
           "--json",
         ],
         undefined,
@@ -776,23 +752,16 @@ describe("runtime hook entrypoints", () => {
       );
       expect(run.status).toBe(0);
 
-      const digest = JSON.parse(
-        readFileSync(
-          join(cwd, ".ut-tdd", "logs", "plan", "PLAN-L4-79-team-wrapper.digest.json"),
-          "utf8",
-        ),
+      expect(
+        existsSync(join(cwd, ".ut-tdd", "logs", "plan", "PLAN-L4-79-team-wrapper.digest.json")),
+      ).toBe(false);
+      const sessionFiles = readdirSync(join(cwd, ".ut-tdd", "logs", "session")).filter((name) =>
+        name.includes("-team-"),
       );
-      expect(digest.plan_id).toBe("PLAN-L4-79-team-wrapper");
-      expect(digest.sessions).toHaveLength(2);
-      expect(digest.sessions).toEqual(
-        expect.arrayContaining([
-          expect.stringMatching(/^codex-team-/),
-          expect.stringMatching(/^claude-team-/),
-        ]),
-      );
-      expect(digest.event_counts.session_start).toBe(2);
-      expect(digest.event_counts.tool_use).toBe(2);
-      expect(digest.event_counts.session_end).toBe(2);
+      expect(sessionFiles).toHaveLength(2);
+      for (const sessionFile of sessionFiles) {
+        expectPlanFreeLifecycle(cwd, sessionFile.replace(/\.jsonl$/u, ""));
+      }
       expect(readFileSync(join(cwd, "codex-called.txt"), "utf8")).toContain("exec");
       expect(readFileSync(join(cwd, "claude-called.txt"), "utf8")).toContain("--print");
     } finally {
