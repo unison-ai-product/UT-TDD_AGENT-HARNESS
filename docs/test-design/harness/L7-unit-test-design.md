@@ -2489,12 +2489,29 @@ blobs、F0aはsource/tree/merge SHA、predecessor integrity digest、exact 8 Git
 reviewer family/model/verdictは入力にしてもadmissionへ影響せず、欠落・不一致は`legacy_evidence_unavailable`とする。
 cutover unit pairはPLAN-L7-458 `CAND-CUTOVER-001..009`を正本とし、genesis、reducer、edge guard、
 wrong evidence、replay、skip/reverse、digest mutation、projection直接更新、production activation admissionを
-退役前は`tests/cutover-transition.test.ts`の正式ID family `U-CUTOVER-{001–009}`へ固定する計画だった (退役・削除済み、#1122)。candidate段階では
+`tests/cutover-transition.test.ts`の正式ID family `U-CUTOVER-{001–009}`へ固定する。candidate段階では
 正式oracleを宣言せず、各test実装とRed実測の同一commitで個別IDへ昇格する。review+admission済みD0 draft下の非activation
 F0a/F0b/F0c build/verifyとQ0 fixture/detector workはslice FSM順序内で許可し、production activation、
 hook/runtime switch、Bun final deletion、cutoverだけをL6 confirmed+D0 admissionまで禁止する。
 
-> **歴史的退役**: 正式 oracle `U-CUTOVER-001..009` は退役した。対象の `tests/cutover-transition.test.ts` と `src/schema/cutover-transition.ts` / `src/runtime/cutover-transition.ts` は 2026-11-11 (#1122) に物理削除済みで、再導入の計画は無い (退役理由は L5 internal-processing.md §Node切替receipt chain)。
+Issue #540 の実装commitでは、上記candidateを次の判別可能な正式oracleへ昇格する。
+`U-CUTOVER-001`はgenesis exactly-once、`002`は4 edgeの隣接fold、`003`はowner/ancestry、
+`004`はadmission authority/attestation、`005`はskip/stale/replay、`006`は独立digest mutation、
+`007`はlength-frame決定性、`008`はtransaction fault時partial write 0、`009`はL6/Q0 direct
+reference authorityを検証する。各negativeは対象外のdigestを正規再計算したfixtureを使い、別guardの偶発Redで
+当該predicateを証明しない。
+
+| Oracle ID | 判別対象 |
+| --- | --- |
+| `U-CUTOVER-001` | genesis exactly-once と二重 genesis の拒否 |
+| `U-CUTOVER-002` | 4 edge の隣接 transition と reducer fold |
+| `U-CUTOVER-003` | evidence producer owner と revision ancestry |
+| `U-CUTOVER-004` | admission authority、attestation、execution mode、prior receipt |
+| `U-CUTOVER-005` | skip、stale、replay、reverse transition と stale CAS loser の拒否（head への二重 contender は append ちょうど1件） |
+| `U-CUTOVER-006` | receipt、evidence、admission の独立 digest mutation |
+| `U-CUTOVER-007` | length-frame と RFC 8785 canonicalization の決定性 |
+| `U-CUTOVER-008` | transaction fault 時の partial write 0 |
+| `U-CUTOVER-009` | L6 confirmation、Q0 admission、slice admission の authority 再利用 |
 
 `CAND-CUTOVER-003/005`は`CUTOVER-EVIDENCE-REGISTRY-v1`を唯一のoracleとし、F0a/F0b/F0c receiptの
 各slice commit subjectをfixture化する。candidate HEADが全commitのdescendantなら受理し、stale/replay/
@@ -2608,7 +2625,8 @@ wrong registry row/revision、issued_at期限外、wrong authority/key、forgery
 mismatchを個別negativeにする。
 ReviewLane exact 12/self除外11-field、SliceAdmission exact 8/self除外7-field orderをmutation pairにする。
 evidence set tupleとduplicate keyは`producer_owner_id,attestation_producer`を使い、未定義`producer_id`を拒否する。
-cutover 3 functionsは退役・削除済み (#1122)。`admitNodeSlice`は`src/schema/node-slice-admission.ts`→
+cutover 3 functionsは`src/schema/cutover-transition.ts`→`src/runtime/cutover-transition.ts`→
+`tests/cutover-transition.test.ts`、`admitNodeSlice`は`src/schema/node-slice-admission.ts`→
 `src/runtime/node-slice-admission.ts`→`tests/node-slice-admission.test.ts`へ固定する。
 
 test名とPLAN traceは`tests/node-self-host-bootstrap.test.ts`へ固定する。正式IDは上記同commit昇格条件を

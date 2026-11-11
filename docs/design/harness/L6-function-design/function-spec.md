@@ -2507,9 +2507,11 @@ L6 confirmationはplan/revision/status/content/head/tracked digest/owner/attesta
 nested attestationをwrapper receipt digestへ固定順で封印する。ReviewBundleはbundle execution modeを持ち、
 両lane及びactual admission modeとexact一致させる。
 
-cutover 3関数`initializeCutoverChain` / `appendCutoverTransition` / `projectCutoverState`は退役・削除済み (#1122)で、
-実装先は存在しない。`admitNodeSlice`のkernel/testは`src/runtime/node-slice-admission.ts` /
-`tests/node-slice-admission.test.ts`、zod正本は`src/schema/node-slice-admission.ts`である。D0では将来生成契約としてfreezeする。
+cutover 3関数`initializeCutoverChain` / `appendCutoverTransition` / `projectCutoverState`の実装先は
+`src/runtime/cutover-transition.ts`、pair testは`tests/cutover-transition.test.ts`である。
+`admitNodeSlice`のkernel/testは`src/runtime/node-slice-admission.ts` /
+`tests/node-slice-admission.test.ts`、zod正本は`src/schema/cutover-transition.ts` /
+`src/schema/node-slice-admission.ts`である。D0では将来生成契約としてfreezeする。
 
 ## PLAN-L6-92 Resource Kernelプロトコル・エラー・プラットフォームポート契約
 

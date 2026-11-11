@@ -378,8 +378,9 @@ owner revisionの同一commitへ追加した場合だけ正式`IT-CUTOVER-*`へ�
 {"artifact_id":"NODE-Q0-CASE-MANIFEST-v1","expected_case_ids":["CAND-CUTOVER-101","CAND-CUTOVER-102","CAND-CUTOVER-103","CAND-CUTOVER-104","CAND-CUTOVER-105","CAND-CUTOVER-106","CAND-CUTOVER-107","CAND-CUTOVER-108","CAND-CUTOVER-109","CAND-CUTOVER-110","CAND-CUTOVER-111","CAND-CUTOVER-112","CAND-CUTOVER-113","CAND-NODEBOOT-101","CAND-NODEBOOT-102","CAND-NODEBOOT-103","CAND-NODEBOOT-104","CAND-NODEBOOT-105","CAND-NODEBOOT-106"],"schema_version":"node-q0-case-manifest.v1"}
 `NODE-Q0-CASE-MANIFEST-v1-END`
 
-zod schema `src/schema/node-slice-admission.ts`からruntime `src/runtime/node-slice-admission.ts`、test
-`tests/node-slice-admission.test.ts`へ同一candidateをtraceする (cutover chain の module / test は退役・削除済み、#1122)。
+zod schema `src/schema/cutover-transition.ts` / `src/schema/node-slice-admission.ts`からruntime
+`src/runtime/cutover-transition.ts` / `src/runtime/node-slice-admission.ts`、test
+`tests/cutover-transition.test.ts` / `tests/node-slice-admission.test.ts`へ同一candidateをtraceする。
 
 ## Resource Kernel物理統合（PLAN-L5-25、2026-07-22）
 
