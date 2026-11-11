@@ -179,8 +179,6 @@ export function registerPlanret020Oracle(): void {
         prNumber: 283,
         baseRef: "main",
         headSha: identity.exactHead,
-        planId: "legacy-plan-fixture",
-        planRevision: "2".repeat(64),
         requestIdentity: identity,
         judgmentDigest: "3".repeat(64),
         workflowRef:
