@@ -40,7 +40,7 @@ pair L6: `docs/design/harness/L6-function-design/provider-invocation-input-valid
 | U-CMDINPUT-001 | `resolveDelegationRouting` | 許可済みreviewer / worker roleそれぞれで不正modelを与え、`ok: false` / `provider_model_invalid`。model検証を片側だけ外すmutationを検出する。 |
 | U-CMDINPUT-002 | `resolveDelegationRouting` | 不正effortを各roleへ単独投入し、`provider_effort_invalid`。省略値は正常。effort検証を外すmutationを検出する。 |
 | U-CMDINPUT-003 | delegation + team plan | 通常モデル・alias・省略modelの構文受理を固定し、percent・引用符・空白・空文字・`[1m]`は構文拒否。role/floor条件を満たすfixtureを用い、正常入力まで一律拒否するmutationを殺す。 |
-| U-CMDINPUT-004 | delegation + team plan | low/medium/middle/high/xhighを受理し、Codex middle→medium、Claude middle→medium/xhigh→highを維持。未知値/空文字は拒否。既存正規化を削除するmutationを殺す。 |
+| U-CMDINPUT-004 | delegation + team plan | low/medium/middle/high/xhigh/maxを受理し、Codex middle→medium、Claude middle→mediumを維持。Claude xhigh→xhigh、max→maxはそのまま渡し、下げない (issue #733 で xhigh→high から改訂)。未知値/空文字は拒否。既存正規化を削除するmutationと、Claudeのxhigh/maxを下げるmutationを殺す。 |
 | U-CMDINPUT-005 | `buildAdapterPlan` | 無効modelだけを投入し`available: false`、`provider_model_invalid`、`args: []`、envなし。effortは正常に保ち、adapter側model検証だけを外すmutationを殺す。 |
 | U-CMDINPUT-006 | `buildAdapterPlan` | model正常で無効effortだけを投入し、005同様のshapeと`provider_effort_invalid`。双方不正時のmodel優先も固定。adapter側effort検証だけを外すmutationを殺す。 |
 | U-CMDINPUT-007 | `buildProviderInvocation`, `platform: "win32"` | `.cmd`と`.bat`の実在fixture pathにpercentを置き、正常argsでも指定Error。resolved commandの検査だけを外すmutationを殺す。元tokenはmessageに含まれない。 |
