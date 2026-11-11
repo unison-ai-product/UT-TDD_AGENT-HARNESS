@@ -25,7 +25,7 @@ function headPrTemplates(): [string, string] {
 }
 
 describe("github pr trace contract (PLAN-L7-451 W4)", () => {
-  it.fails("CANDIDATE-U-PLANRET-006: trace v2 はIssueだけに束縛し、PLAN fieldを拒否する", () => {
+  it.fails("U-PLANRET-006: trace v2 はIssueだけに束縛し、PLAN fieldを拒否する", () => {
     const fields = {
       route_mode: "add-feature",
       subject_head: "abc123def456abc123def456abc123def456abcd",

@@ -95,7 +95,7 @@ describe("CLI delegation adapter execution env", () => {
 });
 
 describe("CLI delegation command registration", () => {
-  it.fails("CANDIDATE-U-PLANRET-014: provider delegation accepts task text without --plan", () => {
+  it.fails("U-PLANRET-014: provider delegation accepts task text without --plan", () => {
     const program = new Command();
     registerDelegationCommands(program, {
       gitBranch: () => "work/test",

@@ -15,7 +15,7 @@ export function registerPlanret016Oracle(
   sourceDocs: GithubWorkflowDoc[],
   attestation: GithubWorkflowDoc,
 ): void {
-  it.fails("CANDIDATE-U-PLANRET-016: review-attestation dispatch binds custody to a required PR", () => {
+  it.fails("U-PLANRET-016: review-attestation dispatch binds custody to a required PR", () => {
     const workflow = parseYaml(attestation.content) as {
       on?: { workflow_dispatch?: { inputs?: Record<string, { required?: boolean }> } };
     };
@@ -115,7 +115,7 @@ export function registerPlanret007DecoderOracle(input: {
   admissionInput: AdmissionFactory;
   expectation: ExpectationFactory;
 }): void {
-  it.fails("CANDIDATE-U-PLANRET-007: custody v2 はPLAN fieldなしで受理し、PR番号を束縛する", async () => {
+  it.fails("U-PLANRET-007: custody v2 はPLAN fieldなしで受理し、PR番号を束縛する", async () => {
     const text = v2TextFromV1(input.buildText());
     const receipt = JSON.parse(text) as Record<string, unknown>;
     expect(receipt).not.toHaveProperty("planId");
@@ -151,7 +151,7 @@ export function registerPlanret007DecoderOracle(input: {
 export function registerPlanret007RunnerOracle(
   createFixture: () => { env: RunnerEnvironment; written: () => string | null },
 ): void {
-  it.fails("CANDIDATE-U-PLANRET-007: runnerはPLAN環境変数なしでPR custody receiptを発行する", () => {
+  it.fails("U-PLANRET-007: runnerはPLAN環境変数なしでPR custody receiptを発行する", () => {
     const fixture = createFixture();
     expect(issueCustodyReceipt(fixture.env)).toMatchObject({ exitCode: 0 });
     const receipt = JSON.parse(fixture.written() ?? "{}") as Record<string, unknown>;

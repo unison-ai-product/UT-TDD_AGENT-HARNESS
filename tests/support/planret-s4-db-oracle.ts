@@ -105,7 +105,7 @@ function v2TextFromV1(text: string): string {
 }
 
 export function registerPlanret020Oracle(): void {
-  it("CANDIDATE-U-PLANRET-020: S4 rebuild はcustody v2を受けても既存receipt tableのDDLと投影契約を保つ", () => {
+  it("U-PLANRET-020: S4 rebuild はcustody v2を受けても既存receipt tableのDDLと投影契約を保つ", () => {
     const s4BaseVersion = 30;
     expect(SCHEMA_VERSION).toBe(s4BaseVersion);
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-planret-s4-db-"));

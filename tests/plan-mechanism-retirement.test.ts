@@ -253,7 +253,7 @@ describe("PLAN 機構の S1 退役", () => {
 });
 
 describe("PLAN 機構の S4 退役", () => {
-  it.fails("CANDIDATE-U-PLANRET-014: task分類・routingとskill推薦にPLAN入力optionを残さない", () => {
+  it.fails("U-PLANRET-014: task分類・routingとskill推薦にPLAN入力optionを残さない", () => {
     const cliSource = readFileSync(join(snapshotRoot, "src/cli.ts"), "utf8");
     const classifyOptions = commandOptionSurface(cliSource, "task", "classify").all;
     const routeOptions = commandOptionSurface(cliSource, "task", "route").all;
@@ -312,7 +312,7 @@ describe("PLAN 機構の S4 退役", () => {
     }
   });
 
-  it.fails("CANDIDATE-U-PLANRET-025: Issue Form の起点・再合流先はIssueで案内する", () => {
+  it.fails("U-PLANRET-025: Issue Form の起点・再合流先はIssueで案内する", () => {
     const formDir = join(snapshotRoot, ".github/ISSUE_TEMPLATE");
     const config = parseYaml(readFileSync(join(formDir, "config.yml"), "utf8")) as {
       blank_issues_enabled?: boolean;
@@ -365,7 +365,7 @@ describe("PLAN 機構の S4 退役", () => {
 });
 
 describe("PLAN 機構の S5 退役", () => {
-  it("CANDIDATE-U-PLANRET-014: S5のProject/binding surfaceを退役し、readinessを保持する", () => {
+  it("U-PLANRET-014: S5のProject/binding surfaceを退役し、readinessを保持する", () => {
     const cliSource = readFileSync(join(snapshotRoot, "src/cli.ts"), "utf8");
     const github = githubCommandSurface(cliSource);
     expect(github.groupFound).toBe(true);
