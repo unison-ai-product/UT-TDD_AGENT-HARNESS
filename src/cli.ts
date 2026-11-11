@@ -1512,7 +1512,7 @@ plan
 
 plan
   .command("complete [id]")
-  .description("active PLAN を completed handover として記録し、current-plan を clear")
+  .description("completed handover を記録し、current-plan を clear")
   .option("--dry-run", "handover を生成するが書き込まない")
   .action((_id: string | undefined, opts: { dryRun?: boolean }) => {
     const date = new Date().toISOString().slice(0, 10);
@@ -1533,11 +1533,9 @@ plan
 
 const handover = program
   .command("handover")
-  .description(
-    "session-log PLAN digest から機械ポインタ CURRENT.json を生成 (要件 §6.8.5。散文 scaffold の生成は停止)",
-  )
+  .description("既存 digest から機械ポインタ CURRENT.json を生成")
   .option("--dry-run", "書き込まず内容のみ表示")
-  .option("--complete", "status=completed として記録 (PLAN 完了時)")
+  .option("--complete", "status=completed として記録")
   .option(
     "--scope-session",
     "§1-§2 を直近 session が触れた digest のみへ絞る (IMP-078 gap④ 前 session 混入排除)",
