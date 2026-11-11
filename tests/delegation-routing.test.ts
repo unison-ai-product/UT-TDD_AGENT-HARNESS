@@ -354,6 +354,25 @@ describe("delegation routing (PLAN-L7-255)", () => {
     }
   });
 
+  // Red (issue #733): max も宣言済み effort として受理する。現行 schema は max を拒否するため失敗する。
+  it.fails("U-CMDINPUT-004: reviewer and worker routing accept max effort", () => {
+    const reviewer = resolveDelegationRouting({
+      provider: "codex",
+      role: "blind-reviewer",
+      task: "review the diff",
+      effort: "max",
+    });
+    expect(reviewer).toMatchObject({ ok: true, effort: "max", effort_source: "explicit" });
+
+    const worker = resolveDelegationRouting({
+      provider: "claude",
+      role: "se",
+      task: "implement the parser module",
+      effort: "max",
+    });
+    expect(worker).toMatchObject({ ok: true, effort: "max", effort_source: "explicit" });
+  });
+
   it("U-CMDINPUT-004: omitted effort keeps reviewer and worker defaults", () => {
     const reviewer = resolveDelegationRouting({
       provider: "codex",

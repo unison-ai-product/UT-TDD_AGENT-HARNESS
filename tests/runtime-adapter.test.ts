@@ -191,8 +191,13 @@ describe("runtime adapter plan", () => {
 
   it("normalizes extended UT-TDD effort values at the Claude provider boundary", () => {
     expect(normalizeProviderEffort("claude", "middle")).toBe("medium");
-    expect(normalizeProviderEffort("claude", "xhigh")).toBe("high");
     expect(normalizeProviderEffort("codex", "xhigh")).toBe("xhigh");
+  });
+
+  // Red (issue #733): Claude へ渡す effort を下げない。契約: provider-invocation-input-validation.md §2.0。
+  // 現行 src は xhigh を high へ下げるため失敗する (期待される失敗: "high" が "xhigh" と一致しない)。
+  it.fails("passes Claude xhigh through without downgrading it", () => {
+    expect(normalizeProviderEffort("claude", "xhigh")).toBe("xhigh");
 
     const plan = buildAdapterPlan(
       {
@@ -206,10 +211,9 @@ describe("runtime adapter plan", () => {
     );
 
     expect(plan.args).toContain("--effort");
-    expect(plan.args).toContain("high");
-    expect(plan.args).not.toContain("xhigh");
-    expect(plan.effort).toBe("high");
-    expect(plan.env).toEqual({ [CLAUDE_EFFORT_ENV]: "high" });
+    expect(plan.args).toContain("xhigh");
+    expect(plan.effort).toBe("xhigh");
+    expect(plan.env).toEqual({ [CLAUDE_EFFORT_ENV]: "xhigh" });
   });
 
   it("U-ADAPTER-002: honors UT_TDD_CODEX_BIN before PATH lookup", () => {
@@ -684,7 +688,6 @@ describe("Issue #1261 M1 provider invocation input validation candidates", () =>
       { provider: "claude" as const, effort: "medium", normalized: "medium" },
       { provider: "claude" as const, effort: "middle", normalized: "medium" },
       { provider: "claude" as const, effort: "high", normalized: "high" },
-      { provider: "claude" as const, effort: "xhigh", normalized: "high" },
     ];
 
     for (const { provider, effort, normalized } of cases) {
@@ -714,6 +717,22 @@ describe("Issue #1261 M1 provider invocation input validation candidates", () =>
       "hybrid",
     );
     expect(omitted.effort).toBeUndefined();
+  });
+
+  // Red (issue #733): U-CMDINPUT-004 の改訂 oracle。Claude の xhigh / max は下げずに渡す。
+  // 現行 src は xhigh を high へ下げ、max は schema が拒否するため失敗する。
+  it.fails("U-CMDINPUT-004: passes Claude xhigh and max through without downgrading", () => {
+    for (const effort of ["xhigh", "max"]) {
+      expect(reasoningEffortSchema.safeParse(effort).success, effort).toBe(true);
+      const plan = buildAdapterPlan(
+        { provider: "claude", role: "se", task: "review", model: "claude-sonnet-5-5", effort },
+        "hybrid",
+      );
+      expect(plan.available, effort).toBe(true);
+      expect(plan.effort, effort).toBe(effort);
+      expect(plan.args, effort).toContain(effort);
+      expect(plan.env, effort).toEqual({ [CLAUDE_EFFORT_ENV]: effort });
+    }
   });
 
   ["extreme", ""].forEach((effort, index) => {
