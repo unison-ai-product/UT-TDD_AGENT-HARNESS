@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import {
   existsSync,
   mkdirSync,
@@ -67,6 +68,8 @@ let root = "";
 
 beforeEach(() => {
   root = mkdtempSync(join(tmpdir(), "ut-tdd-rvadm-"));
+  // custody の audit は git common dir を通して読むため、tmp repo は git repo にする。
+  execFileSync("git", ["init", "-q"], { cwd: root, windowsHide: true });
 });
 
 afterEach(() => {
