@@ -43,6 +43,7 @@ import {
 import { projectRuntimeTestRunFromSessionEvent as projectRuntimeTestRunFromSessionEventCore } from "../src/state-db/runtime-projections.ts";
 import { projectSkillMetrics as projectSkillMetricsCore } from "../src/state-db/skill-projections.ts";
 import { claudeProjectSlug } from "../src/state-db/token-tracker.ts";
+import { expectForcedStopPlanAndNullProjection } from "./support/planret-s4-projection-oracles.ts";
 
 const hasSourceScreenDocs = () =>
   existsSync(join(process.cwd(), "docs", "design", "harness", "L2-screen", "screen-list.md")) &&
@@ -1569,18 +1570,24 @@ export function evaluateAgentGuard(input: { stage: string; route: string; model:
         ],
       ]);
 
-      projectRuntimeGuardrailDecisionFromSessionEvent({
-        db,
-        plans,
-        event: {
-          ts: "2026-06-29T00:01:00Z",
-          session_id: "session-guardrail-1",
-          plan_id: "PLAN-L7-200-runtime-guardrail-provenance",
-          event_type: "forced_stop",
-          outcome: "error",
-        },
-        evidencePath: ".ut-tdd/logs/session/session-guardrail-1.jsonl",
-      });
+      const projectForcedStop = (sessionId: string, ts: string, planId: string | null) =>
+        projectRuntimeGuardrailDecisionFromSessionEvent({
+          db,
+          plans,
+          event: {
+            ts,
+            session_id: sessionId,
+            plan_id: planId,
+            event_type: "forced_stop",
+            outcome: "error",
+          },
+          evidencePath: `.ut-tdd/logs/session/${sessionId}.jsonl`,
+        });
+      projectForcedStop(
+        "session-guardrail-1",
+        "2026-06-29T00:01:00Z",
+        "PLAN-L7-200-runtime-guardrail-provenance",
+      );
       projectRuntimeGuardrailDecisionFromSessionEvent({
         db,
         plans,
@@ -1595,22 +1602,9 @@ export function evaluateAgentGuard(input: { stage: string; route: string; model:
         },
         evidencePath: ".ut-tdd/logs/session/session-guardrail-1.jsonl",
       });
+      projectForcedStop("session-guardrail-no-plan", "2026-06-29T00:03:00Z", null);
 
-      const rows = db
-        .prepare(
-          "SELECT session_id, guardrail, decision, mode, human_signoff_required, evidence_path, decided_at FROM guardrail_decisions",
-        )
-        .all();
-      expect(rows).toHaveLength(1);
-      expect(rows[0]).toMatchObject({
-        session_id: "session-guardrail-1",
-        guardrail: "forced-stop",
-        decision: "block",
-        mode: "runtime-hook",
-        human_signoff_required: 0,
-        evidence_path: ".ut-tdd/logs/session/session-guardrail-1.jsonl",
-        decided_at: "2026-06-29T00:01:00Z",
-      });
+      expectForcedStopPlanAndNullProjection(db);
     } finally {
       db.close();
     }

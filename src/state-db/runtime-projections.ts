@@ -73,10 +73,10 @@ function verificationVerbFromSessionTarget(event: RuntimeSessionLogProjection): 
 
 export function projectRuntimeTestRunFromSessionEvent(input: RuntimeTestRunProjectionInput): void {
   const { db, event, evidencePath, deps } = input;
-  if (!event.session_id || !event.plan_id || !event.ts) return;
+  if (!event.session_id || event.plan_id === "" || !event.ts) return;
   const verb = verificationVerbFromSessionTarget(event);
   if (!verb) return;
-  const planId = deps.resolvePlanId(event.plan_id);
+  const planId = event.plan_id ? deps.resolvePlanId(event.plan_id) : null;
   const shell = event.tool === "PowerShell" ? "powershell" : "bash";
   const status = event.outcome === "error" ? "failed" : "passed";
   const testRunId = deps.stableId(
@@ -111,9 +111,9 @@ export function projectRuntimeGuardrailDecisionFromSessionEvent(
   input: RuntimeGuardrailDecisionProjectionInput,
 ): void {
   const { db, event, evidencePath, deps } = input;
-  if (!event.session_id || !event.plan_id || !event.ts) return;
+  if (!event.session_id || event.plan_id === "" || !event.ts) return;
   if (event.event_type !== "forced_stop") return;
-  const planId = deps.resolvePlanId(event.plan_id);
+  const planId = event.plan_id ? deps.resolvePlanId(event.plan_id) : null;
   const guardrailDecisionId = deps.stableId(
     "guardrail-runtime",
     `${event.session_id}:${planId}:${event.ts}:forced-stop:${event.outcome ?? ""}`,

@@ -22,6 +22,7 @@ import {
 } from "../src/runtime/session-log.ts";
 import { openHarnessDb } from "../src/state-db/index.ts";
 import { rebuildHarnessDb } from "../src/state-db/projection-writer.ts";
+import { expectPlanFreeSessionProjection } from "./support/planret-s4-projection-oracles.ts";
 import { removeTestTree } from "./support/temp-tree.ts";
 
 /** in-memory file store の mock deps (now 固定で決定論)。 */
@@ -425,16 +426,7 @@ describe("session-log (PLAN-L7-01 add-impl / U-SLOG)", () => {
             ok: true,
           },
         });
-        expect(
-          db
-            .prepare("SELECT hook_name, event_type FROM hook_events WHERE session_id = ?")
-            .get("ps-projection-session"),
-        ).toMatchObject({ hook_name: "PostToolUse", event_type: "tool_use" });
-        expect(
-          db
-            .prepare("SELECT command, shell, status FROM test_runs WHERE session_id = ?")
-            .get("ps-projection-session"),
-        ).toMatchObject({ command: "PowerShell (tsc)", shell: "powershell", status: "passed" });
+        expectPlanFreeSessionProjection(db, "ps-projection-session");
       } finally {
         db.close();
       }
