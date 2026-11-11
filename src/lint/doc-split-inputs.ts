@@ -148,7 +148,11 @@ function loadCurrentBaseline(repoRoot: string): DocSplitBaseline | null {
   }
 }
 
-export function checkDocSplit(repoRoot: string): { messages: string[]; ok: boolean } {
+export function checkDocSplit(repoRoot: string): {
+  messages: string[];
+  ok: boolean;
+  findings: DocSplitFinding[];
+} {
   const adapterFindings: DocSplitFinding[] = [];
   const loaded = loadDocSplitSources(repoRoot);
   for (const path of loaded.unreadable) {
@@ -187,5 +191,6 @@ export function checkDocSplit(repoRoot: string): { messages: string[]; ok: boole
       `checked=${checked} over=${over} stale=${stale} baseline=${result.summary.baseline}`,
     ],
     ok: findings.length === 0,
+    findings,
   };
 }
