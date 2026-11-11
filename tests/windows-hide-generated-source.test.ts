@@ -114,7 +114,7 @@ const GENERATED_SOURCES: Record<string, string> = {
 
 describe("issue #1607 生成される source の windowsHide (Red)", () => {
   describe("U-WHIDE-015", () =>
-    it.fails("U-WHIDE-015: 生成される source の child_process 呼び出しはすべて windowsHide: true を持つ", () => {
+    it("U-WHIDE-015: 生成される source の child_process 呼び出しはすべて windowsHide: true を持つ", () => {
       const violations = Object.entries(GENERATED_SOURCES).flatMap(([label, source]) =>
         violationsOf(label, source),
       );
