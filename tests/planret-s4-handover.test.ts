@@ -53,15 +53,34 @@ const tempRoots: string[] = [];
 function tempRepo(): string {
   const root = mkdtempSync(join(tmpdir(), "ut-tdd-planret-s4-handover-"));
   tempRoots.push(root);
-  execFileSync("git", ["init", "--quiet", "-b", ACTIVE_PLAN], { cwd: root, stdio: "ignore" });
-  execFileSync("git", ["config", "user.email", "test@example.invalid"], { cwd: root });
-  execFileSync("git", ["config", "user.name", "UT-TDD handover fixture"], { cwd: root });
+  execFileSync("git", ["init", "--quiet", "-b", ACTIVE_PLAN], {
+    cwd: root,
+    stdio: "ignore",
+    windowsHide: true,
+  });
+  execFileSync("git", ["config", "user.email", "test@example.invalid"], {
+    cwd: root,
+    windowsHide: true,
+  });
+  execFileSync("git", ["config", "user.name", "UT-TDD handover fixture"], {
+    cwd: root,
+    windowsHide: true,
+  });
   execFileSync(
     "git",
-    ["commit", "--quiet", "--allow-empty", "-m", "test: initialize handover fixture"],
+    [
+      "-c",
+      "commit.gpgsign=false",
+      "commit",
+      "--quiet",
+      "--allow-empty",
+      "-m",
+      "test: initialize handover fixture",
+    ],
     {
       cwd: root,
       stdio: "ignore",
+      windowsHide: true,
     },
   );
   return root;
