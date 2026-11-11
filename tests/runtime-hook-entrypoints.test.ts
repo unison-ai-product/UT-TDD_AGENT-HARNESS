@@ -74,6 +74,16 @@ function expectPlanFreeLifecycle(root: string, sessionId: string): void {
   expect(events.every((event) => event.plan_id === null)).toBe(true);
 }
 
+function expectSingleCodexLifecycle(root: string): void {
+  const sessionFiles = readdirSync(join(root, ".ut-tdd", "logs", "session")).filter((name) =>
+    name.startsWith("codex-"),
+  );
+  expect(sessionFiles).toHaveLength(1);
+  const sessionFile = sessionFiles[0];
+  if (!sessionFile) throw new Error("codex wrapper session log was not created");
+  expectPlanFreeLifecycle(root, sessionFile.replace(/\.jsonl$/u, ""));
+}
+
 async function runCapturedSessionStart(
   root: string,
   sessionId: string,
@@ -570,13 +580,7 @@ describe("runtime hook entrypoints", () => {
       );
       expect(run.status).toBe(0);
 
-      const digest = JSON.parse(
-        readFileSync(join(cwd, ".ut-tdd", "logs", "plan", "PLAN-L4-13.digest.json"), "utf8"),
-      );
-      expect(digest.sessions).toHaveLength(1);
-      expect(digest.sessions[0]).toMatch(/^codex-/);
-      expect(digest.event_counts.session_start).toBe(1);
-      expect(digest.event_counts.tool_use).toBe(1);
+      expectSingleCodexLifecycle(cwd);
       expect(readFileSync(join(cwd, "codex-called.txt"), "utf8")).toContain("exec");
       const envText = readFileSync(join(cwd, "codex-env.txt"), "utf8");
       expect(envText).not.toContain("raw=1");
@@ -607,11 +611,7 @@ describe("runtime hook entrypoints", () => {
       );
       expect(run.status).toBe(0);
 
-      const digest = JSON.parse(
-        readFileSync(join(cwd, ".ut-tdd", "logs", "plan", "PLAN-L4-13.digest.json"), "utf8"),
-      );
-      expect(digest.event_counts.session_start).toBe(1);
-      expect(digest.event_counts.tool_use).toBe(1);
+      expectSingleCodexLifecycle(cwd);
       const called = readFileSync(join(cwd, "codex-called.txt"), "utf8");
       expect(called).toContain("exec");
       // プロンプトは args でなく stdin で渡る (PLAN-L7-77、cmd.exe shell-wrap の改行切り詰め回避)。
