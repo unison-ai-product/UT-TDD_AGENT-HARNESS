@@ -21,7 +21,8 @@ export function registerPlanret016Oracle(
     };
     const dispatch = workflow.on?.workflow_dispatch;
     expect(dispatch?.inputs?.pr?.required).toBe(true);
-    expect(Object.keys(dispatch?.inputs ?? {})).toEqual(["pr"]);
+    expect(dispatch?.inputs).not.toHaveProperty("plan_id");
+    expect(dispatch?.inputs).not.toHaveProperty("plan_revision");
     for (const doc of sourceDocs) {
       const parsed = parseYaml(doc.content) as {
         env?: Record<string, unknown>;

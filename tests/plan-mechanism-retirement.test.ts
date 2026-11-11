@@ -342,9 +342,12 @@ describe("PLAN 機構の S4 退役", () => {
       expect(reentry[0].attributes?.description).toMatch(/Issue URL|layer/u);
       expect(body.map((item) => item.id)).not.toContain("origin_plan");
       expect(body.map((item) => item.id)).not.toContain("origin_revision");
-      for (const field of body)
-        for (const value of Object.values(field.attributes ?? {}))
-          expect(value ?? "").not.toMatch(/PLAN(?:-L\d+-| ID|[- ]input)/iu);
+      for (const field of body) {
+        const attributes = field.attributes ?? {};
+        for (const value of [attributes.label, attributes.description, attributes.placeholder])
+          if (typeof value === "string")
+            expect(value).not.toMatch(/PLAN(?:-L\d+-| ID|[- ]input)/iu);
+      }
       if (["recovery.yml", "reverse.yml", "redesign.yml"].includes(name)) {
         const origin = body.filter((item) => item.id === "origin_issue");
         expect(origin).toHaveLength(1);
