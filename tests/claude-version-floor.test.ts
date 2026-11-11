@@ -41,6 +41,16 @@ interface HookResult {
   error?: Error;
 }
 
+type RuntimeSignals = Partial<Record<"CLAUDECODE" | "CODEX_SANDBOX" | "CODEX_HOME", string>>;
+interface RuntimeCase007 {
+  suffix: string;
+  sessionId: string;
+  result: HookResult;
+  expectsWarning: boolean;
+}
+
+let runtimeCases007: RuntimeCase007[] = [];
+
 function createFixture(): string {
   const root = mkdtempSync(join(tmpdir(), "ut-tdd-ccver-"));
   FIXTURES.push(root);
@@ -63,10 +73,19 @@ function writeTranscriptRows(root: string, rows: Record<string, unknown>[]): str
   return path;
 }
 
-function invokePostToolUse(root: string, input: Record<string, unknown>): HookResult {
+function invokePostToolUse(
+  root: string,
+  input: Record<string, unknown>,
+  runtimeSignals: RuntimeSignals = { CLAUDECODE: "1" },
+): HookResult {
+  const env: NodeJS.ProcessEnv = { ...process.env, CLAUDE_PROJECT_DIR: root };
+  delete env.CLAUDECODE;
+  delete env.CODEX_SANDBOX;
+  delete env.CODEX_HOME;
+  Object.assign(env, runtimeSignals);
   const result = spawnSync(process.execPath, [CLI_PATH, "hook", "post-tool-use"], {
     cwd: root,
-    env: { ...process.env, CLAUDE_PROJECT_DIR: root },
+    env,
     encoding: "utf8",
     input: JSON.stringify(input),
     windowsHide: true,
@@ -99,7 +118,7 @@ afterAll(() => {
   for (const fixture of FIXTURES.splice(0)) removeTestTree(fixture);
 });
 
-describe("Claude Code version floor warning (Issue #1561)", () => {
+describe.sequential("Claude Code version floor warning (Issue #1561)", () => {
   beforeAll(async () => {
     const cases001 = [
       { previous: "2.1.318", latest: "2.1.293" },
@@ -397,6 +416,65 @@ describe("Claude Code version floor warning (Issue #1561)", () => {
     ) {
       violations.push("the literal floor must appear only in the authoritative source module");
     }
+    expect(violations).toEqual([]);
+  });
+
+  it("U-CCVER-007 prerequisite: all runtime combinations start and exit normally", () => {
+    const cases: {
+      suffix: string;
+      runtimeSignals: RuntimeSignals;
+      expectsWarning: boolean;
+    }[] = [
+      { suffix: "a", runtimeSignals: { CLAUDECODE: "1" }, expectsWarning: true },
+      {
+        suffix: "b",
+        runtimeSignals: { CLAUDECODE: "1", CODEX_SANDBOX: "1" },
+        expectsWarning: false,
+      },
+      { suffix: "c", runtimeSignals: { CODEX_SANDBOX: "1" }, expectsWarning: false },
+      { suffix: "d", runtimeSignals: {}, expectsWarning: false },
+    ];
+    runtimeCases007 = cases.map(({ suffix, runtimeSignals, expectsWarning }) => {
+      const root = createFixture();
+      const sessionId = `ccver-007-${suffix}`;
+      const result = invokePostToolUse(
+        root,
+        { session_id: sessionId, hook_event_name: "PostToolUse" },
+        runtimeSignals,
+      );
+      return { suffix, sessionId, result, expectsWarning };
+    });
+    expect(runtimeCases007).toHaveLength(4);
+    const failures = runtimeCases007.flatMap(({ suffix, result }) => [
+      ...(result.error ? [`${suffix}: CLI process did not start`] : []),
+      ...(result.status !== 0 ? [`${suffix}: CLI process did not exit normally`] : []),
+    ]);
+    expect(failures).toEqual([]);
+  });
+
+  it.fails("U-CCVER-007: warns only in a Claude runtime", () => {
+    const violations: string[] = [];
+    for (const { suffix, sessionId, result, expectsWarning } of runtimeCases007) {
+      if (expectsWarning) {
+        let output: Record<string, unknown> | undefined;
+        try {
+          output = JSON.parse(result.stdout) as Record<string, unknown>;
+        } catch {
+          // Report malformed or mixed stdout through the assertion below.
+        }
+        if (
+          !output ||
+          Object.keys(output).length !== 1 ||
+          typeof output.systemMessage !== "string" ||
+          !output.systemMessage.includes("Claude Code の版を確かめられない")
+        ) {
+          violations.push(`${suffix}: expected one Claude version warning JSON object`);
+        }
+      } else if (result.stdout !== `session-log: post-tool-use ${sessionId}\n`) {
+        violations.push(`${suffix}: expected normal session-log output only`);
+      }
+    }
+
     expect(violations).toEqual([]);
   });
 });

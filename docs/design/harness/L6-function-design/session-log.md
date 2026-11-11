@@ -289,7 +289,7 @@ field は `type`・`command`・`timeout`・`statusMessage`・`async`・`addition
 - 信号は `src/runtime/detect.ts` の `detectMode` が runtime の判定に使うものと同じである。新しい環境変数・設定項目・hook の引数は足さない。
 - 両方の信号がある場合 (Claude から起動した Codex が `CLAUDECODE` を継承した場合など) は Codex とみなし、評価しない。警告は助言であり、評価しない側に倒しても guard の判定は変わらない。逆に、利用者が `CODEX_HOME` を常に設定している環境では Claude でも警告が出ない。この見逃しは受け入れる (Codex の画面に Claude の警告を出す誤りより害が小さい)。
 - `CLAUDE_PROJECT_DIR` の有無は対象の判定に使わない。Claude から起動した Codex に継承されうるためである。
-- 対応する oracle は `docs/test-design/harness/L7-claude-version-floor-test-design.md` の `CANDIDATE-U-CCVER-007` である。
+- 対応する oracle は `docs/test-design/harness/L7-claude-version-floor-test-design.md` の `U-CCVER-007` である。
 
 採らない方式。
 
@@ -297,4 +297,4 @@ field は `type`・`command`・`timeout`・`statusMessage`・`async`・`addition
 - わざと失敗する検査用の hook を置く方式: 新しい版では全 tool を止めて作業できなくなり、古い版では無音になる。
 - guard の内部エラーをすべて exit 2 にして版に頼らない方式: 古い版で効かなかったのは guard の script を起動できない場合であり、script の中で例外を捕まえても救えない。work-guard の「内部エラーは fail-open (exit 0)」は既存の契約で、本節では変えない。
 
-対応する自動テスト oracle は `docs/test-design/harness/L7-claude-version-floor-test-design.md` の `U-CCVER-001`〜`005` と、対象の runtime の候補 `CANDIDATE-U-CCVER-007` である。実画面での確認は、同書の `CANDIDATE-U-CCVER-006` を実装後に行う。
+対応する自動テスト oracle は `docs/test-design/harness/L7-claude-version-floor-test-design.md` の `U-CCVER-001`〜`005` と `U-CCVER-007` である。実画面での確認は、同書の `CANDIDATE-U-CCVER-006` を実装後に行う。
