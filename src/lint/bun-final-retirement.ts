@@ -153,8 +153,6 @@ const PACK_DOCUMENT_PREFIXES = [
 
 const COMPATIBILITY_PATHS = new Set([
   "src/schema/frontmatter.ts",
-  "src/schema/cutover-transition.ts",
-  "src/runtime/cutover-transition.ts",
   "src/runtime/verb-classify.ts",
   "src/runtime/agent-slots.ts",
   "src/runtime/node-slice-admission.ts",
