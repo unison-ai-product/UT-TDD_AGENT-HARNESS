@@ -249,7 +249,7 @@ describe("elicitation stage-bound context (U-ELICIT)", () => {
   it("U-ELICIT-006: appendDesignDecision writes an append-only JSONL record and validates input", () => {
     const repoRoot = tempRepo();
     appendDesignDecision(repoRoot, {
-      planId: "PLAN-L7-906-record",
+      issueNumber: 906,
       currentLocation: "U20d: record",
       topic: "方式選択",
       options: ["A", "B"],
@@ -258,7 +258,7 @@ describe("elicitation stage-bound context (U-ELICIT)", () => {
       recordedAt: "2026-07-13T00:00:00Z",
     });
     appendDesignDecision(repoRoot, {
-      planId: "PLAN-L7-906-record",
+      issueNumber: 906,
       topic: "二件目",
       chosen: "B",
       reason: "追記が壊れないこと",
@@ -267,14 +267,14 @@ describe("elicitation stage-bound context (U-ELICIT)", () => {
     const lines = readFileSync(join(repoRoot, DESIGN_DECISION_LOG_PATH), "utf8").trim().split("\n");
     expect(lines).toHaveLength(2);
     expect(JSON.parse(lines[0])).toMatchObject({
-      plan_id: "PLAN-L7-906-record",
+      issue_number: 906,
       current_location: "U20d: record",
       chosen: "A",
       options: ["A", "B"],
     });
     expect(() =>
       appendDesignDecision(repoRoot, {
-        planId: "PLAN-L7-906-record",
+        issueNumber: 906,
         topic: "",
         chosen: "A",
         reason: "r",

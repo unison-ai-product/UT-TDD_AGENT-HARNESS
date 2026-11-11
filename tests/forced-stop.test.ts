@@ -83,12 +83,21 @@ describe("forced-stop (PLAN-L7-02 add-impl / U-FSF)", () => {
     const line = deps.files.get(sessionPath("s1")) as string;
     const parsed = JSON.parse(line.trim());
     expect(parsed.event_type).toBe("forced_stop");
+    expect(parsed.plan_id).toBe("PLAN-A");
     expect(parsed.next_message_ref).toBe("s1.jsonl#3");
     expect(typeof parsed.next_message_ref).toBe("string");
     // 本文フィールドを持たない (秘匿)
     expect(parsed.message).toBeUndefined();
     expect(parsed.text).toBeUndefined();
     expect(parsed.content).toBeUndefined();
+
+    const unresolved = mockDeps({
+      currentBranch: () => {
+        throw new Error("must not resolve active plan");
+      },
+    });
+    recordForcedStop({ session_id: "s2", dangling_from: "T2" }, unresolved);
+    expect(JSON.parse((unresolved.files.get(sessionPath("s2")) ?? "{}").trim()).plan_id).toBeNull();
 
     // fail-open
     const throwing = mockDeps({

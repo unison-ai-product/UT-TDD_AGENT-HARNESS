@@ -92,7 +92,6 @@ async function dryRunTask(provider: "claude" | "codex", role: string): Promise<s
     gitBranch: () => "work/d3-verdict-receipt",
     gitHead: () => "a".repeat(40),
     resolveTaskText: (opts) => opts.task ?? null,
-    resolveSkillContextInjection: () => undefined,
     runSessionStartSideEffects: () => {},
     taskFileOptionDescription: "read task text from file",
     writeHandoverWarnings: () => {},

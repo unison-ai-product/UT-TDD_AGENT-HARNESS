@@ -1085,7 +1085,7 @@ function codexWrapperParityFiles(root: string, overrides: Record<string, string>
       "tests/runtime-hook-entrypoints.test.ts": [
         "ut-tdd codex --execute records the same session lifecycle through the adapter wrapper",
         "ut-tdd codex --task-file feeds file content through the same adapter wrapper",
-        "ut-tdd codex --plan records wrapper lifecycle without forwarding plan flags to Codex",
+        "ut-tdd codex records wrapper lifecycle without resolving a current PLAN",
       ].join("\n"),
       "tests/runtime-adapter.test.ts": "U-ADAPTER-007\nU-ADAPTER-008",
       "docs/test-design/harness/L7-unit-test-design.md": "U-ADAPTER-009",

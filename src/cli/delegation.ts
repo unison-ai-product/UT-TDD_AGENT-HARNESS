@@ -20,7 +20,6 @@ import {
 } from "../feedback/review-verdict-custody.ts";
 import { loadUntrackedAddedFiles, loadWorkingTreeStatus } from "../lint/change-impact.ts";
 import {
-  type AdapterContextInjection,
   type AdapterPlan,
   type AdapterProvider,
   buildAdapterPlan,
@@ -64,7 +63,6 @@ export interface AdapterSpawnResult {
 export interface AdapterExecutionInput {
   sessionPrefix: string;
   toolName: string;
-  planId?: string;
   jsonOut?: boolean;
   reviewRole?: string;
   review?: {
@@ -84,7 +82,6 @@ export interface AdapterExecutionResult {
 
 export interface DelegationCommandDeps extends AdapterExecutionDeps {
   resolveTaskText: (opts: { task?: string; taskFile?: string }) => string | null;
-  resolveSkillContextInjection: (planId: string | undefined) => AdapterContextInjection | undefined;
   taskFileOptionDescription: string;
 }
 
@@ -190,7 +187,6 @@ export function executeAdapterPlanForCli(
   const startInput: SessionHookInput = {
     hook_event_name: "SessionStart",
     session_id: sessionId,
-    ...(input.planId ? { plan_id: input.planId } : {}),
   };
   depsInput.runSessionStartSideEffects({
     repoRoot,
@@ -272,7 +268,6 @@ export function executeAdapterPlanForCli(
     {
       hook_event_name: "PostToolUse",
       session_id: sessionId,
-      ...(input.planId ? { plan_id: input.planId } : {}),
       tool_name: input.toolName,
       tool_input: { command: `${plan.command} ${plan.args.join(" ")}` },
       tool_response: { outcome: child.status === 0 ? "ok" : "error" },
@@ -284,7 +279,6 @@ export function executeAdapterPlanForCli(
     {
       hook_event_name: "Stop",
       session_id: sessionId,
-      ...(input.planId ? { plan_id: input.planId } : {}),
     },
     deps,
     "Stop",
@@ -310,7 +304,6 @@ function runtimeCommand(
     .requiredOption("--role <role>", "delegation role")
     .option("--task <text>", "task text")
     .option("--task-file <path>", deps.taskFileOptionDescription)
-    .option("--plan <id>", "PLAN id")
     .option("--model <model>", "provider model override for this call")
     .option("--effort <level>", "provider reasoning effort override for this call")
     .option("--review-pr <number>", "reviewed pull request number")
@@ -325,7 +318,6 @@ function runtimeCommand(
         role: string;
         task?: string;
         taskFile?: string;
-        plan?: string;
         model?: string;
         effort?: string;
         reviewPr?: string;
@@ -416,7 +408,6 @@ function runtimeCommand(
           `effort=${routing.effort} (${routing.effort_source})` +
           (routing.review_lane ? ` lane=${routing.review_lane}` : "") +
           (routing.task_intent ? ` intent=${routing.task_intent}` : "");
-        const contextInjection = deps.resolveSkillContextInjection(opts.plan);
         // 著者族は provider から独立した事実 (委譲を実行している runtime) から取る。
         // provider の反対と定義すると D1 の同族レビュー検出が恒偽になり fail-open する
         // (`resolveReviewAuthorFamily` の doc を参照)。判別できなければ推測せず落とす。
@@ -480,11 +471,9 @@ function runtimeCommand(
               provider,
               role: opts.role,
               task: taskForAdapter,
-              planId: opts.plan,
               model: routing.model,
               effort: routing.effort,
               execute: Boolean(opts.execute),
-              contextInjection,
             },
             mode,
           );
@@ -553,7 +542,6 @@ function runtimeCommand(
           {
             sessionPrefix: provider,
             toolName: provider,
-            planId: opts.plan,
             jsonOut,
             reviewRole: opts.role,
             ...(reviewRequest && reviewVerdictFile

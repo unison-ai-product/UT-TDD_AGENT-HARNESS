@@ -1,4 +1,4 @@
-# PLAN-L7-451 W5: Incident episode の Issue Form (PLAN-L6-83 準拠)。
+# Incident episode Issue Form.
 name: Incident
 description: 運用中の障害・退行 episode を起票する
 title: "Incident: "
@@ -40,12 +40,6 @@ body:
       label: Observed HEAD (git SHA)
     validations:
       required: true
-  - type: input
-    id: origin_plan
-    attributes:
-      label: Origin PLAN ID (関連する場合)
-    validations:
-      required: false
   - type: textarea
     id: evidence
     attributes:
@@ -70,6 +64,7 @@ body:
   - type: input
     id: reentry_target
     attributes:
-      label: Reentry target (Forward 再合流先 PLAN / layer)
+      label: Reentry target (Forward 再合流先 Issue / layer)
+      description: Forward へ再合流する Issue URL または layer を記入する
     validations:
       required: true
