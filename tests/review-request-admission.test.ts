@@ -129,7 +129,6 @@ function runCli(
     gitBranch: () => "test/issue1600",
     gitHead: () => HEAD.slice(0, 7),
     resolveTaskText: (opts) => opts.task ?? null,
-    resolveSkillContextInjection: () => undefined,
     runSessionStartSideEffects: () => {},
     taskFileOptionDescription: "read task text from file",
     writeHandoverWarnings: () => {},

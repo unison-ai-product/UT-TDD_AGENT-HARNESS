@@ -490,7 +490,7 @@ function projectHookEvents(
         } catch {
           continue;
         }
-        if (!event.session_id || !event.plan_id || !event.event_type) continue;
+        if (!event.session_id || event.plan_id === "" || !event.event_type) continue;
         const hookName =
           event.event_type === "session_start"
             ? "SessionStart"
@@ -501,7 +501,7 @@ function projectHookEvents(
                 : "PostToolUse";
         const id = stableId(
           "hook-event",
-          `${event.session_id}:${event.plan_id}:${event.ts ?? ""}:${event.event_type}`,
+          `${event.session_id}:${event.plan_id ?? ""}:${event.ts ?? ""}:${event.event_type}`,
         );
         recordProjectionEvent(db, {
           table: "hook_events",
@@ -509,7 +509,7 @@ function projectHookEvents(
           row: {
             event_id: id,
             session_id: event.session_id,
-            plan_id: resolveProjectedPlanId(plans, event.plan_id),
+            plan_id: event.plan_id ? resolveProjectedPlanId(plans, event.plan_id) : null,
             hook_name: hookName,
             event_type: event.event_type,
             occurred_at: event.ts ?? "",

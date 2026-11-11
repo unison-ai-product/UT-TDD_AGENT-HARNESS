@@ -161,7 +161,6 @@ function runDelegation(args: string[]): Promise<{ stdout: string; stderr: string
     gitBranch: () => "work/d3b-review-attestation",
     gitHead: () => head,
     resolveTaskText: (opts) => opts.task ?? null,
-    resolveSkillContextInjection: () => undefined,
     runSessionStartSideEffects: () => {},
     taskFileOptionDescription: "read task text from file",
     writeHandoverWarnings: () => {},

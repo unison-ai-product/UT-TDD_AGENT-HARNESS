@@ -1,4 +1,4 @@
-# PLAN-L7-451 W5: Reverse (backfill) episode の Issue Form (PLAN-L6-83 準拠)。
+# Reverse (backfill) episode Issue Form.
 name: Reverse
 description: 実装観測から設計へ gap-only backfill する Reverse episode を起票する
 title: "Reverse: "
@@ -29,10 +29,11 @@ body:
     validations:
       required: true
   - type: input
-    id: origin_plan
+    id: origin_issue
     attributes:
-      label: Origin PLAN ID
-      placeholder: PLAN-L7-xxx
+      label: Origin Issue URL
+      description: 起点となった既存 GitHub Issue の canonical Issue URL。Parent Issue 欄とは別の由来参照。
+      placeholder: https://github.com/<owner>/<repo>/issues/<number>
     validations:
       required: true
   - type: textarea
@@ -70,6 +71,7 @@ body:
   - type: input
     id: reentry_target
     attributes:
-      label: Reentry target (Forward 再合流先 PLAN / layer)
+      label: Reentry target (Forward 再合流先 Issue / layer)
+      description: Forward へ再合流する Issue URL または layer を記入する
     validations:
       required: true

@@ -22,6 +22,7 @@ import {
 } from "../src/runtime/session-log.ts";
 import { openHarnessDb } from "../src/state-db/index.ts";
 import { rebuildHarnessDb } from "../src/state-db/projection-writer.ts";
+import { expectPlanFreeSessionProjection } from "./support/planret-s4-projection-oracles.ts";
 import { removeTestTree } from "./support/temp-tree.ts";
 
 /** in-memory file store の mock deps (now 固定で決定論)。 */
@@ -266,7 +267,7 @@ describe("session-log (PLAN-L7-01 add-impl / U-SLOG)", () => {
     const deps = mockDeps({ currentBranch: () => "add/session-log" });
     expect(onSessionStart({ session_id: "s1" }, deps)).toBe(0);
     expect(deps.files.get(sessionPath("s1"))).toContain('"event_type":"session_start"');
-    expect(deps.files.get(sessionPath("s1"))).toContain('"plan_id":"session-log"');
+    expect(deps.files.get(sessionPath("s1"))).toContain('"plan_id":null');
 
     const throwing = mockDeps({
       appendLine: () => {
@@ -425,16 +426,7 @@ describe("session-log (PLAN-L7-01 add-impl / U-SLOG)", () => {
             ok: true,
           },
         });
-        expect(
-          db
-            .prepare("SELECT hook_name, event_type FROM hook_events WHERE session_id = ?")
-            .get("ps-projection-session"),
-        ).toMatchObject({ hook_name: "PostToolUse", event_type: "tool_use" });
-        expect(
-          db
-            .prepare("SELECT command, shell, status FROM test_runs WHERE session_id = ?")
-            .get("ps-projection-session"),
-        ).toMatchObject({ command: "PowerShell (tsc)", shell: "powershell", status: "passed" });
+        expect(expectPlanFreeSessionProjection(db, "ps-projection-session")).toEqual([null, null]);
       } finally {
         db.close();
       }
