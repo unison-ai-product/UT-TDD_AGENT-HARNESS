@@ -104,8 +104,8 @@ afterEach(() => {
   for (const root of tempRoots.splice(0)) removeTestTree(root);
 });
 
-describe("CANDIDATE-U-PLANRET-026 S4 handover retirement", () => {
-  it.fails("CANDIDATE-U-PLANRET-026: new session pointer has null active_plan", () => {
+describe("U-PLANRET-026 S4 handover retirement", () => {
+  it.fails("U-PLANRET-026: new session pointer has null active_plan", () => {
     const root = tempRepo();
     writeFixture(root, CURRENT_PLAN, `${ACTIVE_PLAN}\n${NOW}`);
     writeFixture(root, DIGEST, JSON.stringify(LEGACY_DIGEST));
@@ -118,19 +118,19 @@ describe("CANDIDATE-U-PLANRET-026 S4 handover retirement", () => {
     expect([result.pointer.active_plan, pointer.active_plan]).toEqual([null, null]);
   });
 
-  it.fails("CANDIDATE-U-PLANRET-026: new provider package has null active_plan", () => {
+  it.fails("U-PLANRET-026: new provider package has null active_plan", () => {
     const pkg = buildProviderHandover(LEGACY_PROVIDER_INPUT, NOW);
 
     expect(pkg.active_plan).toBeNull();
   });
 
-  it.fails("CANDIDATE-U-PLANRET-026: provider ID has no PLAN suffix", () => {
+  it.fails("U-PLANRET-026: provider ID has no PLAN suffix", () => {
     const pkg = buildProviderHandover(LEGACY_PROVIDER_INPUT, NOW);
 
     expect(pkg.handover_id).toBe("20261111060000-claude-to-codex");
   });
 
-  it.fails("CANDIDATE-U-PLANRET-026: provider generation accepts no PLAN input", () => {
+  it.fails("U-PLANRET-026: provider generation accepts no PLAN input", () => {
     const root = tempRepo();
     writeFixture(root, CURRENT_PLAN, `${ACTIVE_PLAN}\n${NOW}`);
     writeFixture(root, DIGEST, JSON.stringify(LEGACY_DIGEST));
@@ -148,20 +148,20 @@ describe("CANDIDATE-U-PLANRET-026 S4 handover retirement", () => {
     expect(JSON.parse(readFileSync(join(root, PROVIDER_CURRENT), "utf8")).active_plan).toBeNull();
   });
 
-  it("CANDIDATE-U-PLANRET-026: legacy reader preserves the saved provider package", () => {
+  it("U-PLANRET-026: legacy reader preserves the saved provider package", () => {
     const root = tempRepo();
     writeFixture(root, PROVIDER_CURRENT, JSON.stringify(LEGACY_PROVIDER_PACKAGE));
 
     expect(readProviderHandoverCurrent(providerDeps(root))).toEqual(LEGACY_PROVIDER_PACKAGE);
   });
 
-  it("CANDIDATE-U-PLANRET-026: branch alone does not resolve session active_plan", () => {
+  it("U-PLANRET-026: branch alone does not resolve session active_plan", () => {
     const root = tempRepo();
 
     expect(runHandover({ date: "2026-11-11" }, handoverDeps(root)).pointer.active_plan).toBeNull();
   });
 
-  it("CANDIDATE-U-PLANRET-026: existing PLAN digest remains in handover scope", () => {
+  it("U-PLANRET-026: existing PLAN digest remains in handover scope", () => {
     const root = tempRepo();
     writeFixture(root, DIGEST, JSON.stringify(LEGACY_DIGEST));
 
