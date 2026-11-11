@@ -78,7 +78,7 @@ function invokePostToolUse(
   input: Record<string, unknown>,
   runtimeSignals: RuntimeSignals = { CLAUDECODE: "1" },
 ): HookResult {
-  const env = { ...process.env, CLAUDE_PROJECT_DIR: root };
+  const env: NodeJS.ProcessEnv = { ...process.env, CLAUDE_PROJECT_DIR: root };
   delete env.CLAUDECODE;
   delete env.CODEX_SANDBOX;
   delete env.CODEX_HOME;
