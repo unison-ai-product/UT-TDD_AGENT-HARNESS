@@ -426,7 +426,7 @@ describe("session-log (PLAN-L7-01 add-impl / U-SLOG)", () => {
             ok: true,
           },
         });
-        expectPlanFreeSessionProjection(db, "ps-projection-session");
+        expect(expectPlanFreeSessionProjection(db, "ps-projection-session")).toEqual([null, null]);
       } finally {
         db.close();
       }

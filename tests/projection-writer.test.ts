@@ -1604,7 +1604,7 @@ export function evaluateAgentGuard(input: { stage: string; route: string; model:
       });
       projectForcedStop("session-guardrail-no-plan", "2026-06-29T00:03:00Z", null);
 
-      expectForcedStopPlanAndNullProjection(db);
+      expect(expectForcedStopPlanAndNullProjection(db)).toHaveLength(2);
     } finally {
       db.close();
     }
