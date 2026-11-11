@@ -340,8 +340,8 @@ describe("Forward FSM", () => {
         "ut-tdd",
         "workflow",
         "status",
-        "--plan",
-        subject.subjectId,
+        "--issue",
+        "344",
         "--revision",
         String(subject.subjectRevision),
         "--source-commit",
@@ -357,7 +357,7 @@ describe("Forward FSM", () => {
         exitCode: 3,
       });
       expect(envelope.digest).toBe(`sha256:${"0".repeat(64)}`);
-      expect(process.exitCode).toBe(3);
+      expect([process.exitCode, envelope.subjectId]).toEqual([3, "344"]);
     } finally {
       stdout.mockRestore();
       stderr.mockRestore();
