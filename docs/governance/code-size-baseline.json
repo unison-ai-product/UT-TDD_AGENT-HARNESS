@@ -83,7 +83,6 @@
   "tests/consumer-node-runtime-closure-red.test.ts": { "lines": 900, "functionExcess": null },
   "tests/consumer-node-runtime-physical.test.ts": { "lines": 816, "functionExcess": null },
   "tests/consumer-node-runtime.test.ts": { "lines": 758, "functionExcess": null },
-  "tests/cutover-transition.test.ts": { "lines": 715, "functionExcess": null },
   "tests/db-currency.test.ts": { "lines": 871, "functionExcess": null },
   "tests/db-projection-coverage.test.ts": { "lines": 574, "functionExcess": null },
   "tests/ddd-tdd-rules.test.ts": { "lines": 509, "functionExcess": null },
