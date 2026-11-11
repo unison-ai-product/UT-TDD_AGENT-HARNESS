@@ -630,17 +630,6 @@ export function gateSelectionGates(calls: string[]): InjectedGate[] {
   ];
 }
 
-export function expectGateSelection(testFixture: Fixture, expected: string[]): void {
-  const calls: string[] = [];
-  expect(
-    checkWithGates(testFixture.work, testFixture.headSha, {
-      gates: gateSelectionGates(calls),
-      pr: 1559,
-    }),
-  ).toBeNull();
-  expect(calls.sort()).toEqual(expected);
-}
-
 export const checkWithGates = checkBaselineConflict as unknown as (
   repoRoot: string,
   headSha: string,
@@ -704,20 +693,6 @@ export function runMerge(
   if (readMergeCommitTree) ports.readMergeCommitTree = readMergeCommitTree;
   const result = runPrMerge({ repoRoot: fixture.work, pr: 1559, now: () => NOW, ports });
   return { result, merges: mergeCount };
-}
-
-export function expectGitFailureDenied(
-  testFixture: Fixture,
-  needles: string[],
-  fault: { active: boolean; needles: string[]; hits: number },
-): void {
-  fault.active = true;
-  fault.needles = needles;
-  fault.hits = 0;
-  const run = runMerge(testFixture);
-  expect(run.result.reason).toMatch(/^baseline_conflict_unknown:/);
-  expect(run.merges).toBe(0);
-  expect(fault.hits).toBe(1);
 }
 
 export function captureWorktreeObservation(
