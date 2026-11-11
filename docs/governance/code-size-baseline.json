@@ -75,7 +75,7 @@
   "tests/bun-permanent-ban.test.ts": { "lines": 704, "functionExcess": null },
   "tests/claude-memory-wake.test.ts": { "lines": 950, "functionExcess": null },
   "tests/claude-wake-generation-upgrade.test.ts": { "lines": 503, "functionExcess": null },
-  "tests/cli-surface.test.ts": { "lines": 1616, "functionExcess": null },
+  "tests/cli-surface.test.ts": { "lines": 1615, "functionExcess": null },
   "tests/codex-hook-adapter.test.ts": { "lines": 666, "functionExcess": null },
   "tests/consumer-g1-screen-namespace.test.ts": { "lines": 525, "functionExcess": null },
   "tests/consumer-local-runtime-admission.test.ts": { "lines": 889, "functionExcess": null },

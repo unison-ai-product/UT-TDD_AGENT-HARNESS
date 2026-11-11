@@ -188,8 +188,6 @@ describe("L7 CLI surface closure", () => {
         "--review-kind",
         "human",
         "--human-approved",
-        "--plan",
-        "PLAN-L7-363-routine-gate-run-projection",
         "--session",
         "session-gate-test",
         "--json",
@@ -204,7 +202,7 @@ describe("L7 CLI surface closure", () => {
       expect(payload.gate_run_evidence.path).toBe(`.ut-tdd/gate_runs/${expectedFileName}`);
       expect(evidence).toMatchObject({
         gate_id: "G0.5",
-        plan_id: "PLAN-L7-363-routine-gate-run-projection",
+        plan_id: null,
         status: "passed",
         session_id: "session-gate-test",
         source: "ut-tdd gate",
@@ -226,8 +224,6 @@ describe("L7 CLI surface closure", () => {
         "--review-kind",
         "human",
         "--human-approved",
-        "--plan",
-        "PLAN-L7-363-routine-gate-run-projection",
         "--json",
       ]);
       expect(run.status, `stderr:\n${run.stderr}\nstdout:\n${run.stdout}`).toBe(0);
@@ -257,10 +253,13 @@ describe("L7 CLI surface closure", () => {
   }, 15_000);
 
   it("exposes skill suggest as a JSON command surface", () => {
-    const run = runCli(["skill", "suggest", "--plan", "PLAN-NO-SUCH", "--json"]);
+    const run = runCli(["skill", "suggest", "--text", "expose a JSON command surface", "--json"]);
 
     expect(run.status).toBe(0);
-    expect(JSON.parse(run.stdout)).toEqual([]);
+    expect(JSON.parse(run.stdout)[0]).toMatchObject({
+      plan_id: "text:expose-a-json-command-surface",
+      reason: expect.stringContaining("source=text"),
+    });
   }, 15_000);
 
   it("exposes strict telemetry provenance as a doctor verification flag", () => {
