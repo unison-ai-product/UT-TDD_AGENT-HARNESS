@@ -1,17 +1,23 @@
-import { join } from "node:path";
-import { describe, expect, it } from "vitest";
-import { type HandoverDeps, runHandover } from "../src/handover/index.ts";
+import { execFileSync } from "node:child_process";
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
+import { afterEach, describe, expect, it } from "vitest";
+import { nodeHandoverDeps, resolveHandoverScope, runHandover } from "../src/handover/index.ts";
 import {
   buildProviderHandover,
-  type ProviderHandoverDeps,
+  nodeProviderHandoverDeps,
   readProviderHandoverCurrent,
+  runProviderHandover,
 } from "../src/runtime/provider-handover.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 
 const NOW = "2026-11-11T06:00:00.000Z";
-const REPO = "/repo";
-const CURRENT_PLAN = join(REPO, ".ut-tdd", "state", "current-plan");
-const PROVIDER_CURRENT = join(REPO, ".ut-tdd", "handover", "provider", "CURRENT.json");
 const ACTIVE_PLAN = "PLAN-L7-04-handover-mechanism";
+const CURRENT_PLAN = join(".ut-tdd", "state", "current-plan");
+const POINTER = join(".ut-tdd", "handover", "CURRENT.json");
+const PROVIDER_CURRENT = join(".ut-tdd", "handover", "provider", "CURRENT.json");
+const DIGEST = join(".ut-tdd", "logs", "plan", `${ACTIVE_PLAN}.digest.json`);
 const LEGACY_PROVIDER_PACKAGE = {
   schema_version: "provider-handover.v1",
   handover_kind: "mechanical",
@@ -27,44 +33,70 @@ const LEGACY_PROVIDER_PACKAGE = {
   },
   created_at: "2026-06-08T00:00:00.000Z",
 } as const;
+const LEGACY_DIGEST = {
+  plan_id: ACTIVE_PLAN,
+  sessions: ["session-1"],
+  commits: ["abc123"],
+  files_touched: ["src/handover/index.ts"],
+  failures: [],
+  updated_at: NOW,
+} as const;
 const LEGACY_PROVIDER_INPUT = {
   from: "claude",
   to: "codex",
   activePlan: ACTIVE_PLAN,
   summary: "continue",
 } as const;
+const PLAN_FREE_PROVIDER_INPUT = { from: "claude", to: "codex", summary: "continue" } as const;
+const tempRoots: string[] = [];
 
-function handoverDeps(): HandoverDeps & { files: Map<string, string> } {
-  const files = new Map([[CURRENT_PLAN, `${ACTIVE_PLAN}\n${NOW}`]]);
-  return {
-    files,
-    repoRoot: REPO,
-    now: () => NOW,
-    readText: (path: string) => files.get(path) ?? null,
-    writeText: (path: string, content: string) => files.set(path, content),
-    listDir: (dir: string) =>
-      [...files.keys()]
-        .filter((path) => path.startsWith(`${dir}/`) || path.startsWith(`${dir}\\`))
-        .map((path) => path.slice(dir.length + 1)),
-  };
+function tempRepo(): string {
+  const root = mkdtempSync(join(tmpdir(), "ut-tdd-planret-s4-handover-"));
+  tempRoots.push(root);
+  execFileSync("git", ["init", "--quiet", "-b", ACTIVE_PLAN], { cwd: root, stdio: "ignore" });
+  execFileSync("git", ["config", "user.email", "test@example.invalid"], { cwd: root });
+  execFileSync("git", ["config", "user.name", "UT-TDD handover fixture"], { cwd: root });
+  execFileSync(
+    "git",
+    ["commit", "--quiet", "--allow-empty", "-m", "test: initialize handover fixture"],
+    {
+      cwd: root,
+      stdio: "ignore",
+    },
+  );
+  return root;
 }
 
-function providerDeps(): ProviderHandoverDeps & { files: Map<string, string> } {
-  const files = new Map<string, string>();
-  return {
-    files,
-    repoRoot: REPO,
-    now: () => NOW,
-    readText: (path: string) => files.get(path) ?? null,
-    writeText: (path: string, content: string) => files.set(path, content),
-  };
+function writeFixture(root: string, relative: string, content: string): void {
+  const path = join(root, relative);
+  mkdirSync(dirname(path), { recursive: true });
+  writeFileSync(path, content, "utf8");
 }
+
+function handoverDeps(root: string) {
+  return { ...nodeHandoverDeps(root), now: () => NOW };
+}
+
+function providerDeps(root: string) {
+  return { ...nodeProviderHandoverDeps(root), now: () => NOW };
+}
+
+afterEach(() => {
+  for (const root of tempRoots.splice(0)) removeTestTree(root);
+});
 
 describe("CANDIDATE-U-PLANRET-026 S4 handover retirement", () => {
   it.fails("CANDIDATE-U-PLANRET-026: new session pointer has null active_plan", () => {
-    const result = runHandover({ date: "2026-11-11" }, handoverDeps());
+    const root = tempRepo();
+    writeFixture(root, CURRENT_PLAN, `${ACTIVE_PLAN}\n${NOW}`);
+    writeFixture(root, DIGEST, JSON.stringify(LEGACY_DIGEST));
+    writeFixture(root, PROVIDER_CURRENT, JSON.stringify(LEGACY_PROVIDER_PACKAGE));
+    const result = runHandover({ date: "2026-11-11" }, handoverDeps(root));
+    const pointer = JSON.parse(readFileSync(join(root, POINTER), "utf8")) as {
+      active_plan: string | null;
+    };
 
-    expect(result.pointer.active_plan).toBeNull();
+    expect([result.pointer.active_plan, pointer.active_plan]).toEqual([null, null]);
   });
 
   it.fails("CANDIDATE-U-PLANRET-026: new provider package has null active_plan", () => {
@@ -79,10 +111,44 @@ describe("CANDIDATE-U-PLANRET-026 S4 handover retirement", () => {
     expect(pkg.handover_id).toBe("20261111060000-claude-to-codex");
   });
 
-  it("CANDIDATE-U-PLANRET-026: legacy reader preserves the saved provider package", () => {
-    const provider = providerDeps();
-    provider.files.set(PROVIDER_CURRENT, JSON.stringify(LEGACY_PROVIDER_PACKAGE));
+  it.fails("CANDIDATE-U-PLANRET-026: provider generation accepts no PLAN input", () => {
+    const root = tempRepo();
+    writeFixture(root, CURRENT_PLAN, `${ACTIVE_PLAN}\n${NOW}`);
+    writeFixture(root, DIGEST, JSON.stringify(LEGACY_DIGEST));
+    writeFixture(root, PROVIDER_CURRENT, JSON.stringify(LEGACY_PROVIDER_PACKAGE));
+    let result: ReturnType<typeof runProviderHandover> | undefined;
+    expect(() => {
+      result = runProviderHandover(
+        PLAN_FREE_PROVIDER_INPUT as Parameters<typeof buildProviderHandover>[0],
+        providerDeps(root),
+      );
+    }).not.toThrow();
 
-    expect(readProviderHandoverCurrent(provider)).toEqual(LEGACY_PROVIDER_PACKAGE);
+    expect(result?.package.active_plan).toBeNull();
+    expect(result?.package.handover_id).toBe("20261111060000-claude-to-codex");
+    expect(JSON.parse(readFileSync(join(root, PROVIDER_CURRENT), "utf8")).active_plan).toBeNull();
+  });
+
+  it("CANDIDATE-U-PLANRET-026: legacy reader preserves the saved provider package", () => {
+    const root = tempRepo();
+    writeFixture(root, PROVIDER_CURRENT, JSON.stringify(LEGACY_PROVIDER_PACKAGE));
+
+    expect(readProviderHandoverCurrent(providerDeps(root))).toEqual(LEGACY_PROVIDER_PACKAGE);
+  });
+
+  it("CANDIDATE-U-PLANRET-026: branch alone does not resolve session active_plan", () => {
+    const root = tempRepo();
+
+    expect(runHandover({ date: "2026-11-11" }, handoverDeps(root)).pointer.active_plan).toBeNull();
+  });
+
+  it("CANDIDATE-U-PLANRET-026: existing PLAN digest remains in handover scope", () => {
+    const root = tempRepo();
+    writeFixture(root, DIGEST, JSON.stringify(LEGACY_DIGEST));
+
+    expect(resolveHandoverScope(handoverDeps(root))).toMatchObject({
+      active_plan: null,
+      digests: [LEGACY_DIGEST],
+    });
   });
 });
