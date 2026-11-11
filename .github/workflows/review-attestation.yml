@@ -19,14 +19,6 @@ on:
         description: pull request number to bind the receipt to
         required: true
         type: string
-      plan_id:
-        description: PLAN id owning the review
-        required: true
-        type: string
-      plan_revision:
-        description: SHA-256 lowerhex of the PLAN document
-        required: true
-        type: string
       memory_id:
         description: review request memory id
         required: true
@@ -96,8 +88,6 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           UT_TDD_CUSTODY_PR: ${{ github.event.inputs.pr }}
-          UT_TDD_CUSTODY_PLAN_ID: ${{ github.event.inputs.plan_id }}
-          UT_TDD_CUSTODY_PLAN_REVISION: ${{ github.event.inputs.plan_revision }}
           UT_TDD_CUSTODY_MEMORY_ID: ${{ github.event.inputs.memory_id }}
           UT_TDD_CUSTODY_JUDGMENT_DIGEST: ${{ github.event.inputs.judgment_digest }}
           UT_TDD_CUSTODY_PROVIDER_EVIDENCE_REF: ${{ github.event.inputs.provider_evidence_ref }}
@@ -115,8 +105,6 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           UT_TDD_CUSTODY_PR: ${{ github.event.inputs.pr }}
-          UT_TDD_CUSTODY_PLAN_ID: ${{ github.event.inputs.plan_id }}
-          UT_TDD_CUSTODY_PLAN_REVISION: ${{ github.event.inputs.plan_revision }}
           UT_TDD_CUSTODY_MEMORY_ID: ${{ github.event.inputs.memory_id }}
           UT_TDD_CUSTODY_JUDGMENT_DIGEST: ${{ github.event.inputs.judgment_digest }}
           UT_TDD_CUSTODY_AUTHOR_FAMILY: ${{ github.event.inputs.author_family }}
