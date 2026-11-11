@@ -103,7 +103,7 @@ function commandOptionSurface(
     }
     return false;
   };
-  const visit = (node: ts.Node): void => {
+  const findTarget = (node: ts.Node): void => {
     if (
       ts.isCallExpression(node) &&
       ts.isPropertyAccessExpression(node.expression) &&
@@ -115,6 +115,10 @@ function commandOptionSurface(
       node.arguments[0].text === command
     )
       target = node;
+    ts.forEachChild(node, findTarget);
+  };
+  findTarget(file);
+  const visit = (node: ts.Node): void => {
     if (
       target &&
       ts.isCallExpression(node) &&
