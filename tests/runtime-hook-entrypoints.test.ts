@@ -13,8 +13,12 @@ import { delimiter, join } from "node:path";
 import { Worker } from "node:worker_threads";
 import { describe, expect, it, vi } from "vitest";
 import { BUILTIN_GITHUB_TEMPLATES } from "../src/setup/templates.ts";
+import {
+  registerPlanret014LifecycleOracle,
+  writeFakeClaude,
+} from "./support/planret-s4-runtime-oracle.ts";
 import { ensureTrackedProjectIdentity } from "./support/project-identity-fixture.ts";
-import { registerPlanret014LifecycleOracle } from "./support/planret-s4-runtime-oracle.ts";
+
 const sessionStartProbe = vi.hoisted(() => ({
   materializeCallback: null as null | ((repoRoot: string) => void),
 }));
@@ -32,7 +36,8 @@ vi.mock("../src/shared/embedded-skills.ts", async (importOriginal) => {
   };
 });
 
-const repoRoot = process.cwd(), cliPath = join(repoRoot, "src", "cli.ts");
+const repoRoot = process.cwd(),
+  cliPath = join(repoRoot, "src", "cli.ts");
 const legacyEnvPrefix = ["HE", "LIX"].join("");
 const claudeProjectDir = `$${"{CLAUDE_PROJECT_DIR}"}`;
 
@@ -162,27 +167,8 @@ function writeFakeCodex(binDir: string): string {
   chmodSync(path, 0o755);
   return path;
 }
-function writeFakeClaude(binDir: string): string {
-  mkdirSync(binDir, { recursive: true });
-  const rawEnv = [legacyEnvPrefix, "ALLOW", "RAW", "CLAUDE"].join("_");
-  const reasonEnv = [legacyEnvPrefix, "RAW", "CLAUDE", "REASON"].join("_");
-  if (process.platform === "win32") {
-    const path = join(binDir, "claude.cmd");
-    writeFileSync(
-      path,
-      `@echo off\r\necho %* > claude-called.txt\r\nfindstr "^" > claude-stdin.txt\r\n(echo raw=%${rawEnv}%)> claude-env.txt\r\n(echo reason=%${reasonEnv}%)>> claude-env.txt\r\nexit /b 0\r\n`,
-    );
-    return path;
-  }
-  const path = join(binDir, "claude");
-  writeFileSync(
-    path,
-    `#!/bin/sh\necho "$@" > claude-called.txt\ncat > claude-stdin.txt\nprintf "raw=%s\\nreason=%s\\n" "$${rawEnv}" "$${reasonEnv}" > claude-env.txt\nexit 0\n`,
-  );
-  chmodSync(path, 0o755);
-  return path;
-}
-describe("runtime hook entrypoints", () => { registerPlanret014LifecycleOracle({ runCli, readSessionStartEvents });
+describe("runtime hook entrypoints", () => {
+  registerPlanret014LifecycleOracle({ runCli, readSessionStartEvents });
   describe("U-SLOG-011: source開発repo自身の5記録hookを30秒にする", () => {
     it("U-SLOG-011: source開発repo自身の5記録hookを30秒にする", () => {
       const claude = JSON.parse(readFileSync(join(repoRoot, ".claude", "settings.json"), "utf8"));
@@ -690,7 +676,7 @@ describe("runtime hook entrypoints", () => { registerPlanret014LifecycleOracle({
     const binDir = join(cwd, "bin");
     try {
       ensureTrackedProjectIdentity(cwd, "fixture/runtime-claude-wrapper");
-      const fakeClaude = writeFakeClaude(binDir);
+      const fakeClaude = writeFakeClaude(binDir, legacyEnvPrefix);
       const env = {
         PATH: `${binDir}${delimiter}${process.env.PATH ?? ""}`,
         UT_TDD_CLAUDE_BIN: fakeClaude,
@@ -748,7 +734,7 @@ describe("runtime hook entrypoints", () => { registerPlanret014LifecycleOracle({
     const binDir = join(cwd, "bin");
     try {
       const fakeCodex = writeFakeCodex(binDir);
-      const fakeClaude = writeFakeClaude(binDir);
+      const fakeClaude = writeFakeClaude(binDir, legacyEnvPrefix);
       mkdirSync(join(cwd, ".ut-tdd", "teams"), { recursive: true });
       writeFileSync(
         join(cwd, ".ut-tdd", "teams", "speed.yaml"),

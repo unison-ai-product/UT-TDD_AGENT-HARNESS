@@ -125,8 +125,7 @@ describe("doctor runtime surface checks", () => {
   it.fails("CANDIDATE-U-PLANRET-014: runtime-surface wrapper check does not require PLAN metadata", () => {
     const root = sourceRepoRoot();
     const files = wrapperParityFiles(root, {
-      "src/runtime/adapter.ts":
-        "const args = CODEX_STDIN_ARGS; return { stdin: intent.task };",
+      "src/runtime/adapter.ts": "const args = CODEX_STDIN_ARGS; return { stdin: intent.task };",
     });
 
     const result = checkCodexWrapperParity(deps(root, files));

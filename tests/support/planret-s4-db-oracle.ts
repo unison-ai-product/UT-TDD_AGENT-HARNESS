@@ -3,20 +3,27 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { expect, it } from "vitest";
-import { buildReviewCustodyReceipt, computeReceiptDigest, type CustodyReceiptDraft } from "../../src/feedback/review-custody.ts";
-import { canonicalize, type ReviewRequestIdentity } from "../../src/feedback/review-custody-canonical.ts";
+import {
+  buildReviewCustodyReceipt,
+  type CustodyReceiptDraft,
+  computeReceiptDigest,
+} from "../../src/feedback/review-custody.ts";
+import {
+  canonicalize,
+  type ReviewRequestIdentity,
+} from "../../src/feedback/review-custody-canonical.ts";
 import {
   appendReviewCustodyAudit,
   isAttemptCompletedEvent,
   readReviewCustodyAudit,
   reviewVerdictPath,
 } from "../../src/feedback/review-verdict-custody.ts";
-import { ensureTrackedProjectIdentity } from "./project-identity-fixture.ts";
 import { HARNESS_DB_TABLES, schemaDdl } from "../../src/schema/harness-db.ts";
+import * as githubReviewLaneProvenance from "../../src/state-db/github-review-lane-provenance.ts";
 import { openHarnessDb } from "../../src/state-db/index.ts";
 import { migrate, SCHEMA_VERSION } from "../../src/state-db/migration.ts";
 import { rebuildHarnessDb } from "../../src/state-db/projection-writer.ts";
-import * as githubReviewLaneProvenance from "../../src/state-db/github-review-lane-provenance.ts";
+import { ensureTrackedProjectIdentity } from "./project-identity-fixture.ts";
 
 // Fixed from S4 base HEAD 91ae6af99518f48e21f256d979697c45c5786051.
 const S4_BASE_PROJECTION_DDL = [
@@ -140,9 +147,7 @@ export function registerPlanret020Oracle(): void {
       expect(receiptDdl).toContain("plan_revision TEXT NOT NULL");
       const beforeDdl = sqliteDdl(db);
       const relevantMasterDdl = beforeDdl
-        .filter(({ name }) =>
-          S4_BASE_PROJECTION_DDL.some((sql) => sql.includes(String(name))),
-        )
+        .filter(({ name }) => S4_BASE_PROJECTION_DDL.some((sql) => sql.includes(String(name))))
         .map(({ sql }) => normalizeDdl(String(sql)))
         .sort();
       expect(relevantMasterDdl).toEqual(S4_BASE_PROJECTION_DDL.map(normalizeDdl).sort());
@@ -156,9 +161,9 @@ export function registerPlanret020Oracle(): void {
       expect(db.userVersion()).toBe(s4BaseVersion);
       expect(sqliteDdl(db)).toEqual(beforeDdl);
       expect(tableRowCounts(db)).toEqual(beforeRows);
-      expect(
-        HARNESS_DB_TABLES.some((table) => table.name === "github_review_lane_receipts"),
-      ).toBe(true);
+      expect(HARNESS_DB_TABLES.some((table) => table.name === "github_review_lane_receipts")).toBe(
+        true,
+      );
       expect(typeof githubReviewLaneProvenance.verifiedReviewLaneDigests).toBe("function");
 
       const identity: ReviewRequestIdentity = {

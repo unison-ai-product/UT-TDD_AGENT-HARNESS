@@ -1,10 +1,20 @@
 import { expect, it } from "vitest";
 import { parse as parseYaml } from "yaml";
-import type { GithubWorkflowDoc } from "../../src/lint/github-ci-policy.ts";
-import { admitReviewCustody, computeReceiptDigest, decodeReviewCustodyReceipt } from "../../src/feedback/review-custody.ts";
+import {
+  admitReviewCustody,
+  computeReceiptDigest,
+  decodeReviewCustodyReceipt,
+} from "../../src/feedback/review-custody.ts";
 import { canonicalize } from "../../src/feedback/review-custody-canonical.ts";
-import { issueCustodyReceipt, type RunnerEnvironment } from "../../src/feedback/review-custody-runner.ts";
-export function registerPlanret016Oracle(sourceDocs: GithubWorkflowDoc[], attestation: GithubWorkflowDoc): void {
+import {
+  issueCustodyReceipt,
+  type RunnerEnvironment,
+} from "../../src/feedback/review-custody-runner.ts";
+import type { GithubWorkflowDoc } from "../../src/lint/github-ci-policy.ts";
+export function registerPlanret016Oracle(
+  sourceDocs: GithubWorkflowDoc[],
+  attestation: GithubWorkflowDoc,
+): void {
   it.fails("CANDIDATE-U-PLANRET-016: review-attestation dispatch binds custody to a required PR", () => {
     const workflow = parseYaml(attestation.content) as {
       on?: { workflow_dispatch?: { inputs?: Record<string, { required?: boolean }> } };
@@ -15,7 +25,10 @@ export function registerPlanret016Oracle(sourceDocs: GithubWorkflowDoc[], attest
     for (const doc of sourceDocs) {
       const parsed = parseYaml(doc.content) as {
         env?: Record<string, unknown>;
-        jobs?: Record<string, { env?: Record<string, unknown>; steps?: { env?: Record<string, unknown> }[] }>;
+        jobs?: Record<
+          string,
+          { env?: Record<string, unknown>; steps?: { env?: Record<string, unknown> }[] }
+        >;
       };
       const environments = [
         parsed.env ?? {},
@@ -50,6 +63,52 @@ type Expectation = Admission["expected"];
 type AdmissionFactory = (overrides?: Partial<Admission>) => Admission;
 type ExpectationFactory = (overrides?: Partial<Expectation>) => Expectation;
 
+export function createRunnerPullRequestFactory(input: {
+  repository: string;
+  headSha: string;
+  mergeSha: string;
+}): (options: { merged: boolean; mergedAt?: string }) => Record<string, unknown> {
+  return (options) => ({
+    number: 283,
+    state: options.merged ? "closed" : "open",
+    merged: options.merged,
+    merged_at: options.mergedAt ?? null,
+    merge_commit_sha: options.merged ? input.mergeSha : null,
+    base: { ref: "main" },
+    head: { sha: input.headSha, repo: { full_name: input.repository } },
+  });
+}
+
+export function createRunnerEnvironment(
+  values: Record<string, string>,
+  options: {
+    pullRequest: Record<string, unknown>;
+    mergeMethod?: string;
+    includePlanMetadata?: boolean;
+  },
+): { env: RunnerEnvironment; written: () => string | null } {
+  if (options.mergeMethod !== undefined) values.UT_TDD_CUSTODY_MERGE_METHOD = options.mergeMethod;
+  const stdout = JSON.stringify(options.pullRequest);
+  let output: string | null = null;
+  return {
+    env: {
+      get: (name) =>
+        options.includePlanMetadata === false && name.startsWith("UT_TDD_CUSTODY_PLAN_")
+          ? undefined
+          : values[name],
+      runGh: () => ({ status: 0, stdout }),
+      readFile: () => {
+        throw new Error("not used by issue");
+      },
+      writeFile: (_path, content) => {
+        output = content;
+      },
+      log: () => undefined,
+    },
+    written: () => output,
+  };
+}
+
 export function registerPlanret007DecoderOracle(input: {
   buildText: () => string;
   admissionInput: AdmissionFactory;
@@ -71,7 +130,8 @@ export function registerPlanret007DecoderOracle(input: {
     withPlan.receiptDigest = withPlanDigest;
     expect(computeReceiptDigest(withPlan)).toBe(withPlanDigest);
     const canonicalWithPlan = canonicalize(withPlan);
-    if (!canonicalWithPlan.ok) throw new Error("could not canonicalize unknown-field receipt fixture");
+    if (!canonicalWithPlan.ok)
+      throw new Error("could not canonicalize unknown-field receipt fixture");
     expect(decodeReviewCustodyReceipt(canonicalWithPlan.value)).toMatchObject({
       ok: false,
       reason: "receipt_corrupt",
@@ -100,13 +160,21 @@ export function registerPlanret007RunnerOracle(
   });
 }
 
-
 export function registerPlanret007Oracles(input: {
   buildText: () => string;
   admissionInput: AdmissionFactory;
   expectation: ExpectationFactory;
-  createRunnerFixture: () => { env: RunnerEnvironment; written: () => string | null };
+  runnerEnvironment: (options: {
+    pullRequest: Record<string, unknown>;
+    includePlanMetadata?: boolean;
+  }) => { env: RunnerEnvironment; written: () => string | null };
+  runnerPullRequest: (options: { merged: boolean; mergedAt?: string }) => Record<string, unknown>;
 }): void {
   registerPlanret007DecoderOracle(input);
-  registerPlanret007RunnerOracle(input.createRunnerFixture);
+  registerPlanret007RunnerOracle(() =>
+    input.runnerEnvironment({
+      pullRequest: input.runnerPullRequest({ merged: false }),
+      includePlanMetadata: false,
+    }),
+  );
 }

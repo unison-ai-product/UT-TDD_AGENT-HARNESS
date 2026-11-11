@@ -32,9 +32,7 @@ describe("github pr trace contract (PLAN-L7-451 W4)", () => {
       base_sha: "5eff8549",
       issue_number: "97",
     };
-    const block = renderPrTraceBlock(
-      fields as Parameters<typeof renderPrTraceBlock>[0],
-    );
+    const block = renderPrTraceBlock(fields as Parameters<typeof renderPrTraceBlock>[0]);
     expect(block).toContain("<!-- ut-tdd:trace/v2");
     expect(block).not.toContain("plan_id:");
     expect(validatePrTraceBody(`## 概要\n\n${block}\n`).ok).toBe(true);

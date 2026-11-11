@@ -123,12 +123,11 @@ function commandOptionSurface(
       node.arguments[0] &&
       ts.isStringLiteralLike(node.arguments[0]) &&
       isCallWithin(node.expression.expression, target)
-    )
-      {
-        const name = node.arguments[0].text.split(/[\s,\[]/u)[0] ?? "";
-        all.push(name);
-        if (node.expression.name.text === "requiredOption") required.push(name);
-      }
+    ) {
+      const name = node.arguments[0].text.split(/[\s,[]/u)[0] ?? "";
+      all.push(name);
+      if (node.expression.name.text === "requiredOption") required.push(name);
+    }
     ts.forEachChild(node, visit);
   };
   visit(file);
@@ -295,9 +294,9 @@ describe("PLAN 機構の S4 退役", () => {
     expect(skillOptions).not.toContain("--record");
     for (const [surface, options] of noPlanSurfaces)
       expect(options, `${surface} has no --plan`).not.toContain("--plan");
-    expect(
-      commandOptionSurface(cliSource, "githubPr", "render").all,
-    ).not.toContain("--plan-revision");
+    expect(commandOptionSurface(cliSource, "githubPr", "render").all).not.toContain(
+      "--plan-revision",
+    );
     expect(cliSource).not.toContain("planId: opts.plan");
     expect(cliSource).not.toContain("resolveSkillContextInjection(opts.plan)");
     expect(cliSource).not.toContain("resolveActivePlan(nodeDeps(process.cwd(), gitBranch))");
@@ -308,9 +307,7 @@ describe("PLAN 機構の S4 退役", () => {
     expect(delegationSource).not.toContain("plan_id");
     for (const command of ["status", "transition", "explain"]) {
       const workflowOptions = commandOptionSurface(workflowSource, "workflow", command);
-      expect(workflowOptions.required, `workflow ${command} requires --issue`).toContain(
-        "--issue",
-      );
+      expect(workflowOptions.required, `workflow ${command} requires --issue`).toContain("--issue");
       expect(workflowOptions.all, `workflow ${command} has no --plan`).not.toContain("--plan");
     }
   });
@@ -321,7 +318,13 @@ describe("PLAN 機構の S4 退役", () => {
       blank_issues_enabled?: boolean;
     };
     expect(config.blank_issues_enabled).toBe(false);
-    const forms = ["recovery.yml", "reverse.yml", "redesign.yml", "incident.yml", "nfr-failure.yml"];
+    const forms = [
+      "recovery.yml",
+      "reverse.yml",
+      "redesign.yml",
+      "incident.yml",
+      "nfr-failure.yml",
+    ];
     for (const name of forms) {
       const raw = readFileSync(join(formDir, name), "utf8");
       const form = parseYaml(raw) as {
@@ -339,7 +342,9 @@ describe("PLAN 機構の S4 退役", () => {
       expect(reentry[0].attributes?.description).toMatch(/Issue URL|layer/u);
       expect(body.map((item) => item.id)).not.toContain("origin_plan");
       expect(body.map((item) => item.id)).not.toContain("origin_revision");
-      for (const field of body) for (const value of Object.values(field.attributes ?? {})) expect(value ?? "").not.toMatch(/PLAN(?:-L\d+-| ID|[- ]input)/iu);
+      for (const field of body)
+        for (const value of Object.values(field.attributes ?? {}))
+          expect(value ?? "").not.toMatch(/PLAN(?:-L\d+-| ID|[- ]input)/iu);
       if (["recovery.yml", "reverse.yml", "redesign.yml"].includes(name)) {
         const origin = body.filter((item) => item.id === "origin_issue");
         expect(origin).toHaveLength(1);

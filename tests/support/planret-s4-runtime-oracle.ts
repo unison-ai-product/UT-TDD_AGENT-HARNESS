@@ -1,14 +1,40 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, it } from "vitest";
 import { ensureTrackedProjectIdentity } from "./project-identity-fixture.ts";
+
 type SessionEvent = Record<string, unknown>;
-type SessionCli = (cwd: string, args: string[], input?: unknown) => {
+type SessionCli = (
+  cwd: string,
+  args: string[],
+  input?: unknown,
+) => {
   status: number | null;
   stdout: string | null;
 };
 type SessionReader = (root: string, sessionId: string) => SessionEvent[];
+
+export function writeFakeClaude(binDir: string, envPrefix: string): string {
+  mkdirSync(binDir, { recursive: true });
+  const rawEnv = [envPrefix, "ALLOW", "RAW", "CLAUDE"].join("_");
+  const reasonEnv = [envPrefix, "RAW", "CLAUDE", "REASON"].join("_");
+  if (process.platform === "win32") {
+    const path = join(binDir, "claude.cmd");
+    writeFileSync(
+      path,
+      `@echo off\r\necho %* > claude-called.txt\r\nfindstr "^" > claude-stdin.txt\r\n(echo raw=%${rawEnv}%)> claude-env.txt\r\n(echo reason=%${reasonEnv}%)>> claude-env.txt\r\nexit /b 0\r\n`,
+    );
+    return path;
+  }
+  const path = join(binDir, "claude");
+  writeFileSync(
+    path,
+    `#!/bin/sh\necho "$@" > claude-called.txt\ncat > claude-stdin.txt\nprintf "raw=%s\\nreason=%s\\n" "$${rawEnv}" "$${reasonEnv}" > claude-env.txt\nexit 0\n`,
+  );
+  chmodSync(path, 0o755);
+  return path;
+}
 
 export function registerPlanret014LifecycleOracle(input: {
   runCli: SessionCli;
