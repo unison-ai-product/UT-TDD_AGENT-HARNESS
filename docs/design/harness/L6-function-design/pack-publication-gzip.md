@@ -1,13 +1,15 @@
 ---
 layer: L6
 artifact_type: design_doc
-status: draft
+status: confirmed
 sub_doc: function-spec
 artifact_role: topic_pack_publication_gzip
 pair_artifact: docs/test-design/harness/L7-pack-publication-gzip-test-design.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 issue: 881
 ---
+
+> **L6 contract marker**: `compressPackTar(tar) => Buffer` は unit-test-granularity contract である (未実装の目標契約。関数名は実装で変えてよい)。本書は gzip 層の方式 (パラメータ 4 つの明示、header 10 byte の固定、literal golden と toolchain identity の 2 検査) を凍結する。pre: 入力は ustar の tar bytes。post: 出力は標準の gzip で、gunzip の結果が入力と byte で一致し、同一入力は承認済み toolchain で byte が一致する。invariant: 公開済み release の anchor は変えない。oracle は `docs/test-design/harness/L7-pack-publication-gzip-test-design.md` の `CANDIDATE-U-PACKASSET-007`〜`CANDIDATE-U-PACKASSET-014` が固定する (正式 ID `U-PACKASSET-*` への昇格は、実装 PR が Red テストと同時に行う)。
 
 # Pack publication tar.gz の圧縮方式
 
@@ -21,7 +23,7 @@ Pack の公開 asset `ut-tdd-pack-<version>.tar.gz` は、`src/setup/pack-public
 asset の名前、checksum ファイルの形式、inventory digest の導出は変えない。
 
 実装は本書の契約を対にする L7 oracle (`docs/test-design/harness/L7-pack-publication-gzip-test-design.md`。
-共有の `L7-unit-test-design.md` には足さない) を先に Red にしてから行う。本書の `draft` は実装の開始を許可しない。
+共有の `L7-unit-test-design.md` には足さない) を先に Red にしてから行う。本書の確定は契約の確定であり、実装の開始は oracle を `CANDIDATE-U-` から正式 ID へ昇格する Red テストが先に入ることを条件とする。
 
 ## 2. 事実 (2026-11-12 実測、Issue #881)
 
@@ -141,7 +143,7 @@ advisor の「小さな golden では足りない」は、本書の当初案 (§
 - **採用**: 方式 B。理由は、圧縮率が約 4.4 倍で、実装が数行で済み、実測した 2 環境 (zlib の版が異なる) で
   header の OS byte を正規化すると byte が一致したため。A は問題を残し、C は最小実装の原則に反する。
 - **advisor の助言の採否**: 契約の保証範囲を「承認済みの toolchain」に限る (採用、§4.1 の 8)。
-  大きな固定 fixture を golden に加える (採用、`U-PACKASSET-007`)。版を上げるときに golden を自動更新しない
+  大きな固定 fixture を golden に加える (採用、`CANDIDATE-U-PACKASSET-007`)。版を上げるときに golden を自動更新しない
   (採用、§4.1 の 9)。#930 の両形式対応を前提にする (採用、§4.1 の 6)。
   Node 配布物の固定は、下の決定で追加不要とした。
 - **未決 (下の決定で解消)**: 承認済み toolchain の版の集合の具体値と置き場、Node 配布物の固定の要否。
