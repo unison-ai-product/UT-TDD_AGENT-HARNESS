@@ -87,14 +87,14 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 ### §1.5 U-SLOG (session-log 由来、PLAN-L6-03 add-design / session-log.md §3)
 | U-ID | 検証対象 | oracle (DbC) |
 |---|---|---|
-| U-SLOG-001 | `resolveActivePlan` | S7 で current-plan / branch による PLAN 解決を退役する。 |
+| U-SLOG-001 | `resolveActivePlan` | S7 前は state ファイル優先 / branch (`add/<plan>`) fallback / 解決不能=`null` (throw しない) 。S7 後は current-plan / branch による PLAN 解決を退役する。 |
 | U-SLOG-002 | `recordEvent` | 正常 append / **不正入力でも throw せず 0 (fail-open)** / 秘匿: `summary` に Bash 引数値・credential・PII が含まれない (`sanitize` 後) |
-| U-SLOG-003 | `compressPlanDigest` | S7 の退役境界は plan-mechanism-retirement-test-design.md §3.1 に従う。 |
-| U-SLOG-004 | `onStop` | session lifecycle / event 記録は維持し、S7 で PLAN digest を生成しない (§3.1)。 |
+| U-SLOG-003 | `compressPlanDigest` | S7 前は events→digest 集計正当 / 同一 (plan,session) 再適用で **idempotent** (event 単位 high-watermark で二重計上なし、U-SLOG-008) / `prev` マージ / `updated_at = max(prev, events)` 巻き戻りなし / `failures` は ts dedupe 。S7 後は PLAN digest の生成・専用処理を退役する (§3.1)。 |
+| U-SLOG-004 | `onStop` | S7 前は session 終了で `.ut-tdd/logs/plan/<plan_id>.digest.json` が生成/更新、常に 0 / **plan_id=null のみの session は digest を書かない** 。S7 後も session lifecycle / event 記録は維持し、PLAN digest は生成しない (§3.1)。 |
 | U-SLOG-005 | `onSessionStart` | session_start event を append し常に 0 (fail-open)、I/O 失敗でも throw しない |
 | U-SLOG-006 | `setActivePlan`/`activePlanStale` (IMP-078 gap②) | S7 前は current-plan の PLAN marker / `updated_at` / stale 判定を検証する。S7 で marker writer・stale判定 assertionを退役する。隣接する `U-SLOG-006b` の generic git commit event `headCommit` capture は維持する。 |
 | U-SLOG-007 | `src/cli.ts session start` / `hook post-tool-use` / `session summary` + `.claude/settings.json` + `ut-tdd codex --execute` | Claude settings の SessionStart/PostToolUse/Stop が `.claude/hooks/session-log.ts` 直接実装ではなく package-local `src/cli.ts` entrypoint を指す / PLAN marker がない temp repo で明示 session ID を使うと、session_start/tool_use/session_end event が同じ `session_id` と `plan_id=null` で記録され、U-SLOG-004 に従い PLAN digest は生成されない / fake `codex` を PATH に置いた temp repo で `ut-tdd codex --execute` と `ut-tdd codex --task-file <path> --execute` を実行すると、Codex wrapper も current-plan / branch を解決せず PLAN-free lifecycle を記録し、legacy source raw Codex guard との共存用に `legacy source_ALLOW_RAW_CODEX=1` + `legacy source_RAW_CODEX_REASON=ut-tdd-runtime-adapter-wrapper` を渡す / CLI `--plan` による lifecycle の PLAN 指定は退役し、内部 adapter API の `intent.planId` は U-ADAPTER-001 の対象として維持する |
-| U-SLOG-008 | `compressPlanDigest` (event 単位 high-watermark、PLAN-L7-80) | S7 で PLAN digest / 専用処理を退役する (§3.1)。 |
+| U-SLOG-008 | `compressPlanDigest` (event 単位 high-watermark、PLAN-L7-80) | S7 前は `session_watermarks[sid]` = その session の matching event を畳み済み件数として持ち、同一 session が複数回 summarize (複数 Stop) されてもログ伸長分の増分のみ計上する (旧 session 単位 fold は 2 回目以降を全 skip = 過少計上) / 増分なし再適用は idempotent / pre-L7-80 digest (session_watermarks 無し) は migration として既計上分 (ts <= updated_at) を再計上せず新規分のみ計上する 。S7 後は PLAN digest / 専用処理を退役する (§3.1)。 |
 | U-SLOG-009 | `renderEscalationSignals` (SessionStart surface cap) | escalation signal が 0 件なら空文字 / total 件数は header に保持 / 既定上限または指定 `maxSignals` 件だけを列挙 / `maxSignals<=0` は無制限 escape hatch / 残件は breadcrumb で示し、直前 session log 調査へ誘導する / STOP・root cause 文言は維持 |
 | U-SLOG-010 | Pack consumer lifecycle hook timeout budget (Issue #1057) | consumer template と built-in asset の Claude PostToolUse/Stop、Codex SessionStart/PostToolUse/Stop を30秒にする。Claude SessionStartは既存30秒。source開発repo設定の記録hookはU-SLOG-011が扱う。agent/work guards、SubagentStop、Claude memory-wakeは対象外で不変。host deadlineによる強制終了時は記録未保証・fail-openで、自動retry/queueを設けない。`tests/runtime-hook-entrypoints.test.ts` の静的な外側 `describe` がformal citationを提供し、内側 `it.fails` は対象5 hookの設定値をRedで固定する。hostの強制終了自体はunit testで再現せず、durabilityを保証しない。 |
 | U-SLOG-011 | source開発repo自身の記録hook timeout (Issue #1057) | source の `.claude/settings.json` の PostToolUse(post-tool-use) と Stop(session summary)、`.codex/hooks.json` の SessionStart/PostToolUse/Stop の計5本が30秒。対象外 (agent-guard / work-guard の5秒、SubagentStop 5、memory-wake 930、Claude SessionStart 30) は不変で、U-SLOG-010 の対象外不変テストが守る。`tests/runtime-hook-entrypoints.test.ts` の静的な外側 `describe` がformal citationを提供し、内側 `it.fails` が対象5 hookの設定値をRedで固定する (Greenは別PR)。 |
@@ -139,17 +139,15 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 | U-ID | 検証対象 | oracle (DbC) |
 |---|---|---|
 | U-HOVER-001 | `resolveHandoverScope` | S7 前は PLAN digest を読み、壊れた行 / 不在を skip する。S7 後は旧 digest を読まず、新規 pointer は `active_plan:null` / `digest_summary:null`。詳細と維持条件は plan-mechanism-retirement-test-design.md §3.1。 |
-
 | U-HOVER-002 | `buildPointer` | S7 前は digest を集計する。S7 後は新規 pointer の `active_plan:null` / `digest_summary:null` を確認し、一般 field は維持する (§3.1)。 |
-
 | U-HOVER-005 | `handoverStale` | **純関数**。`updated_at=null`/parse 不能 → true / 24h 超 → true / 24h 以内 → false / **境界 (now-updated_at=24h ちょうど) は stale でない (`>` 判定)** / **具体 oracle: `now`/`updated_at` を UTC ISO8601 で与え `Date.parse` 数値差分で判定 (辞書順比較でない)** |
-| U-HOVER-006 | `setActivePlan` + `inferPlanFromCommit` | S7 で PLAN marker writer / clear と PLAN commit 推定を退役する。 |
+| U-HOVER-006 | `setActivePlan` + `inferPlanFromCommit` | S7 前は `setActivePlan` が `.ut-tdd/state/current-plan` を書き `resolveActivePlan` が同値を読む (**round-trip**) / **`null`+`removeFile` 有 → file 削除で clear / `null`+`removeFile` 無 → 空文字書込 → `resolveActivePlan` が空文字を null 相当に落とす (両 clear 経路を検証)** / `inferPlanFromCommit`: `PLAN-L6-06-...` 抽出 / 非該当文字列 → null / **`-F -` heredoc 様 (本文に PLAN 文字列なし) → null** 。S7 後は PLAN marker writer / clear と PLAN commit 推定を退役する。 |
 | U-HOVER-007 | `runHandover` (orchestration) | **`dryRun=true` → 何も書かない (`written=[]`、非破壊)** / 通常 → CURRENT.json 更新 (md の追記・`content` の返却は §5.1 で撤去。散文を作らない契約は U-STCHAN-019 が持つ) / **`complete=true` → CURRENT.json の `status==="completed"` かつ新規 pointer の `active_plan===null`** (PLAN を解決せず、legacy scope / marker の値を引き継がない) |
-| U-HOVER-008 | `sameFamilyPlan` / `dedupeDigests` (IMP-048) | S7 で旧 PLAN digest 専用 helper と test を退役する (§3.1)。 |
+| U-HOVER-008 | `sameFamilyPlan` / `dedupeDigests` (IMP-048) | S7 前は `sameFamilyPlan`: 同一 id → true / bare ⊂ slug (`-` 境界付き prefix) → true / `bare が slug の prefix だが `-` 境界でない (例: `PLAN-L7-0` vs `PLAN-L7-04`) → false (誤マッチ防止)` / 無関係 → false / **対称 (a,b)=(b,a)**。`dedupeDigests`: 同 family の bare/slug ゴーストを **最長 id** へ union 集約 (commits/files_touched/sessions の union、files_touched は重複除去) / 無関係 PLAN は別 group のまま残す / **推移的マージ: bare 無しで slug 2 種 + bare が後着でも全部 1 group へ収束 (順序非依存)** 。S7 後は旧 PLAN digest 専用 helper と test を退役する (§3.1)。 |
 | U-HOVER-009 | `resolveHandoverScope` (IMP-048、S4 で部分改訂) | `scopeToActive` は S4 で撤去し、残る PLAN digest scope は S7 で退役する (§3.1)。 |
-| U-HOVER-010 | `readPointer` / `checkHandoverDiscipline` (IMP-047、S4 で部分改訂) | generic `readPointer` / `handoverStale` / `checkHandoverBypass` を維持し、digest 活動起点の警告は S7 で退役する (§3.1)。 |
+| U-HOVER-010 | `readPointer` / `checkHandoverDiscipline` (IMP-047、S4 で部分改訂) | S7 前は `readPointer`: 不在 → null / 壊れ JSON → null / 正常 → object。`checkHandoverDiscipline`: **digest 活動なし → 警告ゼロ** / digest 活動あり + CURRENT.json 不在 → `"handover 未生成"` warn / digest 活動あり + fresh pointer → 警告ゼロ (pointer の `active_plan` に依存しない) / digest 活動あり + stale pointer → `"stale"` を含む warn。current-plan marker stale 警告と PLAN family drift 判定は撤回する。新規 `active_plan:null` でも missing / stale 警告を維持する 。S7 後は generic `readPointer` / `handoverStale` / `checkHandoverBypass` を維持し、digest 活動起点の警告を退役する (§3.1)。 |
 | U-HOVER-011 | `checkHandoverBypass` の署名照合 (IMP-078 gap①、state-channel-consolidation §5.2) | pointer 不在 → 警告ゼロ (discipline 担当) / `generated_by` 欠落 (手書き pointer) → `"bypass"` warn / `generated_by` 一致 + `latest_doc` なしの pointer → 警告ゼロ。md 照合 (`latest_doc` の `# Session Handover` 数 > `doc_entry_count` → `"mismatch"` warn) と `countHandoverEntries` は §5.1 の撤去対象 (`latest_doc` / `doc_entry_count` の廃止に伴い oracle から外す。旧 pointer の残骸が md を持っていても警告しない契約は U-STCHAN-021 が持つ) |
-| U-HOVER-012 | `resolveHandoverScope` scopeToSession / `latestSessionId` (IMP-078 gap④) | digest 依存の `scopeToSession` は S7 で退役し、session JSONL の `latestSessionId` は維持する (§3.1)。 |
+| U-HOVER-012 | `resolveHandoverScope` scopeToSession / `latestSessionId` (IMP-078 gap④) | S7 前は `scopeToSession`: 指定 session が触れた digest のみへ絞る / 該当無し → 全件 fallback (空 handover 回避)。`latestSessionId`: session jsonl 群から最新 event ts の session_id を返す / 不在 → null / 壊れ行 skip。runHandover の readPlanMeta family 解決 (gap⑤) は、`readPlanMeta` が scaffold の §1 を描く専用部品で §5.1 の撤去対象のため oracle から外した 。S7 後は digest 依存の `scopeToSession` を退役し、session JSONL の `latestSessionId` を維持する (§3.1)。 |
 | U-HOVER-015 | `runHandover` marker reconcile (PLAN-L7-83、S4 で部分改訂) | **`complete=true` → `current-plan` marker を clear** (`resolveActivePlan→null`) / **plain in_progress → marker 無変更** / **`dryRun=true` → marker を書かない** (非破壊不変)。退役する `--plan` による marker 同期 oracle は撤回する。reconcile する場合は marker path を `written` に計上 (透明性)。この marker reconcile は S7 で退役し、generic dry-run 非破壊・completed status は `U-HOVER-007` で維持する。 |
 
 ### §1.8.1 U-MEMORY (共有 memory / PLAN-L7-189)
@@ -686,7 +684,6 @@ SMB/NFS/OneDrive をまたぐ strict lease、heartbeat、clock-skew 耐性は主
 | U-ID | 対象関数 | DbC oracle |
 |---|---|---|
 | U-PHOVER-001 | `buildProviderHandover` (S4 契約) | Claude↔Codex の from/to が異なる package を生成 / 生成入力 `activePlan` は必須でない / 出力 `active_plan` field は `null` / summary 必須 / secret 風 token は sanitize。reader は過去 package の `active_plan` (`string \| null`) field を読み取れるが、S7 後は値を表示・判定に使わない。status text と `--json` のいずれにも値を出さず、他の field は維持する。 |
-
 | U-PHOVER-002 | `runProviderHandover` | `.ut-tdd/handover/provider/<id>.json` + `CURRENT.json` を書く / dry-run は非書込 |
 | U-GATE-001 | `evaluateGateReview` (hybrid) | judgment gate は `review_kind=cross_agent` + workerModel≠reviewerModel で pass / 同一 model は fail |
 | U-GATE-002 | `evaluateGateReview` (single runtime) | claude-only/codex-only は checklist 必須、欠落・fail・根拠なし n-a で fail、揃えば `cross_agent_review=unavailable` |
@@ -1126,8 +1123,8 @@ This addendum pairs `screen-spec.md` with L7 unit-test oracles. It covers the L6
 | U-SPECIR-R1 | `loadSpecIrSources(input)` | repo-relative root だけを読み、S7 後はdesign / test-design / reference documentを読む。PLAN frontmatter、schedule、activation source は読まず、source docsを書き換えない。missing root は warn finding、secret-like / PII-like / raw transcript payload は投影しない。 |
 | U-SPECIR-R2 | `parseSpecDefs(bundle)` | 同一 input から stable `spec_id` / `source_hash` / `section_anchor` を生成する。未知 layer/sub_doc、重複 ID、空 definition は finding 化し、仕様を補完創作しない。非ASCII見出しなど ASCII 正規化で情報が落ちる ID は hash suffix で衝突を避ける。 |
 | U-SPECIR-R3 | `parseSpecRelations(bundle, defs)` | relation_kind allowlist、orphan/self-loop/unknown relation findings と reference document path 解決を維持する。一意な短縮 PLAN ID の解決と PLAN frontmatter relation 読取りは S7 で退役する。 |
-| U-SPECIR-R4 | `parseScheduleEntries(bundle)` | S7 で PLAN schedule parser と `schedule_entries` draft assertion を退役する。 |
-| U-SPECIR-R5 | `parseActivationEntries(bundle)` | S7 で PLAN activation parser / profile assertion を退役する。 |
+| U-SPECIR-R4 | `parseScheduleEntries(bundle)` | S7 前は 工程管理表から deterministic `schedule_entries` draft を返す。date/state 欠落、未解決 plan_id、過去 due 未完了は finding。PLAN status は mutate しない。 。S7 後は PLAN schedule parser と `schedule_entries` draft assertion を退役する。 |
+| U-SPECIR-R5 | `parseActivationEntries(bundle)` | S7 前は enabled profile は reason を必須とし、未知 drive/mode または profile 欠落を finding/fail-close 候補にする。暗黙 default で駆動モデルを有効化しない。 。S7 後は PLAN activation parser / profile assertion を退役する。 |
 | U-SPECIR-R6 | `projectSpecIr(input, db)` | `spec_defs` / `spec_relations` / `detector_route_candidates` の idempotent upsert、rebuild安定性、source doc不変更を維持する。S7でschedule / activation projectionを除く。 |
 | U-SPECIR-R7 | `analyzeSpecIrIntegrity(input)` | generic design/spec integrity finding と secret / raw-body guard を維持し、PLAN schedule / activation 固有findingを退役する。 |
 | U-SPECIR-R8 | `deriveDetectorRouteCandidates(input)` | finding/spec と `routeFiling` SSoT から candidate を導出する性質を維持する。schedule / activation 入力への依存は S7 で外す。 |
@@ -1135,7 +1132,7 @@ This addendum pairs `screen-spec.md` with L7 unit-test oracles. It covers the L6
 | U-SPECIR-R10 | `analyzeSpecIrIntegrity(input)` / `parseSpecRelations(bundle, defs)` (PLAN-L7-405) | L1-L6 design document catalog の sub_doc 検証と存在する reference document path の解決を維持する。一意な短縮 PLAN ID の解決は S7 で退役する。 |
 | U-SPECIR-R11 | `stableId(prefix, value)` / projection ID consumers (PLAN-L7-406) | ASCII safe ID は後方互換のまま、非ASCII見出し・パス・空文字は deterministic に正規化される。正規化で情報が落ちる場合は hash suffix で衝突を避け、projection / feedback / skill / workflow のテスト injected deps も同じ helper を使う。 |
 | U-SPECIR-R12 | `parseSpecDefs(bundle)` / `analyzeSpecIrIntegrity(input)` (PLAN-L7-429) | frontmatter `doc_type: index` / `doc_type: verification-roadmap` を宣言する design doc は `spec_kind: design_meta_doc` に分類され、`spec-ir-invalid-subdoc` の対象外になる。meta doc 以外の design doc の sub_doc 検証は従来通り発火する。 |
-| U-SPECIR-R13 | `parseSpecRelations(bundle, defs)` (PLAN-L7-429) | PLAN frontmatter の `requires` / `pair_artifact` evidence参照除外と `pair_artifact:self` orphan assertion は S7 で退役する。 |
+| U-SPECIR-R13 | `parseSpecRelations(bundle, defs)` (PLAN-L7-429) | S7 前は PLAN frontmatter の `requires` / `pair_artifact` のうち evidence 参照 (`src/` / `tests/` / `scripts/` / `skills/` / `.ut-tdd/` / `.claude/` / `.github/` / `docs/research/` prefix、および `CLAUDE.md` / `AGENTS.md` / `package.json` / `docs/improvement-backlog.md`) は spec 依存 relation の解決対象外で、orphan relation を発火しない。`pair_artifact: self` は PLAN-REVERSE-12 規定通り unresolved orphan として発火し続ける (実装: tests/spec-ir-projections.test.ts "PLAN-L7-429" ケース)。 。S7 後はこれらの PLAN frontmatter relation assertion を退役する。 |
 
 ## PLAN-L7-368 Design Lint DB Projection Addendum (2026-07-08)
 
