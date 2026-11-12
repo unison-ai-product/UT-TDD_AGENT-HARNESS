@@ -9,7 +9,7 @@ related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 issue: 821
 ---
 
-> **L6 contract marker**: `expectedPackModes(sourceTree, pathMapping) => PackModeExpectation` (公開対象 source commit の Git tree の entry を、既存の materializer の path 写像 (`materializeReleaseArtifacts`) に通し、出荷先 path ごとの期待 mode を導く) と `verifyPackC1Modes(c1Tree, expected) => PackModeVerdict` (C1 の Git tree を `git ls-tree -r` 相当で独立に読み、**mode だけ**を照合して食い違いを fail-close する) は unit-test-granularity contract である (未実装の目標契約。関数名は実装で変えてよいが、契約の意味は変えない)。pre: 入力は Git object だけで、index と実行 bit を読まない。post: 期待 path が全て C1 に在り、各 mode が期待と一致し、期待しない `100755` と `120000` が C1 に無いときだけ合格。**bytes の digest は本契約の照合に含めない** (`package.json` などは Pack への変換で bytes が source と正当に異なるため。内容の照合は既存の manifest `artifacts[].contentDigest` と `exactCommitEntries` が持つ、§4.3)。invariant: sync-pack は `git add` / `update-index` / `commit` / `push` を実行しない。oracle は `docs/test-design/harness/L7-pack-exec-mode-test-design.md` の `CANDIDATE-U-PACKMODE-001`〜`011` が固定する (正式 ID `U-PACKMODE-*` への昇格は、src を含まない昇格 PR で行う)。
+> **L6 contract marker**: `expectedPackModes(sourceTree, pathMapping) => PackModeExpectation` (公開対象 source commit の Git tree の entry を、既存の materializer の path 写像 (`materializeReleaseArtifacts`) に通し、出荷先 path ごとの期待 mode を導く) と `verifyPackC1Modes(c1Tree, expected) => PackModeVerdict` (C1 の Git tree を `git ls-tree -r` 相当で独立に読み、**mode だけ**を照合して食い違いを fail-close する) は unit-test-granularity contract である (未実装の目標契約。関数名は実装で変えてよいが、契約の意味は変えない)。pre: 入力は Git object だけで、index と実行 bit を読まない。post: 期待 path が全て C1 に在り、各 mode が期待と一致し、期待しない `100755` と、`120000` (期待の有無にかかわらず) が C1 に無いときだけ合格。**bytes の digest は本契約の照合に含めない** (`package.json` などは Pack への変換で bytes が source と正当に異なるため。内容の照合は既存の manifest `artifacts[].contentDigest` と `exactCommitEntries` が持つ、§4.3)。invariant: sync-pack は `git add` / `update-index` / `commit` / `push` を実行しない。oracle は `docs/test-design/harness/L7-pack-exec-mode-test-design.md` の `CANDIDATE-U-PACKMODE-001`〜`014` が固定する (正式 ID `U-PACKMODE-*` への昇格は、src を含まない昇格 PR で行う)。
 
 # Pack の実行可能ファイルの mode を保つ方式 (Issue #821)
 
@@ -72,7 +72,7 @@ PLAN は凍結中 (#1166) のため、方式判断はここへ置く。
      そのまま持つ (`release-materializer.ts:191`)。結果は (出荷先 path → 期待 mode) の集合になる。manifest と同じ
      producer の出力だけで比べないよう、source の Git tree から導く。
    - **fail-close の条件**: (a) 期待 path が C1 に無い、(b) C1 の mode が期待と違う (`100755` が `100644` に落ちる場合を含む)、
-     (c) 期待しない `100755` が C1 に在る、(d) 検査対象の C1 の entry に mode `120000` (symlink) が在る。(d) は
+     (c) 期待しない `100755` が C1 に在る、(d) 検査対象の C1 の entry に mode `120000` (symlink) が在る (期待 mode との一致・不一致、期待集合への所属に依らない独立の条件)。(d) は
      manifest v2 の symlink 拒否 (`release-channel-manifest.md` §7.1、`PUBLICATION_MODES`、`src/schema/release-manifest.ts:9`) と
      同じ向きである。materializer は source の `120000` を受け付ける (`release-materializer.ts:48`、`:182`) ので、
      source が `120000` の path を期待 mode として導く場合も fail-close し、公開の契約が受け付けない mode を期待値にしない。
@@ -91,8 +91,14 @@ PLAN は凍結中 (#1166) のため、方式判断はここへ置く。
      (`pack-publication-staging.ts:261`) と index ごとの path の一致 (`:268`) を要求するため、extra は既存の audit が
      `commit_entries_mismatch` で拒否する (`:378-379`)。ただし control manifest の sidecar (`release/manifest.yaml`、
      mode `100644`、`pack-publication-staging.ts:14`、`:240-248`) は期待 entry の一部であり、extra として扱わない。
-     (確認できていないこと: `auditPackPublication` の `observe` port の実装は src に無く、C1 を Git tree から読む
-     producer は未実装である。したがって audit が実 C1 を観測するまで、100644 の extra の拒否は port の契約に依存する。)
+   - **公開の必須条件 (実装 PR の受け入れ基準、本 PR では実装しない)**: mode 照合は本契約の新しい gate だが、extra `100644` や bytes 改変は
+     既存機構の `auditPackPublication` (`src/setup/pack-publication-staging.ts:366-390`) に委ねる。この関数は注入された `observe` の値を
+     比べるだけで (`:372`)、src に実 C1 を読む呼び出し側は無い。委譲が成り立つよう、実装 PR は次を満たす。
+     (1) 固定した同一の C1 SHA の **全 entry と全 blob** を独立に読む観測経路 (`git ls-tree -r` と `git cat-file`) を実装し、
+     `auditPackPublication` の `observe` へ配線する。(2) 観測値を、sealed な変換後の期待集合 (`plan.commitEntries`) と完全に比べる。
+     (3) 公開は、その結果が `status: "attested"` (`:76-89`、返却 `:382-`) のときだけ許す。`partial_publication` と `indeterminate`
+     では公開しない。(4) この観測と上の mode 照合は同じ C1 SHA を使い、別 SHA を後続へ渡さない。この (1)〜(3) が無いまま
+     mode 照合だけが通っても、公開の受け入れ基準を満たさない。
    照合の対象 C1 は SHA で固定し、後続の公開処理が同じ SHA を使うことを同じ gate で確かめる。
 4. **範囲外**: #807 / PR #813 の tar 生成 (`pack-publication-assets.ts`) は変更しない。canary.3 の公開物は
    作り直さず、是正は次の版で効けばよい。#418 の AT-DIST の判定を止めない。
@@ -101,5 +107,5 @@ PLAN は凍結中 (#1166) のため、方式判断はここへ置く。
 
 ## 5. oracle
 
-`CANDIDATE-U-PACKMODE-001..011` (`docs/test-design/harness/L7-pack-exec-mode-test-design.md`。共有の L7-unit-test-design.md には足さない)。Windows と Linux の両方で、
+`CANDIDATE-U-PACKMODE-001..014` (`docs/test-design/harness/L7-pack-exec-mode-test-design.md`。共有の L7-unit-test-design.md には足さない)。Windows と Linux の両方で、
 実行 bit ではなく Git object の mode だけを観測する。
