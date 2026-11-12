@@ -25,18 +25,21 @@ describe("U-CMDINPUT-004: provider effort passthrough (issue #733)", () => {
     expect(reasoningEffortSchema.safeParse("max").success).toBe(true);
   });
 
-  it.fails.each([
-    "xhigh",
-    "max",
-  ])("U-CMDINPUT-004: claude adapter plan is available for %s", (effort) => {
-    expect(claudePlan(effort).available).toBe(true);
+  // 現行 src でも契約どおりに通る境界 (xhigh の available / max の plan.effort の素通し) は通常の it で固定する。
+  it("U-CMDINPUT-004: claude adapter plan is available for xhigh", () => {
+    expect(claudePlan("xhigh").available).toBe(true);
   });
 
-  it.fails.each([
-    "xhigh",
-    "max",
-  ])("U-CMDINPUT-004: claude adapter plan keeps effort %s", (effort) => {
-    expect(claudePlan(effort).effort).toBe(effort);
+  it.fails("U-CMDINPUT-004: claude adapter plan is available for max", () => {
+    expect(claudePlan("max").available).toBe(true);
+  });
+
+  it.fails("U-CMDINPUT-004: claude adapter plan keeps effort xhigh", () => {
+    expect(claudePlan("xhigh").effort).toBe("xhigh");
+  });
+
+  it("U-CMDINPUT-004: claude adapter plan keeps effort max", () => {
+    expect(claudePlan("max").effort).toBe("max");
   });
 
   it.fails.each(["xhigh", "max"])("U-CMDINPUT-004: claude argv carries %s", (effort) => {
