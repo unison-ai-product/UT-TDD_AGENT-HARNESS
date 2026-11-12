@@ -3,7 +3,7 @@ title: "L7 Pack 実行可能ファイル mode 保持 テスト設計"
 layer: L7
 executed_at_layer: L7
 artifact_type: test_design
-pair_artifact: docs/design/harness/L6-function-design/release-channel-manifest.md
+pair_artifact: docs/design/harness/L6-function-design/pack-exec-mode.md
 status: draft
 updated: 2026-11-12
 issue: 821
@@ -13,13 +13,13 @@ issue: 821
 
 ## 1. 位置付け
 
-対になる設計文書は `docs/design/harness/L6-function-design/release-channel-manifest.md` §9 である。共有の
+対になる設計文書は `docs/design/harness/L6-function-design/pack-exec-mode.md` である。共有の
 `docs/test-design/harness/L7-unit-test-design.md` には行を足さない (別 lane が分割・縮小中のため)。本書が
 oracle の正本であり、`CANDIDATE-U-PACKMODE-001`〜`006` を候補として宣言する。昇格・実装は別 PR である。
 
 ## 2. 候補の oracle
 
-正本: `docs/design/harness/L6-function-design/release-channel-manifest.md` §9。
+正本: `docs/design/harness/L6-function-design/pack-exec-mode.md`。
 以下は契約からの転記であり、実行済み・Green・正式 oracle 昇格を主張しない。実装は別 PR。
 全 ID は実行 bit (ファイルシステム) ではなく Git object の mode だけを観測する。fixture は一時 Git repo を
 `core.filemode=false` (Windows 相当) と `true` (Linux) の両方で作る。
