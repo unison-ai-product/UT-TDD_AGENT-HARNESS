@@ -1,7 +1,4 @@
-import { readFileSync } from "node:fs";
-import { createRequire } from "node:module";
-import { dirname, join } from "node:path";
-import { pathToFileURL } from "node:url";
+import { spawnSync } from "node:child_process";
 import { describe, expect, it } from "vitest";
 import { parseSnapshotRunnerArgs } from "../scripts/run-vitest-snapshot.ts";
 
@@ -17,20 +14,31 @@ function allowedOptionsReportedByRunner(): string[] {
   return match[1].split(", ");
 }
 
-// 固定版 Vitest の実際の CLI 定義 (stub なし) を cli.js が import する chunk から取り出す。
-async function loadRealVitestCli(): Promise<
-  () => {
-    parse: (argv: string[], o: { run: boolean }) => unknown;
-    matchedCommand: { checkUnknownOptions: () => void };
+// 固定版 Vitest の実際の CLI 定義 (stub なし) を、別の node process で cli.js が import する chunk から取り出して検査する。
+// vite-node の import 変換 (Windows の短い path 名など) を通さず、どの platform でも同じ経路で CLI 定義に届く。
+const PROBE_SOURCE = String.raw`
+import { readFileSync } from "node:fs";
+import { createRequire } from "node:module";
+import { dirname, join } from "node:path";
+import { pathToFileURL } from "node:url";
+const root = dirname(createRequire(join(process.cwd(), "noop.js")).resolve("vitest/package.json"));
+const cliSource = readFileSync(join(root, "dist", "cli.js"), "utf8");
+const chunk = /import \{ c as createCLI \} from '(\.\/chunks\/[^']+)'/.exec(cliSource);
+if (!chunk) throw new Error("createCLI chunk not found in vitest/dist/cli.js");
+const createCLI = (await import(pathToFileURL(join(root, "dist", chunk[1])).href)).c;
+const rejected = [];
+for (const option of JSON.parse(process.env.UT_PROBE_OPTIONS)) {
+  const argv = option === "--browser" ? [option] : [option, ${JSON.stringify(VALUE_PROBE)}];
+  const cli = createCLI();
+  try {
+    cli.parse(["node", "vitest", "run", ...argv], { run: false });
+    cli.matchedCommand.checkUnknownOptions();
+  } catch (error) {
+    rejected.push(option + ": " + String(error.message).split("\n")[0]);
   }
-> {
-  const root = dirname(createRequire(import.meta.url).resolve("vitest/package.json"));
-  const cliSource = readFileSync(join(root, "dist", "cli.js"), "utf8");
-  const chunk = /import \{ c as createCLI \} from '(\.\/chunks\/[^']+)'/.exec(cliSource);
-  if (!chunk) throw new Error("createCLI chunk not found in vitest/dist/cli.js");
-  const mod = await import(pathToFileURL(join(root, "dist", chunk[1])).href);
-  return mod.c;
 }
+console.log(JSON.stringify(rejected));
+`;
 
 describe("snapshot runner argv vs pinned Vitest (issue #1247)", () => {
   it.fails("U-SNAPARG-003 rejects --minWorkers (removed in Vitest 4) as an unknown option", () => {
@@ -41,21 +49,16 @@ describe("snapshot runner argv vs pinned Vitest (issue #1247)", () => {
     }
   });
 
-  it("U-SNAPARG-004 every allowlisted option is accepted by the real pinned Vitest CLI", async () => {
-    const createCLI = await loadRealVitestCli();
+  it("U-SNAPARG-004 every allowlisted option is accepted by the real pinned Vitest CLI", () => {
     const options = allowedOptionsReportedByRunner();
     expect(options.length).toBeGreaterThan(0);
-    const rejected: string[] = [];
-    for (const option of options) {
-      const argv = option === "--browser" ? [option] : [option, VALUE_PROBE];
-      const cli = createCLI();
-      try {
-        cli.parse(["node", "vitest", "run", ...argv], { run: false });
-        cli.matchedCommand.checkUnknownOptions();
-      } catch (error) {
-        rejected.push(`${option}: ${(error as Error).message.split("\n")[0]}`);
-      }
-    }
-    expect(rejected).toEqual([]);
+    const result = spawnSync(process.execPath, ["--input-type=module", "-e", PROBE_SOURCE], {
+      env: { ...process.env, UT_PROBE_OPTIONS: JSON.stringify(options) },
+      encoding: "utf8",
+      timeout: 60_000,
+      windowsHide: true,
+    });
+    expect(result.stderr).toBe("");
+    expect(JSON.parse(result.stdout)).toEqual([]);
   });
 });
