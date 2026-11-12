@@ -1,13 +1,15 @@
 ---
 layer: L6
 artifact_type: design_doc
-status: draft
+status: confirmed
 sub_doc: function-spec
 artifact_role: topic_pack_exec_mode
 pair_artifact: docs/test-design/harness/L7-pack-exec-mode-test-design.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 issue: 821
 ---
+
+> **L6 contract marker**: `expectedPackModes(sourceTree) => PackModeExpectation` (公開対象 source commit の Git tree から path ごとの期待 mode を導く) と `verifyPackC1Modes(c1Tree, expected) => PackModeVerdict` (C1 の Git tree を独立に読んで完全照合し、食い違いを fail-close する) は unit-test-granularity contract である (未実装の目標契約。関数名は実装で変えてよいが、契約の意味は変えない)。pre: 入力は Git object だけで、index と実行 bit を読まない。post: 期待値と C1 の (path, mode, bytes の digest) が全 artifact で一致するときだけ合格。invariant: sync-pack は `git add` / `update-index` / `commit` / `push` を実行しない。oracle は `docs/test-design/harness/L7-pack-exec-mode-test-design.md` の `CANDIDATE-U-PACKMODE-001`〜`006` が固定する (正式 ID `U-PACKMODE-*` への昇格は、src を含まない昇格 PR で行う)。
 
 # Pack の実行可能ファイルの mode を保つ方式 (Issue #821)
 
