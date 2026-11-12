@@ -531,7 +531,7 @@ describe("review request admission (issue #1600)", () => {
     expectRejectedWithoutWrite(result, "review_revision_invalid");
   });
 
-  it("U-RVADM-014: 空の --review-memory-id の単独指定は入口で拒否し、何も書かない", () => {
+  it("空の --review-memory-id の単独指定は入口で拒否し、何も書かない", () => {
     const args = ["--role", "blind-reviewer", "--task", "probe", "--review-memory-id", ""];
     expectRejectedWithoutWrite(runCli("codex", "claude", args), "review_memory_id_required");
   });
