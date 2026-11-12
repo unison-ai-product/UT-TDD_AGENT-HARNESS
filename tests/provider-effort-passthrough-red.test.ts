@@ -9,23 +9,46 @@ import { resolveDelegationRouting } from "../src/team/delegation-routing.ts";
 // 契約 PR + Red (design-protection-diff-gate.md §10.2) のため、未実装の assertion は it.fails で固定する。
 // 既存の xhigh→high 前提の assertion は runtime-adapter.test.ts / cli-surface.test.ts 側で it.fails に反転済み。
 describe("U-CMDINPUT-004: provider effort passthrough (issue #733)", () => {
-  // Red: 現行 src は xhigh を high へ下げ、max は schema が拒否する。
-  it.fails("U-CMDINPUT-004: passes Claude xhigh and max through without downgrading", () => {
-    for (const effort of ["xhigh", "max"]) {
-      expect(reasoningEffortSchema.safeParse(effort).success, effort).toBe(true);
-      const plan = buildAdapterPlan(
-        { provider: "claude", role: "se", task: "review", model: "claude-sonnet-5-5", effort },
-        "hybrid",
-      );
-      expect(plan.available, effort).toBe(true);
-      expect(plan.effort, effort).toBe(effort);
-      expect(plan.args, effort).toContain(effort);
-      expect(plan.env, effort).toEqual({ [CLAUDE_EFFORT_ENV]: effort });
-    }
+  const claudePlan = (effort: string) =>
+    buildAdapterPlan(
+      { provider: "claude", role: "se", task: "review", model: "claude-sonnet-5-5", effort },
+      "hybrid",
+    );
+
+  // xhigh の schema 受理は現行 src でも通る (契約どおり)。
+  it("U-CMDINPUT-004: schema accepts xhigh", () => {
+    expect(reasoningEffortSchema.safeParse("xhigh").success).toBe(true);
   });
 
-  // Red: 現行 schema は max を拒否し provider_effort_invalid になる。
-  it.fails("U-CMDINPUT-004: reviewer and worker routing accept Claude max effort", () => {
+  // Red: 現行 src は xhigh を high へ下げ、max は schema が拒否する。effort と境界ごとに独立した反例にする。
+  it.fails("U-CMDINPUT-004: schema accepts max", () => {
+    expect(reasoningEffortSchema.safeParse("max").success).toBe(true);
+  });
+
+  it.fails.each([
+    "xhigh",
+    "max",
+  ])("U-CMDINPUT-004: claude adapter plan is available for %s", (effort) => {
+    expect(claudePlan(effort).available).toBe(true);
+  });
+
+  it.fails.each([
+    "xhigh",
+    "max",
+  ])("U-CMDINPUT-004: claude adapter plan keeps effort %s", (effort) => {
+    expect(claudePlan(effort).effort).toBe(effort);
+  });
+
+  it.fails.each(["xhigh", "max"])("U-CMDINPUT-004: claude argv carries %s", (effort) => {
+    expect(claudePlan(effort).args).toContain(effort);
+  });
+
+  it.fails.each(["xhigh", "max"])("U-CMDINPUT-004: claude env carries %s", (effort) => {
+    expect(claudePlan(effort).env).toEqual({ [CLAUDE_EFFORT_ENV]: effort });
+  });
+
+  // Red: 現行 schema は max を拒否し provider_effort_invalid になる。role ごとに独立した反例にする。
+  it.fails("U-CMDINPUT-004: reviewer routing accepts Claude max effort", () => {
     const reviewer = resolveDelegationRouting({
       provider: "claude",
       role: "blind-reviewer",
@@ -33,7 +56,9 @@ describe("U-CMDINPUT-004: provider effort passthrough (issue #733)", () => {
       effort: "max",
     });
     expect(reviewer).toMatchObject({ ok: true, effort: "max", effort_source: "explicit" });
+  });
 
+  it.fails("U-CMDINPUT-004: worker routing accepts Claude max effort", () => {
     const worker = resolveDelegationRouting({
       provider: "claude",
       role: "se",
