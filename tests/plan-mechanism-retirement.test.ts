@@ -103,7 +103,7 @@ function commandOptionSurface(
     }
     return false;
   };
-  const visit = (node: ts.Node): void => {
+  const findTarget = (node: ts.Node): void => {
     if (
       ts.isCallExpression(node) &&
       ts.isPropertyAccessExpression(node.expression) &&
@@ -115,6 +115,10 @@ function commandOptionSurface(
       node.arguments[0].text === command
     )
       target = node;
+    ts.forEachChild(node, findTarget);
+  };
+  findTarget(file);
+  const visit = (node: ts.Node): void => {
     if (
       target &&
       ts.isCallExpression(node) &&
@@ -253,7 +257,7 @@ describe("PLAN 機構の S1 退役", () => {
 });
 
 describe("PLAN 機構の S4 退役", () => {
-  it.fails("U-PLANRET-014: task分類・routingとskill推薦にPLAN入力optionを残さない", () => {
+  it("U-PLANRET-014: task分類・routingとskill推薦にPLAN入力optionを残さない", () => {
     const cliSource = readFileSync(join(snapshotRoot, "src/cli.ts"), "utf8");
     const classifyOptions = commandOptionSurface(cliSource, "task", "classify").all;
     const routeOptions = commandOptionSurface(cliSource, "task", "route").all;

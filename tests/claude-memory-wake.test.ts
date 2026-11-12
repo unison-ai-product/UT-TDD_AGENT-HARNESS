@@ -11,7 +11,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import type { MemoryEntry } from "../src/memory/index.ts";
 import {
   buildClaudeInboxEntry,
@@ -33,7 +33,7 @@ import {
   waitForClaudeMemory,
 } from "../src/runtime/claude-memory-wake.ts";
 import { resolveProjectMemoryRoot } from "../src/runtime/project-memory-root.ts";
-import { ensureTrackedProjectIdentity } from "./support/project-identity-fixture.ts";
+import { seedFixtureTemplate } from "./support/claude-memory-wake-fixture.ts";
 
 const wakeReadCounters = vi.hoisted(() => ({
   active: false,
@@ -86,11 +86,10 @@ function inboxFileStem(entryId: string): string {
   return `${safeId.slice(0, 147)}_${createHash("sha256").update(entryId).digest("hex").slice(0, 12)}`;
 }
 
-function fixture(): string {
-  const root = mkdtempSync(join(tmpdir(), "ut-tdd-claude-wake-"));
-  ensureTrackedProjectIdentity(root, "fixture/claude-memory-wake");
-  return root;
-}
+const wakeFixture = seedFixtureTemplate("fixture/claude-memory-wake", "ut-tdd-claude-wake");
+beforeAll(wakeFixture.build);
+afterAll(wakeFixture.dispose);
+const fixture = (): string => wakeFixture.copy();
 
 function wakeRuntimeRoot(root: string): string {
   const project = resolveProjectMemoryRoot(root);
