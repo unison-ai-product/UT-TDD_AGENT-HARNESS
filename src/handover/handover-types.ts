@@ -26,8 +26,6 @@ interface HandoverArgs {
   date: string;
   dryRun?: boolean;
   complete?: boolean;
-  planId?: string;
-  scopeToActive?: boolean;
   sessionId?: string;
 }
 
@@ -45,7 +43,6 @@ interface HandoverDeps {
 }
 
 interface HandoverScopeOpts {
-  scopeToActive?: boolean;
   scopeToSession?: string;
 }
 

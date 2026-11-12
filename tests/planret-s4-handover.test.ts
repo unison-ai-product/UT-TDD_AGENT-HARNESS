@@ -105,7 +105,7 @@ afterEach(() => {
 });
 
 describe("U-PLANRET-026 S4 handover retirement", () => {
-  it.fails("U-PLANRET-026: new session pointer has null active_plan", () => {
+  it("U-PLANRET-026: new session pointer has null active_plan", () => {
     const root = tempRepo();
     writeFixture(root, CURRENT_PLAN, `${ACTIVE_PLAN}\n${NOW}`);
     writeFixture(root, DIGEST, JSON.stringify(LEGACY_DIGEST));
@@ -118,19 +118,19 @@ describe("U-PLANRET-026 S4 handover retirement", () => {
     expect([result.pointer.active_plan, pointer.active_plan]).toEqual([null, null]);
   });
 
-  it.fails("U-PLANRET-026: new provider package has null active_plan", () => {
+  it("U-PLANRET-026: new provider package has null active_plan", () => {
     const pkg = buildProviderHandover(LEGACY_PROVIDER_INPUT, NOW);
 
     expect(pkg.active_plan).toBeNull();
   });
 
-  it.fails("U-PLANRET-026: provider ID has no PLAN suffix", () => {
+  it("U-PLANRET-026: provider ID has no PLAN suffix", () => {
     const pkg = buildProviderHandover(LEGACY_PROVIDER_INPUT, NOW);
 
     expect(pkg.handover_id).toBe("20261111060000-claude-to-codex");
   });
 
-  it.fails("U-PLANRET-026: provider generation accepts no PLAN input", () => {
+  it("U-PLANRET-026: provider generation accepts no PLAN input", () => {
     const root = tempRepo();
     writeFixture(root, CURRENT_PLAN, `${ACTIVE_PLAN}\n${NOW}`);
     writeFixture(root, DIGEST, JSON.stringify(LEGACY_DIGEST));
