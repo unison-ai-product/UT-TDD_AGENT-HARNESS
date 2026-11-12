@@ -26,12 +26,12 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
-          node-version: "24.22.1"
+          node-version: "24.22.3"
       - name: cache npm when a lockfile exists
         if: \${{ hashFiles('package-lock.json') != '' }}
         uses: actions/setup-node@v4
         with:
-          node-version: "24.22.1"
+          node-version: "24.22.3"
           cache: npm
       - name: install dependencies when a lockfile exists
         run: |

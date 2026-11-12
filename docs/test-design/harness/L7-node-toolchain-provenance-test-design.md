@@ -17,8 +17,8 @@ verifier、Bun の削除、CI、consumer の変更は本書の成果物ではな
 `docs/design/harness/L5-detailed-design/node-toolchain-provenance-registry-v1.json`。
 本書が束縛する3入力の実在 source revision は `git-sha1:4bf577433cc209576636609280b236149d4bdb1f` であり、
 同 revision の `.node-version`、`package-lock.json`、`package.json` の tracked blob と raw-byte digest をregistryで検証する。
-本書の更新対象 pin は Node.js v24.22.1 / 同梱 npm 11.19.1 とする。公式 archive filename/SHA-256 は
-Node.js v24.22.1 の archive index と `SHASUMS256.txt` に照合済みである。archive SHA と、照合済み archive 内の
+本書の更新対象 pin は Node.js v24.22.3 / 同梱 npm 11.19.1 とする。公式 archive filename/SHA-256 は
+Node.js v24.22.3 の archive index と `SHASUMS256.txt` に照合済みである。archive SHA と、照合済み archive 内の
 Node/npm CLI member SHA は別の digest として記録する。registry の pinned values と
 Git custody は L5 `internal-processing.md` §7 の更新順序に従い、対応する source/package/.node-version
 変更後に実在する Git object から記録する。registry の更新・来歴確認と非著者レビューが完了するまでは
@@ -38,7 +38,7 @@ support/activation authority でもない。Bun の削除や runtime 切替は�
 
 | 入力 | 固定内容 |
 |---|---|
-| Node/npm | Node `24.22.1`、同梱 npm `11.19.1` |
+| Node/npm | Node `24.22.3`、同梱 npm `11.19.1` |
 | package manager | `package.json.packageManager` の exact string（`engines` は範囲であり、この exact identity には含めない。範囲と pin の整合は §3 の engines 範囲 oracle と §5 が扱う） |
 | lock identity | `package-lock.json`、lockfileVersion `3`、name/version、content SHA-256 |
 | archive | supported OS/arch ごとの公式 filename と SHA-256 |
@@ -107,7 +107,7 @@ runtime verifier、Bun 経路、CI workflow、consumer package、既存 build sc
 | ID | Red mutation | Green oracle |
 |---|---|---|
 | `U-TOOLPIN-001` | `.node-version` を `NODE_TOOLCHAIN_POLICY.nodeVersion` と異なる版へ変更 | `node-version-mismatch` を報告する（従来どおり） |
-| `U-TOOLPIN-002` | `engines.node` を pin を含む範囲（例: pin が `24.22.1` のとき `>=24.22.1 <25`）にする | `node-version-mismatch` を報告しない（従来は完全一致でないため不一致だった） |
+| `U-TOOLPIN-002` | `engines.node` を pin を含む範囲（例: pin が `24.22.3` のとき `>=24.22.3 <25`）にする | `node-version-mismatch` を報告しない（従来は完全一致でないため不一致だった） |
 | `U-TOOLPIN-003` | `engines.node` を pin を含まない有効な範囲（例: `>=24.23.0 <25`、`<24`）にする | `node-version-mismatch` を報告する |
 | `U-TOOLPIN-004` | `engines.node` を有効な semver 範囲でない文字列（例: `latest`、空文字、`24.x.y.z`）にする | `node-version-mismatch` を報告する。例外で落ちず finding として返る |
 | `U-TOOLPIN-005` | `packageManager` の npm 版を `NODE_TOOLCHAIN_POLICY.npmVersion` と異なる版へ変更 | `npm-version-mismatch` を報告する（従来どおり） |
