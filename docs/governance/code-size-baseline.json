@@ -1,6 +1,6 @@
 {
   "src/cli.ts": { "lines": 4001, "functionExcess": 111 },
-  "src/cli/delegation.ts": { "lines": 555, "functionExcess": 214 },
+  "src/cli/delegation.ts": { "lines": 555, "functionExcess": 205 },
   "src/cli/distribution.ts": { "lines": 1147, "functionExcess": 352 },
   "src/cli/review-live.ts": { "lines": null, "functionExcess": 25 },
   "src/disposition/adapters/tracked-vmodel-loader.ts": { "lines": null, "functionExcess": 9 },
@@ -16,7 +16,7 @@
   "src/feedback/review-attestation.ts": { "lines": 604, "functionExcess": 1 },
   "src/feedback/review-custody.ts": { "lines": 630, "functionExcess": null },
   "src/feedback/review-dispatch.ts": { "lines": 606, "functionExcess": 27 },
-  "src/feedback/review-verdict-custody.ts": { "lines": 673, "functionExcess": 11 },
+  "src/feedback/review-verdict-custody.ts": { "lines": 672, "functionExcess": 10 },
   "src/forward/application/forward-workflow.ts": { "lines": null, "functionExcess": 7 },
   "src/gate/right-arm-static.ts": { "lines": 1438, "functionExcess": 41 },
   "src/gate/static.ts": { "lines": null, "functionExcess": 2 },

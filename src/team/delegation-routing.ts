@@ -111,7 +111,7 @@ export function resolveDelegationRouting(input: DelegationRoutingInput): Delegat
       return {
         ok: false,
         message:
-          `[ut-tdd-delegation] BLOCK: role=${input.role} (provider=${input.provider}) ` +
+          `reviewer_model_below_floor: [ut-tdd-delegation] BLOCK: role=${input.role} (provider=${input.provider}) ` +
           `model=${input.model} is below the review floor.
 ` +
           `Minimum: ${REVIEW_LANE_MODELS[lane][input.provider]}`,

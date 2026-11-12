@@ -33,6 +33,11 @@ import {
 } from "../runtime/review-guard.ts";
 import { dispatch, nodeDeps, type SessionHookInput } from "../runtime/session-log.ts";
 import { resolveDelegationRouting } from "../team/delegation-routing.ts";
+import {
+  reviewAdmissionDenial,
+  reviewIdentityDeclared,
+  reviewIdentityDenial,
+} from "./review-admission.ts";
 
 export interface AdapterExecutionDeps {
   gitBranch: () => string | null;
@@ -314,20 +319,23 @@ function runtimeCommand(
     .option("--execute", "execute provider CLI instead of dry-run")
     .option("--json", "JSON output")
     .action(
-      (opts: {
-        role: string;
-        task?: string;
-        taskFile?: string;
-        model?: string;
-        effort?: string;
-        reviewPr?: string;
-        reviewHead?: string;
-        reviewRevision?: string;
-        reviewAuthorFamily?: string;
-        reviewMemoryId?: string;
-        execute?: boolean;
-        json?: boolean;
-      }) => {
+      (
+        opts: {
+          role: string;
+          task?: string;
+          taskFile?: string;
+          model?: string;
+          effort?: string;
+          reviewPr?: string;
+          reviewHead?: string;
+          reviewRevision?: string;
+          reviewAuthorFamily?: string;
+          reviewMemoryId?: string;
+          execute?: boolean;
+          json?: boolean;
+        },
+        command: Command,
+      ) => {
         const task = deps.resolveTaskText(opts);
         if (!task) {
           process.stderr.write("adapter requires exactly one of --task or --task-file\n");
@@ -365,35 +373,11 @@ function runtimeCommand(
         // --review-author-family も宣言入力に含める。三識別子だけを宣言と数えると、
         // author-family 単独指定が「識別子なし委譲」として素通りし、値が黙って捨てられる
         // (silent discard、PR #214 precheck FLAG)。宣言 = 4 flag のいずれかを渡したこと。
-        const reviewIdentityRequested = Boolean(
-          opts.reviewPr ||
-            opts.reviewHead ||
-            opts.reviewRevision ||
-            opts.reviewAuthorFamily ||
-            opts.reviewMemoryId,
-        );
-        if (
-          reviewIdentityRequested &&
-          (!opts.reviewPr || !opts.reviewHead || !opts.reviewRevision)
-        ) {
-          process.stderr.write(
-            "review_head_required: review identity requires --review-pr, --review-head, and --review-revision together\n",
-          );
-          process.exitCode = 1;
-          return;
-        }
-        if (opts.reviewMemoryId !== undefined && !opts.reviewMemoryId.trim()) {
-          process.stderr.write("review_memory_id_required: --review-memory-id must not be blank\n");
-          process.exitCode = 1;
-          return;
-        }
-        // 識別子を渡した = receipt を作る宣言。review lane でない role では receipt を作れないので、
-        // 宣言済み入力を黙って捨てず fail-close する (silent undefined の禁止)。
-        if (reviewIdentityRequested && !routing.review_lane) {
-          process.stderr.write(
-            `review_identity_requires_review_lane: role=${opts.role} is not a review lane role; ` +
-              "review identity flags produce no receipt here\n",
-          );
+        const reviewIdentityRequested = reviewIdentityDeclared(opts);
+        const identityDenial = reviewIdentityDenial(opts, routing.review_lane);
+        if (identityDenial) {
+          process.stderr.write(`${identityDenial}
+`);
           process.exitCode = 1;
           return;
         }
@@ -440,6 +424,22 @@ function runtimeCommand(
             : undefined;
         if (reviewRequest && !Number.isInteger(reviewRequest.pr)) {
           process.stderr.write("review_pr_required: --review-pr must be an integer\n");
+          process.exitCode = 1;
+          return;
+        }
+        const admissionDenial =
+          reviewRequest && routing.review_lane
+            ? reviewAdmissionDenial({
+                revision: reviewRevision,
+                extraArgs: command.args,
+                authorFamily: reviewRequest.authorFamily,
+                provider,
+                model: routing.model,
+              })
+            : undefined;
+        if (admissionDenial) {
+          process.stderr.write(`${admissionDenial}
+`);
           process.exitCode = 1;
           return;
         }
