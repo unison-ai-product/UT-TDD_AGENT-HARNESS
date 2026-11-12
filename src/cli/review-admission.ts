@@ -26,7 +26,12 @@ export function reviewIdentityDenial(
   opts: ReviewIdentityOptions & { role: string },
   reviewLane: string | undefined,
 ): string | undefined {
-  if (!reviewIdentityDeclared(opts)) return undefined;
+  if (!reviewIdentityDeclared(opts)) {
+    // 空 memory id の単独指定は「宣言なし」に見えるが、既存の検査どおり拒否する。
+    return opts.reviewMemoryId !== undefined && !opts.reviewMemoryId.trim()
+      ? "review_memory_id_required: --review-memory-id must not be blank"
+      : undefined;
+  }
   if (!opts.reviewPr || !opts.reviewHead || !opts.reviewRevision?.trim()) {
     return "review_head_required: review identity requires --review-pr, --review-head, and --review-revision together";
   }
