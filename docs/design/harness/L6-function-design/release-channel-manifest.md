@@ -268,5 +268,5 @@ PLAN は凍結中 (#1166) のため、方式判断はここへ置く。
 
 ### 9.5 oracle
 
-`CANDIDATE-U-PACKMODE-001..006` (`docs/test-design/harness/L7-unit-test-design.md`)。Windows と Linux の両方で、
+`CANDIDATE-U-PACKMODE-001..006` (`docs/test-design/harness/L7-pack-exec-mode-test-design.md`。共有の L7-unit-test-design.md には足さない)。Windows と Linux の両方で、
 実行 bit ではなく Git object の mode だけを観測する。
