@@ -167,7 +167,7 @@ describe("CANDIDATE-U-PLANRET-019 frozen v29 migration", () => {
     } finally {
       db.close();
     }
-  });
+  }, 60000); // 24.1s measured (Windows), #1063
 
   it("(3): re-migrate is unapplied and leaves complete state unchanged", () => {
     const { root, db } = createLegacyDatabase();
@@ -205,7 +205,7 @@ describe("CANDIDATE-U-PLANRET-019 frozen v29 migration", () => {
     } finally {
       db.close();
     }
-  });
+  }, 120000); // 36.4s measured (Windows), #1063
 
   it("precondition (5): delegated DROP sentinel fires after quoted IF EXISTS target DROP", () => {
     const { db } = createLegacyDatabase();
@@ -236,7 +236,7 @@ describe("CANDIDATE-U-PLANRET-019 frozen v29 migration", () => {
     } finally {
       db.close();
     }
-  });
+  }, 60000); // 26.7s measured (Windows), #1063
 
   it("(5): post-DROP failure preserves exact legacy schema, version, and rows", () => {
     const { db } = createLegacyDatabase();
@@ -295,7 +295,7 @@ describe("CANDIDATE-U-PLANRET-019 frozen v29 migration", () => {
     } finally {
       db.close();
     }
-  });
+  }, 60000); // 21.1s measured (Windows), #1063
 
   it("precondition (4): isolated rebuild reaches its outer-commit path", () => {
     const { root, db } = createLegacyDatabase();
@@ -304,7 +304,7 @@ describe("CANDIDATE-U-PLANRET-019 frozen v29 migration", () => {
     } finally {
       db.close();
     }
-  });
+  }, 60000); // 24.3s measured (Windows), #1063
 
   it("precondition (4): wrapper fires at the post-projection COMMIT", () => {
     const { root, db } = createLegacyDatabase();
@@ -338,7 +338,7 @@ describe("CANDIDATE-U-PLANRET-019 frozen v29 migration", () => {
     } finally {
       db.close();
     }
-  });
+  }, 60000); // 30.0s measured (Windows), #1063
 
   it("(4): outer rebuild COMMIT failure restores schema, version, and all rows", () => {
     const { root, db } = createLegacyDatabase();
@@ -388,5 +388,5 @@ describe("CANDIDATE-U-PLANRET-019 frozen v29 migration", () => {
     } finally {
       db.close();
     }
-  });
+  }, 60000); // 28.1s measured (Windows), #1063
 });
