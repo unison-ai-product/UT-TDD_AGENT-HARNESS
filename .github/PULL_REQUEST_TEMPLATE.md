@@ -1,12 +1,10 @@
-<!-- PLAN-L7-451 W4: typed PR trace contract。trace block は手書きせず
-     `node src/cli.ts github pr render --plan <PLAN-ID> --route-mode <mode> --issue-number <n>` の出力を貼る。
+<!-- Typed PR trace contract v2。trace block は手書きせず
+     `node src/cli.ts github pr render --route-mode <mode> --issue-number <n>` の出力を貼る。
      検証: `node src/cli.ts github pr validate --body-file <body.md>` -->
 
 ## 概要
 
-## 関連 PLAN / Issue
-
-PLAN:
+## 関連 Issue
 
 `Closes #<issue-number>`（通常Forwardを含む全PRで必須。空の`Closes #`を残さない）
 
@@ -25,4 +23,4 @@ PLAN:
 
 ## UT-TDD trace (machine-readable)
 
-_ここに `github pr render` の出力 (`ut-tdd:trace/v1` block) をそのまま貼る。_
+_ここに `github pr render` の出力 (`ut-tdd:trace/v2` block) をそのまま貼る。_
