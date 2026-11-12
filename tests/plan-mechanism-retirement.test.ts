@@ -2,6 +2,7 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
+import { parse as parseYaml } from "yaml";
 import { buildFullDoctorCheckDefinitions } from "../src/doctor/check-definitions.ts";
 import { FULL_DOCTOR_OUTPUT_IDS } from "../src/doctor/profiles.ts";
 import { nodeDoctorDeps } from "../src/doctor/runtime-state.ts";
@@ -76,6 +77,65 @@ function githubCommandSurface(source: string): { groupFound: boolean; children: 
   };
   visit(file);
   return { groupFound, children };
+}
+
+function commandOptionSurface(
+  source: string,
+  parent: string,
+  command: string,
+): { all: string[]; required: string[] } {
+  const file = ts.createSourceFile(
+    "src/cli.ts",
+    source,
+    ts.ScriptTarget.ES2022,
+    true,
+    ts.ScriptKind.TS,
+  );
+  let target: ts.CallExpression | undefined;
+  const all: string[] = [];
+  const required: string[] = [];
+  const isCallWithin = (expression: ts.Expression, targetCall: ts.CallExpression): boolean => {
+    let current: ts.Expression = expression;
+    while (ts.isCallExpression(current)) {
+      if (current === targetCall) return true;
+      if (!ts.isPropertyAccessExpression(current.expression)) return false;
+      current = current.expression.expression;
+    }
+    return false;
+  };
+  const findTarget = (node: ts.Node): void => {
+    if (
+      ts.isCallExpression(node) &&
+      ts.isPropertyAccessExpression(node.expression) &&
+      node.expression.name.text === "command" &&
+      ts.isIdentifier(node.expression.expression) &&
+      node.expression.expression.text === parent &&
+      node.arguments[0] &&
+      ts.isStringLiteralLike(node.arguments[0]) &&
+      node.arguments[0].text === command
+    )
+      target = node;
+    ts.forEachChild(node, findTarget);
+  };
+  findTarget(file);
+  const visit = (node: ts.Node): void => {
+    if (
+      target &&
+      ts.isCallExpression(node) &&
+      ts.isPropertyAccessExpression(node.expression) &&
+      ["option", "requiredOption"].includes(node.expression.name.text) &&
+      node.arguments[0] &&
+      ts.isStringLiteralLike(node.arguments[0]) &&
+      isCallWithin(node.expression.expression, target)
+    ) {
+      const name = node.arguments[0].text.split(/[\s,[]/u)[0] ?? "";
+      all.push(name);
+      if (node.expression.name.text === "requiredOption") required.push(name);
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(file);
+  return { all, required };
 }
 
 function testCallbacks(source: string, path: string): Map<string, string> {
@@ -196,8 +256,120 @@ describe("PLAN 機構の S1 退役", () => {
   });
 });
 
+describe("PLAN 機構の S4 退役", () => {
+  it("U-PLANRET-014: task分類・routingとskill推薦にPLAN入力optionを残さない", () => {
+    const cliSource = readFileSync(join(snapshotRoot, "src/cli.ts"), "utf8");
+    const classifyOptions = commandOptionSurface(cliSource, "task", "classify").all;
+    const routeOptions = commandOptionSurface(cliSource, "task", "route").all;
+    const skillOptions = commandOptionSurface(cliSource, "skill", "suggest").all;
+    const recordOptions = commandOptionSurface(cliSource, "elicit", "record");
+    const noPlanSurfaces: Array<[string, string[]]> = [
+      ["handover", commandOptionSurface(cliSource, "program", "handover").all],
+      ["provider handover", commandOptionSurface(cliSource, "providerHandover", "export").all],
+      ["skill suggest", skillOptions],
+      ["advisor", commandOptionSurface(cliSource, "program", "advisor").all],
+      ["gate", commandOptionSurface(cliSource, "program", "gate <id>").all],
+      ["task classify", classifyOptions],
+      ["task route", routeOptions],
+      ["team run", commandOptionSurface(cliSource, "team", "run").all],
+      ["github pr render", commandOptionSurface(cliSource, "githubPr", "render").all],
+      ["elicit context", commandOptionSurface(cliSource, "elicit", "context").all],
+      ["elicit record", recordOptions.all],
+    ];
+    const feedbackSource = readFileSync(join(snapshotRoot, "src/cli/feedback.ts"), "utf8");
+    const delegationSource = readFileSync(join(snapshotRoot, "src/cli/delegation.ts"), "utf8");
+    noPlanSurfaces.push([
+      "feedback classify",
+      commandOptionSurface(feedbackSource, "feedback", "classify").all,
+    ]);
+    const workflowSource = readFileSync(
+      join(snapshotRoot, "src/forward/adapters/cli-registrar.ts"),
+      "utf8",
+    );
+
+    expect(classifyOptions).toContain("--text");
+    expect(classifyOptions).toContain("--text-file");
+    expect(classifyOptions).not.toContain("--plan");
+    expect(routeOptions).toContain("--text");
+    expect(routeOptions).toContain("--text-file");
+    expect(routeOptions).not.toContain("--plan");
+    expect(skillOptions).toContain("--text");
+    expect(skillOptions).not.toContain("--plan");
+    expect(skillOptions).not.toContain("--record");
+    for (const [surface, options] of noPlanSurfaces)
+      expect(options, `${surface} has no --plan`).not.toContain("--plan");
+    expect(commandOptionSurface(cliSource, "githubPr", "render").all).not.toContain(
+      "--plan-revision",
+    );
+    expect(cliSource).not.toContain("planId: opts.plan");
+    expect(cliSource).not.toContain("resolveSkillContextInjection(opts.plan)");
+    expect(cliSource).not.toContain("resolveActivePlan(nodeDeps(process.cwd(), gitBranch))");
+    expect(recordOptions.required).toContain("--issue");
+    expect(recordOptions.all).not.toContain("--plan");
+    expect(feedbackSource).not.toContain("resolveActivePlan");
+    expect(delegationSource).not.toContain("planId");
+    expect(delegationSource).not.toContain("plan_id");
+    for (const command of ["status", "transition", "explain"]) {
+      const workflowOptions = commandOptionSurface(workflowSource, "workflow", command);
+      expect(workflowOptions.required, `workflow ${command} requires --issue`).toContain("--issue");
+      expect(workflowOptions.all, `workflow ${command} has no --plan`).not.toContain("--plan");
+    }
+  });
+
+  it("U-PLANRET-025: Issue Form の起点・再合流先はIssueで案内する", () => {
+    const formDir = join(snapshotRoot, ".github/ISSUE_TEMPLATE");
+    const config = parseYaml(readFileSync(join(formDir, "config.yml"), "utf8")) as {
+      blank_issues_enabled?: boolean;
+    };
+    expect(config.blank_issues_enabled).toBe(false);
+    const forms = [
+      "recovery.yml",
+      "reverse.yml",
+      "redesign.yml",
+      "incident.yml",
+      "nfr-failure.yml",
+    ];
+    for (const name of forms) {
+      const raw = readFileSync(join(formDir, name), "utf8");
+      const form = parseYaml(raw) as {
+        body?: Array<{
+          id?: string;
+          validations?: { required?: boolean };
+          attributes?: { label?: string; description?: string; placeholder?: string };
+        }>;
+      };
+      const body = form.body ?? [];
+      const reentry = body.filter((item) => item.id === "reentry_target");
+      expect(reentry).toHaveLength(1);
+      expect(reentry[0].validations?.required).toBe(true);
+      expect(reentry[0].attributes?.label).toBe("Reentry target (Forward 再合流先 Issue / layer)");
+      expect(reentry[0].attributes?.description).toMatch(/Issue URL|layer/u);
+      expect(body.map((item) => item.id)).not.toContain("origin_plan");
+      expect(body.map((item) => item.id)).not.toContain("origin_revision");
+      for (const field of body) {
+        const attributes = field.attributes ?? {};
+        for (const value of [attributes.label, attributes.description, attributes.placeholder])
+          if (typeof value === "string")
+            expect(value).not.toMatch(/PLAN(?:-L\d+-| ID|[- ]input)/iu);
+      }
+      if (["recovery.yml", "reverse.yml", "redesign.yml"].includes(name)) {
+        const origin = body.filter((item) => item.id === "origin_issue");
+        expect(origin).toHaveLength(1);
+        expect(origin[0].validations?.required).toBe(true);
+        expect(origin[0].attributes?.label).toBe("Origin Issue URL");
+        expect(origin[0].attributes?.placeholder).toBe(
+          "https://github.com/<owner>/<repo>/issues/<number>",
+        );
+        expect(origin[0].attributes?.description).toMatch(/canonical Issue URL/u);
+      }
+      const header = raw.split(/\r?\n/u).slice(0, 6).join("\n");
+      expect(header).not.toMatch(/PLAN(?:-L\d+-| ID|[- ]input)/iu);
+    }
+  });
+});
+
 describe("PLAN 機構の S5 退役", () => {
-  it("CANDIDATE-U-PLANRET-014: S5のProject/binding surfaceを退役し、readinessを保持する", () => {
+  it("U-PLANRET-014: S5のProject/binding surfaceを退役し、readinessを保持する", () => {
     const cliSource = readFileSync(join(snapshotRoot, "src/cli.ts"), "utf8");
     const github = githubCommandSurface(cliSource);
     expect(github.groupFound).toBe(true);

@@ -10,7 +10,7 @@ import {
   pendingRecoveryProposals,
   recordFeedback,
 } from "../runtime/forced-stop.ts";
-import { nodeDeps, resolveActivePlan } from "../runtime/session-log.ts";
+import { nodeDeps } from "../runtime/session-log.ts";
 import { defaultHarnessDbPath, openHarnessDb } from "../state-db/index.ts";
 
 function gitBranch(): string | null {
@@ -67,9 +67,8 @@ export function registerFeedbackCommands(program: Command): void {
     )
     .option("--text <text>", "target text; stdin is used when omitted")
     .option("--session <id>", "session_id")
-    .option("--plan <id>", "plan_id; defaults to active state or branch resolution")
     .option("--apply <json>", "ClassifyResult JSON to apply through recordFeedback")
-    .action((opts: { text?: string; session?: string; plan?: string; apply?: string }) => {
+    .action((opts: { text?: string; session?: string; apply?: string }) => {
       const text = opts.text ?? readStdin();
       if (!opts.apply) {
         process.stdout.write(`${emitClassifyRequest(text)}\n`);
@@ -86,14 +85,14 @@ export function registerFeedbackCommands(program: Command): void {
       const deps = nodeDeps(process.cwd(), gitBranch);
       const ctx: FeedbackCtx = {
         session_id: opts.session ?? "unknown",
-        plan_id: opts.plan ?? resolveActivePlan(deps),
+        plan_id: null,
         summary: text,
       };
       recordFeedback(result, ctx, deps);
       process.stdout.write(
         result.category === "feedback" && ctx.plan_id
           ? `recorded: feedback (attention=${result.attention})\n`
-          : "skipped (mistake or unresolved plan_id)\n",
+          : "skipped (mistake or missing feedback context)\n",
       );
     });
 

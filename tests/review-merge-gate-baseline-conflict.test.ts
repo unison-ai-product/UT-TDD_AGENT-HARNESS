@@ -8,17 +8,20 @@ import { execFileSync } from "node:child_process";
 import {
   appendFileSync,
   chmodSync,
+  cpSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
+  readFileSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { Command } from "commander";
-import { describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { registerPrMergeCommands } from "../src/cli/pr-merge.ts";
+import { BASELINE_GATES, evaluateBaselineConflict } from "../src/feedback/baseline-conflict.ts";
 import { type GhPrMergePorts, runPrMerge } from "../src/feedback/review-merge-gate.ts";
 
 const now = "2026-10-28T01:00:00.000Z";
@@ -83,10 +86,39 @@ function git(dir: string, ...args: string[]): string {
   }
 }
 
+function changedPaths(dir: string, from: string, to: string): string[] {
+  const tokens = execFileSync("git", ["-C", dir, "diff", "-M", "--name-status", "-z", from, to], {
+    encoding: "utf8",
+    windowsHide: true,
+    stdio: ["ignore", "pipe", "pipe"],
+  })
+    .split("\0")
+    .filter((token) => token !== "");
+  const paths: string[] = [];
+  for (let index = 0; index < tokens.length; ) {
+    const pathCount = /^[RC]/.test(tokens[index] ?? "") ? 2 : 1;
+    paths.push(...tokens.slice(index + 1, index + 1 + pathCount));
+    index += 1 + pathCount;
+  }
+  return paths;
+}
+
 function configure(dir: string): void {
   git(dir, "config", "user.email", "fixture@example.test");
   git(dir, "config", "user.name", "fixture");
   git(dir, "config", "core.autocrlf", "false");
+}
+
+/** clone の .git/config が持つ origin の絶対 path を、複製先の bare repo へ書き換える (git を起動しない)。 */
+function repointOrigin(clone: string, origin: string): void {
+  const configPath = join(clone, ".git", "config");
+  const text = readFileSync(configPath, "utf8");
+  const next = text.replace(
+    /^(\s*url = ).*$/m,
+    (_m, head: string) => `${head}${origin.replaceAll("\\", "/")}`,
+  );
+  if (next === text) throw new Error(`origin url not found in ${configPath}`);
+  writeFileSync(configPath, next, "utf8");
 }
 
 function writeFile(dir: string, path: string, line: string): void {
@@ -111,9 +143,11 @@ interface Fixture {
   mergedTip: string;
 }
 
-/** bare origin + work (PR branch) + other (main を進める側)。work の origin/main は取り込むまで古いまま。 */
-function buildFixture(plan: Plan): Fixture {
-  const base = mkdtempSync(join(tmpdir(), "ut-tdd-bconf-"));
+let templateDir = "";
+
+/** 全 test 共通の土台 (bare origin + base commit を push 済みの work と other) を 1 回だけ作る。 */
+function buildTemplate(): string {
+  const base = mkdtempSync(join(tmpdir(), "ut-tdd-bconf-tpl-"));
   const origin = join(base, "origin.git");
   const work = join(base, "work");
   const other = join(base, "other");
@@ -133,6 +167,26 @@ function buildFixture(plan: Plan): Fixture {
     stdio: "ignore",
   });
   configure(other);
+  return base;
+}
+
+beforeAll(() => {
+  templateDir = buildTemplate();
+});
+
+afterAll(() => {
+  if (templateDir) rmSync(templateDir, { recursive: true, force: true });
+});
+
+/** 土台を複製した isolated fixture。work の origin/main は取り込むまで古いまま。 */
+function buildFixture(plan: Plan): Fixture {
+  const base = mkdtempSync(join(tmpdir(), "ut-tdd-bconf-"));
+  cpSync(templateDir, base, { recursive: true });
+  const origin = join(base, "origin.git");
+  const work = join(base, "work");
+  const other = join(base, "other");
+  repointOrigin(work, origin);
+  repointOrigin(other, origin);
   git(work, "checkout", "-q", "-b", "pr");
   applyEdit(work, plan.pr, "pr");
   applyEdit(other, plan.main, "main");
@@ -254,13 +308,6 @@ function withFixture(plan: Plan, body: (fx: Fixture) => void | Promise<void>) {
   };
 }
 
-function expectBaselineConflictDeny(run: ReturnType<typeof runMerge>): void {
-  expect(run.result.ok).toBe(false);
-  expect(run.result.decision).toBe("deny");
-  expect(run.result.reason).toMatch(/^baseline_conflict(?!_unknown)/);
-  expect(run.merges).toBe(0);
-}
-
 function expectUnknownDeny(run: ReturnType<typeof runMerge>): void {
   expect(run.result.ok).toBe(false);
   expect(run.result.reason).toMatch(/^baseline_conflict_unknown/);
@@ -271,29 +318,42 @@ const untouched: Plan = { pr: { touch: [OUT_OF_SCOPE] }, main: { touch: [OUT_OF_
 
 describe("review merge gate baseline conflict (Issue #1423)", { timeout: 120_000 }, () => {
   for (const gate of [DOC_SPLIT, CODE_SIZE]) {
-    const conflicts: Array<[string, Plan]> = [
+    const conflicts: Array<[string, Plan, string]> = [
       [
         "(a) PR と main が同じ対象ファイルを変更",
         { pr: { touch: [gate.target] }, main: { touch: [gate.target] } },
+        gate.target,
       ],
       [
         "(b) PR が baseline を変更し main が別の対象ファイルを変更",
         { pr: { touch: [gate.baseline] }, main: { touch: [gate.other] } },
+        gate.other,
       ],
       [
         "(c) main が baseline を変更し PR が対象ファイルを変更",
         { pr: { touch: [gate.target] }, main: { touch: [gate.baseline] } },
+        gate.target,
       ],
       [
         "(d) PR が対象ファイルを rename し main が旧 path を変更",
         { pr: { rename: [gate.target, gate.renamed] }, main: { touch: [gate.target] } },
+        gate.target,
       ],
     ];
-    for (const [label, plan] of conflicts) {
+    for (const [label, plan, conflictPath] of conflicts) {
       it(
-        `CANDIDATE-U-RVMG-047: ${gate.name} ${label} は baseline_conflict で deny し gh pr merge を呼ばない`,
+        `CANDIDATE-U-RVMG-047: ${gate.name} ${label} は再計算後の最終可否と分けて競合検出する`,
         withFixture(plan, (fx) => {
-          expectBaselineConflictDeny(runMerge(fx));
+          // production adapter と同様、push 後の最新 main を検出する。
+          git(fx.work, "fetch", "-q", "origin", "+refs/heads/main:refs/remotes/origin/main");
+          const mainSha = git(fx.work, "rev-parse", "origin/main^{commit}");
+          const mergeBase = git(fx.work, "merge-base", fx.prHead, mainSha);
+          const result = evaluateBaselineConflict(
+            changedPaths(fx.work, mergeBase, fx.prHead),
+            changedPaths(fx.work, mergeBase, mainSha),
+            BASELINE_GATES,
+          );
+          expect(result.conflicts).toEqual([{ gate: gate.name, paths: [conflictPath] }]);
         }),
       );
     }

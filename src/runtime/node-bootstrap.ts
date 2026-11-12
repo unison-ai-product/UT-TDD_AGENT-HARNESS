@@ -18,7 +18,7 @@ import {
 } from "node:fs";
 import { builtinModules } from "node:module";
 import { basename, dirname, isAbsolute, relative, resolve, sep } from "node:path";
-export const REVIEWED_NODE_VERSION = "v24.22.1";
+export const REVIEWED_NODE_VERSION = "v24.22.3";
 export const REVIEWED_NPM_VERSION = "11.19.1";
 export const NODE_GENERATIONS = "dist/node-generations";
 export const NODE_LEASE = "dist/node-publish.lock";

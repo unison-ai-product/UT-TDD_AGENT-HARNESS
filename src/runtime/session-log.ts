@@ -415,7 +415,7 @@ export function onSessionStart(input: SessionHookInput, deps: SessionLogDeps): n
       {
         ts: deps.now(),
         session_id: input.session_id ?? "unknown",
-        plan_id: input.plan_id ?? resolveActivePlan(deps),
+        plan_id: input.plan_id ?? null,
         event_type: "session_start",
       },
       deps,
@@ -448,7 +448,7 @@ export function onPostToolUse(input: SessionHookInput, deps: SessionLogDeps): nu
       {
         ts: deps.now(),
         session_id: input.session_id ?? "unknown",
-        plan_id: input.plan_id ?? resolveActivePlan(deps),
+        plan_id: input.plan_id ?? null,
         event_type: isCommit ? "commit" : isMemoryWrite ? "memory_write" : "tool_use",
         tool: input.tool_name,
         // IMP-078 gap③: commit は HEAD hash を捕捉 (deps.headCommit、PostToolUse は commit 完了後 = 新 HEAD)。
@@ -475,7 +475,7 @@ export function onStop(input: SessionHookInput, deps: SessionLogDeps): number {
       {
         ts: deps.now(),
         session_id: sid,
-        plan_id: input.plan_id ?? resolveActivePlan(deps),
+        plan_id: input.plan_id ?? null,
         event_type: "session_end",
       },
       deps,
@@ -489,7 +489,7 @@ export function onStop(input: SessionHookInput, deps: SessionLogDeps): number {
       const nudge: SessionEvent = {
         ts: deps.now(),
         session_id: sid,
-        plan_id: input.plan_id ?? resolveActivePlan(deps),
+        plan_id: input.plan_id ?? null,
         event_type: "memory_promotion_missed",
         tool: "session-summary",
         target: promotion.reason,

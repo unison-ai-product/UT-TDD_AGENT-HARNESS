@@ -99,7 +99,7 @@ Codex では `## 設計判断依頼` の markdown 選択肢表で等価に出力
 「PO 判断必須」「PO 承認待ち」「PO が決める」と記載して作業を止める前に、必ず
 `ut-tdd advisor --decision <kind> --current-model <current-model> --execute --task "<判断内容>"`
 で第三者判断を得る。設計・進行・優先順位・UI/UX は
-`claude-fable-5-1`、実装方式・技術的トラブルシュートは `gpt-6.1-sol` へrouteする
+`claude-fable-5-2`、実装方式・技術的トラブルシュートは `gpt-6.1-sol` へrouteする
 (正規の `--decision design|progress|uiux|implementation|troubleshooting` を使う)。
 advisor結果は前提をrepo実測で検証し、下記の高影響境界に該当せず、既存の層・責務・契約から
 一意に決まるなら、AIランタイムが技術判断として決定・記録して作業を継続する。advisor相談を
@@ -574,16 +574,23 @@ Task-kind ベースの割当 (PO rule 2026-07-14、旧 tier 記述を supersede)
   GUI lane の指揮 = Terra (`gpt-6.1-terra`。フロントエンド・UI と設計の判断だけ Sol に相談する);
   超局所の難所の相談だけ = Astra (`gpt-6-astra`、常用しない)。指揮モデル別の振る舞いは
   `AGENTS.md` §Codex / Claude Code Harness の「あなたが○○なら」の表。
-- Claude: 担当は次のとおり。指揮モデル別の相談先と委譲先は `.claude/CLAUDE.md` §委譲と判断層 の
+- Claude: 担当は次のとおり (PO 2026-11-11: 原則 Sonnet か Haiku へ振り、指揮は orchestration を原則とする。
+  発見を判断して処理することに専念するほうが価値が高い。Haiku 5.5 は性能が上がったので主力に押し上げ、
+  難所の worker に Sonnet を置き、Opus は判断と検証、Fable は PO 前のエスカレーションと大規模設計の相談役にする。
+  目的はコストを下げ、速度と精度を上げること)。指揮モデル別の相談先と委譲先は `.claude/CLAUDE.md` §委譲と判断層 の
   「あなたが○○なら」の表を参照する。
-  - Opus (`claude-opus-5-5`): フロントデザイン/UI デザインの判断・レビュー、設計ドキュメント作成。
-  - Sonnet (`claude-sonnet-5-5`): 決まった UI デザインの実装、ドキュメント修正に加えて、**型が決まった書き物**。
-    例は closing review の発注文、Issue 本文、PR / Issue への返信、handover、設計文書の対象節が名指しされた改訂。
-  - Haiku (`claude-haiku-5-5`): web 検索、doc パッチに加えて、**読む・確かめる・集める作業の標準 worker**。
-    例は行番号・引用の確認、対象行が明示された文書編集、CI ログの失敗の要約、PR の差分と変更 path の重なりの確認、
-    Issue / PR / CI の状態確認、発注文や報告に入れる事実 (commit の一覧、diff の範囲、ファイルの有無) の収集、
-    grep での洗い出し。
-  - 指揮モデル (Fable / Opus) は、上の Sonnet と Haiku の担当を自分で行わず委ねる。
+  - Fable (`claude-fable-5-2`): PO 前のエスカレーションと大規模設計の相談役 (`ut-tdd advisor`)。
+  - Opus (`claude-opus-5-5`): 指揮のときは判断と検証に専念する (順序・方式・FLAG の扱いの判断、worker の成果物の検収)。
+    成果物は自分で書き下ろさない。フロントデザイン/UI デザインの判断・レビューも担う。
+  - Sonnet (`claude-sonnet-5-5`): **難所の worker**。自明でない実装、設計ドキュメントの起草、
+    基準が全部は明示できない編集、決まった UI デザインの実装。
+  - Haiku (`claude-haiku-5-5`): **手を動かす作業の主力 (既定の worker)**。web 検索、doc パッチ、
+    状態確認、grep / diff の確認、計測、CI ログの失敗の要約、Issue / PR / CI の状態確認、発注文や報告に入れる事実の収集、
+    決まった型の PR / Issue 本文・返信・handover、通常の文書修正、基準が明示できるコード・テストの編集。
+    例は行番号・引用の確認、対象行が明示された文書編集、PR の差分と変更 path の重なりの確認、
+    commit の一覧・diff の範囲・ファイルの有無の収集。
+    この既定は Agent tool で worker を出すときの運用の既定である。正規委譲経路 (`ut-tdd claude --role <role>`) の worker の機械の既定は `selectTeamModel` (`src/team/model-policy.ts`) のままで、実装・テストは Sonnet、設計は Opus に振られる。正規委譲経路で Haiku か Sonnet を使うときは `--model` で明示する。
+  - 指揮モデル (Fable / Opus) は、手を動かす作業を自分で行わず、既定では Haiku、難所は Sonnet へ委ねる。
   - 委譲するのは、独立した作業が複数あるとき、または 1 つのコンテキストに収まらない量を読むときである。
     1 本の依存した鎖や、すでに自分のコンテキストにある内容で済む作業は委譲せず、自分で行う
     (subagent は文脈を作り直し、報告を読み直す分の費用がかかる)。
@@ -595,9 +602,10 @@ Task-kind ベースの割当 (PO rule 2026-07-14、旧 tier 記述を supersede)
   - Haiku へ渡す文脈は 10 万トークン以内に収める (超えると単価が 5 倍になる。100 万トークンあたり
     $0.10 / $0.50 が $0.50 / $2.50)。
   - 変えない線引き: 意味の判定と完了の判定は上位モデルか control が確定し、成果物は非著者 review を通す。
-    コードの worker 標準にする根拠はまだ無い
-    (実測 2026-11-02: 読み取り 3 本で誤り 0、実編集は対象 10 行を正解し誤書き換え 0。一方、前段の棚卸しは 7 行を誤分類し、
-    Issue 完了判定 68 件は 3 件誤り)。
+    なお 2026-11-02 の実測 (読み取り 3 本で誤り 0、実編集は対象 10 行を正解し誤書き換え 0。一方、前段の棚卸しは 7 行を
+    誤分類し、Issue 完了判定 68 件は 3 件誤り) を根拠にした「コードの worker 標準にする根拠はまだ無い」という制限は、
+    PO 2026-11-11 の決定で置き換えた。基準が明示できるコード・テストの編集も Haiku の既定 (Agent tool の運用の既定。機械の routing は上記のとおり) とし、基準が全部は明示できない
+    作業と意味の判定は Sonnet か上位モデルへ上げる。誤りの件数は引き続き数える。
   - 根拠 (#1599): Anthropic の公式文書 (Choosing the right model / Optimizing for cost and intelligence、
     2026-11-10 確認) は、Haiku 5.5 の用途に subagent の作業を挙げ、指揮モデルと安い worker の組が単独より
     得になった計測は「独立した作業が多いとき」と「1 コンテキストに収まらない量のとき」だけだとしている。
@@ -628,7 +636,7 @@ Task-kind ベースの割当 (PO rule 2026-07-14、旧 tier 記述を supersede)
 - advisor (PO rule 2026-07-29、2026-07-14 の行列を supersede): **技術判断**
   (実装方式 / トラブルシューティング) は `gpt-6.1-sol` 一次 (fallback Fable)、
   **設計・進行判断** (設計方式 / レーン選択 / 優先順位 / 段取り) と
-  **デザイン/UI 判断** は `claude-fable-5-1` 一次 (次点 `gpt-6.1-sol`)。
+  **デザイン/UI 判断** は `claude-fable-5-2` 一次 (次点 `gpt-6.1-sol`)。
   判断種別は `--decision design|progress|implementation|troubleshooting|uiux`
   で明示でき、省略時は task 文から推論する (進行語は technical 語より優先)。
   迷う場合は `ut-tdd advisor --task "..." --current-model <model>` を使い、

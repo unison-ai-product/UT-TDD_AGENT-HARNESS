@@ -14,8 +14,8 @@ const CODEX_WORKER_MODEL_ID = "gpt-6-luna";
  */
 export const MODEL_IDS = {
   claude: {
-    /** Claude 5.1 世代フロンティア (advisor 一次相談先、PO 2026-10 更新)。 */
-    fable: "claude-fable-5-1",
+    /** Claude 5.2 世代フロンティア (advisor 一次相談先、PO 2026-10 更新)。 */
+    fable: "claude-fable-5-2",
     opus: "claude-opus-5-5",
     sonnet: "claude-sonnet-5-5",
     haiku: "claude-haiku-5-5",

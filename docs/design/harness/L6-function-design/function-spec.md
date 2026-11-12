@@ -2314,7 +2314,7 @@ runtime 固有 projection であり、意味論正本ではない。これによ
 template が同じ invocation を比較しつつ、runtime ごとの schema capability を混同しない。
 ## Node self-host bootstrap機能契約（Issue #152 D0-N）
 
-関数`buildNodeGeneration(candidateRevision)`はexact Node `24.22.1` / npm `11.19.1`、review済み
+関数`buildNodeGeneration(candidateRevision)`はexact Node `24.22.3` / npm `11.19.1`、review済み
 検証済みツールチェーン来歴（Node配布物digest、同梱npm CLIの期待digest、package/lock identity）、
 入力には`package-lock.json`とbuilder/source graphも含め、compiled ESMと`NodeBootstrapReceipt`を
 同一generationへ原子的に公開する。receiptは少なくとも
@@ -2507,11 +2507,9 @@ L6 confirmationはplan/revision/status/content/head/tracked digest/owner/attesta
 nested attestationをwrapper receipt digestへ固定順で封印する。ReviewBundleはbundle execution modeを持ち、
 両lane及びactual admission modeとexact一致させる。
 
-cutover 3関数`initializeCutoverChain` / `appendCutoverTransition` / `projectCutoverState`の実装先は
-`src/runtime/cutover-transition.ts`、pair testは`tests/cutover-transition.test.ts`である。
-`admitNodeSlice`のkernel/testは`src/runtime/node-slice-admission.ts` /
-`tests/node-slice-admission.test.ts`、zod正本は`src/schema/cutover-transition.ts` /
-`src/schema/node-slice-admission.ts`である。D0では将来生成契約としてfreezeする。
+cutover 3関数`initializeCutoverChain` / `appendCutoverTransition` / `projectCutoverState`は退役・削除済み (#1122)で、
+実装先は存在しない。`admitNodeSlice`のkernel/testは`src/runtime/node-slice-admission.ts` /
+`tests/node-slice-admission.test.ts`、zod正本は`src/schema/node-slice-admission.ts`である。D0では将来生成契約としてfreezeする。
 
 ## PLAN-L6-92 Resource Kernelプロトコル・エラー・プラットフォームポート契約
 

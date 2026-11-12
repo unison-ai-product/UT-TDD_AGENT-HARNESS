@@ -40,4 +40,4 @@ issue: 1559
 - 050〜054 は設計書保護の三段階に従う。登録と Red の PR が `it.fails` として入れ、`src` を含まない昇格 PR が正式 ID に改め、実装 PR が `it` に戻す。
   fixture は一時ディレクトリだけを使うので、`test-repository-isolation` の登録は要らない見込みである。053 の (実際の `BASELINE_GATES` を import する) 部分が
   開発 repository のファイルを読むなら、登録行を登録と Red の PR に入れる。
-- 実装 PR は、wrapper の中で計った再計算の時間を L6 §6.6 の実測表に追記する。
+- 実装 PR の merge 後に、docs-only PR で wrapper の再計算時間を L6 §6.6 の実測表へ追記する。

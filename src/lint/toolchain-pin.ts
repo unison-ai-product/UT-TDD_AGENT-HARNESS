@@ -6,7 +6,7 @@ export const NODE_TOOLCHAIN_POLICY = {
   phase: "node_production",
   nodeAuthority: "sealed",
   executableReceipt: "required",
-  nodeVersion: "24.22.1",
+  nodeVersion: "24.22.3",
   npmVersion: "11.19.1",
   npmIntegrity:
     "sha512-ztsxKxt/kkIaAs+2i0GU6I+DRmUdrNasxTZKJe9TCdSjKxlhah/4r/hl5ygMD6XAg1qZ9c2TNomR4qgOydp10g==",

@@ -13,6 +13,7 @@ export const CONSUMER_RUNTIME_ABSENT_WRAPPER_SOURCE = [
   "      cwd: worktreeRoot,",
   '      encoding: "utf8",',
   '      stdio: ["ignore", "pipe", "ignore"],',
+  "      windowsHide: true,",
   "    }).trim());",
   '    mainLauncher = resolve(dirname(common), ".ut-tdd", "bin", "ut-tdd.mjs");',
   '    mainExplanation = "";',

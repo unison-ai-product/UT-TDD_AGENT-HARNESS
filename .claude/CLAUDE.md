@@ -131,7 +131,7 @@ Opus が orchestration を担当するとき、**設計・実装・修正の方�
 - 実行: `ut-tdd advisor --decision <kind> --current-model <model> --execute --task "..."`
   (`--plan <id>` を付けると発火ログが PLAN に紐づく)。技術判断 (implementation /
   troubleshooting) は `gpt-6.1-sol` 一次、設計・進行判断 (design / progress) と
-  デザイン/UI は `claude-fable-5-1` 一次 (Model / Effort Routing 節、PO 2026-07-29)。
+  デザイン/UI は `claude-fable-5-2` 一次 (Model / Effort Routing 節、PO 2026-07-29)。
   レーン選択・着手順・優先順位は **progress** であって技術判断ではない。
 - **advisor の回答を鵜呑みにしない**。前提が事実か実測で確かめ、食い違ったら実測を突き返す
   (2026-07-28 実例: doctor 二重実行の方式判断で、memo 共有テストが 1 件でなく 19 件という
@@ -161,11 +161,13 @@ trade-off を記録した PLAN とする。spot-check で (a) この対象に該
 ## 委譲と判断層 (PO ルール 2026-07-28、Claude 固有)
 
 **作業は下位モデルへ委ねて判断層を厚くする。** orchestrator (Fable / Opus) が自分で
-書き下ろすのではなく、創出は worker tier、判断は frontier tier に置く。Sonnet が指揮するときは
-Sonnet 自身が worker tier なので、通常の作業は自分で行う (「あなたが○○なら」の表の Sonnet 行)。
+書き下ろすのではなく、創出は worker tier、判断は frontier tier に置く。Sonnet が指揮するときも
+通常の作業は Haiku へ振り、難所だけ自分で行う (「あなたが○○なら」の表の Sonnet 行)。
 
-- 文書作成 = Sonnet (`claude-sonnet-5-5`)。実装 = Codex 側 worker (Luna `gpt-6-luna`)。
-  読む・確かめる・集める作業 = Haiku (`claude-haiku-5-5`)。範囲の正本は `../CLAUDE.md` §Model / Effort Routing。
+- 手を動かす作業の主力 = Haiku (`claude-haiku-5-5`)。難所 (自明でない実装・設計文書の起草) = Sonnet
+  (`claude-sonnet-5-5`)。実装 = Codex 側 worker (Luna `gpt-6-luna`)。範囲の正本は `../CLAUDE.md` §Model / Effort Routing。
+- orchestrator (Fable / Opus) は orchestration を原則とし、発見を判断して処理することに専念する。
+  Opus は判断と検証、Fable は PO 前のエスカレーションと大規模設計の相談役である。
 - 判断ゲート (review / blind-review / qa / tl / security) は族内 frontier tier。
   正規委譲経路 (`ut-tdd codex|claude --role <role>`) がこの routing を機械強制する
   (`src/team/delegation-routing.ts`、未登録 role は fail-close)。
@@ -192,16 +194,17 @@ Sonnet 自身が worker tier なので、通常の作業は自分で行う (「�
 
 | あなたが | 迷った判断・難所 | レビュー・UI デザイン判断 | 通常の作業 | 軽い作業 |
 |---|---|---|---|---|
-| Fable | 自分で決めて記録する。技術判断だけ Sol に相談する (`ut-tdd advisor`) | 委譲経路 (`ut-tdd claude --role` / `ut-tdd codex --role`、Opus / Sol) | Sonnet | Haiku |
-| Opus | `ut-tdd advisor` で相談する。設計・進行・UI は Fable、技術判断は Sol (Model / Effort Routing の振り分けどおり) | 自分の UI デザイン判断。closing review は委譲経路 (`ut-tdd claude --role` / `ut-tdd codex --role`) | Sonnet | Haiku |
-| Sonnet | Opus に相談する (Agent tool の汎用の型に `model: opus` を渡す。相談の回答は closing の根拠にしない) | 委譲経路 (`ut-tdd claude --role <role>`、Opus) | 自分 | Haiku |
+| Fable | 自分で決めて記録する。技術判断だけ Sol に相談する (`ut-tdd advisor`)。PO 前のエスカレーションと大規模設計の相談役でもある | 委譲経路 (`ut-tdd claude --role` / `ut-tdd codex --role`、Opus / Sol) | Haiku (難所は Sonnet) | Haiku |
+| Opus | `ut-tdd advisor` で相談する。設計・進行・UI は Fable、技術判断は Sol (Model / Effort Routing の振り分けどおり) | 自分の UI デザイン判断。closing review は委譲経路 (`ut-tdd claude --role` / `ut-tdd codex --role`) | Haiku (難所は Sonnet) | Haiku |
+| Sonnet | Opus に相談する (Agent tool の汎用の型に `model: opus` を渡す。相談の回答は closing の根拠にしない) | 委譲経路 (`ut-tdd claude --role <role>`、Opus) | Haiku (難所は自分) | Haiku |
 | Haiku | 指揮をしない。判断が出たら Sonnet に相談する | ― | ― | 自分 |
 
 - Agent tool の subagent は手を動かす層 (草稿・調査・並列作業) であり、closing の権限を持たない。レビューの verdict・merge の根拠は
   委譲経路 (`ut-tdd claude|codex --role <role>`) と review custody だけが持つ (`../CLAUDE.md` §Model / Effort Routing の 2 層)。
-- 「通常の作業」は型が決まった書き物 (文書作成・決まった型での issue / PR 返信・発注文・handover) と
-  決まった UI デザインの実装、「軽い作業」は読む・確かめる・集める作業 (gh の状態確認・grep・CI の見張り・CI ログの要約・
-  diff の確認) である。意味・完了の判定は任せない。例は短く挙げただけで、範囲・委譲する形としない形・
+- 「通常の作業」は手を動かす作業全般 (型が決まった書き物・通常の文書修正・基準が明示できるコード・テストの編集) で、
+  既定は Haiku、難所 (自明でない実装・設計文書の起草・基準が全部は明示できない編集・決まった UI デザインの実装) は Sonnet。
+  「軽い作業」は読む・確かめる・集める作業 (gh の状態確認・grep・CI の見張り・CI ログの要約・diff の確認) で Haiku。
+  意味・完了の判定は任せない。例は短く挙げただけで、範囲・委譲する形としない形・
   Haiku の文脈上限の正本は `../CLAUDE.md` §Model / Effort Routing。
 - どの行でも変えないもの: モデル割当は Model / Effort Routing (`../CLAUDE.md`) と
   `src/team/delegation-routing.ts` の機械強制に従う。review の族分離 (Codex 著 → Claude Opus、
@@ -210,6 +213,8 @@ Sonnet 自身が worker tier なので、通常の作業は自分で行う (「�
 - 根拠 (2026-10-09 実測): Sonnet で control lane を回した間に、古い wake 通知への 1 行返事に
   数十ターンを使い、自分で決めるべき canary.7 の時期を PO に尋ね、#939 の再検が遅れた。
   1 段上へ相談する経路が無かったことが原因である。
+- 根拠 (PO 2026-11-11): 原則 Sonnet か Haiku へ振り、指揮は発見の判断と処理に専念する。Haiku 5.5 の性能向上で主力に
+  押し上げ、難所に Sonnet、判断と検証に Opus、PO 前の相談と大規模設計に Fable を置く。コストを下げ、速度と精度を上げる。
 - ルールであって機械強制ではない。同じ失敗が再発したら、SessionStart で指揮モデルの行を表示する
   仕組みを検討する。
 

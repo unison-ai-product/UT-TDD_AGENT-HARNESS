@@ -138,11 +138,7 @@ import { lintPlanWithGate } from "./plan/lint.ts";
 import { SystemGitCommandPort } from "./plan-admission/git-diff-adapter.ts";
 import { createNodePlanDraftRunner } from "./plan-admission/node-plan-draft-runner.ts";
 import { createNodePlanRevisionRunner } from "./plan-admission/node-plan-revision-runner.ts";
-import {
-  type AdapterContextInjection,
-  type AdapterProvider,
-  buildProviderInvocation,
-} from "./runtime/adapter.ts";
+import { type AdapterProvider, buildProviderInvocation } from "./runtime/adapter.ts";
 import { type AgentGuardInput, evaluateAgentGuard } from "./runtime/agent-guard.ts";
 import {
   nodeAgentSlotsDeps,
@@ -195,7 +191,6 @@ import {
   dispatch,
   nodeDeps,
   parseSessionEvents,
-  recordSkillInjectionAttempt,
   resolveActivePlan,
   type SessionHookInput,
   safeName,
@@ -237,9 +232,7 @@ import { ensureDir } from "./shared/fs.ts";
 import {
   bucketRecommendations,
   buildSkillInjectionSet,
-  recommendSkillsForPlan,
   recommendSkillsForText,
-  recordSkillRecommendations,
   resolveRuntimeSessionId,
 } from "./skill-engine/recommend.ts";
 import { type SkillCategory, scaffoldSkill } from "./skill-engine/scaffold.ts";
@@ -350,70 +343,6 @@ function resolveTaskText(opts: { task?: string; taskFile?: string }): string | n
     }
   }
   return opts.task ?? null;
-}
-
-function resolveSkillContextInjection(
-  planId: string | undefined,
-): AdapterContextInjection | undefined {
-  if (!planId) return undefined;
-  const repoRoot = process.cwd();
-  // PLAN-L7-262: 注入の成功/skip を session jsonl へ記録する (silent fail-open をやめ、
-  // 「握った事実の記録付き fail-open」へ)。記録自体は recordEvent の fail-open に従う。
-  const logDeps = nodeDeps(repoRoot, () => null);
-  const db = openHarnessDb(":memory:", { repoRoot });
-  try {
-    try {
-      // 文脈注入は skill/PLAN 投影だけが必要で、グローバル token telemetry の再走査は不要。
-      // 毎回の provider 起動で home 配下を走査すると実行境界を不必要に遅延させる。
-      rebuildHarnessDb({ repoRoot, db, skipTokenTelemetry: true });
-    } catch {
-      recordSkillInjectionAttempt(
-        { plan_id: planId, status: "skipped", reason: "rebuild-failed", required: 0, optional: 0 },
-        logDeps,
-      );
-      return undefined;
-    }
-    const recommendations = recommendSkillsForPlan(db, planId);
-    const injection = buildSkillInjectionSet(db, recommendations);
-    if (injection.required_paths.length === 0 && injection.optional_paths.length === 0) {
-      recordSkillInjectionAttempt(
-        {
-          plan_id: planId,
-          status: "skipped",
-          reason: "no-matching-skills",
-          required: 0,
-          optional: 0,
-        },
-        logDeps,
-      );
-      return undefined;
-    }
-    recordSkillInjectionAttempt(
-      {
-        plan_id: planId,
-        status: "injected",
-        required: injection.required_paths.length,
-        optional: injection.optional_paths.length,
-      },
-      logDeps,
-    );
-    return {
-      required_paths: injection.required_paths,
-      optional_paths: injection.optional_paths,
-    };
-  } finally {
-    db.close();
-  }
-}
-
-function planIdFromPath(path: string | undefined): string | undefined {
-  if (!path) return undefined;
-  try {
-    const raw = readFileSync(path, "utf8");
-    return raw.match(/^plan_id:\s*([^\r\n]+)/m)?.[1]?.trim();
-  } catch {
-    return undefined;
-  }
 }
 
 function readHookInput(defaultEvent: string, sessionId?: string): SessionHookInput {
@@ -1512,10 +1441,9 @@ plan
 
 plan
   .command("complete [id]")
-  .description("active PLAN を completed handover として記録し、current-plan を clear")
+  .description("completed handover を記録し、current-plan を clear")
   .option("--dry-run", "handover を生成するが書き込まない")
-  .option("--scope-active", "active plan family の digest のみで handover を生成")
-  .action((id: string | undefined, opts: { dryRun?: boolean; scopeActive?: boolean }) => {
+  .action((_id: string | undefined, opts: { dryRun?: boolean }) => {
     const date = new Date().toISOString().slice(0, 10);
     const deps = nodeHandoverDeps(process.cwd());
     const r = runHandover(
@@ -1523,8 +1451,6 @@ plan
         date,
         dryRun: Boolean(opts.dryRun),
         complete: true,
-        scopeToActive: Boolean(opts.scopeActive),
-        ...(id ? { planId: id } : {}),
       },
       deps,
     );
@@ -1536,13 +1462,9 @@ plan
 
 const handover = program
   .command("handover")
-  .description(
-    "session-log PLAN digest から機械ポインタ CURRENT.json を生成 (要件 §6.8.5。散文 scaffold の生成は停止)",
-  )
+  .description("既存 digest から機械ポインタ CURRENT.json を生成")
   .option("--dry-run", "書き込まず内容のみ表示")
-  .option("--complete", "status=completed として記録 (PLAN 完了時)")
-  .option("--plan <id>", "明示 active PLAN (省略時 current-plan/branch から解決)")
-  .option("--scope-active", "§1-§2 を active plan family の digest のみへ絞る (IMP-048 ノイズ低減)")
+  .option("--complete", "status=completed として記録")
   .option(
     "--scope-session",
     "§1-§2 を直近 session が触れた digest のみへ絞る (IMP-078 gap④ 前 session 混入排除)",
@@ -1552,14 +1474,7 @@ const handover = program
     "session scope に使う session_id を明示 (省略時 --scope-session で直近を推定)",
   )
   .action(
-    (opts: {
-      dryRun?: boolean;
-      complete?: boolean;
-      plan?: string;
-      scopeActive?: boolean;
-      scopeSession?: boolean;
-      session?: string;
-    }) => {
+    (opts: { dryRun?: boolean; complete?: boolean; scopeSession?: boolean; session?: string }) => {
       const date = new Date().toISOString().slice(0, 10);
       const deps = nodeHandoverDeps(process.cwd());
       // IMP-078 gap④: --session 明示 > --scope-session 推定 (latestSessionId) > なし。
@@ -1570,9 +1485,7 @@ const handover = program
           date,
           dryRun: Boolean(opts.dryRun),
           complete: Boolean(opts.complete),
-          scopeToActive: Boolean(opts.scopeActive),
           ...(sessionId ? { sessionId } : {}),
-          ...(opts.plan ? { planId: opts.plan } : {}),
         },
         deps,
       );
@@ -1593,7 +1506,6 @@ providerHandover
   .requiredOption("--from <runtime>", "claude or codex")
   .requiredOption("--to <runtime>", "claude or codex")
   .requiredOption("--summary <text>", "handover context summary")
-  .option("--plan <id>", "active PLAN (defaults to current-plan/branch resolution)")
   .option("--budget <text>", "budget or constraint summary")
   .option("--next-action <text...>", "next actions")
   .option("--file <path...>", "relevant files")
@@ -1604,7 +1516,6 @@ providerHandover
         from: ProviderRuntime;
         to: ProviderRuntime;
         summary: string;
-        plan?: string;
         budget?: string;
         nextAction?: string[];
         file?: string[];
@@ -1613,27 +1524,15 @@ providerHandover
       cmd: Command,
     ) => {
       const localOpts = cmd.opts() as typeof opts;
-      const chainPlan = optionFromCommandChain<string>(cmd, "plan");
       const chainBudget = optionFromCommandChain<string>(cmd, "budget");
       const chainNextAction = optionFromCommandChain<string[]>(cmd, "nextAction");
       const chainFile = optionFromCommandChain<string[]>(cmd, "file");
       const chainDryRun = optionFromCommandChain<boolean>(cmd, "dryRun");
-      const planId =
-        localOpts.plan ??
-        opts.plan ??
-        chainPlan ??
-        resolveActivePlan(nodeDeps(process.cwd(), gitBranch));
-      if (!planId) {
-        process.stderr.write("provider handover requires --plan or active current-plan\n");
-        process.exitCode = 1;
-        return;
-      }
       try {
         const result = runProviderHandover(
           {
             from: opts.from,
             to: opts.to,
-            activePlan: planId,
             budget: localOpts.budget ?? opts.budget ?? chainBudget ?? null,
             summary: opts.summary,
             nextActions: localOpts.nextAction ?? opts.nextAction ?? chainNextAction ?? [],
@@ -1665,7 +1564,7 @@ providerHandover
     if (opts.json) process.stdout.write(`${JSON.stringify(current, null, 2)}\n`);
     else {
       process.stdout.write(
-        `provider handover: ${current.handover_id} ${current.from}->${current.to} plan=${current.active_plan}\n`,
+        `provider handover: ${current.handover_id} ${current.from}->${current.to} plan=${current.active_plan ?? "-"}\n`,
       );
     }
   });
@@ -1946,89 +1845,57 @@ telemetry
 const skill = program.command("skill").description("skill recommendation and invocation telemetry");
 skill
   .command("suggest")
-  .description("suggest skills for a PLAN id or a free-text task from harness.db context")
-  .option("--plan <id>", "PLAN id (harness.db plan/layer/drive context)")
-  .option("--text <task>", "free-text task (classify → context; mutually exclusive with --plan)")
-  .option("--record", "write recommendations to harness.db (--plan only)")
+  .description("suggest skills for a free-text task from harness.db context")
+  .requiredOption("--text <task>", "free-text task (classify → context)")
   .option("--buckets", "group ranked rows into required/recommended/optional (additive view)")
   .option("--inject", "emit provider context injection manifest (skill paths only)")
   .option("--json", "JSON output")
-  .action(
-    (opts: {
-      plan?: string;
-      text?: string;
-      record?: boolean;
-      buckets?: boolean;
-      inject?: boolean;
-      json?: boolean;
-    }) => {
-      // A-138 ITEM-2: --plan / --text のどちらか一方が必須 (相互排他、flat ranked list は不変)。
-      if (Boolean(opts.plan) === Boolean(opts.text)) {
-        process.stderr.write("skill suggest requires exactly one of --plan or --text\n");
-        process.exitCode = 1;
-        return;
-      }
-      // 自由文は登録 PLAN でないので DB record 不可 (--record は --plan 専用)。
-      if (opts.text && opts.record) {
-        process.stderr.write(
-          "--record requires --plan (free-text task is not a registered PLAN)\n",
-        );
-        process.exitCode = 1;
-        return;
-      }
-      const repoRoot = process.cwd();
-      const db = openHarnessDb(opts.record ? defaultHarnessDbPath(repoRoot) : ":memory:", {
-        repoRoot,
-      });
-      try {
-        rebuildHarnessDb({ repoRoot, db });
-        const rows = opts.plan
-          ? recommendSkillsForPlan(db, opts.plan)
-          : recommendSkillsForText(db, opts.text ?? "");
-        if (opts.record) recordSkillRecommendations(db, rows);
-        if (opts.inject) {
-          const injection = buildSkillInjectionSet(db, rows);
-          if (opts.json) process.stdout.write(`${JSON.stringify(injection, null, 2)}\n`);
-          else {
-            process.stdout.write(`${injection.plan_id} skill injection\n`);
-            for (const entry of injection.entries) {
-              process.stdout.write(
-                `  ${entry.tier} ${entry.inject_at} ${entry.skill_id} -> ${entry.skill_path} reason=${entry.reason}\n`,
-              );
-            }
-            for (const skillId of injection.missing_skill_ids) {
-              process.stdout.write(`  missing ${skillId}\n`);
-            }
-          }
-          return;
-        }
-        // A-138 ITEM-2 PO 残課題: --buckets で required/recommended/optional に再編成 (additive、flat は既定)。
-        if (opts.buckets) {
-          const buckets = bucketRecommendations(rows);
-          if (opts.json) process.stdout.write(`${JSON.stringify(buckets, null, 2)}\n`);
-          else {
-            for (const tier of ["required", "recommended", "optional"] as const) {
-              process.stdout.write(`# ${tier}\n`);
-              for (const row of buckets[tier]) {
-                process.stdout.write(
-                  `  ${row.skill_id}: score=${row.score} reason=${row.reason}\n`,
-                );
-              }
-            }
-          }
-        } else if (opts.json) process.stdout.write(`${JSON.stringify(rows, null, 2)}\n`);
+  .action((opts: { text: string; buckets?: boolean; inject?: boolean; json?: boolean }) => {
+    const repoRoot = process.cwd();
+    const db = openHarnessDb(":memory:", { repoRoot });
+    try {
+      rebuildHarnessDb({ repoRoot, db });
+      const rows = recommendSkillsForText(db, opts.text);
+      if (opts.inject) {
+        const injection = buildSkillInjectionSet(db, rows);
+        if (opts.json) process.stdout.write(`${JSON.stringify(injection, null, 2)}\n`);
         else {
-          for (const row of rows) {
+          process.stdout.write(`${injection.plan_id} skill injection\n`);
+          for (const entry of injection.entries) {
             process.stdout.write(
-              `${row.plan_id} ${row.skill_id}: rank=${row.rank} score=${row.score} reason=${row.reason}\n`,
+              `  ${entry.tier} ${entry.inject_at} ${entry.skill_id} -> ${entry.skill_path} reason=${entry.reason}\n`,
             );
           }
+          for (const skillId of injection.missing_skill_ids) {
+            process.stdout.write(`  missing ${skillId}\n`);
+          }
         }
-      } finally {
-        db.close();
+        return;
       }
-    },
-  );
+      // A-138 ITEM-2 PO 残課題: --buckets で required/recommended/optional に再編成 (additive、flat は既定)。
+      if (opts.buckets) {
+        const buckets = bucketRecommendations(rows);
+        if (opts.json) process.stdout.write(`${JSON.stringify(buckets, null, 2)}\n`);
+        else {
+          for (const tier of ["required", "recommended", "optional"] as const) {
+            process.stdout.write(`# ${tier}\n`);
+            for (const row of buckets[tier]) {
+              process.stdout.write(`  ${row.skill_id}: score=${row.score} reason=${row.reason}\n`);
+            }
+          }
+        }
+      } else if (opts.json) process.stdout.write(`${JSON.stringify(rows, null, 2)}\n`);
+      else {
+        for (const row of rows) {
+          process.stdout.write(
+            `${row.plan_id} ${row.skill_id}: rank=${row.rank} score=${row.score} reason=${row.reason}\n`,
+          );
+        }
+      }
+    } finally {
+      db.close();
+    }
+  });
 
 skill
   .command("new")
@@ -2603,7 +2470,6 @@ program
   )
   .option("--current-model <model>", "current orchestrator model that needs advice")
   .option("--reason <text>", "why upper-model advice is needed")
-  .option("--plan <id>", "PLAN id")
   .option("--execute", "execute provider CLI instead of dry-run")
   .option("--mode <mode>", MODE_OVERRIDE_OPTION_DESCRIPTION)
   .option("--json", "JSON output")
@@ -2615,7 +2481,6 @@ program
       decision?: string;
       currentModel?: string;
       reason?: string;
-      plan?: string;
       execute?: boolean;
       mode?: ReturnType<typeof detectMode>["mode"];
       json?: boolean;
@@ -2648,9 +2513,7 @@ program
         decisionKind: opts.decision as AdvisorDecisionKind | undefined,
         currentModel: opts.currentModel,
         reason: opts.reason,
-        planId: opts.plan,
         execute: Boolean(opts.execute),
-        contextInjection: resolveSkillContextInjection(opts.plan),
       });
       if (!decision.adapterPlan.available) {
         if (opts.json) process.stdout.write(`${JSON.stringify(decision, null, 2)}\n`);
@@ -2681,7 +2544,6 @@ program
         {
           sessionPrefix: `advisor-${decision.provider}`,
           toolName: "advisor",
-          planId: opts.plan,
           jsonOut: Boolean(opts.json),
         },
         { gitBranch, gitHead, runSessionStartSideEffects, writeHandoverWarnings },
@@ -2698,7 +2560,6 @@ program
           {
             sessionPrefix: `advisor-${decision.fallback.provider}`,
             toolName: "advisor",
-            planId: opts.plan,
             jsonOut: Boolean(opts.json),
           },
           { gitBranch, gitHead, runSessionStartSideEffects, writeHandoverWarnings },
@@ -2743,7 +2604,6 @@ registerDelegationCommands(program, {
   gitBranch,
   gitHead,
   resolveTaskText,
-  resolveSkillContextInjection,
   runSessionStartSideEffects,
   taskFileOptionDescription: TASK_FILE_OPTION_DESCRIPTION,
   writeHandoverWarnings,
@@ -2758,7 +2618,6 @@ program
   .option("--reviewer-model <model>", "reviewer provider/model id")
   .option("--checklist <path>", "YAML checklist evidence for single-runtime review")
   .option("--coverage-summary <path>", "coverage/coverage-summary.json evidence for G7")
-  .option("--plan <id>", "plan_id to attach to gate run evidence")
   .option("--session <id>", "session_id to attach to gate run evidence")
   .option("--human-approved", "standalone human approval evidence")
   .option("--json", "JSON output")
@@ -2772,7 +2631,6 @@ program
         reviewerModel?: string;
         checklist?: string;
         coverageSummary?: string;
-        plan?: string;
         session?: string;
         humanApproved?: boolean;
         json?: boolean;
@@ -2819,10 +2677,6 @@ program
         const written = writeGateRunEvidence({
           repoRoot: process.cwd(),
           gateId: id,
-          planId:
-            opts.plan ??
-            process.env.UT_TDD_PLAN_ID ??
-            resolveActivePlan(nodeDeps(process.cwd(), gitBranch)),
           sessionId: opts.session ?? process.env.UT_TDD_SESSION_ID ?? null,
           status: result.passed ? "passed" : "failed",
           mode,
@@ -2883,7 +2737,6 @@ task
   .description("classify a task into kind / drive / size / complexity / difficulty / risk")
   .option("--text <text>", "task text")
   .option("--text-file <path>", TASK_FILE_OPTION_DESCRIPTION)
-  .option("--plan <path>", "read task text from a PLAN file")
   .option("--files <list>", "comma-separated affected file paths")
   .option("--design-docs", "derive required design/test documents from proposal text")
   .option("--json", "JSON output")
@@ -2891,16 +2744,13 @@ task
     (opts: {
       text?: string;
       textFile?: string;
-      plan?: string;
       files?: string;
       designDocs?: boolean;
       json?: boolean;
     }) => {
-      const text = resolveTaskText({ task: opts.text, taskFile: opts.textFile ?? opts.plan });
+      const text = resolveTaskText({ task: opts.text, taskFile: opts.textFile });
       if (text === null || text.trim().length === 0) {
-        process.stderr.write(
-          "task classify requires exactly one of --text, --text-file, or --plan\n",
-        );
+        process.stderr.write("task classify requires exactly one of --text or --text-file\n");
         process.exitCode = 1;
         return;
       }
@@ -2973,7 +2823,6 @@ task
   .requiredOption("--role <role>", `router role: ${ROUTER_ROLES.join("|")}`)
   .option("--text <text>", "task text")
   .option("--text-file <path>", TASK_FILE_OPTION_DESCRIPTION)
-  .option("--plan <path>", "read task text from a PLAN file")
   .option("--files <list>", "comma-separated affected file paths")
   .option("--primary <provider>", "override primary provider (claude|codex)")
   .option("--allow-frontier", "explicitly authorize T0 (opus/gpt-5.5)")
@@ -2985,7 +2834,6 @@ task
       role: string;
       text?: string;
       textFile?: string;
-      plan?: string;
       files?: string;
       primary?: string;
       allowFrontier?: boolean;
@@ -2998,9 +2846,9 @@ task
         process.exitCode = 1;
         return;
       }
-      const text = resolveTaskText({ task: opts.text, taskFile: opts.textFile ?? opts.plan });
+      const text = resolveTaskText({ task: opts.text, taskFile: opts.textFile });
       if (text === null || text.trim().length === 0) {
-        process.stderr.write("task route requires exactly one of --text, --text-file, or --plan\n");
+        process.stderr.write("task route requires exactly one of --text or --text-file\n");
         process.exitCode = 1;
         return;
       }
@@ -3028,7 +2876,6 @@ task
       const adapterPlan = opts.execute
         ? routeToAdapterPlan(decision, text, {
             mode: detection.mode,
-            contextInjection: resolveSkillContextInjection(planIdFromPath(opts.plan)),
           })
         : null;
       if (opts.json) {
@@ -3117,7 +2964,6 @@ team
   .description("validate, plan, and optionally execute a hybrid team run")
   .requiredOption("--definition <path>", "team definition YAML")
   .option("--mode <mode>", MODE_OVERRIDE_OPTION_DESCRIPTION)
-  .option("--plan <id>", "PLAN id to attach to provider adapter metadata")
   .option("--execute", "execute provider adapters; default is dry-run planning only")
   .option(
     "--route",
@@ -3130,7 +2976,6 @@ team
     async (opts: {
       definition: string;
       mode?: ReturnType<typeof detectMode>["mode"];
-      plan?: string;
       execute?: boolean;
       route?: boolean;
       primary?: Provider;
@@ -3162,9 +3007,7 @@ team
         }
         const result = buildTeamRunPlan(definition, mode, {
           execute: Boolean(opts.execute),
-          planId: opts.plan,
           placements,
-          contextInjection: resolveSkillContextInjection(opts.plan),
         });
         if (!opts.execute) {
           if (opts.json) process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
@@ -3203,7 +3046,6 @@ team
               const startInput: SessionHookInput = {
                 hook_event_name: HOOK_EVENT_SESSION_START,
                 session_id: sessionId,
-                ...(opts.plan ? { plan_id: opts.plan } : {}),
               };
               runSessionStartSideEffects({
                 repoRoot,
@@ -3256,7 +3098,6 @@ team
                   {
                     hook_event_name: "PostToolUse",
                     session_id: sessionId,
-                    ...(opts.plan ? { plan_id: opts.plan } : {}),
                     tool_name: provider,
                     tool_input: { command: `${command} ${args.join(" ")}` },
                     tool_response: { outcome: exitCode === 0 ? "ok" : "error" },
@@ -3268,7 +3109,6 @@ team
                   {
                     hook_event_name: "Stop",
                     session_id: sessionId,
-                    ...(opts.plan ? { plan_id: opts.plan } : {}),
                   },
                   sessionDeps,
                   "Stop",
@@ -3675,25 +3515,21 @@ github
 
 const githubPr = github
   .command("pr")
-  .description("typed PR trace contract — <!-- ut-tdd:trace/v1 --> block (PLAN-L7-451 W4)");
+  .description("typed PR trace contract — <!-- ut-tdd:trace/v2 --> block");
 
 githubPr
   .command("render")
   .description("PR body へ貼る trace block を生成する (手入力しない)")
-  .requiredOption("--plan <planId>", "PLAN ID (PLAN-L7-451 など)")
   .requiredOption("--route-mode <mode>", "route mode (add-feature / recovery / reverse など)")
   .option("--head <sha>", "subject HEAD SHA (default: git rev-parse HEAD)")
   .option("--base <sha>", "base SHA (default: git rev-parse origin/main)")
-  .option("--plan-revision <n>", "PLAN revision")
   .option("--episode-id <id>", "execution episode ID (Forward 外のみ)")
   .requiredOption("--issue-number <n>", "GitHub issue number")
   .action(
     (opts: {
-      plan: string;
       routeMode: string;
       head?: string;
       base?: string;
-      planRevision?: string;
       episodeId?: string;
       issueNumber: string;
     }) => {
@@ -3701,11 +3537,9 @@ githubPr
         const resolve = (ref: string): string =>
           execFileSync("git", ["rev-parse", ref], { encoding: "utf8" }).trim();
         const block = renderPrTraceBlock({
-          plan_id: opts.plan,
           route_mode: opts.routeMode,
           subject_head: opts.head ?? resolve("HEAD"),
           base_sha: opts.base ?? resolve("origin/main"),
-          plan_revision: opts.planRevision,
           episode_id: opts.episodeId,
           issue_number: opts.issueNumber,
         });
@@ -3732,7 +3566,7 @@ githubPr
     if (opts.json) {
       process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
     } else if (result.ok) {
-      process.stdout.write(`pr trace — OK (plan_id=${result.fields.plan_id})\n`);
+      process.stdout.write(`pr trace — OK (issue_number=${result.fields.issue_number})\n`);
     } else {
       process.stdout.write("pr trace — FAIL\n");
       for (const finding of result.findings) {
@@ -4159,19 +3993,18 @@ memory
 
 const elicit = program
   .command("elicit")
-  .description("design-decision elicitation bound to the current V-model stage (PLAN-L7-428)");
+  .description("design-decision elicitation bound to the current design stage");
 elicit
   .command("context")
   .description(
     "resolve current stage + skill decision defaults + design coverage into an elicitation packet",
   )
-  .option("--plan <plan_id>", "target PLAN (default: first ready schedule row)")
   .option("--json", "JSON output")
-  .action((opts: { plan?: string; json?: boolean }) => {
+  .action((opts: { json?: boolean }) => {
     const repoRoot = process.cwd();
     const db = openHarnessDb(defaultHarnessDbPath(repoRoot), { repoRoot });
     try {
-      const ctx = selectElicitationContext(db, { repoRoot, planId: opts.plan });
+      const ctx = selectElicitationContext(db, { repoRoot });
       process.stdout.write(
         opts.json ? `${JSON.stringify(ctx, null, 2)}\n` : renderElicitationContext(ctx),
       );
@@ -4182,19 +4015,24 @@ elicit
 elicit
   .command("record")
   .description(`append an adopted design decision to ${DESIGN_DECISION_LOG_PATH}`)
-  .requiredOption("--plan <plan_id>", "PLAN the decision belongs to")
+  .requiredOption("--issue <number>", "Issue number the decision belongs to")
   .requiredOption("--topic <text>", "what was decided (判断の種別)")
   .requiredOption("--chosen <text>", "adopted option")
   .requiredOption("--reason <text>", "why it was adopted")
   .option("--options <csv>", "comma-separated candidate options")
   .action(
-    (opts: { plan: string; topic: string; chosen: string; reason: string; options?: string }) => {
+    (opts: { issue: string; topic: string; chosen: string; reason: string; options?: string }) => {
+      if (!/^[1-9][0-9]*$/.test(opts.issue) || !Number.isSafeInteger(Number(opts.issue))) {
+        process.stderr.write("--issue must be a positive integer\n");
+        process.exitCode = 1;
+        return;
+      }
       const repoRoot = process.cwd();
       let currentLocation = "";
       try {
         const db = openHarnessDb(defaultHarnessDbPath(repoRoot), { repoRoot });
         try {
-          const ctx = selectElicitationContext(db, { repoRoot, planId: opts.plan });
+          const ctx = selectElicitationContext(db, { repoRoot });
           currentLocation = ctx.stage?.current_location ?? "";
         } finally {
           db.close();
@@ -4204,7 +4042,7 @@ elicit
       }
       try {
         const record = appendDesignDecision(repoRoot, {
-          planId: opts.plan,
+          issueNumber: Number(opts.issue),
           currentLocation,
           topic: opts.topic,
           options: opts.options?.split(",") ?? [],
@@ -4213,10 +4051,10 @@ elicit
           sessionId: resolveRuntimeSessionId(),
         });
         process.stdout.write(
-          `elicit: recorded ${record.plan_id}${record.current_location ? ` @ ${record.current_location}` : ""} → ${DESIGN_DECISION_LOG_PATH}\n`,
+          `elicit: recorded issue #${record.issue_number}${record.current_location ? ` @ ${record.current_location}` : ""} → ${DESIGN_DECISION_LOG_PATH}\n`,
         );
         process.stdout.write(
-          "elicit: 正本への転記を忘れずに (PLAN 設計判断節 / ADR、governance §共通ルール 7)\n",
+          "elicit: 正本の設計文書 / ADR に採択結果を反映してください (governance §共通ルール 7)\n",
         );
       } catch (error) {
         process.stderr.write(`elicit: ${error instanceof Error ? error.message : String(error)}\n`);

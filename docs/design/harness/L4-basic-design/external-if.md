@@ -181,11 +181,11 @@ AI runtime / 外部ツール (Claude Code / Codex CLI / gh ...)  ← いずれ�
 - `ut-tdd github summary` は harness.db の `gate_runs` から読んだ gate matrix (gate_id ごとの最新観測)・notes・失敗 gate の next action を markdown で stdout へ出し、workflow が `>> "$GITHUB_STEP_SUMMARY"` で追記する (`src/github/job-summary.ts:16-74`)。failed tests と doctor 所見は出力しない。
 - 表示は projection であって判定正本ではない。生成失敗でも exit 0 で degrade し、CI を summary 失敗で red にしない。
 
-### §10.4 PR 本文の型付き追跡ブロック (`ut-tdd:trace/v1`)
+### §10.4 PR 本文の型付き追跡ブロック (`ut-tdd:trace/v2`)
 
-- PR body に hidden block `<!-- ut-tdd:trace/v1 ... -->` を置く。必須キー: `plan_id` / `route_mode` / `subject_head` / `base_sha` / `issue_number`。任意キー: `plan_revision` / `episode_id` / `admission_receipt_digest` / `review_receipt_digest`。
-- `ut-tdd github pr render` が block を生成する (手入力しない)。`ut-tdd github pr validate --body-file <path>` は block 欠落・重複・不正行・未知キー・キー重複・必須キー欠落・値不正を finding とし exit 1 で fail-close する。
-- 項目語彙は PLAN-L6-85 の PR body 規定を正とし、本契約で拡張しない。
+- PR body に hidden block `<!-- ut-tdd:trace/v2 ... -->` を置く。必須キー: `route_mode` / `subject_head` / `base_sha` / `issue_number`。任意キー: `episode_id` / `admission_receipt_digest` / `review_receipt_digest`。
+- `ut-tdd github pr render` が block を生成する (手入力しない)。`ut-tdd github pr validate --body-file <path>` は block 欠落・重複・不正行・未知キー・キー重複・必須キー欠落・値不正を finding とし exit 1 で fail-close する。`plan_id` と `plan_revision` は v2 の語彙に含めず、`plan_id` は未知キーとして扱う。
+- v1 の過去の PR 本文は検証し直さない。S4 の trace 語彙と `github pr render` の PLAN option 撤去は、`docs/design/harness/L6-function-design/plan-mechanism-retirement.md` §5.2 と `docs/test-design/harness/L7-plan-mechanism-retirement-test-design.md` `U-PLANRET-006` / `U-PLANRET-014` に従う。
 
 ### §10.5 Issue の入力フォーム
 

@@ -1085,7 +1085,7 @@ function codexWrapperParityFiles(root: string, overrides: Record<string, string>
       "tests/runtime-hook-entrypoints.test.ts": [
         "ut-tdd codex --execute records the same session lifecycle through the adapter wrapper",
         "ut-tdd codex --task-file feeds file content through the same adapter wrapper",
-        "ut-tdd codex --plan records wrapper lifecycle without forwarding plan flags to Codex",
+        "ut-tdd codex records wrapper lifecycle without resolving a current PLAN",
       ].join("\n"),
       "tests/runtime-adapter.test.ts": "U-ADAPTER-007\nU-ADAPTER-008",
       "docs/test-design/harness/L7-unit-test-design.md": "U-ADAPTER-009",
@@ -1146,7 +1146,7 @@ describe("checkHandover (doctor handover staleness surface)", () => {
 });
 
 describe("checkHandoverDisciplineMessages", () => {
-  it("fresh CURRENT still surfaces drift when active_plan differs from current plan", () => {
+  it("fresh CURRENT does not surface PLAN family drift", () => {
     const files = new Map([
       [currentPlanPath, "PLAN-L5-08-harness-db-feedback\n2026-06-03T23:50:00.000Z"],
       [
@@ -1174,7 +1174,7 @@ describe("checkHandoverDisciplineMessages", () => {
       ],
     ]);
     const messages = checkHandoverDisciplineMessages(deps({ files }));
-    expect(messages.some((m) => m.includes("drift"))).toBe(true);
+    expect(messages.some((m) => m.includes("drift"))).toBe(false);
   });
 
   it("runDoctor surfaces handover discipline as warning-only", () => {

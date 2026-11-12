@@ -1,8 +1,17 @@
-import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import {
+  createMarkerFailureFixture,
+  type HookResult,
+  invokePostToolUse,
+  type RuntimeSignals,
+  sourceTypeScriptFiles,
+  systemMessage,
+  writeTranscript,
+  writeTranscriptRows,
+} from "./support/claude-version-floor-fixture.ts";
 import { removeTestTree } from "./support/temp-tree.ts";
 
 const REPO_ROOT = process.cwd();
@@ -35,11 +44,15 @@ interface PreparedClaudeVersionCases {
 
 let prepared: PreparedClaudeVersionCases;
 
-interface HookResult {
-  status: number | null;
-  stdout: string;
-  error?: Error;
+interface RuntimeCase007 {
+  suffix: string;
+  sessionId: string;
+  result: HookResult;
+  expectsWarning: boolean;
 }
+
+let runtimeCases007: RuntimeCase007[] = [];
+let markerFailureCases008: HookResult[] = [];
 
 function createFixture(): string {
   const root = mkdtempSync(join(tmpdir(), "ut-tdd-ccver-"));
@@ -47,59 +60,11 @@ function createFixture(): string {
   return root;
 }
 
-function writeTranscript(root: string, ...versions: string[]): string {
-  const path = join(root, "transcript.jsonl");
-  writeFileSync(
-    path,
-    `${versions.map((version) => JSON.stringify({ type: "user", version })).join("\n")}\n`,
-    "utf8",
-  );
-  return path;
-}
-
-function writeTranscriptRows(root: string, rows: Record<string, unknown>[]): string {
-  const path = join(root, "transcript.jsonl");
-  writeFileSync(path, `${rows.map((row) => JSON.stringify(row)).join("\n")}\n`, "utf8");
-  return path;
-}
-
-function invokePostToolUse(root: string, input: Record<string, unknown>): HookResult {
-  const result = spawnSync(process.execPath, [CLI_PATH, "hook", "post-tool-use"], {
-    cwd: root,
-    env: { ...process.env, CLAUDE_PROJECT_DIR: root },
-    encoding: "utf8",
-    input: JSON.stringify(input),
-    windowsHide: true,
-  });
-  return {
-    status: result.status,
-    stdout: result.stdout ?? "",
-    ...(result.error ? { error: result.error } : {}),
-  };
-}
-
-function systemMessage(output: string): string | undefined {
-  try {
-    const parsed = JSON.parse(output) as { systemMessage?: unknown };
-    return typeof parsed.systemMessage === "string" ? parsed.systemMessage : undefined;
-  } catch {
-    return undefined;
-  }
-}
-
-function sourceTypeScriptFiles(root: string): string[] {
-  return readdirSync(root, { withFileTypes: true }).flatMap((entry) => {
-    const path = join(root, entry.name);
-    if (entry.isDirectory()) return sourceTypeScriptFiles(path);
-    return entry.isFile() && entry.name.endsWith(".ts") ? [path] : [];
-  });
-}
-
 afterAll(() => {
   for (const fixture of FIXTURES.splice(0)) removeTestTree(fixture);
 });
 
-describe("Claude Code version floor warning (Issue #1561)", () => {
+describe.sequential("Claude Code version floor warning (Issue #1561)", () => {
   beforeAll(async () => {
     const cases001 = [
       { previous: "2.1.318", latest: "2.1.293" },
@@ -112,7 +77,7 @@ describe("Claude Code version floor warning (Issue #1561)", () => {
       const transcriptPath = writeTranscript(root, previous, latest);
       return {
         latest,
-        result: invokePostToolUse(root, {
+        result: invokePostToolUse(CLI_PATH, root, {
           session_id: `ccver-001-${index}`,
           transcript_path: transcriptPath,
           hook_event_name: "PostToolUse",
@@ -157,7 +122,7 @@ describe("Claude Code version floor warning (Issue #1561)", () => {
       const root = createFixture();
       return {
         name,
-        result: invokePostToolUse(root, input(root)),
+        result: invokePostToolUse(CLI_PATH, root, input(root)),
       };
     });
 
@@ -165,7 +130,7 @@ describe("Claude Code version floor warning (Issue #1561)", () => {
     const transcriptPath003 = writeTranscript(root003, "2.1.293");
     const sessionIds003 = ["ccver-003-a", "ccver-003-a", "ccver-003-a", "ccver-003-b"];
     const outputs003 = sessionIds003.map((session_id) =>
-      invokePostToolUse(root003, {
+      invokePostToolUse(CLI_PATH, root003, {
         session_id,
         transcript_path: transcriptPath003,
         hook_event_name: "PostToolUse",
@@ -238,6 +203,26 @@ describe("Claude Code version floor warning (Issue #1561)", () => {
       expect(result.error, `${label}: CLI process must start`).toBeUndefined();
       expect(result.status, `${label}: CLI process must exit normally`).toBe(0);
     }
+
+    const markerRoot = createFixture();
+    const markerFixture = createMarkerFailureFixture(markerRoot);
+    expect(
+      markerFixture.setupErrorCode,
+      "fixture must produce a non-EEXIST marker setup failure",
+    ).toBe("ENOTDIR");
+    markerFailureCases008 = [0, 1].map(() =>
+      invokePostToolUse(CLI_PATH, markerRoot, {
+        session_id: "ccver-008-marker-failure",
+        transcript_path: markerFixture.transcriptPath,
+        hook_event_name: "PostToolUse",
+      }),
+    );
+    expect(markerFailureCases008).toHaveLength(2);
+    const healthyClaudeStatus = prepared.cases001[0]?.result.status;
+    expect(healthyClaudeStatus).toBe(0);
+    expect(
+      markerFailureCases008.every(({ error, status }) => !error && status === healthyClaudeStatus),
+    ).toBe(true);
   }, 300_000);
 
   it("Red fixture precondition: version-floor seams and contract inputs are present", async () => {
@@ -279,7 +264,7 @@ describe("Claude Code version floor warning (Issue #1561)", () => {
 
     const root = createFixture();
     const transcriptPath = writeTranscript(root, "2.1.318");
-    const result = invokePostToolUse(root, {
+    const result = invokePostToolUse(CLI_PATH, root, {
       session_id: "ccver-precondition",
       transcript_path: transcriptPath,
       hook_event_name: "PostToolUse",
@@ -397,6 +382,100 @@ describe("Claude Code version floor warning (Issue #1561)", () => {
     ) {
       violations.push("the literal floor must appear only in the authoritative source module");
     }
+    expect(violations).toEqual([]);
+  });
+
+  it("U-CCVER-007 prerequisite: all runtime combinations start and exit normally", () => {
+    const cases: {
+      suffix: string;
+      runtimeSignals: RuntimeSignals;
+      expectsWarning: boolean;
+    }[] = [
+      { suffix: "a", runtimeSignals: { CLAUDECODE: "1" }, expectsWarning: true },
+      {
+        suffix: "b",
+        runtimeSignals: { CLAUDECODE: "1", CODEX_SANDBOX: "1" },
+        expectsWarning: false,
+      },
+      { suffix: "c", runtimeSignals: { CODEX_SANDBOX: "1" }, expectsWarning: false },
+      { suffix: "d", runtimeSignals: {}, expectsWarning: false },
+    ];
+    runtimeCases007 = cases.map(({ suffix, runtimeSignals, expectsWarning }) => {
+      const root = createFixture();
+      const sessionId = `ccver-007-${suffix}`;
+      const result = invokePostToolUse(
+        CLI_PATH,
+        root,
+        { session_id: sessionId, hook_event_name: "PostToolUse" },
+        runtimeSignals,
+      );
+      return { suffix, sessionId, result, expectsWarning };
+    });
+    expect(runtimeCases007).toHaveLength(4);
+    const failures = runtimeCases007.flatMap(({ suffix, result }) => [
+      ...(result.error ? [`${suffix}: CLI process did not start`] : []),
+      ...(result.status !== 0 ? [`${suffix}: CLI process did not exit normally`] : []),
+    ]);
+    expect(failures).toEqual([]);
+  });
+
+  it.fails("U-CCVER-007: warns only in a Claude runtime", () => {
+    const violations: string[] = [];
+    for (const { suffix, sessionId, result, expectsWarning } of runtimeCases007) {
+      if (expectsWarning) {
+        let output: Record<string, unknown> | undefined;
+        try {
+          output = JSON.parse(result.stdout) as Record<string, unknown>;
+        } catch {
+          // Report malformed or mixed stdout through the assertion below.
+        }
+        if (
+          !output ||
+          Object.keys(output).length !== 1 ||
+          typeof output.systemMessage !== "string" ||
+          !output.systemMessage.includes("Claude Code の版を確かめられない")
+        ) {
+          violations.push(`${suffix}: expected one Claude version warning JSON object`);
+        }
+      } else if (result.stdout !== `session-log: post-tool-use ${sessionId}\n`) {
+        violations.push(`${suffix}: expected normal session-log output only`);
+      }
+    }
+
+    expect(violations).toEqual([]);
+  });
+
+  it.fails("U-CCVER-008: warns on every hook when the marker cannot be written", () => {
+    const violations: string[] = [];
+    let warningCount = 0;
+    for (const [index, result] of markerFailureCases008.entries()) {
+      let output: Record<string, unknown> | undefined;
+      try {
+        output = JSON.parse(result.stdout) as Record<string, unknown>;
+      } catch {
+        // Report mixed or malformed stdout through the checks below.
+      }
+      const warning = output?.systemMessage;
+      if (
+        !output ||
+        Object.keys(output).length !== 1 ||
+        typeof warning !== "string" ||
+        !warning.includes("2.1.293") ||
+        !warning.includes(CLAUDE_VERSION_FLOOR) ||
+        !/guard/i.test(warning) ||
+        !/onFailure/i.test(warning) ||
+        !/update|更新/i.test(warning)
+      ) {
+        violations.push(`call ${index + 1}: expected a single stdout warning JSON`);
+      } else {
+        warningCount++;
+      }
+      if (!/marker|印/i.test(result.stderr) || !/ENOTDIR|fail|error|失敗/i.test(result.stderr)) {
+        violations.push(`call ${index + 1}: stderr must contain a marker-save diagnostic`);
+      }
+    }
+    if (warningCount !== 2)
+      violations.push("warning must be repeated on both failed marker writes");
     expect(violations).toEqual([]);
   });
 });

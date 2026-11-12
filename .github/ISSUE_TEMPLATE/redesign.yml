@@ -1,4 +1,4 @@
-# PLAN-L7-451 W5: Redesign episode の Issue Form (PLAN-L6-83 準拠)。
+# Redesign episode Issue Form.
 name: Redesign
 description: 確定済み設計の作り直しが必要になった episode を起票する
 title: "Redesign: "
@@ -29,9 +29,11 @@ body:
     validations:
       required: true
   - type: input
-    id: origin_plan
+    id: origin_issue
     attributes:
-      label: Origin PLAN ID
+      label: Origin Issue URL
+      description: 起点となった既存 GitHub Issue の canonical Issue URL。Parent Issue 欄とは別の由来参照。
+      placeholder: https://github.com/<owner>/<repo>/issues/<number>
     validations:
       required: true
   - type: textarea
@@ -69,6 +71,7 @@ body:
   - type: input
     id: reentry_target
     attributes:
-      label: Reentry target (Forward 再合流先 PLAN / layer)
+      label: Reentry target (Forward 再合流先 Issue / layer)
+      description: Forward へ再合流する Issue URL または layer を記入する
     validations:
       required: true
