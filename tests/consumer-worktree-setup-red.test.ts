@@ -41,10 +41,7 @@ describe("consumer worktree runtime setup entry Red (#1525)", () => {
 
   afterAll(() => cleanupConsumerWorktreeRuntimeFixture());
 
-  it("prerequisite: main and both Releases are valid; candidate worktrees are linked", {
-    timeout: 240000,
-  }, async () => {
-    // 93s measured, bounded per #1063
+  it("prerequisite: main and both Releases are valid; candidate worktrees are linked", async () => {
     expect(existsSync(join(fixture.main, ".ut-tdd", "runtime", "activation", "active.json"))).toBe(
       true,
     );
@@ -123,7 +120,7 @@ describe("consumer worktree runtime setup entry Red (#1525)", () => {
     expect(existsSync(fixture.cache)).toBe(true);
     expect(existsSync(fixture.networkStub)).toBe(true);
     expect(existsSync(fixture.networkMarker)).toBe(false);
-  });
+  }, 240000); // 93s measured, #1063
 
   it("prerequisite: cache-missing, invalid-anchor, and explicit version-B cases are distinct", () => {
     const names = readdirSync(fixture.cache).sort();

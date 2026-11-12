@@ -563,10 +563,7 @@ describe("physical consumer Node runtime adapter", () => {
     expect(removeAttempts).toBe(2);
   });
 
-  it("CANDIDATE-U-PACKNODE-005/012: update fault preserves prior pointer and bundle bytes", {
-    timeout: 240000,
-  }, async () => {
-    // 115s measured, bounded per #1063
+  it("CANDIDATE-U-PACKNODE-005/012: update fault preserves prior pointer and bundle bytes", async () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-physical-fault-"));
     roots.push(root);
     const checkout = mkdtempSync(join(tmpdir(), "ut-tdd-physical-fault-pack-"));
@@ -638,7 +635,7 @@ describe("physical consumer Node runtime adapter", () => {
     expect(readFileSync(pointerPath)).toEqual(priorPointer);
     for (const [name, bytes] of Object.entries(priorFiles))
       expect(readFileSync(join(priorBundle.bundle_path, name))).toEqual(bytes);
-  });
+  }, 240000); // 115s measured, #1063
 
   // This measures the producer-byte/setup/wrapper subcase of 001/002/003 and
   // the checkout-deletion launch path; it does not claim the full 007 oracle

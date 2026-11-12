@@ -3,10 +3,7 @@ import { describe, expect, it } from "vitest";
 import { resolveNodeBinary } from "../scripts/run-vitest-snapshot.ts";
 
 describe("global setup fence", () => {
-  it("U-TESTHYGIENE-043: turns a sealed detached-reference teardown violation into a nonzero runner process", {
-    timeout: 180000,
-  }, () => {
-    // 89s measured, bounded per #1063
+  it("U-TESTHYGIENE-043: turns a sealed detached-reference teardown violation into a nonzero runner process", () => {
     // PLAN-L7-462 step 2: runner 実発火 oracle は node 直 spawn (bun/.cmd shell 経由なし)。
     const result = spawnSync(
       resolveNodeBinary(),
@@ -20,5 +17,5 @@ describe("global setup fence", () => {
     );
     expect(result.status).toBe(1);
     expect(`${result.stdout}\n${result.stderr}`).toContain("test workspace fence violation");
-  });
+  }, 180000); // 89s measured, #1063
 });
