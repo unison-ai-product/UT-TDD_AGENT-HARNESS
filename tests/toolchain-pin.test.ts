@@ -7,7 +7,7 @@ const direct = {
   esbuild: "0.21.5",
 };
 
-const reviewedNodeVersion = "24.22.1";
+const reviewedNodeVersion = "24.22.3";
 const reviewedNpmVersion = "11.19.1";
 const reviewedNpmIntegrity =
   "sha512-ztsxKxt/kkIaAs+2i0GU6I+DRmUdrNasxTZKJe9TCdSjKxlhah/4r/hl5ygMD6XAg1qZ9c2TNomR4qgOydp10g==";
@@ -26,7 +26,7 @@ function fixture(
   const packageJson = JSON.stringify({
     packageManager: overrides.packageManager ?? `npm@${reviewedNpmVersion}+${reviewedNpmIntegrity}`,
     engines: {
-      node: overrides.nodeEngine ?? ">=24.22.1 <25",
+      node: overrides.nodeEngine ?? ">=24.22.3 <25",
       npm: overrides.npmEngine ?? ">=11.19.1 <12",
     },
     devDependencies: direct,

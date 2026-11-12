@@ -15,7 +15,7 @@ parent_doc: docs/design/harness/L5-detailed-design/internal-processing.md
 正本は `docs/design/harness/L5-detailed-design/internal-processing.md` の
 「Node toolchain authority」節、特に項目 2 と 8 である。項目 2 は source workflow の
 `.github/workflows/review-attestation.yml` を含む pin 面を審査済みの Node
-`24.22.1` に固定し、実行時 authority ではない Pack policy fixture を Pack
+`24.22.3` に固定し、実行時 authority ではない Pack policy fixture を Pack
 template と同じ pin にするよう定める。項目 8 は #1411 の範囲をこの pin 整合に限定し、
 workflow trigger、権限、job 構造、required-check 判定を変更しない。
 
@@ -27,8 +27,8 @@ workflow 修正を意味しない。対応する `it.fails` は候補引用か�
 
 | ID | 対象・入力 | 期待 |
 | --- | --- | --- |
-| `U-CIPOL-040` | source profile で load した `attestation_runtime` (`.github/workflows/review-attestation.yml`) の `actions/setup-node@v4` pin を読む | Node pin は審査済みの `24.22.1` と一致する。現在の Red は実 workflow の `24.13.0` で不一致となる |
-| `U-CIPOL-041` | Pack policy fixture (`tests/github-ci-policy.test.ts`) と load 済み Pack template (`docs/templates/github/common/pack-harness-check.yml`) の `actions/setup-node@v4` pin を読む | template と fixture の両方が `24.22.1` で一致する。現在の Red は fixture `24.13.0` と template `24.22.1` の不一致となる |
+| `U-CIPOL-040` | source profile で load した `attestation_runtime` (`.github/workflows/review-attestation.yml`) の `actions/setup-node@v4` pin を読む | Node pin は審査済みの `24.22.3` と一致する。現在の Red は実 workflow の `24.13.0` で不一致となる |
+| `U-CIPOL-041` | Pack policy fixture (`tests/github-ci-policy.test.ts`) と load 済み Pack template (`docs/templates/github/common/pack-harness-check.yml`) の `actions/setup-node@v4` pin を読む | template と fixture の両方が `24.22.3` で一致する。現在の Red は fixture `24.13.0` と template `24.22.3` の不一致となる |
 
 いずれの oracle も pin 値の比較だけを行う。trigger、permissions、job、required-check
 の判定規則や workflow の他の内容はこの Issue で変更しない。
