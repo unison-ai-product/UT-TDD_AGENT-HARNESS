@@ -339,7 +339,7 @@ const commonSteps = (setupNodeName: string) =>
     step("checkout", { uses: "actions/checkout@v5", with: { "fetch-depth": 0 } }),
     step(setupNodeName, {
       uses: "actions/setup-node@v4",
-      with: { "node-version": "24.22.1", cache: "npm" },
+      with: { "node-version": "24.22.3", cache: "npm" },
     }),
     run("install deps (frozen)", "npm ci --no-audit --no-fund"),
   ] as const;
