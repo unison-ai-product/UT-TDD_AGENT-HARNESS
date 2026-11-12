@@ -4,7 +4,7 @@ artifact_type: design_doc
 status: draft
 sub_doc: function-spec
 artifact_role: topic_pack_publication_gzip
-pair_artifact: docs/test-design/harness/L7-unit-test-design.md
+pair_artifact: docs/test-design/harness/L7-pack-publication-gzip-test-design.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 issue: 881
 ---
@@ -20,8 +20,8 @@ Pack の公開 asset `ut-tdd-pack-<version>.tar.gz` は、`src/setup/pack-public
 本書が決めるのは gzip 層だけである。tar 層 (ustar header、mode、path 分割、末尾のゼロ 2 ブロック)、
 asset の名前、checksum ファイルの形式、inventory digest の導出は変えない。
 
-実装は本書の契約を対にする L7 oracle (`docs/test-design/harness/L7-unit-test-design.md`
-§Pack publication gzip 圧縮) を先に Red にしてから行う。本書の `draft` は実装の開始を許可しない。
+実装は本書の契約を対にする L7 oracle (`docs/test-design/harness/L7-pack-publication-gzip-test-design.md`。
+共有の `L7-unit-test-design.md` には足さない) を先に Red にしてから行う。本書の `draft` は実装の開始を許可しない。
 
 ## 2. 事実 (2026-11-12 実測、Issue #881)
 
@@ -143,7 +143,7 @@ advisor の「小さな golden では足りない」は、本書の当初案 (§
 - **advisor の助言の採否**: 契約の保証範囲を「承認済みの toolchain」に限る (採用、§4.1 の 8)。
   大きな固定 fixture を golden に加える (採用、`U-PACKASSET-007`)。版を上げるときに golden を自動更新しない
   (採用、§4.1 の 9)。#930 の両形式対応を前提にする (採用、§4.1 の 6)。
-  Node 配布物の固定は、仕組みが未定のため未決とする。
-- **未決**: 承認済み toolchain の版の集合の具体値 (Node と zlib の組) と、その管理の置き場。Node 配布物の固定の要否。
-  実装 PR の前に control が決める。
+  Node 配布物の固定は、下の決定で追加不要とした。
+- **未決 (下の決定で解消)**: 承認済み toolchain の版の集合の具体値と置き場、Node 配布物の固定の要否。
 - **未検証**: 他の入力、他の Node / zlib の版での一致。CI 上の Linux と Windows での一致。
+- **決定 (control、2026-11-12、PR #1654 コメント)**: 承認済み toolchain は既存の Node の固定 (`.node-version`、`package.json` の engines、`docs/governance/node-toolchain-provenance.json` と registry、`src/lint/toolchain-pin.ts` が照合する値) そのものとし、gzip 用の別の版の一覧と追加の Node 配布物の固定は持たない (二重管理を避ける。sealed の Node は provenance で archive と member の sha256 まで固定済みで、zlib はその Node に同梱される)。Node の固定を上げる PR で golden digest の検査が赤になったら、golden を自動では更新せず、その PR の中で差分を確かめてから手で更新する。
