@@ -6,17 +6,17 @@
   "materialization_boundary": "PLAN-L7-458 may materialize a runtime governance registry from this exact digest; it must not become a second source of provenance values.",
   "review_scope": "F0b Node generation input only; runtime generation and verification remain owned by PLAN-L7-458",
   "source_authority": {
-    "archive_index": "https://nodejs.org/download/release/v24.22.1/",
-    "checksums": "https://nodejs.org/download/release/v24.22.1/SHASUMS256.txt",
-    "release_archive": "https://nodejs.org/en/download/archive/v24.22.1",
-    "observed_on": "2026-10-27"
+    "archive_index": "https://nodejs.org/download/release/v24.22.3/",
+    "checksums": "https://nodejs.org/download/release/v24.22.3/SHASUMS256.txt",
+    "release_archive": "https://nodejs.org/en/download/archive/v24.22.3",
+    "observed_on": "2026-11-12"
   },
   "toolchain": {
-    "node_version": "24.22.1",
+    "node_version": "24.22.3",
     "npm_version": "11.19.1",
     "package_manager": "npm@11.19.1+sha512-ztsxKxt/kkIaAs+2i0GU6I+DRmUdrNasxTZKJe9TCdSjKxlhah/4r/hl5ygMD6XAg1qZ9c2TNomR4qgOydp10g==",
     "engines": {
-      "node": ">=24.22.1 <25",
+      "node": ">=24.22.3 <25",
       "npm": ">=11.19.1 <12"
     },
     "engine_authority": "package.json.engines.node and package.json.engines.npm are semver range declarations, not exact pins; each range must include this registry's reviewed Node/npm version. Exact version custody is established by toolchain.node_version/npm_version, packageManager, and .node-version. package.json.engines.bun was removed under PLAN-L7-488 §2.3. package-lock.json may retain the mirrored engines.bun declaration from npm regeneration as a known residual owned by #134 / PLAN-L7-462; it is neither captured authority nor support or activation authority.",
@@ -25,16 +25,16 @@
       "lockfile_version": 3,
       "name": "ut-tdd",
       "version": "0.2.0-canary.1",
-      "content_sha256": "sha256:e93f0dbbf7bf3a9553481c51774ebd08929f093b1e81483014c553a065acf23e"
+      "content_sha256": "sha256:b6469e5fa5abc0bfd45000a3bc2b0edef39d02af172560e2a85078e98d9b26cb"
     },
     "package_json_identity": {
       "path": "package.json",
-      "content_sha256": "sha256:e1687c2a9911089c9eb9b085b68468deb01e561eea6b9afac08d2036acc0ee34"
+      "content_sha256": "sha256:9a63196dea76313ffec3d0140e98a915dbdf01ea241d17cf0909c92baceabab3"
     },
     "node_version_file": {
       "path": ".node-version",
-      "value": "24.22.1",
-      "content_sha256": "sha256:d9f318747a126ce2247661af67852b185def7789492eabfad7bba322be087c33"
+      "value": "24.22.3",
+      "content_sha256": "sha256:584f19ccde29925286e32f566a2aa06c89efb4e2eb2bb2fc9ea5d56e2d190ac4"
     }
   },
   "supported_platforms": [
@@ -42,19 +42,19 @@
       "platform_id": "linux-x64",
       "os": "linux",
       "arch": "x64",
-      "node_version": "24.22.1",
+      "node_version": "24.22.3",
       "npm_version": "11.19.1",
       "archive": {
-        "filename": "node-v24.22.1-linux-x64.tar.xz",
-        "sha256": "sha256:6c172a9ab6718f7b801fb5a7bd486af2ee5e32758086a04b84fcce2aa77095e6"
+        "filename": "node-v24.22.3-linux-x64.tar.xz",
+        "sha256": "sha256:4f2b175a6d53a5c617a80dba2676238a0688cef28c6da4eba35c7d844e66fcfb"
       },
       "members": {
         "node": {
-          "relative_path": "node-v24.22.1-linux-x64/bin/node",
-          "sha256": "sha256:e32e2d16081cf644f88392934288086e7662529d0d43277c34f7aad2207cfafb"
+          "relative_path": "node-v24.22.3-linux-x64/bin/node",
+          "sha256": "sha256:a7ec1b37e6ff9d187e4198c5b6df9a4eb1c74dd31804fb3bac55cc4ceca1ac01"
         },
         "npm_cli": {
-          "relative_path": "node-v24.22.1-linux-x64/lib/node_modules/npm/bin/npm-cli.js",
+          "relative_path": "node-v24.22.3-linux-x64/lib/node_modules/npm/bin/npm-cli.js",
           "sha256": "sha256:8e5f6f3429f8cdbe693cdc29904e9d5a7b127a494bd15c804bd54c7403bfcbe7"
         }
       }
@@ -63,19 +63,19 @@
       "platform_id": "windows-x64",
       "os": "windows",
       "arch": "x64",
-      "node_version": "24.22.1",
+      "node_version": "24.22.3",
       "npm_version": "11.19.1",
       "archive": {
-        "filename": "node-v24.22.1-win-x64.zip",
-        "sha256": "sha256:d2046d28c2c3dcd211ac5145c0bf30e2047ef9dfb306693c8c6e2eccd8b95fa5"
+        "filename": "node-v24.22.3-win-x64.zip",
+        "sha256": "sha256:e612af99f626ab415ea225af6bce5c971feb448cb5cae250bb1c3fa50c5f7d9f"
       },
       "members": {
         "node": {
-          "relative_path": "node-v24.22.1-win-x64/node.exe",
-          "sha256": "sha256:d702daa815eabbff763c7d3808e235cf031cf2ca70211b56847bc72f51e240e5"
+          "relative_path": "node-v24.22.3-win-x64/node.exe",
+          "sha256": "sha256:86fc4785327db5f5c7558dc6156c543b433c313e813a222e088086222ab4afa6"
         },
         "npm_cli": {
-          "relative_path": "node-v24.22.1-win-x64/node_modules/npm/bin/npm-cli.js",
+          "relative_path": "node-v24.22.3-win-x64/node_modules/npm/bin/npm-cli.js",
           "sha256": "sha256:3ce7cba6f5128dd5f54c98b6a5036b0f850496878cc2e21044b675fe3c594e3e"
         }
       }
@@ -116,25 +116,25 @@
     "canonicalization": "RFC 8785 JCS",
     "encoding": "UTF-8 without BOM",
     "preimage": "the registry JSON object with canonical_digest.registry_sha256 omitted",
-    "registry_sha256": "sha256:738b9f4b88bc50102eae1ac0db24464fb4ad4415312b26ceffb6149229bce62d"
+    "registry_sha256": "sha256:65018e51a4878472e40686343dfa4186446ae87f05dd50f55f83087a4e2ed7ba"
   },
   "git_blob_custody": {
-    "source_revision": "git-sha1:4bf577433cc209576636609280b236149d4bdb1f",
+    "source_revision": "git-sha1:55de01666822a448cc3edd24ad53e283f8c59b8d",
     "tracked_sources": [
       {
         "path": ".node-version",
-        "blob_oid": "ce62013c39aed63f656bb7ae41bdd45d81163ffe",
-        "content_sha256": "sha256:d9f318747a126ce2247661af67852b185def7789492eabfad7bba322be087c33"
+        "blob_oid": "229b3ce85a631ccd5991b25f75f414171ccc7942",
+        "content_sha256": "sha256:584f19ccde29925286e32f566a2aa06c89efb4e2eb2bb2fc9ea5d56e2d190ac4"
       },
       {
         "path": "package-lock.json",
-        "blob_oid": "c5808cb10c0305d9238306aaf3b78c89b0cf42b6",
-        "content_sha256": "sha256:e93f0dbbf7bf3a9553481c51774ebd08929f093b1e81483014c553a065acf23e"
+        "blob_oid": "ecc49be05aac965bd5d752ebfb924fe88869e031",
+        "content_sha256": "sha256:b6469e5fa5abc0bfd45000a3bc2b0edef39d02af172560e2a85078e98d9b26cb"
       },
       {
         "path": "package.json",
-        "blob_oid": "723117813fbf6000b0b37c83926b300372c45115",
-        "content_sha256": "sha256:e1687c2a9911089c9eb9b085b68468deb01e561eea6b9afac08d2036acc0ee34"
+        "blob_oid": "c549d12090cedffb4a31a6ba24a43f335617eb16",
+        "content_sha256": "sha256:9a63196dea76313ffec3d0140e98a915dbdf01ea241d17cf0909c92baceabab3"
       }
     ],
     "registry_blob": {
