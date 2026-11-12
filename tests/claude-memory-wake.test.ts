@@ -256,7 +256,10 @@ describe("Claude HARNESS memory async wake", () => {
     expect(fiftyForeign.foreignInboxFilesRetained).toBe(true);
   }, 20_000);
 
-  it("U-PMEMROOT-007: provider envelope rejects each binding axis independently", async () => {
+  it("U-PMEMROOT-007: provider envelope rejects each binding axis independently", {
+    timeout: 60000,
+  }, async () => {
+    // 27s measured, bounded per #1063
     const root = fixture();
     try {
       const project = resolveProjectMemoryRoot(root);

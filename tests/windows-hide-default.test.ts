@@ -688,7 +688,10 @@ describe("issue #693 子プロセス windowsHide 既定 (Red)", () => {
     }));
 
   describe("U-WHIDE-014", () =>
-    it("U-WHIDE-014: setupFiles 下で既存 spawn 検証と child_process mock が通る", async () => {
+    it("U-WHIDE-014: setupFiles 下で既存 spawn 検証と child_process mock が通る", {
+      timeout: 300000,
+    }, async () => {
+      // 142s measured, bounded per #1063
       await loadWindowsHide();
       const files = [
         "tests/node-plan-revision-runner.test.ts",

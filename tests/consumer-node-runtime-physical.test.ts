@@ -563,7 +563,10 @@ describe("physical consumer Node runtime adapter", () => {
     expect(removeAttempts).toBe(2);
   });
 
-  it("CANDIDATE-U-PACKNODE-005/012: update fault preserves prior pointer and bundle bytes", async () => {
+  it("CANDIDATE-U-PACKNODE-005/012: update fault preserves prior pointer and bundle bytes", {
+    timeout: 240000,
+  }, async () => {
+    // 115s measured, bounded per #1063
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-physical-fault-"));
     roots.push(root);
     const checkout = mkdtempSync(join(tmpdir(), "ut-tdd-physical-fault-pack-"));

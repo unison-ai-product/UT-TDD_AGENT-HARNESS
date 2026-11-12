@@ -41,7 +41,10 @@ describe("consumer worktree runtime setup entry Red (#1525)", () => {
 
   afterAll(() => cleanupConsumerWorktreeRuntimeFixture());
 
-  it("prerequisite: main and both Releases are valid; candidate worktrees are linked", async () => {
+  it("prerequisite: main and both Releases are valid; candidate worktrees are linked", {
+    timeout: 240000,
+  }, async () => {
+    // 93s measured, bounded per #1063
     expect(existsSync(join(fixture.main, ".ut-tdd", "runtime", "activation", "active.json"))).toBe(
       true,
     );

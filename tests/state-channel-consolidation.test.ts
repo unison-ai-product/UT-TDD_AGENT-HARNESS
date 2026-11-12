@@ -1372,7 +1372,7 @@ describe("Issue #1062: runtime notifications are memory-free", () => {
         expect(summary.terminalized, `${name} valid marker`).toBe(1);
         expect(summary.pending, `${name} valid marker`).toBe(0);
       }
-    });
+    }, 300000); // 163s file measured, bounded per #1063
 
     const rejectMalformedNoteTerminal = async (
       name: string,

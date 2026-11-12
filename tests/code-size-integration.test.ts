@@ -166,7 +166,7 @@ beforeAll(() => {
   });
   cliGreenRoot = createCliFixture("cli-green", false);
   cliViolationRoot = createCliFixture("cli-violation", true);
-});
+}, 240000); // 104s measured, bounded per #1063
 
 afterAll(() => {
   if (scratchRoot) rmSync(scratchRoot, { recursive: true, force: true });

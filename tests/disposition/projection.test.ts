@@ -81,7 +81,7 @@ describe("I-DISP-001 V-model projection", () => {
       negativeRoot = createDocsGitFixture({ ensureTracked: targetPath });
       originalDisposition = readFileSync(join(negativeRoot, dispositionPath), "utf8");
       originalSourceTargets = readFileSync(join(negativeRoot, sourceTargetPath), "utf8");
-    });
+    }, 120000); // 54s measured, bounded per #1063
 
     afterAll(() => {
       rmSync(tempRoot, { recursive: true, force: true });
