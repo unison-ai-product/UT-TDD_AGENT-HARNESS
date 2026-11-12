@@ -3080,6 +3080,25 @@ v2正常fixtureはN=3、stable/canary両channelを対象とする。実producer�
 mutation M1–M7は正本§5と同一: exactly-oneへの退行、集合一致への弱体化、先頭mappingだけの比較、v1基数guard削除、attestation path束縛削除、promotion余剰scalar受理、rollback余剰scalar受理。
 対応するRed証跡は実装後に各単独mutationを実行して記録する。finding enum、reason precedence、producer/installer/validatorの既存意味は変更しない。
 
+## Pack の実行可能ファイル mode の保持 oracle 候補 (Issue #821)
+
+正本: `docs/design/harness/L6-function-design/release-channel-manifest.md` §9。
+以下は契約からの転記であり、実行済み・Green・正式 oracle 昇格を主張しない。実装は別 PR。
+全 ID は実行 bit (ファイルシステム) ではなく Git object の mode だけを観測する。fixture は一時 Git repo を
+`core.filemode=false` (Windows 相当) と `true` (Linux) の両方で作る。
+
+| ID | 入力 / 独立変異 | 期待 |
+| --- | --- | --- |
+| `CANDIDATE-U-PACKMODE-001` | source commit の tree に `100755` を 2 件持つ fixture を sync-pack で copy する (Windows 相当: `core.filemode=false`) | `nextCommands` に `git add` の後・`commit` の前で、`100755` の path ごとに `update-index --chmod=+x -- <path>` が出る。copy evidence の `pack` に同じ path / mode の一覧が残る。`localGitMutationExecuted` は `false` のまま、Pack checkout の index は sync-pack の前後で同一 |
+| `CANDIDATE-U-PACKMODE-002` | 期待 mode の入力を、source commit の Git tree と、staged だけ `100755` に変えた index とで変える | 期待値は commit の Git tree 由来のままで、staged 変更は混入しない |
+| `CANDIDATE-U-PACKMODE-003` | 手順を実施して作った C1 (`100755` が保たれる) | C1 照合が通る。Windows 相当 (`core.filemode=false`) でも `git ls-tree` が `100755` を返す |
+| `CANDIDATE-U-PACKMODE-004` | 手順を省略して作った C1 (path と bytes は同一で `100644` へ落ちる) | C1 照合が fail-close する。blob 内容が一致していても通らない (blob oid だけの照合への退行が Red) |
+| `CANDIDATE-U-PACKMODE-005` | 期待 `100644` の path が C1 で `100755` になる / manifest `artifacts[].mode` だけ書き換える / C1 の別 SHA を後続の公開処理へ渡す | 3 変異とも fail-close する。完全照合であること (`+x` 対象だけの検査への退行) と、検査した C1 SHA が公開処理まで固定されることを確かめる |
+| `CANDIDATE-U-PACKMODE-006` | Linux 上で同じ fixture (`core.filemode=true`、実行 bit あり) | 001-005 と同じ判定。Windows と Linux で結果が同じであり、実行 bit の有無が判定を変えない |
+
+mutation: 期待値を index (`ls-files -s`) から読む退行、`+x` 対象だけを検査する退行、blob oid だけを比べる退行、sync-pack が
+`update-index` / `git add` を実行する退行 (001 の index 同一性が Red)。
+
 ## Issue #789 退役 oracle (PLAN-L6-789 §5)
 
 正本: `PLAN-L6-789-token-ingest-retirement` §5。実装 PLAN は `PLAN-L7-789-token-ingest-retirement-execution`。PR1 で実装・実測する退役 oracle を以下に定義する。現契約 PR は実測完了を主張しない。各 oracle は旧実装 (`projectTokenUsage` / `projectRepoScopedTokenUsage` / `projectModelEvaluations`、scan action の `openHarnessDb` → `migrate` → `projectTokenUsage` → `projectModelEvaluations`) を戻すと RED になる。
