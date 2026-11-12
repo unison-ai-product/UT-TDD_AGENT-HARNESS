@@ -9,7 +9,7 @@ related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 issue: 881
 ---
 
-> **L6 contract marker**: `compressPackTar(tar) => Buffer` は unit-test-granularity contract である (未実装の目標契約。関数名は実装で変えてよい)。本書は gzip 層の方式 (パラメータ 4 つの明示、header 10 byte の固定、literal golden と toolchain identity の 2 検査) を凍結する。pre: 入力は ustar の tar bytes。post: 出力は標準の gzip で、gunzip の結果が入力と byte で一致し、同一入力は承認済み toolchain で byte が一致する。invariant: 公開済み release の anchor は変えない。oracle は `docs/test-design/harness/L7-pack-publication-gzip-test-design.md` の `CANDIDATE-U-PACKASSET-007`〜`CANDIDATE-U-PACKASSET-014` が固定する (正式 ID `U-PACKASSET-*` への昇格は、実装 PR が Red テストと同時に行う)。
+> **L6 contract marker**: `compressPackTar(tar) => Buffer` は unit-test-granularity contract である (未実装の目標契約。関数名は実装で変えてよい)。本書は gzip 層の方式 (パラメータ 4 つの明示、header 10 byte の固定、literal golden と toolchain identity の 2 検査) を凍結する。pre: 入力は ustar の tar bytes。post: 出力は標準の gzip で、gunzip の結果が入力と byte で一致し、同一入力は承認済み toolchain で byte が一致する。invariant: 公開済み release の anchor は変えない。oracle は `docs/test-design/harness/L7-pack-publication-gzip-test-design.md` の `CANDIDATE-U-PACKASSET-007`〜`CANDIDATE-U-PACKASSET-015` が固定する (正式 ID `U-PACKASSET-*` への昇格は、実装 PR が Red テストと同時に行う)。
 
 # Pack publication tar.gz の圧縮方式
 
@@ -64,7 +64,7 @@ asset の名前、checksum ファイルの形式、inventory digest の導出は
 ### 4.1 契約
 
 1. **パラメータを明示する**。`level: 9`、`memLevel: 9`、`windowBits: 15`、
-   `strategy: Z_DEFAULT_STRATEGY` を、呼び出しで毎回明示する。Node の既定値に任せない。
+   `strategy: Z_DEFAULT_STRATEGY` を、呼び出しで毎回明示する。Node の既定値に任せない。4 つの options は、`node:zlib` の `gzipSync` を呼ぶ唯一の呼び出し点へ 1 つの options object として渡す (別の呼び出し点や、options の分割・後付けを作らない)。`windowBits` と `strategy` は省いても出力 byte が変わらないため (2026-11-12 実測、L7 テスト設計 §3)、golden では明示を検査できず、この呼び出し点で options を観測する oracle (`CANDIDATE-U-PACKASSET-015`) が検査する。`compressPackTar` の引数と戻り値は変えない。
 2. **header の固定**。mtime=0、XFL=2 (level 9 の値)、OS=255 (unknown) とする。`gzipSync` の素の出力は
    OS byte が実行環境で異なる (Windows `0a`、Linux `03`) ため、byte 9 を `ff` へ置き換える。
    置き換えは出力の先頭 10 byte だけを対象とし、deflate 本体と trailer (CRC-32 と ISIZE) は変えない。
