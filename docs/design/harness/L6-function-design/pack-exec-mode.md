@@ -9,7 +9,7 @@ related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 issue: 821
 ---
 
-> **L6 contract marker**: `expectedPackModes(sourceTree, pathMapping) => PackModeExpectation` (公開対象 source commit の Git tree の entry を、既存の materializer の path 写像 (`materializeReleaseArtifacts`) に通し、出荷先 path ごとの期待 mode を導く) と `verifyPackC1Modes(c1Tree, expected) => PackModeVerdict` (C1 の Git tree を `git ls-tree -r` 相当で独立に読み、**mode だけ**を照合して食い違いを fail-close する) は unit-test-granularity contract である (未実装の目標契約。関数名は実装で変えてよいが、契約の意味は変えない)。pre: 入力は Git object だけで、index と実行 bit を読まない。post: 期待 path が全て C1 に在り、各 mode が期待と一致し、期待しない `100755` と、`120000` (期待の有無にかかわらず) が C1 に無いときだけ合格。**bytes の digest は本契約の照合に含めない** (`package.json` などは Pack への変換で bytes が source と正当に異なるため。内容の照合は既存の manifest `artifacts[].contentDigest` と `exactCommitEntries` が持つ、§4.3)。invariant: sync-pack は `git add` / `update-index` / `commit` / `push` を実行しない。oracle は `docs/test-design/harness/L7-pack-exec-mode-test-design.md` の `CANDIDATE-U-PACKMODE-001`〜`014` が固定する (正式 ID `U-PACKMODE-*` への昇格は、src を含まない昇格 PR で行う)。
+> **L6 contract marker**: `expectedPackModes(sourceTree, pathMapping) => PackModeExpectation` (公開対象 source commit の Git tree の entry を、既存の materializer の path 写像 (`materializeReleaseArtifacts`) に通し、出荷先 path ごとの期待 mode を導く) と `verifyPackC1Modes(c1Tree, expected) => PackModeVerdict` (C1 の Git tree を `git ls-tree -r` 相当で独立に読み、**mode だけ**を照合して食い違いを fail-close する) は unit-test-granularity contract である (未実装の目標契約。関数名は実装で変えてよいが、契約の意味は変えない)。pre: 入力は Git object だけで、index と実行 bit を読まない。post: 期待 path が全て C1 に在り、各 mode が期待と一致し、期待集合外の `100755` と、`120000` (期待の有無にかかわらず) が C1 に無いときだけ合格。**bytes の digest は本契約の照合に含めない** (`package.json` などは Pack への変換で bytes が source と正当に異なるため。内容の照合は既存の manifest `artifacts[].contentDigest` と `exactCommitEntries` が持つ、§4.3)。invariant: sync-pack は `git add` / `update-index` / `commit` / `push` を実行しない。oracle は `docs/test-design/harness/L7-pack-exec-mode-test-design.md` の `CANDIDATE-U-PACKMODE-001`〜`015` が固定する (正式 ID `U-PACKMODE-*` への昇格は、src を含まない昇格 PR で行う)。
 
 # Pack の実行可能ファイルの mode を保つ方式 (Issue #821)
 
@@ -71,11 +71,19 @@ PLAN は凍結中 (#1166) のため、方式判断はここへ置く。
      `cleanDistributionSourcePath` (`src/setup/distribution.ts:215-224`、`:226-247`) で、mode は変換せず source の値を
      そのまま持つ (`release-materializer.ts:191`)。結果は (出荷先 path → 期待 mode) の集合になる。manifest と同じ
      producer の出力だけで比べないよう、source の Git tree から導く。
-   - **fail-close の条件**: (a) 期待 path が C1 に無い、(b) C1 の mode が期待と違う (`100755` が `100644` に落ちる場合を含む)、
-     (c) 期待しない `100755` が C1 に在る、(d) 検査対象の C1 の entry に mode `120000` (symlink) が在る (期待 mode との一致・不一致、期待集合への所属に依らない独立の条件)。(d) は
-     manifest v2 の symlink 拒否 (`release-channel-manifest.md` §7.1、`PUBLICATION_MODES`、`src/schema/release-manifest.ts:9`) と
-     同じ向きである。materializer は source の `120000` を受け付ける (`release-materializer.ts:48`、`:182`) ので、
-     source が `120000` の path を期待 mode として導く場合も fail-close し、公開の契約が受け付けない mode を期待値にしない。
+   - **fail-close の条件** (互いに分離でき、各条件だけが成立する入力を L7 の行列が 1 つずつ固定する):
+     (a) 期待集合の path が C1 に無い。(b) 期待集合の path の mode が期待と違う (`100644` と `100755` の間のどちらの向きも含む。
+     期待集合の中だけを対象にする)。(c) 期待集合に無い path が mode `100755` で C1 に在る (期待集合の外だけを対象にし、
+     期待 `100644` の path が `100755` になる場合は (b) であって (c) ではない)。(d) C1 の任意の entry の mode が `120000`
+     (symlink。期待との一致・不一致、期待集合への所属に依らない独立の条件。`release-channel-manifest.md` §7.1、
+     `PUBLICATION_MODES` (`src/schema/release-manifest.ts:9`) の symlink 拒否と同じ向き)。(e) source 由来の期待 mode が
+     `120000` (期待値の導出の段階の拒否。C1 を読む前に落とす。materializer は source の `120000` を受け付ける
+     (`release-materializer.ts:48`、`:182`) が、公開の契約が受け付けない mode を期待値にしない)。
+     公開の条件として (f) 照合した C1 SHA が後続の公開処理の SHA と違う、(g) 独立観測で期待集合外の extra `100644` が見つかる、
+     (h) 独立観測で bytes が sealed 期待と違う、を持つ。
+     分離できない組: 期待集合の path が C1 で `120000` のとき (b) と (d) が同時に成立する。(d) だけが成立する入力は
+     期待集合外の `120000` で作れるので、(d) の固定にはそれを使い、期待集合内の `120000` は (b) と (d) の二重なので
+     単独の oracle にしない。
    - **bytes を比べない理由**: Pack の出荷物は source の bytes と正当に異なる。`package.json` は `transformCleanDistributionArtifact`
      (`src/setup/distribution.ts:261-281`、`src/cli/distribution.ts:207-215`) で test / build / repository / `artifactProfile`
      が書き換わり、追跡する team の定義は projection (`src/cli/distribution.ts:186-200`) を通る。bytes や digest を source と
@@ -107,5 +115,5 @@ PLAN は凍結中 (#1166) のため、方式判断はここへ置く。
 
 ## 5. oracle
 
-`CANDIDATE-U-PACKMODE-001..014` (`docs/test-design/harness/L7-pack-exec-mode-test-design.md`。共有の L7-unit-test-design.md には足さない)。Windows と Linux の両方で、
+`CANDIDATE-U-PACKMODE-001..015` (`docs/test-design/harness/L7-pack-exec-mode-test-design.md`。共有の L7-unit-test-design.md には足さない)。Windows と Linux の両方で、
 実行 bit ではなく Git object の mode だけを観測する。
