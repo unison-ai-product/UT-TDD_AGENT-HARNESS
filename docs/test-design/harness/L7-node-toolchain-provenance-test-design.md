@@ -15,7 +15,7 @@ verifier、Bun の削除、CI、consumer の変更は本書の成果物ではな
 
 正本データは
 `docs/design/harness/L5-detailed-design/node-toolchain-provenance-registry-v1.json`。
-本書が束縛する3入力の実在 source revision は `git-sha1:4bf577433cc209576636609280b236149d4bdb1f` であり、
+本書が束縛する3入力の実在 source revision は `git-sha1:55de01666822a448cc3edd24ad53e283f8c59b8d` であり、
 同 revision の `.node-version`、`package-lock.json`、`package.json` の tracked blob と raw-byte digest をregistryで検証する。
 本書の更新対象 pin は Node.js v24.22.3 / 同梱 npm 11.19.1 とする。公式 archive filename/SHA-256 は
 Node.js v24.22.3 の archive index と `SHASUMS256.txt` に照合済みである。archive SHA と、照合済み archive 内の

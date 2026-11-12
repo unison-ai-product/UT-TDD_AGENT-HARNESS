@@ -116,24 +116,24 @@
     "canonicalization": "RFC 8785 JCS",
     "encoding": "UTF-8 without BOM",
     "preimage": "the registry JSON object with canonical_digest.registry_sha256 omitted",
-    "registry_sha256": "sha256:738b9f4b88bc50102eae1ac0db24464fb4ad4415312b26ceffb6149229bce62d"
+    "registry_sha256": "sha256:65018e51a4878472e40686343dfa4186446ae87f05dd50f55f83087a4e2ed7ba"
   },
   "git_blob_custody": {
-    "source_revision": "git-sha1:4bf577433cc209576636609280b236149d4bdb1f",
+    "source_revision": "git-sha1:55de01666822a448cc3edd24ad53e283f8c59b8d",
     "tracked_sources": [
       {
         "path": ".node-version",
-        "blob_oid": "ce62013c39aed63f656bb7ae41bdd45d81163ffe",
+        "blob_oid": "229b3ce85a631ccd5991b25f75f414171ccc7942",
         "content_sha256": "sha256:584f19ccde29925286e32f566a2aa06c89efb4e2eb2bb2fc9ea5d56e2d190ac4"
       },
       {
         "path": "package-lock.json",
-        "blob_oid": "c5808cb10c0305d9238306aaf3b78c89b0cf42b6",
+        "blob_oid": "ecc49be05aac965bd5d752ebfb924fe88869e031",
         "content_sha256": "sha256:b6469e5fa5abc0bfd45000a3bc2b0edef39d02af172560e2a85078e98d9b26cb"
       },
       {
         "path": "package.json",
-        "blob_oid": "723117813fbf6000b0b37c83926b300372c45115",
+        "blob_oid": "c549d12090cedffb4a31a6ba24a43f335617eb16",
         "content_sha256": "sha256:9a63196dea76313ffec3d0140e98a915dbdf01ea241d17cf0909c92baceabab3"
       }
     ],
