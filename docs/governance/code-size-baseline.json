@@ -131,7 +131,7 @@
   "tests/review-merge-gate.test.ts": { "lines": 1244, "functionExcess": null },
   "tests/review-receipt-supersession.test.ts": { "lines": 652, "functionExcess": null },
   "tests/review-verdict-custody.test.ts": { "lines": 824, "functionExcess": null },
-  "tests/runtime-adapter.test.ts": { "lines": 882, "functionExcess": null },
+  "tests/runtime-adapter.test.ts": { "lines": 880, "functionExcess": null },
   "tests/runtime-hook-entrypoints.test.ts": { "lines": 721, "functionExcess": null },
   "tests/session-log.test.ts": { "lines": 509, "functionExcess": null },
   "tests/setup-project-identity-bootstrap.test.ts": { "lines": 613, "functionExcess": null },
