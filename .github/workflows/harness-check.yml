@@ -57,7 +57,7 @@ jobs:
       - name: setup node (harness 実行系の正式 runtime、PLAN-L7-462 step 2)
         uses: actions/setup-node@v4
         with:
-          node-version: "24.22.1"
+          node-version: "24.22.3"
           cache: npm
 
       - name: install deps (frozen)
@@ -269,7 +269,7 @@ jobs:
       - name: setup node (harness 実行系の正式 runtime、PLAN-L7-462 step 2)
         uses: actions/setup-node@v4
         with:
-          node-version: "24.22.1"
+          node-version: "24.22.3"
           cache: npm
 
       - name: install deps (frozen)
@@ -322,7 +322,7 @@ jobs:
       - name: setup node (sealed generation runtime)
         uses: actions/setup-node@v4
         with:
-          node-version: "24.22.1"
+          node-version: "24.22.3"
           cache: npm
 
       - name: install deps (frozen)
@@ -354,7 +354,7 @@ jobs:
       - name: setup node (sealed generation runtime)
         uses: actions/setup-node@v4
         with:
-          node-version: "24.22.1"
+          node-version: "24.22.3"
           cache: npm
 
       - name: install deps (frozen)
@@ -392,7 +392,7 @@ jobs:
       - name: setup node (aggregate admission runtime)
         uses: actions/setup-node@v4
         with:
-          node-version: "24.22.1"
+          node-version: "24.22.3"
 
       - name: download Node generation evidence
         uses: actions/download-artifact@v4
