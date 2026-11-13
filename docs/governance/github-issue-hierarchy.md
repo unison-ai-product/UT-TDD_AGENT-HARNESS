@@ -94,7 +94,7 @@ Claude 著は Codex Sol) にも同じに当てる。特定の backlog の話で�
 - **並列ボックス**: 順序を問わないチケットの集まり。空いた slot は、どれでも 1 件拾う。
 - **直列ボックス**: A→B→C と鎖でつないだチケット。前のチケットが close して初めて、次が拾える。
 - **slot**: どの lane も最大 N slot を同時に動かす。各 slot は自分の worktree (または作業枠) を持つ。
-  例として Codex の N は 3 (subagent の上限)。control と検収の N は運用値として記録し、ここでは固定しない。
+  例として Codex の N は 3。control と検収の N は運用値として記録し、ここでは固定しない。
 
 v4 候補 (`docs/governance/candidates/ut-tdd-concept-v4.0.md`) のチケット発行 (原子チケットが lease を持ち、
 依存が順序を決め、WIP 上限が量を縛る) を、手運用で先に試すものである。

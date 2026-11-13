@@ -321,7 +321,7 @@ PR #167、自己 supersede 7 件 #183)。以下を**再締結**する。新規�
    (§引き継ぎ・検証の基準点)。
 
 **違反時の扱い**: 上記から外れた PR / merge / 委譲は、内容の当否に関わらず
-process violation FLAG とし、incident memory に記録する。遵守の spot-check は
+process violation FLAG とし、feedback メモリ (`ut-tdd memory add --kind feedback`) に記録する。遵守の spot-check は
 §定期棚卸し (EOD close-out) に載せる (新規機構は建てない — 未計測のままゲート化しない)。
 
 ### PR スコープ規律 (PO ルール 2026-08-03、両ランタイム共通)
@@ -348,7 +348,7 @@ close された)。新規機構は作らず、既存工程の遵守を規律と�
    `tests/` の内容差分 0 (rename だけ可) でテスト設計にも触れず、commit ごとに full suite を流す。
    直す余地が無いときは PR 本文に「Refactor なし (理由)」と書く。その理由を認める条件と判定者は
    `docs/governance/coding-rules.md` §量・分割・Refactor の目安 を正本とする。大きな構造変更は
-   Refactor Issue (ラベル `refactor`) と設計文書へ回す (PLAN 凍結、#1166)。非著者 reviewer は commit の順と Refactor commit の `tests/` 差分 0 を確かめ、判定を verdict の行頭 `REFACTOR:` 欄 (`commit-ok` / `none-ok` / `not-applicable` / `commit-tests-changed` / `none-rejected`) に必ず書く。実装 PR (`src/` か `scripts/` を変える PR) では、`ut-tdd pr merge` が exact HEAD の verdict にこの欄があり合格の値であることを機械で確かめ、欄が無いか不合格なら merge を拒否する (欄の形と gate の規則は `docs/design/harness/L6-function-design/merge-gate-refactor-stage.md`、#1300)。
+   Refactor Issue (ラベル `refactor`) と設計文書へ回す (PLAN 凍結、#1166)。非著者 reviewer は commit の順と Refactor commit の `tests/` 差分 0 を確かめ、判定を verdict の行頭 `REFACTOR:` 欄 (`commit-ok` / `none-ok` / `not-applicable` / `commit-tests-changed` / `none-rejected`) に必ず書く。実装 PR (`src/` か `scripts/` を変える PR) では、この欄を `ut-tdd pr merge` が機械で確かめる gate は契約済み (欄の形と規則は `docs/design/harness/L6-function-design/merge-gate-refactor-stage.md`) だが未実装であり、実装は #1300 が持つ。実装されるまで、欄の確認は非著者 reviewer と control の手順である。
    手順の正本は `skills/test-driven-development.md`。
 
 6. **WIP 上限 (slot 単位) と共有文書の直列化** (PO 指摘 2026-10-14、2026-10-23 に slot 単位へ改訂): WIP は
@@ -548,7 +548,7 @@ control lane の合図を待つことを基本にせず、止まったら相手�
 - Plan lint: `ut-tdd plan lint`
 - Review: `ut-tdd review --uncommitted`
 - Codex delegation: `ut-tdd codex --role <role> --task "..."`
-- Claude prompt generation: `ut-tdd claude --role <role> --task "..." --dry-run`
+- Claude prompt generation: `ut-tdd claude --role <role> --task "..."` (`--execute` なしが dry run)
 - Team run: `ut-tdd team run --definition .ut-tdd/teams/<team>.yaml`
 - Task classification: `ut-tdd task classify --text "..."`
 - Skill suggestion: `ut-tdd skill suggest --plan <path>`

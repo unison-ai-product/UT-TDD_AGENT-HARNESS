@@ -116,7 +116,7 @@ Runtime modes:
 Canonical commands:
 
 - Codex execution: `ut-tdd codex --role <role> --task "..."`
-- Claude prompt generation: `ut-tdd claude --role <role> --task "..." --dry-run`
+- Claude prompt generation: `ut-tdd claude --role <role> --task "..."` (without `--execute` it is a dry run)
 - Team delegation: `ut-tdd team run --definition .ut-tdd/teams/<team>.yaml`
 - Task classification: `ut-tdd task classify --text "..."` / `ut-tdd task estimate --plan <path>`
 - Skill recommendation: `ut-tdd skill suggest --plan <path>`
@@ -127,7 +127,9 @@ Canonical commands:
 
 When multiple AI runtimes are available, separate creation from judgement.
 Design decisions, judgement gates, and R4 merge decisions should go through a
-different runtime / model family when feasible. In single-runtime modes, record
+different runtime / model family (MUST in `hybrid`; same-family reviewers are
+rejected, `same_family_reviewer_denied` in `src/feedback/review-admission-check.ts`).
+In single-runtime modes, record
 `intra_runtime_subagent` as the review substitute and leave evidence.
 
 lane 間の依頼 (止まったら待たずに control / ほかの lane / PO へ依頼をかける) は
@@ -176,7 +178,7 @@ identity/runtime. Run two lanes and report them separately:
   Requirement satisfaction is out of scope for this lane.
 
 Use the valid-attack taxonomy and citation-only refutation from
-`docs/plans/PLAN-L6-53-adversarial-review-mechanism.md`; verdict is FLAG (an
+`skills/adversarial-review.md`; verdict is FLAG (an
 un-refuted attack), PASS (all attacks refuted by citation), or PASS-WEAK (no
 attack found, with a trial log of at least three attempted attacks). In `hybrid`,
 route blind review to the provider that did not author the change so
@@ -252,15 +254,16 @@ Codex tool names differ from Claude, so matchers are mapped (not copied):
   `Stop` / `UserPromptSubmit` hook events (no `SubagentStop`).
 - `agent-guard` **is wired** for Codex: `.codex/hooks.json` matches
   `spawn_agent|spawn_agents_on_csv` and runs the same `.claude/hooks/agent-guard.ts`
-  with `blockOnFailure`, so Codex subagent spawns follow the same rule as Claude's
+  as a single `command` string, so Codex subagent spawns follow the same rule as Claude's
   (a missing model is blocked; #1002). (This entry read "not yet wired" until 2026-07-28, which
   the hook config itself already contradicted. Read `.codex/hooks.json` when in
   doubt — it is the SSoT for what is actually wired.)
 
 `.codex/hooks.json` parity with `.claude/settings.json` is machine-checked by `doctor`
-`codex-hook-adapter`, which fails closed if a guard diverges, drops
-`blockOnFailure`, depends on `$CLAUDE_PROJECT_DIR`, or references global
-`~/.codex/`.
+`codex-hook-adapter`, which fails closed if a guard diverges, carries a
+field outside the supported set (`blockOnFailure`, `args`, `commandWindows` are
+rejected as `unsupported_hook_field`), depends on `$CLAUDE_PROJECT_DIR`, or
+references global `~/.codex/`.
 
 Scope boundary: `.codex/hooks.json` guards direct Codex CLI / Codex IDE sessions
 only. Hosted API/developer tools supplied by the surrounding chat runtime (such

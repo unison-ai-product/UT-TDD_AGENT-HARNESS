@@ -111,8 +111,9 @@ Current command path:
 - Team run: `ut-tdd team run --definition .ut-tdd/teams/<team>.yaml`
 
 Runtime mode is one of `standalone`, `claude-only`, `codex-only`, or `hybrid`.
-In `hybrid`, judgement gates should use a different runtime / model family when
-feasible. In single-runtime modes, record `intra_runtime_subagent` review
+In `hybrid`, judgement gates MUST use a different runtime / model family (a
+same-family reviewer is rejected, `same_family_reviewer_denied` in
+`src/feedback/review-admission-check.ts`). In single-runtime modes, record `intra_runtime_subagent` review
 evidence as the substitute.
 
 Do not make raw `codex exec` or raw `claude` the normal path for UT-TDD work.
