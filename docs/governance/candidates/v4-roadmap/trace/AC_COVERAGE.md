@@ -10,7 +10,7 @@
 |---|---|---|---|
 | UTV4-AC-001 | UTV4-FR-001 | R05 | 未実行 |
 | UTV4-AC-002 | UTV4-FR-002 | R05 | 未実行 |
-| UTV4-AC-003 | UTV4-FR-002 | R05 | 未実行 |
+| UTV4-AC-003 | UTV4-FR-001, UTV4-FR-002 | R05 | 未実行 |
 | UTV4-AC-004 | UTV4-FR-003 | R05 | 未実行 |
 | UTV4-AC-005 | UTV4-FR-003 | R05 | 未実行 |
 | UTV4-AC-006 | UTV4-FR-004 | R05 | 未実行 |
@@ -24,12 +24,12 @@
 | UTV4-AC-014 | UTV4-FR-008 | R04 | 未実行 |
 | UTV4-AC-015 | UTV4-FR-008 | R04 | 未実行 |
 | UTV4-AC-016 | UTV4-FR-009 | R04 | 未実行 |
-| UTV4-AC-017 | UTV4-FR-009 | R04 | 未実行 |
+| UTV4-AC-017 | UTV4-FR-008, UTV4-FR-009 | R04 | 未実行 |
 | UTV4-AC-018 | UTV4-FR-010 | R09 | 未実行 |
 | UTV4-AC-019 | UTV4-FR-010 | R09 | 未実行 |
 | UTV4-AC-020 | UTV4-FR-011 | R09 | 未実行 |
 | UTV4-AC-021 | UTV4-FR-012 | R05 | 未実行 |
-| UTV4-AC-022 | UTV4-FR-013 | R08 | 未実行 |
+| UTV4-AC-022 | UTV4-FR-013, UTV4-FR-023 | R08 | 未実行 |
 | UTV4-AC-023 | UTV4-FR-014 | R00 | 未実行 |
 | UTV4-AC-024 | UTV4-FR-015 | R07 | 未実行 |
 | UTV4-AC-025 | UTV4-FR-016 | R07 | 未実行 |
@@ -40,8 +40,8 @@
 | UTV4-AC-030 | UTV4-FR-021 | R09 | 未実行 |
 | UTV4-AC-031 | UTV4-FR-022 | R09 | 未実行 |
 | UTV4-AC-032 | UTV4-FR-023 | R08 | 未実行 |
-| UTV4-AC-033 | UTV4-FR-023 | R08 | 未実行 |
-| UTV4-AC-034 | UTV4-FR-024 | R08 | 未実行 |
+| UTV4-AC-033 | UTV4-FR-013, UTV4-FR-027 | R08 | 未実行 |
+| UTV4-AC-034 | UTV4-FR-023, UTV4-FR-024 | R08 | 未実行 |
 | UTV4-AC-035 | UTV4-FR-025 | R09 | 未実行 |
 | UTV4-AC-036 | UTV4-FR-026 | R09 | 未実行 |
 | UTV4-AC-037 | UTV4-FR-027 | R05 | 未実行 |
