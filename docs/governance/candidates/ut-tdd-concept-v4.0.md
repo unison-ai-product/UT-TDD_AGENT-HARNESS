@@ -13,7 +13,7 @@ issue: 530
 > **改訂メモ (2026-11-12 / 2026-11-13、#1005 のコメント 6822862705 と 6844628646):** v4 の要求 79 件の見直し (2026-11-13 の追補で区分は 4 つだけに確定: 残す 12 / 簡素化 32 / 先送り 21 / 削る 15、詳細は要件候補の改訂メモ) の決定を、この構想書に反映する。本書の本文は構想の記録として残し、次の 6 点と食い違う記述は、この改訂メモを優先する。
 > 1. スプレッドシート・Office・Google 文書は、人間が読むための一方向の書き出しである。書き戻し (admission 経由の逆流) は作らない。
 > 2. チケットの正本は GitHub Issue / Sub-issue / PR である。独自のチケット store・tracked 記録・一方向投影・ずれ検出は作らない (Issue は作業の許可で、権限を持たず、契約本文は設計文書に置く)。
-> 3. 管理知能 (別プロセスの Python) は作らない。control lane (LLM) が GitHub と CLI で指揮し、閉じる権限は gate だけが持つ。実装言語は TypeScript / Node 一本のままである。
+> 3. 管理知能 (別プロセスの Python) は作らない。control lane (LLM) が GitHub と CLI で指揮し、閉じる権限は gate だけが持つ。実装言語は TypeScript / Node 一本のままである (ADR-001 は改訂しない。決定 4 との食い違いは別に扱う)。
 > 4. 1.0.0 が保証する運用形態は hybrid だけである。単一 provider は今ある fallback のままにし、最初の導入先が片方の provider しか使えないと分かった時点で見直す。
 > 5. 層番号の振り直しとディレクトリ再編 (product/ と dev/ の分離) は先送りにする。上流の製品工程 (要求の整理・PoC・画面プロト・製本) は、テンプレートとチェックリストだけを配る。
 > 6. 派生する一覧は手で編集せず、再生成のコマンドを 1 本にして CI で「再生成しても差分が出ない」ことを確かめる (UTV4-FR-080)。
@@ -51,7 +51,7 @@ v3.1 は V-model L0-L14、4 artifact + 3 段階 freeze、9-mode、配線、5 役
 本書は PO が提示した個人開発ハーネスの構想 v4.0 候補 (Verified Change Operating System) から、**チーム開発に必要な部分だけ**を翻案する。参照元の 8 Plane のうち、Sovereignty / Change Contract Compiler /
 Control Plane / Assurance Kernel / Evidence Ledger / Adaptation を採り、Execution Plane の provider 非依存 lane と
 Release / Lifecycle Plane は既存の tier-router / Pack 配布 (PLAN-L6-63 系) へ写像するに留める。参照元の
-Python 恒久意味コアは採らない (ADR-001: TypeScript/Node 一本)。2026-11-12 の見直しで、管理知能 (別プロセスの Python) も作らないことにした。
+Python 恒久意味コアは採らない (ADR-001: TypeScript/Node 一本)。2026-11-12 の見直しで、管理知能 (別プロセスの Python) も作らないことにした。ADR-001 は改訂しない。決定 4 (管理知能は Python) との食い違いは残り、別に扱う。
 
 ## 北極星
 
@@ -157,7 +157,7 @@ v3.1 の doctor / plan lint / review custody / exact-HEAD receipt をそのま�
 | 対象 | 役割 | 正本形式 |
 |---|---|---|
 | Requirement / 設計 / Policy | 意味 authority | markdown + typed spec block |
-| PLAN | 工程間の簡易契約 (§工程間の契約と工程内のチケット) | markdown 本文 4 項目 + record 化 frontmatter (段階移行、専用 Reverse 対で扱う、UTV4-FR-007) |
+| PLAN | 工程間の簡易契約 (§工程間の契約と工程内のチケット) | markdown 本文 4 項目 + record 化 frontmatter (段階移行、専用 Reverse 対で扱う、UTV4-FR-007 は撤回) |
 | チケット / schedule / verdict / receipt / evidence | 境界付き record | 1 record = 1 JSON/YAML file |
 | Git commit / tree | 成果物の事実 | Git |
 | GitHub / event journal | 協調・実行の事実 | projection |
@@ -216,7 +216,7 @@ evidence tier は 3 段 (`cross_family` > `same_family_separated` > `intra_runti
 (3) author と reviewer の session は memory namespace・context を共有しない、(4) reviewer は oracle を自分で再実行し、
 最低 1 件の反証試行 (反例・境界値・仕様外入力) を record に残す (反証ゼロの PASS は PASS-WEAK に格下げ)、(5) reviewer の tier /
 effort は author 以上、prompt pack は author と別、(6) blind verdict は judgement record として back-annotate し、監査 sampling の
-hybrid 基準比較 (FR-024) で見逃し率を継続計測する。これらは hybrid でも適用するが、single-provider では admission 条件になる。
+hybrid 基準比較 (FR-024、先送り) で見逃し率を継続計測する。これらは hybrid でも適用するが、single-provider では admission 条件になる。
 
 不変条件: (1) profile は project 設定の typed record で宣言し、receipt に evidence tier を記録する。上位 tier を僭称しない。(2) 同一 session の自己 review、author runtime 内部 review の独立 review への昇格は全 profile で禁止。(3) profile の格下げ (hybrid → single-provider) は利用上限・契約停止の record を伴う場合だけ自動で許し、格上げは常に許す。(4) routing・agent-guard・delegation-routing は provider 名ではなく role × tier × session 分離で判定し、provider が 1 つでも fail-close しない。(5) 補償統制は doctor の fail-close gate として機械強制されるまで first-class 昇格を認めない。
 
@@ -297,26 +297,26 @@ v3.1 資産から新体制への移行は Reverse → ずれの判定 (正解 = 
 |---|---|
 | judgement record | LLM が下したあらゆる判断 (review verdict、finding、advisor 決定、gate 判定、triage、分類) を **judgement record** (1 record = 1 JSON、subject identity・入力 digest・判断者 (model / tier / role)・結論・根拠 finding・所要コスト) として Evidence Ledger に残す。会話 transcript は正本にしない。 |
 | 結果との照合 (calibration) | 後続の事実 (CI / oracle 結果、incident、Reverse 発生、人間の override、利用者フィードバック) を judgement record へ back-annotate し、判断種別 × 判断者ごとに正答率・見逃し・過検知を計測する。照合の無い判断は「未検証の意見」であり昇格材料にならない。 |
-| 機械判断化の階段 | 同種の判断が calibration で安定したら **LLM 判断 → 安価モデル / 小型分類器 → 決定的 check (lint / doctor / schema)** の順に降格 (= 機械化) する。各段は shadow 運転 → before/after 比較 → 独立 review を経て gate 化する (FR-022 の昇格経路を再利用)。log を機械判断化できた領域では frontier tier を呼ばない。 |
+| 機械判断化の階段 | 同種の判断が calibration で安定したら **LLM 判断 → 安価モデル / 小型分類器 → 決定的 check (lint / doctor / schema)** の順に降格 (= 機械化) する。各段は shadow 運転 → before/after 比較 → 独立 review を経て gate 化する (FR-022 は撤回。昇格経路の再利用は適用しない)。log を機械判断化できた領域では frontier tier を呼ばない。 |
 | 費用非依存の品質 | frontier tier は「学習済み check が無い判断」と「人間ゲート直前の独立 review」にだけ使う。effort / model ladder は上げる方向だけでなく、機械判断化に応じて **下げる方向** を持つ。品質は蓄積された判断機構と人間ゲートで守り、モデルの高価さを品質の担保にしない。 |
 | 判断軸 skill (良否 + 選好) | 判断軸は 2 軸で蓄積する。**良否軸** = 契約 / oracle / 規約に対する正誤。**選好軸** = (a) プロダクトが人間ユーザーにとって使いやすいか (操作導線・失敗時の回復・認知負荷・一貫性)、(b) AI が裏側で継続的に変更しても壊しにくいシステムか (境界の明示・契約の機械可読性・変更の局所性・観測可能性・fail-close 既定)。選好軸の判断は実録の CASE / PATTERN から skill として抽出し、判断パックの評価観点へ注入する。選好軸の昇格 (規約化) は人間ゲートを必ず通す。 |
-| 適用範囲 | ハーネス自身の運用判断だけでなく、ハーネス上で開発されるプロダクトのレビュー観点にも同じ record・照合・階段を適用する。project 単位の intake record (FR-038) が収集点、ハーネス repo の Evidence Ledger が集約点。 |
-| 人間可読 (組織で使える) | AI が分かるだけの record は組織的には使えない。judgement record・calibration・機械判断化された check・判断軸 skill は、すべて **ハーネス標準共有機構** — 要求 / 要件 / 設計を同期するスプレッドシート view (FR-008) と、画面モック / プロトの製本物 (FR-039) — へ generated view として投影され、人間はそこで読む・承認する・差し戻す。人間可読 view を持たない判断・skill は昇格できない。 |
+| 適用範囲 | ハーネス自身の運用判断だけでなく、ハーネス上で開発されるプロダクトのレビュー観点にも同じ record・照合・階段を適用する。project 単位の intake record (FR-038、先送り) が収集点、ハーネス repo の Evidence Ledger が集約点。 |
+| 人間可読 (組織で使える) | AI が分かるだけの record は組織的には使えない。judgement record・calibration・機械判断化された check・判断軸 skill は、すべて **ハーネス標準共有機構** — 要求 / 要件 / 設計を同期するスプレッドシート view (FR-008) と、画面モック / プロトの製本物 (FR-039、先送り) — へ generated view として投影され、人間はそこで読む・承認する・差し戻す。人間可読 view を持たない判断・skill は昇格できない。 |
 
 ## ハーネス標準共有機構: 機械認識の可視化と齟齬検出 (PO 指示 2026-09-04)
 
-> **2026-11-12 の見直し:** スプレッドシート・Office・Google 文書は一方向の書き出しで、書き戻しの admission と discrepancy record は作らない (FR-008 の簡素化、FR-009 の先送り、FR-047 の撤回)。図は必要なときに生成する (FR-046)。派生物は手で編集せず、再生成の差分 0 を CI で確かめる (FR-080)。
+> **2026-11-12 の見直し:** スプレッドシート・Office・Google 文書は一方向の書き出しで、書き戻しの admission と discrepancy record は作らない (FR-008 の簡素化、FR-009 の先送り、FR-047 の撤回)。図は必要なときに生成する形 (FR-046) は先送りにした (発火条件: 簡素化後の形で、1.0.0 の後に必要が実測されたら)。派生物は手で編集せず、再生成の差分 0 を CI で確かめる (FR-080)。
 
 | 論点 | 方式 |
 |---|---|
-| 図は generated view | 依存グラフ (PLAN の requires / references、中チケットの責務 × path 行列、admission 履歴)、画面遷移図 (FR-039 の prototype record が持つ surface / action / state)、ER 図 (schema record) は、機械が認識している record から **決定的に描画** し、生成元 id・revision・digest を図に刻む。手描き図・貼り付け画像は正本にならず、参照は generated 図の id で行う。現行の harness.db `graph_nodes` / `dependency_edges` と docs の mermaid 描画が起点。 |
+| 図は generated view | 依存グラフ (PLAN の requires / references、中チケットの責務 × path 行列、admission 履歴)、画面遷移図 (FR-039 は先送り。その prototype record が持つ surface / action / state)、ER 図 (schema record) は、機械が認識している record から **決定的に描画** し、生成元 id・revision・digest を図に刻む。手描き図・貼り付け画像は正本にならず、参照は generated 図の id で行う。現行の harness.db `graph_nodes` / `dependency_edges` と docs の mermaid 描画が起点。 |
 | テーブル定義はスプシと同型 | DB テーブル・カラム・型・制約・インデックス・FK の正本は構造化 schema record であり、スプレッドシートへは生成 view として同期し (FR-008 の consumer)、ER 図も同じ record から派生させる。列の編集はスプシ側から admission 経由で戻す。 |
 | 齟齬の検出 | 「機械が認識していること」と「人間が認識していること」の差は、人間が図 / スプシ側で行った追加・削除・変更を直接反映せず **discrepancy record** (対象 record id、人間側の主張、機械側の値、差分の種類) として diff し、admission で正本へ戻すか finding として owner へ返す。逆に record が変わって図が古くなった状態 (diagram drift) は doctor が fail-close する。齟齬は会話ではなく record で解消する。 |
 | 適用層 | L1 (要求 → 要件のトレース図)、L3 (要件 IR ↔ 画面遷移)、L4 (責務 × 依存)、L5 / L6 (ER・API・状態遷移)、チケット (大 → 中 → 小 → 原子の入れ子とレース状況)。各層の図は同じ生成契約を使い、層ごとに描画器を発明しない。 |
 
 ## 画面プロト工程の構成 (PO 指示 2026-09-04: 本開発では構成が薄い、しっかり見る)
 
-> **2026-11-12 の見直し:** 画面プロトの工程は、record のエンジンではなく、consumer に配るテンプレートとチェックリストで持つ (FR-056 の簡素化)。画面の製本 (FR-039 / 057) は先送りにした (発火条件: UI を持つ consumer で、画面と要件の食い違いが繰り返し記録されたとき)。
+> **2026-11-12 の見直し:** 画面プロトの工程は、FR-056 (record のエンジンではなくテンプレートとチェックリストで持つ簡素化後の形を含む) ごと先送りにした (発火条件: 簡素化後の形で、1.0.0 の後に必要が実測されたら)。画面の製本 (FR-039 / 057) も先送りにした (発火条件: UI を持つ consumer で、画面と要件の食い違いが繰り返し記録されたとき)。
 
 製本点 (a)(b) だけでは工程が成立しない。画面プロトは **要求を整理し要件を固めるための検証装置** であり、次の構成要素を
 record と generated view で持つ。ハーネス自身の人間向け面 (スプレッドシート view、digest、ダッシュボード、CLI の対話面) も同じ工程を通す
@@ -324,13 +324,13 @@ record と generated view で持つ。ハーネス自身の人間向け面 (ス�
 
 | 構成要素 | 内容 | record / view |
 |---|---|---|
-| 初期画面ルール (freeze) | 画面規約・component / design token・状態語彙 (利用不可 / 未観測 / 部分表示 / 前回確定値 / 算出中 等の縮退状態)・失敗 / 回復の表示規約。分担開始の前提条件 (FR-028) | ルール record (typed) + UI parts catalog (generated) |
-| screen inventory / screen flow | screen id・目的・主 actor・入口出口・参照する要求 candidate。遷移は record から描画 (FR-046) | inventory record、遷移図 (generated) |
-| prototype plan | 検証したい問い (仮説)、build 順序 (基盤 → 共通面 → 機能面 → 管理面)、対象外の明示 | plan record、フェーズ = 中チケット、画面 = 小 / 原子チケット (FR-028 / FR-036) |
+| 初期画面ルール (freeze) | 画面規約・component / design token・状態語彙 (利用不可 / 未観測 / 部分表示 / 前回確定値 / 算出中 等の縮退状態)・失敗 / 回復の表示規約。分担開始の前提条件 (FR-028、先送り) | ルール record (typed) + UI parts catalog (generated) |
+| screen inventory / screen flow | screen id・目的・主 actor・入口出口・参照する要求 candidate。遷移は record から描画 (FR-046、先送り) | inventory record、遷移図 (generated) |
+| prototype plan | 検証したい問い (仮説)、build 順序 (基盤 → 共通面 → 機能面 → 管理面)、対象外の明示 | plan record、フェーズ = 中チケット、画面 = 小 / 原子チケット (FR-028 は先送り、FR-036 は撤回) |
 | fixture 契約 | **捏造禁止**: fixture は本番 schema / event envelope と同形、匿名化・切り捨て注記を持つ。**異常系 fixture 必須セット** (権限不足・予算超過・境界違反・保留・鮮度警告・同意未済など、正常系のみのプロトは受入不可) | fixture record (schema 参照 + digest)、必須セットの checklist |
 | mock event 契約 | プロトを駆動する mock event は本番 event schema と同一 envelope。後日の実接続で差し替え可能 | event schema 参照 record |
 | screen finding | 操作で判明した不足・過剰・操作不能・責務ずれを typed に記録し、L1 / L2 へ backflow (FR-048)。L3 契約はそれまで暫定 baseline | finding record → discrepancy / backflow record |
-| 依存の暫定 → 確定 | プロトで発見した要求間・データ依存は「暫定」で依存台帳に入り、要求 / decision record で根拠が確定した時点で「確定」に遷移 (人間ゲート) | 依存 graph の edge state (FR-046) |
+| 依存の暫定 → 確定 | プロトで発見した要求間・データ依存は「暫定」で依存台帳に入り、要求 / decision record で根拠が確定した時点で「確定」に遷移 (人間ゲート) | 依存 graph の edge state (FR-046、先送り) |
 | 受入チェックリスト | 画面ごとの PT-* 観点 (状態網羅・reason 表示・冪等・境界越え拒否・旧仕様文言の不在 等) を AC 候補として要件 IR へ還元 | checklist record → AC 候補 |
 | 機械検証 | layout / 遷移 / 状態表示の Playwright 等による CI 照合。fixture 全列照合。人間の目視は問いに集中 | CI receipt |
 | modernization register | 暫定アセット・superseded 画面・TODO の棚卸し。プロト資産のうち製本されなかったものの退役 (FR-025 / FR-052 大) | register record |
@@ -381,7 +381,7 @@ subagent ファイル名で allowlist と floor を判定する。同じ「revie
 | 論点 | 方式 |
 |---|---|
 | 論理 role record | ハーネスが所有するのは **論理 role** (worker / reviewer / gate / explorer / advisor など少数) の record だけ: capability floor (tier)、許可 tool 種別、証拠義務、authority (closing 可否)、family 分離要件。provider 名・model 名・ファイル形式は record に入れない。 |
-| provider-native 写像 | 各 provider adapter (Claude Code / Codex CLI / 将来 provider) が role record を自社 native 機構 (Claude Code の subagent / Agent tool、Codex の exec + role、team 定義) へ写像する。`.claude/agents/*.md` 等の provider 固有定義は record からの **generated view** であり手書きしない。ドメイン特化 (be-api / db-schema 等) は role ではなく skill / 判断パックの注入で表す (FR-021 / FR-040)。 |
+| provider-native 写像 | 各 provider adapter (Claude Code / Codex CLI / 将来 provider) が role record を自社 native 機構 (Claude Code の subagent / Agent tool、Codex の exec + role、team 定義) へ写像する。`.claude/agents/*.md` 等の provider 固有定義は record からの **generated view** であり手書きしない。ドメイン特化 (be-api / db-schema 等) は role ではなく skill / 判断パックの注入で表す (FR-021 は撤回、FR-040 は先送り)。 |
 | guard の根拠 | agent-guard / delegation-routing の allowlist・floor 判定は role record を単一の根拠にし、ファイル名や subagent_type は adapter が record id へ解決する。二重 role 体系を解消する。 |
 | オーケストレーション形式 | 「LLM orchestrator が名前付き subagent を呼ぶ」形式から、**control plane が原子チケット (role + lease + budget) を lane へ dispatch する** 形式へ移す。LLM orchestrator は lane の一つ (統制主体ではない) で、その有無・provider・tier は record の値。合流点の判断は gate role が行い、orchestrator が閉じない。 |
 | 単一 provider 構成 | 論理 role が provider 非依存なので、single-provider / standalone topology (§Provider topology) でも同じ role record と guard が使え、family 分離が不可能な部分だけ evidence tier を落として記録する。 |
@@ -405,7 +405,7 @@ subagent ファイル名で allowlist と floor を判定する。同じ「revie
 | 表示 | スプシ view と製本物は provisional / frozen を列・印で区別し、provisional を確定値のように見せない (予測の表示規約と同型)。 |
 | freeze の粒度 | 要求単位・要件 IR 単位で個別に freeze する。文書一括 freeze は L3 / L4 owner の明示宣言に限る。 |
 | 指標 | freeze 率を目標にしない。測るのは「freeze 後の改訂件数」 (低いほど freeze 判断が正しい) と「provisional 依存の再 compile 所要」。 |
-| AI 間齟齬 | 要求の解釈が AI 間で食い違ったら、どちらかが確定するのではなく discrepancy record として上流 owner へ上げる (FR-047 / FR-048)。 |
+| AI 間齟齬 | 要求の解釈が AI 間で食い違ったら、どちらかが確定するのではなく discrepancy record として上流 owner へ上げる (FR-047 は撤回、FR-048 は簡素化)。 |
 
 ### PoC の行き過ぎ検知 (PO 提示 2026-09-04、実録 4)
 
@@ -446,7 +446,7 @@ PR の merge lane を author から別の人へ渡す構造を、チケット責
 | 大 | 統括 | release 適格性 review | PO / release owner |
 
 個人でやる範囲: author と admission 判断。他人へ渡す範囲: review と (人が居れば) admission。人が 1 人のときは admission を
-**self-admission** として record に印を付け、監査 sampling (FR-024) の対象にする。人が 2 人以上になれば admission チケットの assignee が
+**self-admission** として record に印を付け、監査 sampling (FR-024、先送り) の対象にする。人が 2 人以上になれば admission チケットの assignee が
 別人へ切り替わるだけで工程は変わらない (人数不変性)。admitter は author の主張ではなく receipt (独立 review verdict・CI generation・
 exact HEAD) だけを見て判断し、admitter 自身が成果物を書き換えることは deny (書き換えは author へ差し戻す)。
 
@@ -514,7 +514,7 @@ PLAN / Reverse / test-design / receipt / projection / review evidence / Pack-Can
 ## v3.1 資産の移行
 
 L0-L14 と正規 V-pair、Forward / Reverse / Recovery、9-mode と routeFiling SSoT、fail-close、cross-family
-review、TypeScript/Node 一本 (ADR-001)、Pack 配布 (PLAN-L6-63 系) は Kernel / Control Plane へ継承する。
+review、TypeScript/Node 一本 (ADR-001。この PR では改訂しない。決定 4 との食い違いは別に扱う)、Pack 配布 (PLAN-L6-63 系) は Kernel / Control Plane へ継承する。
 §9 の 5 役割は Sovereignty Plane の層別境界表と統合する。旧 Bun runtime、personal legacy path、memory 中心の
 継続、宣言のみの evidence は current identity として再出力しない。ハーネスが手書きで持つ subagent 定義も、
 理由を記録した例外を除いて継承しない (V4D-098)。
