@@ -10,6 +10,15 @@ issue: 530
 
 # UT-TDD Agent Harness 構想書 v4.0 候補 (チーム開発版 Verified Change Harness)
 
+> **改訂メモ (2026-11-12、#1005 のコメント 6822862705):** v4 の要求 79 件の見直し (残す 11 / 簡素化 41 / 先送り 12 / 削る 15、詳細は要件候補の改訂メモ) の決定を、この構想書に反映する。本書の本文は構想の記録として残し、次の 6 点と食い違う記述は、この改訂メモを優先する。
+> 1. スプレッドシート・Office・Google 文書は、人間が読むための一方向の書き出しである。書き戻し (admission 経由の逆流) は作らない。
+> 2. チケットの正本は GitHub Issue / Sub-issue / PR である。独自のチケット store・tracked 記録・一方向投影・ずれ検出は作らない (Issue は作業の許可で、権限を持たず、契約本文は設計文書に置く)。
+> 3. 管理知能 (別プロセスの Python) は作らない。control lane (LLM) が GitHub と CLI で指揮し、閉じる権限は gate だけが持つ。実装言語は TypeScript / Node 一本のままである。
+> 4. 1.0.0 が保証する運用形態は hybrid だけである。単一 provider は今ある fallback のままにし、最初の導入先が片方の provider しか使えないと分かった時点で見直す。
+> 5. 層番号の振り直しとディレクトリ再編 (product/ と dev/ の分離) は先送りにする。上流の製品工程 (要求の整理・PoC・画面プロト・製本) は、テンプレートとチェックリストだけを配る。
+> 6. 派生する一覧は手で編集せず、再生成のコマンドを 1 本にして CI で「再生成しても差分が出ない」ことを確かめる (UTV4-FR-080)。
+> 版のはしごは 7 段から 3 段 + rc に減らした (v4-roadmap/README.md の「版のはしご (2026-11-12 の見直し)」)。
+
 ## Authority 境界
 
 本書は **未承認候補**であり、現行 concept v3.1 と要件定義書 v1.2 を置換しない。L1 要求候補
@@ -41,7 +50,7 @@ v3.1 は V-model L0-L14、4 artifact + 3 段階 freeze、9-mode、配線、5 役
 本書は PO が提示した個人開発ハーネスの構想 v4.0 候補 (Verified Change Operating System) から、**チーム開発に必要な部分だけ**を翻案する。参照元の 8 Plane のうち、Sovereignty / Change Contract Compiler /
 Control Plane / Assurance Kernel / Evidence Ledger / Adaptation を採り、Execution Plane の provider 非依存 lane と
 Release / Lifecycle Plane は既存の tier-router / Pack 配布 (PLAN-L6-63 系) へ写像するに留める。参照元の
-Python 恒久意味コアは採らない (ADR-001: TypeScript/Node 一本)。
+Python 恒久意味コアは採らない (ADR-001: TypeScript/Node 一本)。2026-11-12 の見直しで、管理知能 (別プロセスの Python) も作らないことにした。
 
 ## 北極星
 
@@ -117,6 +126,8 @@ schedule を新たな record 種別として追加する。
 
 ### 3. Control Plane (統制面・チーム協調)
 
+> **2026-11-12 の見直し:** 次の記述のうち、機械が compile するチケットの既定発行、大・中・小・原子の 4 階層、lease / fence / budget、tracked のチケット正本と GitHub の一方向投影は採らない (UTV4-FR-004 / 035 / 036 の簡素化・撤回)。チケットは GitHub Issue / Sub-issue / PR の 3 段で、claim は self-assign とする。
+
 統括 owner 1 名 (program owner、人間) が、チケット・PR・CI・review・merge から生成される進捗 projection を見て判断する: 発散区間の開始 / 終了、合流点の owner 指名と takeover 承認、再集計上限超過の差し戻し先、リリース切り分け、WIP 上限とキャパシティ配分、blocked チケットの escalation。進捗を手で更新する層ではなく判断だけを持つ層である。
 
 チケットは **既定で機械が compile** する: L4 基本設計の typed block (責務 × path × 依存の行列) から詳細設計・仕様・実装チケットと合流点の統合チケットを、L2 の screen id / 仮説 id から画面プロト・PoC チケットを、admission receipt から検証チケットを生成する。人は個票ではなく batch 単位で admission し、AI lane への割当は routing policy で自動、人間 owner の割当だけを手で行う。手発行は例外経路で、理由を record に残す。発行と判断の重みは層で勾配を持つ: L0〜L3 (企画・画面プロト・PoC・要件) は人が発行・割当し機械は候補起草まで、L4 は文書 1 名でチケット化しない、L5 以下は機械 compile が既定。
@@ -174,6 +185,8 @@ PO は 2 大要求 (A / B) に加えて、参照元の個人開発ハーネス�
 要求・要件・受入への降下は UTV4-BR-009〜012 / UTV4-FR-015〜022 / UTV4-AC-024〜031。
 
 ## Provider topology (単一 provider でも成立する構成)
+
+> **2026-11-12 の見直し:** 1.0.0 が保証するのは hybrid だけである。ここに書く単一 provider の補償統制と evidence tier の運用 (UTV4-FR-023 / 024) は、最初の導入先が片方の provider しか使えないと分かった時点で見直す。それまで、単一 provider は今の fallback (`intra_runtime_subagent` 記録) のままにする。
 
 本構想は特定の provider 組合せを前提にしない。独立 review の本質は **authoring context からの分離 + reviewer attestation + exact HEAD / CI generation への束縛** であり、provider family の分離はその最も強い実装であって唯一の実装ではない。チームが利用できる provider は契約・予算・地域で変わるため、次の 3 profile を同じ契約の上で選べるようにする。
 
@@ -269,6 +282,8 @@ v3.1 資産から新体制への移行は Reverse → ずれの判定 (正解 = 
 
 ## 判断の蓄積と機械判断化 (自己学習型ハーネス、PO 指示 2026-09-04)
 
+> **2026-11-12 の見直し:** 全 LLM 判断の judgement record 化 (FR-041) は撤回し、calibration と frontier の降格 (FR-042 / 043 / 045) は先送りにした (発火条件: AI 費用か review 費用が PO の決めた予算を超えたとき)。判断を良否軸と選好軸に分け、選好の指摘で merge を止めない規則 (FR-044) だけを残す。
+
 | 論点 | 方式 |
 |---|---|
 | judgement record | LLM が下したあらゆる判断 (review verdict、finding、advisor 決定、gate 判定、triage、分類) を **judgement record** (1 record = 1 JSON、subject identity・入力 digest・判断者 (model / tier / role)・結論・根拠 finding・所要コスト) として Evidence Ledger に残す。会話 transcript は正本にしない。 |
@@ -281,6 +296,8 @@ v3.1 資産から新体制への移行は Reverse → ずれの判定 (正解 = 
 
 ## ハーネス標準共有機構: 機械認識の可視化と齟齬検出 (PO 指示 2026-09-04)
 
+> **2026-11-12 の見直し:** スプレッドシート・Office・Google 文書は一方向の書き出しで、書き戻しの admission と discrepancy record は作らない (FR-008 の簡素化、FR-009 の先送り、FR-047 の撤回)。図は必要なときに生成する (FR-046)。派生物は手で編集せず、再生成の差分 0 を CI で確かめる (FR-080)。
+
 | 論点 | 方式 |
 |---|---|
 | 図は generated view | 依存グラフ (PLAN の requires / references、中チケットの責務 × path 行列、admission 履歴)、画面遷移図 (FR-039 の prototype record が持つ surface / action / state)、ER 図 (schema record) は、機械が認識している record から **決定的に描画** し、生成元 id・revision・digest を図に刻む。手描き図・貼り付け画像は正本にならず、参照は generated 図の id で行う。現行の harness.db `graph_nodes` / `dependency_edges` と docs の mermaid 描画が起点。 |
@@ -289,6 +306,8 @@ v3.1 資産から新体制への移行は Reverse → ずれの判定 (正解 = 
 | 適用層 | L1 (要求 → 要件のトレース図)、L3 (要件 IR ↔ 画面遷移)、L4 (責務 × 依存)、L5 / L6 (ER・API・状態遷移)、チケット (大 → 中 → 小 → 原子の入れ子とレース状況)。各層の図は同じ生成契約を使い、層ごとに描画器を発明しない。 |
 
 ## 画面プロト工程の構成 (PO 指示 2026-09-04: 本開発では構成が薄い、しっかり見る)
+
+> **2026-11-12 の見直し:** 画面プロトの工程は、record のエンジンではなく、consumer に配るテンプレートとチェックリストで持つ (FR-056 の簡素化)。画面の製本 (FR-039 / 057) は先送りにした (発火条件: UI を持つ consumer で、画面と要件の食い違いが繰り返し記録されたとき)。
 
 製本点 (a)(b) だけでは工程が成立しない。画面プロトは **要求を整理し要件を固めるための検証装置** であり、次の構成要素を
 record と generated view で持つ。ハーネス自身の人間向け面 (スプレッドシート view、digest、ダッシュボード、CLI の対話面) も同じ工程を通す
@@ -338,6 +357,8 @@ deep を要する典型は 2 種 (PO 2026-09-04): (1) **意味ロジック** (�
 | 昇格の抑制 | 1 件の backflow で規則・機構を変えない (原則 7)。同種 backflow の反復は judgement record の calibration へ入り、契約テンプレートや check の改善候補になる。 |
 
 ## Sub-agent 機構の再編: 論理 role record と provider-native 写像 (PO 指示 2026-09-04)
+
+> **2026-11-12 の見直し:** 手書きの subagent 定義は撤去済み (#1002) で、role の根拠は `src/team/delegation-routing.ts` を単一とする。残すのは、モデルを世代固定の ID で持たず alias で解決し、解決した ID を receipt に残すこと (FR-049 の簡素化)。provider 定義の生成は作らない。
 
 実測 (HEAD 2026-09-04): `.claude/agents/` に Claude Code 固有形式の手書き subagent 20 本 (role・model floor・tools・
 プロンプトを焼き付け)、`delegation-routing.ts` に別系統の role 登録 (gate / review / worker)、`agent-guard.ts` は
@@ -498,7 +519,7 @@ goal は、Design 移行済みの範囲から開発ハーネスを **Pack 自己
 
 prompt 集、persona 集、multi-agent chat room、全会話保存、Issue を意味正本にする project manager、DB を意味正本に
 する workflow engine、latest model 自動追従器ではない。完全自動を理由に human authority を AI へ移さない。
-949 PLAN の一括 JSON 化は行わない (record 化は新規種別から段階導入)。
+949 PLAN の一括 JSON 化は行わない (record 化は新規種別から段階導入)。ハーネス独自のチケット store、別プロセスの管理知能、スプレッドシートからの書き戻しも作らない (2026-11-12 の見直し)。
 
 ## 昇格条件
 
