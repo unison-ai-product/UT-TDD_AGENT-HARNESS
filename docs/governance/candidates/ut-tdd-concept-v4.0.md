@@ -95,7 +95,7 @@ judgement record として蓄積し、繰り返し現れる判断を安価なモ
    読む narrative は markdown 正本 (typed spec block で機械可読部を埋め込む)。機械が生成・集計・遷移させる record
    (チケット / schedule / verdict / receipt / evidence) は 1 record = 1 JSON/YAML file の構造化正本とし、
    markdown・spreadsheet・ダッシュボードはすべて generated view とする。双方向書き戻しは構造化正本に対してのみ
-   admission 経由で許し、markdown 正本への機械書き戻しは行わない。
+   admission 経由で許し、markdown 正本への機械書き戻しは行わない。(2026-11-12 の見直し: スプレッドシート・Office・Google 文書の書き戻しは作らない。冒頭の改訂メモ 1 を優先する。)
 7. **Controlled Adaptation (人間とハーネスへの二方向還流)**: FLAG・incident・運用観測は直接 authority を書き換えず、
    改善候補として既存 V-model (Reverse / Requirement Re-entry) へ戻す。同じ候補を人間可読 digest としてチームへも
    配る。単一 episode で規則や機構へ昇格しない。
@@ -137,7 +137,7 @@ schedule を新たな record 種別として追加する。
 queue、assignment (チケット)、owner、branch / worktree、base / HEAD、lease / fence、heartbeat、budget、
 provider capability、PR / review / CI state を管理する。**人間ユーザーも AI lane も同じ assignment model に載る**。
 GitHub Issue / Projects は read 側 projection (一方向同期) であり、GitHub 側の編集は Issue admission 経由で
-のみ正本へ戻る (docs/governance/github-issue-hierarchy.md と U23 Execution Ledger を継承・拡張)。
+のみ正本へ戻る (docs/governance/github-issue-hierarchy.md と U23 Execution Ledger を継承・拡張)。(2026-11-12 の見直し: チケットの正本は GitHub Issue 自身で、tracked の正本・投影・admission は作らない。冒頭の改訂メモ 2 を優先する。)
 起動時は文書を順不同で読ませず、authority root・Requirement IR・V-pair・責務・assignment・HEAD・lease・
 runtime capability・approval 境界を解決した startup packet を決定的に生成する。
 
@@ -465,9 +465,9 @@ projection であり、LLM の「気づき」だけで発火させない (気づ
 1. canonical authority より先に runtime behavior を current 化しない。
 2. チケット・finding・learning asset は exactly-one primary owner を持つ。
 3. provenance の無い human authority claim を生成しない (memory、session summary、AI 解釈から approval を作らない)。
-4. lease の無い書き込み、owner の無いチケット、HEAD 未解決の作業者を起動しない。
+4. lease の無い書き込み、owner の無いチケット、HEAD 未解決の作業者を起動しない。(2026-11-12 の見直し: lease は作らない。二重着手は Issue の self-assign で防ぐ、UTV4-FR-005。)
 5. author runtime の内部 review を独立 review へ昇格しない。wrong HEAD の review を再利用しない。
-6. generated view を編集して正本へ戻さない。書き戻しは構造化正本への admission 経由のみ。
+6. generated view を編集して正本へ戻さない。書き戻しは構造化正本への admission 経由のみ。(2026-11-12 の見直し: 人間向けの書き出しからの書き戻しは作らない。冒頭の改訂メモ 1 を優先する。)
 7. unknown を none / unchanged / healthy / green へ変換しない。
 8. 単一 episode で規則や機構へ昇格しない。高価な監査を admission なしで起動しない。
 9. 人間の介入点を層別境界表の外へ増やさない (反射的エスカレーション禁止) し、表の内側を AI が越権しない。
