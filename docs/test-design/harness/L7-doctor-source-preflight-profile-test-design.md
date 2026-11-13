@@ -24,7 +24,7 @@ oracle は、正しい実装に 1 つだけ加えた変異 (反例、§3) を基
 - CLI の観測: `node src/cli.ts doctor ...` を子プロセスで起動し、終了コードと `--json` の出力を見る。`src/cli.ts` の path は vitest の cwd (snapshot runner が作る実行 root) から組み立てる。
 - violation の fixture: HEAD の snapshot の複製で、L6 文書 1 本の frontmatter から `issue:` の行だけを外す。これは member の `l6-completion` だけを violation にする。変える前の snapshot で全件 OK であることは、別の oracle (`CANDIDATE-U-PREFLIGHT-013`) が確かめる。
 - lock の fixture: 生存している別プロセスが doctor の lock を持つ状態を、既存の doctor singleton lock の test と同じ方法で作る。
-- 既存 profile の固定値: §4.1 の値は origin/main `de6da7e4d` (`src/doctor/profiles.ts` の最終変更は `ad99923e1`) から読んだ。test はこの値を literal で持ち、`src/doctor/profiles.ts` の定数から組み立てない。`source-full` は固定値を持たない (§4.2)。
+- 既存 profile の固定値: §4.1 の値は origin/main `09ce4e761` (`src/doctor/profiles.ts` の最終変更は `f2d9558e4`、PR #1662 が `claude-version-floor` を足した) から読み直した。直前の版は `de6da7e4d` から読んでおり、#1662 を取り込んでいなかった。test はこの値を literal で持ち、`src/doctor/profiles.ts` の定数から組み立てない。`source-full` は固定値を持たない (§4.2)。
 
 ## 3. 反例 (変異) の一覧
 
@@ -80,13 +80,13 @@ oracle は、正しい実装に 1 つだけ加えた変異 (反例、§3) を基
 
 013 は HEAD の 8 件が実際に OK であることにも依存する。HEAD の member に本物の違反があれば 013 も赤になるが、その違反は CI の全件 doctor でも同じ check の赤として見える。
 
-### 4.1 小さい既存 profile の固定値 (L6 の I4a、origin/main `de6da7e4d`)
+### 4.1 小さい既存 profile の固定値 (L6 の I4a、origin/main `09ce4e761`)
 
 | profile | `outputIds` の固定値 |
 |---|---|
 | `source-doc-lane` | `["readability", "runtime-readability", "rule-drift", "secret-scan"]` |
-| `source-toolchain` | `["toolchain-pin"]` |
-| `consumer-toolchain` | `["toolchain-pin"]` |
+| `source-toolchain` | `["toolchain-pin", "claude-version-floor"]` |
+| `consumer-toolchain` | `["toolchain-pin", "claude-version-floor"]` |
 | `consumer-setup-smoke` | `[]` |
 
 この 4 つの集合を契約として持つ設計文書は、本書と対の L6 (§5 の I4a) である。他の設計文書はこれらの集合に触れるが、契約として固定してはいない (`consumer-design-phase-doctor.md` §2 は `consumer-toolchain` の `outputIds` を実測の事実として記録し、`function-spec.md` は doc lane で `source-doc-lane` が走ることだけを書く)。固定値を変えてよいのは次の手順を通ったときだけである。
