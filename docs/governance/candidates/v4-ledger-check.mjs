@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// v4 決定台帳と L1 要求候補・L3 要件候補・受入候補の対応を機械で確かめる (依存なし)。
+// v4 決定台帳と L1 要求候補・L3 要件候補・受入候補の対応、および要件の区分と版の割当 (v4-roadmap) の整合を機械で確かめる (依存なし)。
 // 使い方: node docs/governance/candidates/v4-ledger-check.mjs [ledger.json] [requests.md] [requirements.md] [acceptance.md]
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
@@ -197,6 +197,7 @@ const acSection = sectionIn(accMd, "受入候補");
 if (!acSection) fail("acceptance doc に「## 受入候補」節が無い");
 const acs = new Set();
 const accepted = new Set();
+const acRows = new Map();
 let releaseBlocking = 0;
 for (const line of acSection.split(/\r?\n/)) {
   const m = line.match(/^\|\s*(UTV4-AC-\d{3})\s*\|/);
@@ -214,6 +215,7 @@ for (const line of acSection.split(/\r?\n/)) {
   const flag = cells[6]?.trim();
   if (flag !== "yes" && flag !== "no") fail(`${ac}: release 必須の列が yes / no でない (${flag ?? "欠落"})`);
   if (flag === "yes") releaseBlocking++;
+  acRows.set(ac, { frs: cited, yes: flag === "yes", line });
 }
 if (acs.size === 0) fail("受入行が 1 件も無い");
 
@@ -242,6 +244,126 @@ for (const line of tableRows(sectionIn(accMd, "廃止した受入"))) {
   for (const c of cited) if (!ids.has(c)) fail(`受入の廃止表: ${c} が ledger に無い`);
 }
 
+// 12. 要件の区分と版の割当 (v4-roadmap) の整合。
+//     区分は要件候補の最初の表の行頭の印だけで決める (後ろの表の同じ id では上書きしない)。
+//     区分は 4 つだけ: 残す / 簡素化 / 先送り / 撤回。
+//     残す・簡素化は 1.0.0 までの段 (0.3.0 / 0.4.0 / 0.5.0 / 1.0.0) のどれか 1 つに入り、
+//     先送り・撤回は段に入らず README の「1.0.0 の対象外」の一覧にある。
+const roadmapDir = resolve(dirname(requirementsPath), "v4-roadmap");
+const readLines = (name) => {
+  try {
+    return readFileSync(resolve(roadmapDir, name), "utf8").split(/\r?\n/);
+  } catch (e) {
+    fail(`${name} を読めない: ${e.message}`);
+    return [];
+  }
+};
+const classOf = (fr, line) => {
+  const cell = (line.split("|")[2] ?? "").trim();
+  if (cell.startsWith("【2026-11-12 簡素化")) return "簡素化";
+  if (cell.startsWith("【2026-11-12 先送り")) return "先送り";
+  if (cell.startsWith("【2026-11-12 撤回")) return "撤回";
+  if (cell.startsWith("【")) fail(`${fr}: 行頭の印が 簡素化 / 先送り / 撤回 のどれでもない`);
+  return "残す";
+};
+const cls = new Map([...frs].map(([fr, line]) => [fr.replace("UTV4-", ""), classOf(fr, line)]));
+// "FR-010 / 015 / 017" を FR-010, FR-015, FR-017 に展開する
+const frList = (s) => {
+  const out = new Set();
+  for (const m of s.matchAll(/FR-(\d{3})((?:\s*\/\s*\d{3})*)/g)) {
+    out.add(`FR-${m[1]}`);
+    for (const x of m[2].matchAll(/(\d{3})/g)) out.add(`FR-${x[1]}`);
+  }
+  return out;
+};
+const RUNGS = ["0.3.0", "0.4.0", "0.5.0", "1.0.0"];
+const readme = readLines("README.md");
+const rungOf = new Map(); // FR -> 段
+const deferred = new Set();
+const withdrawn = new Set();
+const seenLists = new Set();
+for (const l of readme) {
+  let m = l.match(/^- \*\*(0\.3\.0|0\.4\.0|0\.5\.0|1\.0\.0):\*\* (.*)$/);
+  if (m) {
+    seenLists.add(m[1]);
+    for (const fr of frList(m[2])) {
+      if (rungOf.has(fr)) fail(`README: ${fr} が段 ${rungOf.get(fr)} と ${m[1]} の両方にある`);
+      rungOf.set(fr, m[1]);
+    }
+    continue;
+  }
+  m = l.match(/^- \*\*(先送り|撤回) \((\d+) 件\):\*\* (.*)$/);
+  if (m) {
+    seenLists.add(m[1]);
+    const set = frList(m[3]);
+    if (set.size !== Number(m[2])) fail(`README: ${m[1]}の件数 ${m[2]} が一覧の ${set.size} 件と合わない`);
+    for (const fr of set) (m[1] === "先送り" ? deferred : withdrawn).add(fr);
+  }
+}
+for (const k of [...RUNGS, "先送り", "撤回"]) if (!seenLists.has(k)) fail(`README: 「${k}」の一覧行が無い`);
+// (b) 区分と割当
+for (const [fr, c] of cls) {
+  const inRung = rungOf.has(fr);
+  const inDefer = deferred.has(fr);
+  const inGone = withdrawn.has(fr);
+  if (c === "先送り") {
+    if (inRung) fail(`${fr}: 先送りなのに段 ${rungOf.get(fr)} にある`);
+    if (!inDefer) fail(`${fr}: 先送りなのに README の対象外の「先送り」一覧に無い`);
+    if (inGone) fail(`${fr}: 先送りなのに「撤回」一覧にもある`);
+  } else if (c === "撤回") {
+    if (inRung) fail(`${fr}: 撤回なのに段 ${rungOf.get(fr)} にある`);
+    if (!inGone) fail(`${fr}: 撤回なのに README の対象外の「撤回」一覧に無い`);
+    if (inDefer) fail(`${fr}: 撤回なのに「先送り」一覧にもある`);
+  } else {
+    if (!inRung) fail(`${fr}: ${c}なのに 1.0.0 までのどの段にも無い`);
+    if (inDefer || inGone) fail(`${fr}: ${c}なのに README の対象外の一覧にある`);
+  }
+}
+for (const fr of [...rungOf.keys(), ...deferred, ...withdrawn]) if (!cls.has(fr)) fail(`README: ${fr} が要件候補に無い`);
+const verOf = (fr) => rungOf.get(fr) ?? "対象外";
+const acVerOf = (list) => {
+  const v = list.map(verOf).filter((x) => x !== "対象外");
+  return v.length === 0 ? "対象外" : RUNGS[Math.max(...v.map((x) => RUNGS.indexOf(x)))];
+};
+// (a) release 必須 yes の受入が、先送り・撤回の要件を受けるなら、行の中で適用しない部分に印を付ける
+for (const [ac, a] of acRows) {
+  if (!a.yes) continue;
+  for (const fr of a.frs) {
+    const c = cls.get(fr.replace("UTV4-", ""));
+    if ((c === "先送り" || c === "撤回") && !a.line.includes(`【1.0.0 では適用しない: ${fr}`)) {
+      fail(`${ac}: release 必須 yes なのに${c}の ${fr} を受ける (行の中に「【1.0.0 では適用しない: ${fr} ...】」の印が無い)`);
+    }
+  }
+}
+// (c)(d) trace: 要件の区分・版の列、受入の対応 FR・release 必須・版の列
+const covered = new Set();
+for (const l of readLines("trace/REQUIREMENT_COVERAGE.md")) {
+  const m = l.match(/^\| (UTV4-FR-\d{3}) /);
+  if (!m) continue;
+  const fr = m[1].replace("UTV4-", "");
+  const c = l.split("|").map((s) => s.trim());
+  if (covered.has(fr)) fail(`REQUIREMENT_COVERAGE: ${fr} の行が重複`);
+  covered.add(fr);
+  if (!cls.has(fr)) { fail(`REQUIREMENT_COVERAGE: ${fr} が要件候補に無い`); continue; }
+  if (c[c.length - 2] !== cls.get(fr)) fail(`REQUIREMENT_COVERAGE: ${fr} の区分 ${c[c.length - 2]} が要件候補の ${cls.get(fr)} と違う`);
+  if (c[c.length - 3] !== verOf(fr)) fail(`REQUIREMENT_COVERAGE: ${fr} の新しい版 ${c[c.length - 3]} が README の ${verOf(fr)} と違う`);
+}
+for (const fr of cls.keys()) if (!covered.has(fr)) fail(`REQUIREMENT_COVERAGE: ${fr} の行が無い`);
+const coveredAc = new Set();
+for (const l of readLines("trace/AC_COVERAGE.md")) {
+  const m = l.match(/^\| (UTV4-AC-\d{3}) \|/);
+  if (!m || !acRows.has(m[1])) continue;
+  const a = acRows.get(m[1]);
+  const c = l.split("|").map((s) => s.trim());
+  coveredAc.add(m[1]);
+  const got = [...new Set(c[2].match(/UTV4-FR-\d{3}/g) ?? [])].sort().join();
+  if (got !== [...a.frs].sort().join()) fail(`AC_COVERAGE: ${m[1]} の対応 FR が受入候補と違う`);
+  if (c[4] !== (a.yes ? "yes" : "no")) fail(`AC_COVERAGE: ${m[1]} の release 必須 ${c[4]} が受入候補と違う`);
+  const want = acVerOf(a.frs.map((x) => x.replace("UTV4-", "")));
+  if (c[5] !== want) fail(`AC_COVERAGE: ${m[1]} の新しい版 ${c[5]} が README の割当から求めた ${want} と違う`);
+}
+for (const ac of acRows.keys()) if (!coveredAc.has(ac)) fail(`AC_COVERAGE: ${ac} の行が無い`);
+
 const count = (f) => ledger.filter(f).length;
 const summary = {
   decisions: ledger.length,
@@ -257,6 +379,8 @@ const summary = {
   requirements_accepted: accepted.size,
   requirements_no_acceptance: noAcceptance.size,
   release_blocking: releaseBlocking,
+  classes: Object.fromEntries(["残す", "簡素化", "先送り", "撤回"].map((c) => [c, [...cls.values()].filter((x) => x === c).length])),
+  rungs: Object.fromEntries(RUNGS.map((r) => [r, [...rungOf.values()].filter((x) => x === r).length])),
 };
 
 if (errors.length > 0) {

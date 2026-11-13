@@ -9,6 +9,12 @@ issue: 530
 
 # UT-TDD 構想書 v4.0 受入候補 (L12 受入、UAT を含む)
 
+> **改訂メモ (2026-11-13、#1005 のコメント 6822862705 / 6844628646、見直しの 2 本目):** 要件候補の区分 (残す 12 / 簡素化 32 / 先送り 21 / 撤回 15。正本は要件候補の最初の表の行頭の印) に合わせた。**ID は消さない。**
+> - 先送り・撤回の要件だけを受ける受入のうち、release 必須が yes だった 8 行 (UTV4-AC-013 / 025 / 031 / 050 / 053 / 057 / 073 / 081) を no にした。行は残す (要件を再開するときに戻す)。release 必須の判定基準 1〜5 を満たす失敗は、残した要件の受入が担保する。
+> - UTV4-AC-034 は、UTV4-FR-023 (簡素化) の「利用上限による停止の記録なしに hybrid から fallback へ下げない」を受ける (b) を yes のまま残す。UTV4-FR-024 (先送り) の補償統制を確かめる (a)(c) は、行の中に「【1.0.0 では適用しない: ...】」と印を付けた。
+> - UTV4-FR-080 の受入として UTV4-AC-096 を足した。
+> - 先送り・撤回の要件を指す参照には区分を添える。区分と版の割当の整合は `node docs/governance/candidates/v4-ledger-check.mjs` が確かめる。
+
 ## Authority 境界
 
 本書は #530 の未承認候補である。test-design でも実装の oracle でもない。
@@ -35,7 +41,7 @@ node docs/governance/candidates/v4-ledger-check.mjs
 
 区分の意味: 維持 = 判定の中身を変えていない。既存を更新 = 同じ ID のまま要件に合わせて書き直した。新規 = どの既存の受入にも無い論点。
 
-集計: 維持 38 件 / 既存を更新 34 件 / 新規 22 件 (計 94 件)。行ごと廃止 1 件 (UTV4-AC-009)。
+集計: 維持 37 件 / 既存を更新 35 件 / 新規 23 件 (計 95 件)。行ごと廃止 1 件 (UTV4-AC-009)。
 
 ## release 必須の判定基準
 
@@ -51,7 +57,7 @@ yes にするのは、失敗すると次のどれかが起きる受入である�
 
 それ以外は no とする。no の受入も、該当する工程の gate では検査する。
 
-集計: release 必須 yes 46 件 / no 48 件。
+集計: release 必須 yes 38 件 / no 57 件 (2026-11-13 の見直しで、先送り・撤回の要件だけを受ける 8 行を yes から no へ変え、UTV4-AC-096 を no で足した。見直し前は yes 46 件 / no 48 件)。
 
 ## 受入候補
 
@@ -70,89 +76,90 @@ yes にするのは、失敗すると次のどれかが起きる受入である�
 | UTV4-AC-010 | UTV4-FR-005 | 同じ PR / HEAD / revision に、異なる memoryId の review request を 2 件出す。 | negative テスト | 2 件目を実行の前に deny する (#421 を継承)。 | yes | 維持 |
 | UTV4-AC-011 | UTV4-FR-006 | (a) 機械の記録 (チケット / verdict / receipt) を markdown だけに書く。(b) 1 ファイルに 2 件以上の記録を入れる。(c) 設計書やチケットに証跡の本体を書く。 | `ut-tdd doctor` + negative テスト | (a) 記録の不在として fail-close する。(b) deny する。(c) deny する。参照側は証跡の ID と digest だけを持つ。 | yes | 既存を更新 |
 | UTV4-AC-012 | UTV4-FR-006 | harness.db を消して、正本ファイルから作り直す。 | 作り直しの前後比較テスト | 作り直しの前後で索引の内容が一致する。DB にしか無い状態は 0 件。 | yes | 既存を更新 |
-| UTV4-AC-013 | UTV4-FR-007 | (a) v4 への切り替え後に、既存 PLAN ファイルの内容を変える。(b) HEAD から作った照合の母集合 3 種に、対応表に無い要素がある。(c) 切り替え前に PLAN 上の gate や CI を外す。(d) 変更が設計書の成果物所有の範囲の外に出る。 | 照合テスト + `ut-tdd doctor` | (a) fail-close する。(b) fail-close し、切り替えを完了にしない。(c) deny する。(d) 機械が止める。 | yes | 既存を更新 |
+| UTV4-AC-013 | UTV4-FR-007 (撤回) | (a) v4 への切り替え後に、既存 PLAN ファイルの内容を変える。(b) HEAD から作った照合の母集合 3 種に、対応表に無い要素がある。(c) 切り替え前に PLAN 上の gate や CI を外す。(d) 変更が設計書の成果物所有の範囲の外に出る。 | 照合テスト + `ut-tdd doctor` | (a) fail-close する。(b) fail-close し、切り替えを完了にしない。(c) deny する。(d) 機械が止める。 | no | 既存を更新 |
 | UTV4-AC-014 | UTV4-FR-008 | 生成 view (表 / doc) を直接編集する。 | `ut-tdd doctor` | hash の不一致を検出して fail-close する。生成元の identity が示される。 | no | 維持 |
 | UTV4-AC-015 | UTV4-FR-008 | 同じ正本から view を 2 回生成する。 | 決定性テスト | byte が同一になる。 | no | 維持 |
-| UTV4-AC-016 | UTV4-FR-009 | view 上の変更を、admission を経て構造化正本へ戻す。 | positive テスト | actor・source view・target record・revision を持つ receipt が残る。正本が更新される。 | no | 維持 |
-| UTV4-AC-017 | UTV4-FR-009 | view 上の変更を、markdown 正本へ機械で書き戻す。 | negative テスト | deny する。markdown 正本は人間だけが編集する。 | no | 維持 |
+| UTV4-AC-016 | UTV4-FR-009 (先送り) | view 上の変更を、admission を経て構造化正本へ戻す。 | positive テスト | actor・source view・target record・revision を持つ receipt が残る。正本が更新される。 | no | 維持 |
+| UTV4-AC-017 | UTV4-FR-009 (先送り) | view 上の変更を、markdown 正本へ機械で書き戻す。 | negative テスト | deny する。markdown 正本は人間だけが編集する。 | no | 維持 |
 | UTV4-AC-018 | UTV4-FR-010 | (a) FLAG 1 件だけを根拠に新しい gate を作る。(b) 選んだ行き先と、それより上流を選ばなかった理由の無い振り分け記録を出す。(c) 同じパターンで修正と再発が閾値を超えて繰り返される。(d) 学習データが保持期間か件数の上限を超える。 | negative テスト | (a) 単一 episode の昇格として deny する。(b) deny する。(c) 自動の修正が止まり、人間へ上がる。(d) 上限を超えた分は保持されない。 | no | 既存を更新 |
 | UTV4-AC-019 | UTV4-FR-010 | 改善候補が要件や設計を直接書き換える。 | negative テスト | deny する。出せるのは proposal / evidence / delta だけ。 | no | 維持 |
-| UTV4-AC-020 | UTV4-FR-011 | 改善候補が作られる。 | positive テスト | 同じ候補が人間向け digest (generated view) として配られる。採否が decision record に残る。 | no | 維持 |
-| UTV4-AC-021 | UTV4-FR-012 | (a) 進捗を人間が手で更新する。モデルが完了を自己申告する。(b) リーダーの全体ビューから記録へ書き戻す。(c) 集約時刻の無い全体ビューを出す。(d) 未発行の範囲を完了予測に混ぜる。 | negative テスト + 予測の計算テスト | (a) 進捗は変わらない。(b) deny する。(c) deny する。(d) 予測は発行済みチケットだけから出る。P50 と P85 の幅を持つ。未発行の範囲は判断と期限として表示される。 | no | 既存を更新 |
+| UTV4-AC-020 | UTV4-FR-011 (先送り) | 改善候補が作られる。 | positive テスト | 同じ候補が人間向け digest (generated view) として配られる。採否が decision record に残る。 | no | 維持 |
+| UTV4-AC-021 | UTV4-FR-012 (先送り) | (a) 進捗を人間が手で更新する。モデルが完了を自己申告する。(b) リーダーの全体ビューから記録へ書き戻す。(c) 集約時刻の無い全体ビューを出す。(d) 未発行の範囲を完了予測に混ぜる。 | negative テスト + 予測の計算テスト | (a) 進捗は変わらない。(b) deny する。(c) deny する。(d) 予測は発行済みチケットだけから出る。P50 と P85 の幅を持つ。未発行の範囲は判断と期限として表示される。 | no | 既存を更新 |
 | UTV4-AC-022 | UTV4-FR-013, UTV4-FR-023 | (a) hybrid で、author と同じ family の verdict で merge する。(b) single-provider で、UTV4-FR-023 の attestation を満たす同 family の verdict で merge する。(c) 旧 HEAD の receipt で merge する。(d) reviewer の自由文から verdict を拾う。(e) 受領の無い依頼、または依頼に対応しない受領がある。 | negative / positive テスト + `ut-tdd doctor` | (a) deny する。(b) admit する。evidence tier は `same_family_separated`。(c) deny する。(d) deny する。verdict は schema に沿った機械可読の値だけ。(e) doctor が finding を出す。 | yes | 既存を更新 |
 | UTV4-AC-023 | UTV4-FR-014 | legacy (Bun / personal path) の green を根拠に、current の failure を相殺する。 | negative テスト | deny する。current identity の failure が残る。 | yes | 維持 |
 | UTV4-AC-024 | UTV4-FR-015 | intake に未確定の field (例: actor が空) があるまま、AI が値を補って L3 compile へ進める。 | negative テスト | deny する。question event が作られる。compile 結果は `human_decision_required` か `backflow_required`。 | no | 維持 |
-| UTV4-AC-025 | UTV4-FR-016 | (a) 人間の approval record なしに L3 IR を frozen にする。(b) 同じ L2 event log から candidate を 2 回作り直す。 | negative テスト + 決定性テスト | (a) fail-close する。(b) byte が同一になる。 | yes | 維持 |
+| UTV4-AC-025 | UTV4-FR-016 (撤回) | (a) 人間の approval record なしに L3 IR を frozen にする。(b) 同じ L2 event log から candidate を 2 回作り直す。 | negative テスト + 決定性テスト | (a) fail-close する。(b) byte が同一になる。 | no | 維持 |
 | UTV4-AC-026 | UTV4-FR-017 | (a) チケットの schema や CLI に S0〜S4 の状態値を置く。(b) 判定記録 (結論と根拠) の無い PoC チケットを閉じる。(c) 判定記録の無い PoC の成果を production の成果として数える。 | lint + negative テスト | (a) lint が fail-close する。(b) deny する。(c) 数えない。 | no | 既存を更新 |
 | UTV4-AC-027 | UTV4-FR-018 | (a) 判定記録が採用を示す前に、PoC チケットの成果物を production path へ merge する。(b) 採用の後でも、production 側の別チケット無しに merge する。(c) プロトへの反応を自由文だけで記録する。 | negative テスト | (a)(b) merge admission が deny する。(c) deny する。構造化 decision を分けて記録する。 | yes | 既存を更新 |
 | UTV4-AC-028 | UTV4-FR-019 | (a) 正本化済み (retirement record あり) の内容を memory へ再び add する。(b) progress 語・raw log・secret を含む memory を add する。 | negative テスト | (a) deny し、retirement record を示す。(b) fail-close する。 | yes | 維持 |
 | UTV4-AC-091 | UTV4-FR-019 | (a) runtime がプロバイダー個別の標準メモリの directory へ教訓を書こうとする。(b) 教訓を別のメモリへ写しただけで canonicalized にしようとする。 | negative テスト (hook と memory lifecycle) | (a) hook が書き込みを拒否し、`ut-tdd memory add` を案内する。(b) 取り込み先が機構でも正本文書でもないので、遷移を拒否する。 | yes | 新規 |
-| UTV4-AC-029 | UTV4-FR-020 | (a) 学習資産の owner に skill 名 / provider 名 / folder を設定する。(b) 依存する provider の版が変わる。 | negative テスト | (a) deny する。(b) 関連する資産が revalidation_required へ移る。 | no | 維持 |
-| UTV4-AC-030 | UTV4-FR-021 | registry に無い identity pair、同じ pair の両極性、applicability 未指定の skill を推薦の入力にする。 | negative テスト | いずれも fail-close する。未指定を all へ広げない。 | no | 維持 |
-| UTV4-AC-031 | UTV4-FR-022 | (a) 同じ入力で packet を 2 回 compile する。(b) stale skill を削除する。(c) shadow・before/after・独立 review のどれかを欠いて gate へ昇格する。 | 決定性テスト + negative テスト | (a) exact set と digest が同一。(b) deny する。quarantine だけ許す。(c) deny する。 | yes | 維持 |
+| UTV4-AC-029 | UTV4-FR-020 (撤回) | (a) 学習資産の owner に skill 名 / provider 名 / folder を設定する。(b) 依存する provider の版が変わる。 | negative テスト | (a) deny する。(b) 関連する資産が revalidation_required へ移る。 | no | 維持 |
+| UTV4-AC-030 | UTV4-FR-021 (撤回) | registry に無い identity pair、同じ pair の両極性、applicability 未指定の skill を推薦の入力にする。 | negative テスト | いずれも fail-close する。未指定を all へ広げない。 | no | 維持 |
+| UTV4-AC-031 | UTV4-FR-022 (撤回) | (a) 同じ入力で packet を 2 回 compile する。(b) stale skill を削除する。(c) shadow・before/after・独立 review のどれかを欠いて gate へ昇格する。 | 決定性テスト + negative テスト | (a) exact set と digest が同一。(b) deny する。quarantine だけ許す。(c) deny する。 | no | 維持 |
 | UTV4-AC-032 | UTV4-FR-023 | (a) single-provider で、同じ provider の別 session・上位 tier が blind packet で review して receipt を出す。(b) 同じ session の subagent が review する。(c) receipt に `cross_family` を記録する。 | positive / negative テスト | (a) admit する。evidence tier は `same_family_separated`。(b) deny する。(c) 僭称として deny する。 | yes | 維持 |
 | UTV4-AC-033 | UTV4-FR-023 | (a) reviewer の session id が author と同じ、または実在しない receipt を出す。(b) CI が green でない HEAD への verdict を出す。 | negative テスト | (a) attestation 不成立として deny する。理由は型付き。(b) deny する。 | yes | 維持 |
-| UTV4-AC-034 | UTV4-FR-024 | (a) single-provider で、高影響境界の merge を人間 review なしに admit する。(b) 利用上限の record なしに hybrid から single-provider へ下げる。(c) 補償統制の gate が無いまま profile を宣言する。 | negative テスト | いずれも deny する。 | yes | 維持 |
+| UTV4-AC-034 | UTV4-FR-023, UTV4-FR-024 (先送り) | 【1.0.0 では適用しない: UTV4-FR-024 は先送り。(a)(c) は補償統制を作る 1.0.0 の後の版で確かめる】(a) single-provider で、高影響境界の merge を人間 review なしに admit する。(b) 利用上限による停止の record なしに hybrid から fallback へ下げる。(c) 補償統制の gate が無いまま profile を宣言する。 | negative テスト | (b) deny する (1.0.0 が適用する)。(a)(c) は上の印のとおり 1.0.0 では適用しない。 | yes | 既存を更新 |
 | UTV4-AC-035 | UTV4-FR-025 | (a) 計測 record の無い skill / subagent を削除する。(b) FLAG 1 件で surface を退役する。(c) 機能の段階 (planned〜retired) を跳ばして遷移する。(d) 削る対象を機械で読めない新しい変更を出す。 | negative テスト + 一覧の生成テスト | (a)(b) deny する。quarantine だけ許す。(c) deny する。(d) finding を出す。各機能の段階が一覧で読める。 | no | 既存を更新 |
 | UTV4-AC-036 | UTV4-FR-026 | (a) inventory に無い legacy token が current surface に出る。(b) DB の schema object を migration なしに drop する。 | `ut-tdd doctor` | いずれも fail-close する。 | yes | 維持 |
 | UTV4-AC-037 | UTV4-FR-027 | (a) receipt を candidate worktree の中だけに置く。(b) dirty か未 merge の worktree を gc が回収する。(c) projection writer が入力の欠落を空の成功として返す。 | negative テスト + `ut-tdd doctor` | (a) main 側から見えなければ finding を出す。(b) deny する。(c) finding として fail-close する。 | yes | 維持 |
 | UTV4-AC-038 | UTV4-FR-004 | (a) チケットの記録に L4 以上の設計本文や設計判断を書く。(b) L5 詳細設計・L6 仕様の改訂や Reverse をチケットの作業として出す。(c) チケットの完了で L4 の本文を accept 扱いにする。 | negative / positive テスト | (a) deny する。本文は設計書に置く。(b) チケットとして受け付ける。(c) deny する。accept は設計の freeze review だけ。 | yes | 既存を更新 |
-| UTV4-AC-039 | UTV4-FR-028 | (a) 初期画面ルールの freeze record が無いまま、画面プロトのチケットを 2 件発行する。(b) 反応を L2 discovery event に記録せずにチケットを閉じる。(c) 検収の雛形が無い種類のチケットを発行する。 | negative テスト | (a) 2 件目を deny する。(b) deny する。(c) deny する。 | no | 既存を更新 |
+| UTV4-AC-039 | UTV4-FR-028 (先送り) | (a) 初期画面ルールの freeze record が無いまま、画面プロトのチケットを 2 件発行する。(b) 反応を L2 discovery event に記録せずにチケットを閉じる。(c) 検収の雛形が無い種類のチケットを発行する。 | negative テスト | (a) 2 件目を deny する。(b) deny する。(c) deny する。 | no | 既存を更新 |
 | UTV4-AC-040 | UTV4-FR-029 | (a) L0〜L4 の文書に owner を 2 名、または 0 名にする。(b) owner 以外が L3 / L4 の文書を freeze する。(c) Issue / Sub-issue / PR のどれかのチケットに owner を 2 名にする。(d) L8〜L12 の検証の owner を author にする。(e) L8 の食い違いの振り分けを作者と同じ family が判定する。 | negative テスト | いずれも deny する。 | yes | 既存を更新 |
-| UTV4-AC-041 | UTV4-FR-030 | 区分をまたぐ合流点の担当を、claim の付け替えの記録 (旧 owner・新 owner・理由・引き取り時の HEAD) なしに替える。 | negative テスト | deny する。 | no | 既存を更新 |
+| UTV4-AC-041 | UTV4-FR-030 (撤回) | 区分をまたぐ合流点の担当を、claim の付け替えの記録 (旧 owner・新 owner・理由・引き取り時の HEAD) なしに替える。 | negative テスト | deny する。 | no | 既存を更新 |
 | UTV4-AC-042 | UTV4-FR-031 | (a) 同じチケットの中で 4 回目の是正を出す。(b) 契約 (設計) の食い違いを同じチケットの中で直す。(c) 是正の回数を数える。 | negative テスト + 集計テスト | (a) 受け付けない。(b) deny し、設計のチケットを新しく起こすよう求める。(c) 回数はチケットの記録から機械で出る。 | no | 既存を更新 |
 | UTV4-AC-043 | UTV4-FR-032 | (a) main の上に無い、または衝突のある candidate を merge admission へ出す。(b) exact HEAD の CI が green でない。(c) exact HEAD に束縛した独立 review の receipt が無い。(d) L10〜L12 のシステム受入を PR の merge だけで閉じる。 | negative テスト | (a)(b)(c) deny する。(d) deny する。システム受入は release の適格性で閉じる。 | yes | 既存を更新 |
 | UTV4-AC-044 | UTV4-FR-033 | 1 人の時期に、チケット・claim・event・receipt のどれかを省いて工程を進める。 | negative テスト | gate が deny する。 | no | 既存を更新 |
 | UTV4-AC-045 | UTV4-FR-034 | (a) PO 以外がチケットを発行する。(b) メンバーの提案が、PO の仕分けの前にチケットになる。(c) チームの管理知能が、自区分と区分境界の契約以外を読む。 | negative テスト | いずれも deny する。 | yes | 既存を更新 |
 | UTV4-AC-046 | UTV4-FR-035 | (a) 管理知能が自分でチケットを発行する。(b) PO が承認していない下書きを発行する。(c) 生成元 (上流成果物の path と revision) の無い下書きを出す。(d) 同じ入力と同じ policy version で下書きを 2 回作る。 | negative テスト + 決定性テスト | (a)(b)(c) deny する。(d) 同じ下書きの集合が出る。 | yes | 既存を更新 |
-| UTV4-AC-047 | UTV4-FR-036 | (a) 最上位の Issue 以外で親の無いチケットを作る。(b) 親を 2 つ持つチケットを作る。(c) 4 段目のチケットを作る。(d) GitHub の sub-issue 関係を見る。 | schema 検証 + 投影テスト | (a)(b)(c) schema 検証が deny する。(d) 正本の親参照から投影されている。 | no | 既存を更新 |
+| UTV4-AC-047 | UTV4-FR-036 (撤回) | (a) 最上位の Issue 以外で親の無いチケットを作る。(b) 親を 2 つ持つチケットを作る。(c) 4 段目のチケットを作る。(d) GitHub の sub-issue 関係を見る。 | schema 検証 + 投影テスト | (a)(b)(c) schema 検証が deny する。(d) 正本の親参照から投影されている。 | no | 既存を更新 |
 | UTV4-AC-048 | UTV4-FR-008 | (a) 要求 / 要件 / 設計の記録を更新しても、スプレッドシート view が同期されない。(b) シートの直接編集が admission を経ずに正本へ入る。(c) 正本を 1 枚の文書へ集める要求を置く。 | `ut-tdd doctor` + negative テスト | (a) 同期の drift として fail-close する。(b) deny する。(c) 要求として受け付けない。 | no | 維持 |
 | UTV4-AC-049 | UTV4-FR-037 | (a) 2 つ以上の区分に跨る欠陥を、incident record なしに個別の修正で merge する。(b) incident が open の間に、影響下のチケットを merge する。(c) 契約の誤りが原因の incident を Reverse 対なしに閉じる。(d) hotfix branch へ直接 push する。 | negative テスト | いずれも deny する。 | yes | 既存を更新 |
-| UTV4-AC-050 | UTV4-FR-038 | (a) secret / PII / private transcript を含む event を改善 corpus へ export する。(b) project identity の無い intake record を作る。(c) Issue 本文を正本として要件を上書きする。 | negative テスト | いずれも deny する。 | yes | 維持 |
-| UTV4-AC-051 | UTV4-FR-039 | (a) prototype record と反応 event なしに、L3 の画面仕様を freeze する。(b) モック画像を画面仕様の正本として参照する。 | negative テスト | (a) compile が backflow_required を返す。(b) deny する。正本は生成した製本物だけ。 | no | 維持 |
-| UTV4-AC-052 | UTV4-FR-040 | (a) 実録の provenance の無い skill を ACTIVE へ昇格する。(b) firing しても結果に相関しない skill を照合なしに残す。 | negative テスト | (a) deny する。(b) quarantine 候補として finding を出す。 | no | 維持 |
-| UTV4-AC-053 | UTV4-FR-041 | (a) judgement record の無い LLM verdict を admission の入力にする。(b) transcript だけから判断を組み立て直す。 | negative テスト | いずれも deny する。 | yes | 維持 |
-| UTV4-AC-054 | UTV4-FR-042 | (a) calibration を測っていない判断種別を分類器へ昇格する。(b) 単一 episode で決定的 check へ昇格する。(c) 昇格後の check と LLM 判断の before/after 差分が無い。 | negative テスト | (a)(b) deny する。(c) 昇格を deny し、shadow へ戻す。 | no | 維持 |
-| UTV4-AC-055 | UTV4-FR-043 | (a) 機械判断化した判断種別で frontier tier へ routing する。(b) tier や cost を品質の根拠として記録する。 | routing テスト + negative テスト | (a) routing が下位 tier か check へ下がり、finding を出す。(b) deny する。 | no | 維持 |
+| UTV4-AC-050 | UTV4-FR-038 (先送り) | (a) secret / PII / private transcript を含む event を改善 corpus へ export する。(b) project identity の無い intake record を作る。(c) Issue 本文を正本として要件を上書きする。 | negative テスト | いずれも deny する。 | no | 維持 |
+| UTV4-AC-051 | UTV4-FR-039 (先送り) | (a) prototype record と反応 event なしに、L3 の画面仕様を freeze する。(b) モック画像を画面仕様の正本として参照する。 | negative テスト | (a) compile が backflow_required を返す。(b) deny する。正本は生成した製本物だけ。 | no | 維持 |
+| UTV4-AC-052 | UTV4-FR-040 (先送り) | (a) 実録の provenance の無い skill を ACTIVE へ昇格する。(b) firing しても結果に相関しない skill を照合なしに残す。 | negative テスト | (a) deny する。(b) quarantine 候補として finding を出す。 | no | 維持 |
+| UTV4-AC-053 | UTV4-FR-041 (撤回) | (a) judgement record の無い LLM verdict を admission の入力にする。(b) transcript だけから判断を組み立て直す。 | negative テスト | いずれも deny する。 | no | 維持 |
+| UTV4-AC-054 | UTV4-FR-042 (先送り) | (a) calibration を測っていない判断種別を分類器へ昇格する。(b) 単一 episode で決定的 check へ昇格する。(c) 昇格後の check と LLM 判断の before/after 差分が無い。 | negative テスト | (a)(b) deny する。(c) 昇格を deny し、shadow へ戻す。 | no | 維持 |
+| UTV4-AC-055 | UTV4-FR-043 (先送り) | (a) 機械判断化した判断種別で frontier tier へ routing する。(b) tier や cost を品質の根拠として記録する。 | routing テスト + negative テスト | (a) routing が下位 tier か check へ下がり、finding を出す。(b) deny する。 | no | 維持 |
 | UTV4-AC-056 | UTV4-FR-044 | (a) 選好軸の項目を、人間の decision record なしに deny 条件へ昇格する。(b) 良否軸と選好軸を分けずに 1 つの記録に書く。 | negative テスト | いずれも deny する。 | yes | 維持 |
-| UTV4-AC-057 | UTV4-FR-045 | (a) 人間が読める view の無い判断種別を機械判断化へ昇格する。(b) view 側の承認を admission なしに正本へ入れる。 | negative テスト | いずれも deny する。 | yes | 維持 |
-| UTV4-AC-058 | UTV4-FR-046 | (a) 手描きの図を依存や遷移の正本として参照する。(b) 同じ記録から生成した図の digest が一致しない。(c) テーブル定義を、スプレッドシート同期 view 以外の自由文で正本にする。 | negative テスト + 決定性テスト | (a) deny する。(b) 生成器の欠陥として finding を出す。(c) deny する。 | no | 維持 |
-| UTV4-AC-059 | UTV4-FR-047 | (a) 図の側の編集を admission なしに記録へ入れる。(b) 記録の更新後に作り直していない図を配る。 | negative テスト + `ut-tdd doctor` | (a) deny する。discrepancy record だけが残る。(b) doctor が fail-close する。 | no | 維持 |
+| UTV4-AC-057 | UTV4-FR-045 (先送り) | (a) 人間が読める view の無い判断種別を機械判断化へ昇格する。(b) view 側の承認を admission なしに正本へ入れる。 | negative テスト | いずれも deny する。 | no | 維持 |
+| UTV4-AC-058 | UTV4-FR-046 (先送り) | (a) 手描きの図を依存や遷移の正本として参照する。(b) 同じ記録から生成した図の digest が一致しない。(c) テーブル定義を、スプレッドシート同期 view 以外の自由文で正本にする。 | negative テスト + 決定性テスト | (a) deny する。(b) 生成器の欠陥として finding を出す。(c) deny する。 | no | 維持 |
+| UTV4-AC-059 | UTV4-FR-047 (撤回) | (a) 図の側の編集を admission なしに記録へ入れる。(b) 記録の更新後に作り直していない図を配る。 | negative テスト + `ut-tdd doctor` | (a) deny する。discrepancy record だけが残る。(b) doctor が fail-close する。 | no | 維持 |
 | UTV4-AC-060 | UTV4-FR-048 | (a) 同じ契約 id へ 2 つの lane が別々に還流を起こす。(b) backflow が open の間に、依存する下流チケットを merge する。(c) 契約の改訂の後、管理知能の改訂の下書きを PO の承認なしに発行する。 | negative テスト | (a) 2 件目は event として 1 件の record に集まる。(b) deny する。(c) deny する。 | yes | 既存を更新 |
 | UTV4-AC-061 | UTV4-FR-049 | (a) role record に無い subagent_type で Agent を起動する。(b) 手書きの provider 固有 sub-agent 定義が生成物と食い違ったまま残る。(c) role record に provider 名や model 名を直接書く。 | guard テスト + `ut-tdd doctor` | (a) guard が deny する。(b) doctor が fail-close する。(c) schema が deny する。 | no | 維持 |
 | UTV4-AC-062 | UTV4-FR-050 | (a) LLM orchestrator か管理知能が、gate role を経ずに合流点を閉じる。(b) single-provider で `cross_family` を記録する。(c) single-provider / standalone で、hybrid と別の role record や guard を使う。 | negative テスト | いずれも deny する。 | yes | 既存を更新 |
 | UTV4-AC-063 | UTV4-FR-051 | (a) single-provider で author が packet を組む。(b) author の claim や自己評価が packet に入る。(c) reviewer の session が author と memory namespace を共有する。(d) 反証試行の記録が無い PASS を出す。(e) reviewer の tier が author より下。 | negative テスト | (a)(b) deny する。(c) attestation 不成立で deny する。(d) PASS-WEAK へ下がる。(e) deny する。 | yes | 維持 |
 | UTV4-AC-064 | UTV4-FR-052 | (a) 1 つの PR に機能の変更と refactor を混ぜる。(b) refactor チケットが既存の oracle を変える、または新しい機能の oracle を足す。(c) 退役 (削る作業) を refactor 以外のチケットで行う。 | negative テスト | (a) deny し、分割を求める。(b) 振る舞いの不変の違反として deny する。(c) deny する。 | no | 既存を更新 |
-| UTV4-AC-065 | UTV4-FR-053 | (a) 閾値を越えた projection が無いのに、LLM の指摘だけで refactor チケットの下書きを作る。(b) 閾値を越えたのに下書きが作られない。 | negative / positive テスト | (a) 下書きを作らない。指摘は finding として projection の入力に残る。(b) 管理知能が下書きを作る。 | no | 既存を更新 |
+| UTV4-AC-065 | UTV4-FR-053 (先送り) | (a) 閾値を越えた projection が無いのに、LLM の指摘だけで refactor チケットの下書きを作る。(b) 閾値を越えたのに下書きが作られない。 | negative / positive テスト | (a) 下書きを作らない。指摘は finding として projection の入力に残る。(b) 管理知能が下書きを作る。 | no | 既存を更新 |
 | UTV4-AC-066 | UTV4-FR-054 | (a) author が自分の PR を admitter として merge する。(b) admitter が成果物を書き換える。(c) 実行の着手後に検収の条件を変える。(d) 実行と同じ family が検収する。(e) 1 人運用の self-admission を印なしで記録する。(f) contract_frozen のまま成果物を検収済みとして数える、または artifact_verified のまま main へ反映する。(g) readiness の状態を、その時点の HEAD で再検証せず申告のまま使う。(h) 依存先が contract_frozen になる前に下流チケットを着手する。(i) 依存先が contract_frozen になった後に下流チケットを着手する。 | negative テスト + 正常系テスト | (a) deny する。(b) deny し、author へ差し戻す。(c)(d)(e) deny する。(f)(g)(h) deny する。(i) 着手を許可する。 | yes | 既存を更新 |
 | UTV4-AC-067 | UTV4-FR-055 | (a) 参加人数が 2 以上のとき、L9 以上に関わる実装を author 以外の人間 review なしに admit する。(b) 参加人数が 1 のとき、AI blind lane で代えたのに evidence tier と self-admission の印を記録しない。 | negative テスト | いずれも deny する。 | yes | 既存を更新 |
-| UTV4-AC-068 | UTV4-FR-056 | (a) risk 信号の record なしに深度 profile を deep にする。(b) light profile で必須最小 4 要素のどれかを省く。(c) 初期画面ルールの freeze 前に、画面プロトのチケットを 2 名以上に分けて発行する。(d) fixture が本番 schema と違う形を持つ。(e) 異常系の必須セットを欠く画面を検証完了にする。(f) screen finding を自由文だけで記録する。(g) screen id を持たない FE の実装の変更を出す。 | negative テスト | (a) deny する。根拠の record が要る。(b)(d)(e) deny する。(c) deny する (UTV4-FR-028)。(f) deny する。型付きが必須。(g) deny する。画面の設計から FE の実装まで screen id で追える。 | no | 既存を更新 |
-| UTV4-AC-069 | UTV4-FR-057 | (a) fixture 契約・異常系セット・finding・checklist のどれかを欠く screen id を、製本点 (a) で画面仕様へ束ねる。(b) ハーネス自身のスプレッドシート view や digest を、プロト工程なしに L5 詳細設計へ進める。 | negative テスト | (a) compile が backflow_required を返す。(b) deny する。 | no | 維持 |
-| UTV4-AC-070 | UTV4-FR-056 | (a) 意味ロジックの判定器の出力を Gold として登録する。(b) 予測値を確定値と同じ表示で描く。(c) 棄却条件の無い仮説 record を作る。 | negative テスト | (a) deny する。独立した Gold が要る。(b) 表示規約の違反として finding を出す。(c) deny する。 | no | 維持 |
+| UTV4-AC-068 | UTV4-FR-056 (先送り) | (a) risk 信号の record なしに深度 profile を deep にする。(b) light profile で必須最小 4 要素のどれかを省く。(c) 初期画面ルールの freeze 前に、画面プロトのチケットを 2 名以上に分けて発行する。(d) fixture が本番 schema と違う形を持つ。(e) 異常系の必須セットを欠く画面を検証完了にする。(f) screen finding を自由文だけで記録する。(g) screen id を持たない FE の実装の変更を出す。 | negative テスト | (a) deny する。根拠の record が要る。(b)(d)(e) deny する。(c) deny する (UTV4-FR-028 (先送り))。(f) deny する。型付きが必須。(g) deny する。画面の設計から FE の実装まで screen id で追える。 | no | 既存を更新 |
+| UTV4-AC-069 | UTV4-FR-057 (先送り) | (a) fixture 契約・異常系セット・finding・checklist のどれかを欠く screen id を、製本点 (a) で画面仕様へ束ねる。(b) ハーネス自身のスプレッドシート view や digest を、プロト工程なしに L5 詳細設計へ進める。 | negative テスト | (a) compile が backflow_required を返す。(b) deny する。 | no | 維持 |
+| UTV4-AC-070 | UTV4-FR-056 (先送り) | (a) 意味ロジックの判定器の出力を Gold として登録する。(b) 予測値を確定値と同じ表示で描く。(c) 棄却条件の無い仮説 record を作る。 | negative テスト | (a) deny する。独立した Gold が要る。(b) 表示規約の違反として finding を出す。(c) deny する。 | no | 維持 |
 | UTV4-AC-071 | UTV4-FR-058 | (a) AI lane・管理知能・review verdict が要求の記録を frozen にする。(b) 人間の freeze decision record も、PoC チケットの判定記録 + 人間の ack も無いまま frozen にする。(c) provisional の要求を view で確定値と同じ表示にする。(d) AI 間の解釈の食い違いを、一方の AI が確定して下流へ流す。 | negative テスト | (a)(b) deny する。(c) 表示規約の違反として finding を出す。(d) deny する。discrepancy record が上流 owner へ上がる。 | yes | 既存を更新 |
-| UTV4-AC-072 | UTV4-FR-059 | (a) PoC 期の設定・規約・CI を、production 側のチケットを起こさずに production path へ持ち込む。(b) 期限を持たない discovery の検収雛形を発行する。(c) 期限を過ぎた PoC チケットを検査する。(d) 期限を過ぎた状態で新しいチケットを発行する。 | negative テスト + 正常系テスト | (a) deny する。production 側のチケットとして起こし直すよう求める。(b) deny する。(c) finding (警告) を 1 件出す。(d) 発行を止めない。 | no | 既存を更新 |
-| UTV4-AC-073 | UTV4-FR-060 | (a) 管理知能の出力を、Kernel の検証なしに記録や gate の入力にする。(b) 「プロダクトの管理」と「ハーネス自身の管理」の名前空間を混ぜて書く。(c) 管理知能の機能の一覧を見る。 | negative テスト + 経路の静的検査 | (a) そのような経路が 0 件。実行しても deny する。(b) deny する。(c) F1〜F10 の 10 個が読める。 | yes | 新規 |
-| UTV4-AC-074 | UTV4-FR-061 | (a) 管理知能を外した状態で、中核の受入を流す。(b) 管理知能が記録を直接書く。(c) 外部監査 P-02 の 10 条件を確かめる。(d) 言語の決定の記録を見る。 | 中核の受入スイート + negative テスト + 条件の検査 | (a) 中核は手動の計画で動き、中核の受入が通る。(b) deny する。(c) 10 条件がすべて満たされる。(d) ADR-001 が更新されている。ADR-010 は無い。 | no | 新規 |
-| UTV4-AC-075 | UTV4-FR-062 | (a) Windows + Node 24 で境界の型を作り直す。(b) 同じ入力を TS と Python の検証に通す (欠落と null・未知の field・union・数値範囲・default・型の自動変換)。(c) 生成器が扱えない構文の schema を通す。(d) 手で書いた境界の型を置く。 | 再生成の差分テスト + 合否一致テスト + lint | (a) 差分が 0。(b) 全ケースで合否が一致する。(c) 生成の時点で拒否する。(d) lint が deny する。 | no | 新規 |
-| UTV4-AC-076 | UTV4-FR-063 | 並行する作業の着地順の提案を出す。その提案を merge の条件に使おうとする。 | positive / negative テスト | 提案は導出に使った入力 (依存・重なる path・base の commit) を含む。merge の可否は gate だけが決める。 | no | 新規 |
+| UTV4-AC-072 | UTV4-FR-059 (先送り) | (a) PoC 期の設定・規約・CI を、production 側のチケットを起こさずに production path へ持ち込む。(b) 期限を持たない discovery の検収雛形を発行する。(c) 期限を過ぎた PoC チケットを検査する。(d) 期限を過ぎた状態で新しいチケットを発行する。 | negative テスト + 正常系テスト | (a) deny する。production 側のチケットとして起こし直すよう求める。(b) deny する。(c) finding (警告) を 1 件出す。(d) 発行を止めない。 | no | 既存を更新 |
+| UTV4-AC-073 | UTV4-FR-060 (撤回) | (a) 管理知能の出力を、Kernel の検証なしに記録や gate の入力にする。(b) 「プロダクトの管理」と「ハーネス自身の管理」の名前空間を混ぜて書く。(c) 管理知能の機能の一覧を見る。 | negative テスト + 経路の静的検査 | (a) そのような経路が 0 件。実行しても deny する。(b) deny する。(c) F1〜F10 の 10 個が読める。 | no | 新規 |
+| UTV4-AC-074 | UTV4-FR-061 (撤回) | (a) 管理知能を外した状態で、中核の受入を流す。(b) 管理知能が記録を直接書く。(c) 外部監査 P-02 の 10 条件を確かめる。(d) 言語の決定の記録を見る。 | 中核の受入スイート + negative テスト + 条件の検査 | (a) 中核は手動の計画で動き、中核の受入が通る。(b) deny する。(c) 10 条件がすべて満たされる。(d) ADR-001 が更新されている。ADR-010 は無い。 | no | 新規 |
+| UTV4-AC-075 | UTV4-FR-062 (撤回) | (a) Windows + Node 24 で境界の型を作り直す。(b) 同じ入力を TS と Python の検証に通す (欠落と null・未知の field・union・数値範囲・default・型の自動変換)。(c) 生成器が扱えない構文の schema を通す。(d) 手で書いた境界の型を置く。 | 再生成の差分テスト + 合否一致テスト + lint | (a) 差分が 0。(b) 全ケースで合否が一致する。(c) 生成の時点で拒否する。(d) lint が deny する。 | no | 新規 |
+| UTV4-AC-076 | UTV4-FR-063 (先送り) | 並行する作業の着地順の提案を出す。その提案を merge の条件に使おうとする。 | positive / negative テスト | 提案は導出に使った入力 (依存・重なる path・base の commit) を含む。merge の可否は gate だけが決める。 | no | 新規 |
 | UTV4-AC-077 | UTV4-FR-064 | (a) 差分から影響するテストと AT を出す。(b) 宣言されていない依存がある。(c) 全回帰との一致を示さずに検査を省く。(d) stable へ昇格する。(e) 一致が示された後、文書だけの変更で、関係しない単位が回る。(f) 単位を選べない変更が、一部の単位だけで merge できる。(g) main への merge 後、またはリリースの前に、一部の単位だけを回す。(h) 別 HEAD の単位結果で merge 判定をする。(i) 単位に分けた後のテストの件数が、分ける前より少ない。(j) 一致が示され、単位を選べる PR で、影響ありと導いた単位を回さずに merge しようとする。 | 影響導出テスト + negative テスト + CI の実行記録 | (a) 影響しないと判断した根拠も出る。グラフは HEAD から計算し直す。(b) 影響ありとして扱う。(c) deny する。(d) 全受入が走る。(e) 回らない。(f) 全単位を要求する。(g) 全単位が回る。一部だけなら deny する。(h) deny する。(i) fail-close する。(j) merge gate が deny する。 | yes | 既存を更新 |
 | UTV4-AC-078 | UTV4-FR-065 | (a) 宣言 (検証する要件・依存範囲・実行の種類・環境の前提・入力の形式・必須の条件) の無い AT を置く。(b) 受入 catalog を手で編集する。(c) release のときに catalog を読む。(d) 環境の前提を満たさない AT を実行する。 | catalog の生成テスト + preflight テスト | (a) deny する。(b) test-design からの再生成との差分で検出し、fail-close する。(c) 「今回必須の AT」と「既存の合格を流用できる AT」が機械で分かれる。(d) 実行せず、理由を返す。 | yes | 新規 |
-| UTV4-AC-079 | UTV4-FR-066 | 右腕の層の構成と左右の対を読む。 | 層の registry の検査 | L7〜L14 が UTV4-FR-066 のとおり並ぶ。対は L5 ↔ L9、L4 ↔ L10、L8 ↔ L4〜L6。L11 総合レビューは無く、各層の gate に分かれている。 | no | 新規 |
+| UTV4-AC-079 | UTV4-FR-066 (先送り) | 右腕の層の構成と左右の対を読む。 | 層の registry の検査 | L7〜L14 が UTV4-FR-066 (先送り) のとおり並ぶ。対は L5 ↔ L9、L4 ↔ L10、L8 ↔ L4〜L6。L11 総合レビューは無く、各層の gate に分かれている。 | no | 新規 |
 | UTV4-AC-080 | UTV4-FR-067 | (a) 食い違いが残り、振り分けの済んでいない L8 の gate を通す。(b) 1 件の食い違いを 2 つの行き先へ振り分ける。(c) 作者と同じ family が振り分けを判定する。(d) 移行の前後で成熟度の段が下がる。 | gate テスト + negative テスト | (a)(b)(c) deny する。(d) 機械が検出し、移行を通さない。 | yes | 新規 |
-| UTV4-AC-081 | UTV4-FR-068 | (a) 右腕の作業の順序 (証拠集め → 判定 → 設計還流とリファクタリング → 検証 → 仕様書) を跳ばす。(b) 右腕で振る舞いを変える変更を入れる。(c) リファクタリングと検証を同じ family が行う。(d) Reverse の採点結果を型の無い文で出す。 | negative テスト | (a)(b)(c) deny する。(b) の変更は次の左腕のチケットへ回る。(d) Kernel の検証が deny する。 | yes | 新規 |
-| UTV4-AC-082 | UTV4-FR-069 | (a) 廃止した層番号と工程名の残りを探す。(b) docs/templates/vmodel/ の有無を見る。(c) L6 のテンプレートの本数を数える。(d) consumer に配るテンプレートの path を変える。 | grep / lint + canary | (a) 残りが 0 件。(b) 無い。(c) 1 本。(d) canary が通る。どれかが欠ければ切り替えを完了にしない。 | no | 新規 |
-| UTV4-AC-083 | UTV4-FR-070 | (a) 置き場所の registry に無い場所へ記録を書く。(b) doctor を巡回させる。 | guard テスト + `ut-tdd doctor` | (a) guard が deny し、正しい path を示す。(b) registry との外れを報告する。fail-close にはしない。 | no | 新規 |
+| UTV4-AC-081 | UTV4-FR-068 (撤回) | (a) 右腕の作業の順序 (証拠集め → 判定 → 設計還流とリファクタリング → 検証 → 仕様書) を跳ばす。(b) 右腕で振る舞いを変える変更を入れる。(c) リファクタリングと検証を同じ family が行う。(d) Reverse の採点結果を型の無い文で出す。 | negative テスト | (a)(b)(c) deny する。(b) の変更は次の左腕のチケットへ回る。(d) Kernel の検証が deny する。 | no | 新規 |
+| UTV4-AC-082 | UTV4-FR-069 (先送り) | (a) 廃止した層番号と工程名の残りを探す。(b) docs/templates/vmodel/ の有無を見る。(c) L6 のテンプレートの本数を数える。(d) consumer に配るテンプレートの path を変える。 | grep / lint + canary | (a) 残りが 0 件。(b) 無い。(c) 1 本。(d) canary が通る。どれかが欠ければ切り替えを完了にしない。 | no | 新規 |
+| UTV4-AC-083 | UTV4-FR-070 (先送り) | (a) 置き場所の registry に無い場所へ記録を書く。(b) doctor を巡回させる。 | guard テスト + `ut-tdd doctor` | (a) guard が deny し、正しい path を示す。(b) registry との外れを報告する。fail-close にはしない。 | no | 新規 |
 | UTV4-AC-084 | UTV4-FR-071 | このリポジトリで hook・gate・guard を動かす。 | hook の解決先テスト | 判定に使うのは .ut-tdd/ の下のリリース harness だけ。開発中の product/ のコードは判定に使われない。 | yes | 新規 |
-| UTV4-AC-085 | UTV4-FR-072 | (a) チケットを閉じる。(b) 自己申告の数字を入れる。(c) 工程ごとに束ねて読む。 | 集計テスト + negative テスト | (a) 作業ログにチケット 1 件につき 1 行が、1 回だけ書かれる。(b) 入力にしない。(c) L 層ごとに読める。専用の DB テーブルは無い。 | no | 新規 |
-| UTV4-AC-086 | UTV4-FR-073 | (a) 層を凍結する。(b) 仮の値の見直し条件が成り立つ。 | gate テスト + positive テスト | (a) G6「WBS 完備」を機械で判定する。満たさなければ凍結しない。(b) 見直しのチケットの下書きが自動で作られる。 | no | 新規 |
+| UTV4-AC-085 | UTV4-FR-072 (先送り) | (a) チケットを閉じる。(b) 自己申告の数字を入れる。(c) 工程ごとに束ねて読む。 | 集計テスト + negative テスト | (a) 作業ログにチケット 1 件につき 1 行が、1 回だけ書かれる。(b) 入力にしない。(c) L 層ごとに読める。専用の DB テーブルは無い。 | no | 新規 |
+| UTV4-AC-086 | UTV4-FR-073 (撤回) | (a) 層を凍結する。(b) 仮の値の見直し条件が成り立つ。 | gate テスト + positive テスト | (a) G6「WBS 完備」を機械で判定する。満たさなければ凍結しない。(b) 見直しのチケットの下書きが自動で作られる。 | no | 新規 |
 | UTV4-AC-087 | UTV4-FR-074 | (a) 登録簿に無い外部ライブラリに依存する。(b) PO の承認記録なしにライセンスを承認済みにする。(c) 社内の部品を探す。 (d) v4 の補強だけを理由に、OSS を登録簿に載せて依存にする。 | lint + negative テスト + カタログ生成テスト | (a) lint が fail-close する。(b) deny する。(c) コードから生成したカタログで見つかる。 (d) 承認記録の有無によらず deny する。参考にした OSS は、名前と参考にした点だけが記録される。 | yes | 新規 |
 | UTV4-AC-088 | UTV4-FR-075 | (a) 権限 (authorization) を変える実装のチケットを、着手前の PO 承認記録なしに進める。(b) F10 のチームマネジメントの入力を見る。 | negative テスト + 入力の静的検査 | (a) deny する。(b) 入力はメンバーと権限の registry だけ。 | yes | 新規 |
-| UTV4-AC-089 | UTV4-FR-076 | (a) 効く基本原則を 1 つも持たない設計判断の記録を出す。(b) 既存の論点に新しい ID の記録を作る。 | lint + review | (a) lint が deny する。(b) 既存の記録を同じ ID で更新するよう差し戻す。 | no | 新規 |
-| UTV4-AC-090 | UTV4-FR-006, UTV4-FR-007, UTV4-FR-013 | #591 の 18 件の一覧を読む。 | 一覧と要件の照合 | 18 件すべてが「v4 で直す」となっている。各項目が、実現する要件 ID を 1 件以上持つ。 | no | 新規 |
+| UTV4-AC-089 | UTV4-FR-076 (撤回) | (a) 効く基本原則を 1 つも持たない設計判断の記録を出す。(b) 既存の論点に新しい ID の記録を作る。 | lint + review | (a) lint が deny する。(b) 既存の記録を同じ ID で更新するよう差し戻す。 | no | 新規 |
+| UTV4-AC-090 | UTV4-FR-006, UTV4-FR-007 (撤回), UTV4-FR-013 | #591 の 18 件の一覧を読む。 | 一覧と要件の照合 | 18 件すべてが「v4 で直す」となっている。各項目が、実現する要件 ID を 1 件以上持つ。 | no | 新規 |
 | UTV4-AC-092 | UTV4-FR-077 | (a) 脅威モデルの脅威のうち、攻撃シナリオを 1 つも持たないものがある。(b) シナリオが、guard・hook・review custody・merge gate のすり抜け、prompt injection、供給網のどれかの攻撃面を欠く。(c) すり抜けに成功したシナリオがあるまま、リリースする。(d) 成功したシナリオを、塞ぐ機構と回帰テストなしに解決済みにする。(e) guard・hook・review custody・merge gate のどれかを変える PR で、シナリオを再実行しない。(f) シナリオの回帰テストを削除する。 | lint + レッドチームの実行記録 + negative テスト | (a)(b) lint が fail-close する。(c) リリースの gate が deny する。(d) deny する。(e) merge gate が deny する。(f) fail-close する。 | yes | 新規 |
 | UTV4-AC-093 | UTV4-FR-077, UTV4-FR-078 | (a) ハーネス自身への攻撃役を、対象を書いた family と同じ family にする。(b) 製品への攻撃役を、成果物を書いた family と同じ family にする。 | negative テスト | (a)(b) 攻撃検証の記録として受け付けない。 | yes | 新規 |
 | UTV4-AC-094 | UTV4-FR-078 | (a) 高影響境界に触れる製品を、攻撃検証の結果なしにリリースする。(b) 攻撃検証の対象に本番の環境を指定する。(c) L7 の検証工程に、DAST・fuzz・ペネトレーションテストのどれかが無い。(d) 製品の脅威モデルから導かれていないシナリオだけで攻撃検証を済ませる。(e) 攻撃検証の記録が、シナリオ・対象の revision・成否・塞いだ機構への参照のどれかを欠く。 | negative テスト | (a) リリースの gate が deny する。(b) fail-close する。(c)(d) 検証工程の完了として受け付けない。(e) 記録として受け付けない。 | yes | 新規 |
 | UTV4-AC-095 | UTV4-FR-079 | (a) readable_versions に含まれない版の記録を読ませる。(b) writable_version 以外の版で記録を書く。(c) migration_ref なしに writable_version を引き上げる。(d) 更新の前に、導入済みの全記録が新しい版の readable_versions に入るかを検査しない。(e) 新しい writable_version で書いた記録が残っているのに、その版を読めない旧版へ rollback する。 | negative / positive テスト | (a) 型付きの finding で止める。(b)(c) deny する。(d) 更新を始めない。(e) 更新の前に拒否し、rollback できない範囲を示す。旧版の readable_versions に入る範囲と、移行前に退避した記録から戻せる範囲は rollback できる。 | yes | 新規 |
+| UTV4-AC-096 | UTV4-FR-080 | (a) 派生する一覧 (要件の trace 表・受入 catalog など) を手で編集して commit する。(b) 再生成のコマンドが 1 本に定まっていない。(c) 派生物が生成元 identity または「編集禁止」を持たない。 | negative テスト + CI | (a) 再生成すると差分が出て CI が fail する。(b) 再生成のコマンドが 1 本に定まらなければ受け付けない。(c) 派生物として受け付けない。 | no | 新規 |
 
 ## 受入不要
 
