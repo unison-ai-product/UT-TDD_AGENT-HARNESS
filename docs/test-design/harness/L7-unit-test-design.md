@@ -683,7 +683,7 @@ SMB/NFS/OneDrive をまたぐ strict lease、heartbeat、clock-skew 耐性は主
 
 | U-ID | 対象関数 | DbC oracle |
 |---|---|---|
-| U-PHOVER-001 | `buildProviderHandover` (S4 契約) | Claude↔Codex の from/to が異なる package を生成 / 生成入力 `activePlan` は必須でない / 出力 `active_plan` field は `null` / summary 必須 / secret 風 token は sanitize。reader は過去 package の `active_plan` (`string \| null`) field を読み取れるが、S7 後は値を表示・判定に使わない。status text と `--json` のいずれにも値を出さず、他の field は維持する。 |
+| U-PHOVER-001 | `buildProviderHandover` (S4 契約) | S7 前は Claude↔Codex の from/to が異なる package を生成 / 生成入力 `activePlan` は必須でない / 出力 `active_plan` field は `null` / summary 必須 / secret 風 token は sanitize。reader は過去 package の `active_plan` (`string \| null`) field を読み取れる。S7 後は過去値を表示・判定に使わず、status text と `--json` のいずれにも値を出さず、他の field は維持する。 |
 | U-PHOVER-002 | `runProviderHandover` | `.ut-tdd/handover/provider/<id>.json` + `CURRENT.json` を書く / dry-run は非書込 |
 | U-GATE-001 | `evaluateGateReview` (hybrid) | judgment gate は `review_kind=cross_agent` + workerModel≠reviewerModel で pass / 同一 model は fail |
 | U-GATE-002 | `evaluateGateReview` (single runtime) | claude-only/codex-only は checklist 必須、欠落・fail・根拠なし n-a で fail、揃えば `cross_agent_review=unavailable` |
@@ -1123,8 +1123,8 @@ This addendum pairs `screen-spec.md` with L7 unit-test oracles. It covers the L6
 | U-SPECIR-R1 | `loadSpecIrSources(input)` | repo-relative root だけを読み、S7 後はdesign / test-design / reference documentを読む。PLAN frontmatter、schedule、activation source は読まず、source docsを書き換えない。missing root は warn finding、secret-like / PII-like / raw transcript payload は投影しない。 |
 | U-SPECIR-R2 | `parseSpecDefs(bundle)` | 同一 input から stable `spec_id` / `source_hash` / `section_anchor` を生成する。未知 layer/sub_doc、重複 ID、空 definition は finding 化し、仕様を補完創作しない。非ASCII見出しなど ASCII 正規化で情報が落ちる ID は hash suffix で衝突を避ける。 |
 | U-SPECIR-R3 | `parseSpecRelations(bundle, defs)` | relation_kind allowlist、orphan/self-loop/unknown relation findings と reference document path 解決を維持する。一意な短縮 PLAN ID の解決と PLAN frontmatter relation 読取りは S7 で退役する。 |
-| U-SPECIR-R4 | `parseScheduleEntries(bundle)` | S7 前は 工程管理表から deterministic `schedule_entries` draft を返す。date/state 欠落、未解決 plan_id、過去 due 未完了は finding。PLAN status は mutate しない。 。S7 後は PLAN schedule parser と `schedule_entries` draft assertion を退役する。 |
-| U-SPECIR-R5 | `parseActivationEntries(bundle)` | S7 前は enabled profile は reason を必須とし、未知 drive/mode または profile 欠落を finding/fail-close 候補にする。暗黙 default で駆動モデルを有効化しない。 。S7 後は PLAN activation parser / profile assertion を退役する。 |
+| U-SPECIR-R4 | `parseScheduleEntries(bundle)` | S7 前は 工程管理表から deterministic `schedule_entries` draft を返す。date/state 欠落、未解決 plan_id、過去 due 未完了は finding。PLAN status は mutate しない。S7 後は PLAN schedule parser と `schedule_entries` draft assertion を退役する。 |
+| U-SPECIR-R5 | `parseActivationEntries(bundle)` | S7 前は enabled profile は reason を必須とし、未知 drive/mode または profile 欠落を finding/fail-close 候補にする。暗黙 default で駆動モデルを有効化しない。S7 後は PLAN activation parser / profile assertion を退役する。 |
 | U-SPECIR-R6 | `projectSpecIr(input, db)` | `spec_defs` / `spec_relations` / `detector_route_candidates` の idempotent upsert、rebuild安定性、source doc不変更を維持する。S7でschedule / activation projectionを除く。 |
 | U-SPECIR-R7 | `analyzeSpecIrIntegrity(input)` | generic design/spec integrity finding と secret / raw-body guard を維持し、PLAN schedule / activation 固有findingを退役する。 |
 | U-SPECIR-R8 | `deriveDetectorRouteCandidates(input)` | finding/spec と `routeFiling` SSoT から candidate を導出する性質を維持する。schedule / activation 入力への依存は S7 で外す。 |
@@ -1132,7 +1132,7 @@ This addendum pairs `screen-spec.md` with L7 unit-test oracles. It covers the L6
 | U-SPECIR-R10 | `analyzeSpecIrIntegrity(input)` / `parseSpecRelations(bundle, defs)` (PLAN-L7-405) | L1-L6 design document catalog の sub_doc 検証と存在する reference document path の解決を維持する。一意な短縮 PLAN ID の解決は S7 で退役する。 |
 | U-SPECIR-R11 | `stableId(prefix, value)` / projection ID consumers (PLAN-L7-406) | ASCII safe ID は後方互換のまま、非ASCII見出し・パス・空文字は deterministic に正規化される。正規化で情報が落ちる場合は hash suffix で衝突を避け、projection / feedback / skill / workflow のテスト injected deps も同じ helper を使う。 |
 | U-SPECIR-R12 | `parseSpecDefs(bundle)` / `analyzeSpecIrIntegrity(input)` (PLAN-L7-429) | frontmatter `doc_type: index` / `doc_type: verification-roadmap` を宣言する design doc は `spec_kind: design_meta_doc` に分類され、`spec-ir-invalid-subdoc` の対象外になる。meta doc 以外の design doc の sub_doc 検証は従来通り発火する。 |
-| U-SPECIR-R13 | `parseSpecRelations(bundle, defs)` (PLAN-L7-429) | S7 前は PLAN frontmatter の `requires` / `pair_artifact` のうち evidence 参照 (`src/` / `tests/` / `scripts/` / `skills/` / `.ut-tdd/` / `.claude/` / `.github/` / `docs/research/` prefix、および `CLAUDE.md` / `AGENTS.md` / `package.json` / `docs/improvement-backlog.md`) は spec 依存 relation の解決対象外で、orphan relation を発火しない。`pair_artifact: self` は PLAN-REVERSE-12 規定通り unresolved orphan として発火し続ける (実装: tests/spec-ir-projections.test.ts "PLAN-L7-429" ケース)。 。S7 後はこれらの PLAN frontmatter relation assertion を退役する。 |
+| U-SPECIR-R13 | `parseSpecRelations(bundle, defs)` (PLAN-L7-429) | S7 前は PLAN frontmatter の `requires` / `pair_artifact` のうち evidence 参照 (`src/` / `tests/` / `scripts/` / `skills/` / `.ut-tdd/` / `.claude/` / `.github/` / `docs/research/` prefix、および `CLAUDE.md` / `AGENTS.md` / `package.json` / `docs/improvement-backlog.md`) は spec 依存 relation の解決対象外で、orphan relation を発火しない。`pair_artifact: self` は PLAN-REVERSE-12 規定通り unresolved orphan として発火し続ける (実装: tests/spec-ir-projections.test.ts "PLAN-L7-429" ケース)。S7 後はこれらの PLAN frontmatter relation assertion を退役する。 |
 
 ## PLAN-L7-368 Design Lint DB Projection Addendum (2026-07-08)
 
