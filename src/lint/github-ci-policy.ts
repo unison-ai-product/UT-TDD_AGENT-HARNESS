@@ -367,7 +367,9 @@ const nodeGenerationUploadStep = (lane: (typeof NODE_GENERATION_LEGS)[number]) =
       "if-no-files-found": "error",
     },
   });
-const WINDOWS_SHARD_TEST_COMMAND = ["npm run test:windows -- --shard=$", "{{ matrix.shard }}"].join("");
+const WINDOWS_SHARD_TEST_COMMAND = ["npm run test:windows -- --shard=$", "{{ matrix.shard }}"].join(
+  "",
+);
 const WINDOWS_SHARD_STRATEGY = JSON.stringify({
   "fail-fast": false,
   matrix: { shard: ["1/3", "2/3", "3/3"] },
