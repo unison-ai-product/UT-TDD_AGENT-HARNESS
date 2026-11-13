@@ -139,7 +139,7 @@ promotion/rollbackのpointer変更は別のS3 pair-freeze（`CANDIDATE-RELMAN-00
   path は空・NUL・backslash・先頭 `/`・drive・UNC・非正規形・空 / `.` / `..` segment を拒否する
   (`validPublicationPath` / `validPublicationArtifacts`、`src/schema/release-manifest.ts:194-230`)。
 - `mode` は `100644` / `100755` だけを受け付ける。mode `120000` (symlink) は v2 公開契約では拒否する
-  (`PUBLICATION_MODES`、`src/schema/release-manifest.ts:9`)。
+  (`PUBLICATION_MODES`、`src/schema/release-manifest.ts:9`)。 実行 mode を Pack 公開まで保つ方式は `pack-exec-mode.md` (#821)。
 
 ### 7.2 digest の framing
 
