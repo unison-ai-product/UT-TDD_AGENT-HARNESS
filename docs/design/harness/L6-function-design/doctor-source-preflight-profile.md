@@ -10,7 +10,7 @@ next_pair_freeze: L7
 issue: 1037
 ---
 
-> **L6 contract marker**: `resolveDoctorRunProfile(options: DoctorRunProfileResolutionOptions) => DoctorRunProfile` に、PR を出す前の点検用の名前付き profile `source-preflight` を足す unit-test-granularity contract である。候補 oracle は `CANDIDATE-U-PREFLIGHT-001` から `CANDIDATE-U-PREFLIGHT-009`。oracle の詳細は `docs/test-design/harness/L7-doctor-source-preflight-profile-test-design.md` が固定する。
+> **L6 contract marker**: `resolveDoctorRunProfile(options: DoctorRunProfileResolutionOptions) => DoctorRunProfile` に、PR を出す前の点検用の名前付き profile `source-preflight` を足す unit-test-granularity contract である。候補 oracle は `CANDIDATE-U-PREFLIGHT-001` から `CANDIDATE-U-PREFLIGHT-013`。oracle の詳細は `docs/test-design/harness/L7-doctor-source-preflight-profile-test-design.md` が固定する。
 
 > **状態**: 本書は issue #1037 の最初の切り出しに対する**未実装の目標契約**である。実装 (Green) は本書と対の L7 を凍結し、Red を入れた後に別 PR で行う。方式の変更が必要になったら実装を止め、本書と対の L7 を同時に改訂する。
 
@@ -107,7 +107,7 @@ control lane が決め、本書はそれを記録する。再検討の対象に�
 | I1 | `source-preflight` の `outputIds` は `FULL_DOCTOR_OUTPUT_IDS` の部分集合である。CI が流さない check を足さない |
 | I2 | 新しい check の論理を足さない。member の check は registry の既存の定義をそのまま呼ぶ |
 | I3 | doctor singleton を守る。lock の取得は既存の CLI 経路のまま全 profile に共通で、本 profile だけの迂回路を作らない |
-| I4 | 既定の profile (`source-full`) と `source-doc-lane` の check 集合、consumer 向けの profile 一覧は変えない |
+| I4 | 既存の 5 profile (`source-full`、`source-doc-lane`、`source-toolchain`、`consumer-toolchain`、`consumer-setup-smoke`) の check 集合 (`outputIds`) と、consumer 向けの profile 一覧は変えない。変える前の集合は L7 が固定値で持つ |
 | I5 | 結果は助言であり、merge の gate (`ut-tdd pr merge`、CI `harness-check`) は本 profile の結果を読まない |
 
 ## 6. origin/main で確かめた事実
@@ -125,7 +125,7 @@ control lane が決め、本書はそれを記録する。再検討の対象に�
 
 - `src/doctor/profiles.ts`: `DoctorRunProfileId` と `DoctorRunProfile` の union に `source-preflight` を足す。`SOURCE_PREFLIGHT_OUTPUT_IDS`、`DOCTOR_RUN_PROFILES` の entry、`DOCTOR_RUN_PROFILE_IDS` の要素を足す。
 - 既存の test の固定値を更新する: `tests/doctor.test.ts` (profile id の一覧、source の profile 一覧、`sourceOnly` の profile 一覧) と `tests/cli-surface.test.ts` (`--profiles --json` の一覧、未知の profile の message の expected 一覧)。どちらも共有のテストなので、他の PR と並行させない。
-- 候補 oracle の Red は、別の test file に `it.fails` で先に入れる。Green で `it` に戻し、正式 ID へ昇格する。
+- 候補 oracle の Red は別の test file に先に入れ、Red の PR には production の変更を入れない。前提 (登録) を要する oracle の扱いと、本来の理由で落ちることの確かめ方は L7 §6 が定める。Green で全件が走って緑になったとき、正式 ID へ昇格する。
 - `src/cli.ts`、`src/doctor/runner.ts`、`src/doctor/check-definition-groups.ts`、CI の workflow は変えない。
 
 ## 8. 受け入れ条件
