@@ -31,9 +31,13 @@ runner は Vitest の option 定義を introspect せず、次の明示的な集
 | 分類 | 受理する token | 値の扱い |
 |---|---|---|
 | 値を取る | `-t`, `--testNamePattern` | `--option value` と `--option=value` の両方を受理する |
-| 値を取る | `--reporter`, `--maxWorkers`, `--minWorkers`, `--shard` | `--option value` と `--option=value` の両方を受理する |
+| 値を取る | `--reporter`, `--maxWorkers`, `--shard` | `--option value` と `--option=value` の両方を受理する |
 | 値を取る | `--exclude`, `--pool` | `--option value` と `--option=value` の両方を受理する |
 | 値を取らない | `--browser` | bare token のみ受理する |
+
+`--minWorkers` は Vitest 4 で CLI option から削除された (固定版 4.1.12 は `Unknown option --minWorkers` で拒否する)。このため受理集合に含めず、runner は §2.5 の未知 option として自ら拒否する (`--minWorkers=1` と `--minWorkers 1` の両形式)。Vitest 4 に同じ意図の option は無く、worker 数の上限は `--maxWorkers` だけで指定する。拒否の理由は §2.5 の既存の `unknown-option` であり、別の拒否経路は設けない。
+
+**受理集合の不変条件 (I5)**: 受理集合のすべての option は、固定した Vitest 版の実際の CLI 定義が受け付ける。wrapper が受理した token を Vitest が `CACError: Unknown option` で拒否する状態を作らない。この不変条件は Vitest を stub せず、固定版の CLI 定義 (`createCLI().parse` と `matchedCommand.checkUnknownOptions()`) に対する検査で確認する (oracle `U-SNAPARG-004`)。
 
 受理した option、値、test path、その他の passthrough token は、Vitest に渡す際に token の内容と相対順序を変えない。同じ値取り option の複数出現も元の順序のまま渡す。
 
@@ -58,7 +62,7 @@ snapshot runner は batch-only であり、`-w`、`--watch`、`--watch=<value>` 
 
 ## 3. 許可集合の根拠と更新条件
 
-現行 caller の確認対象は package scripts (`--exclude`)、Windows shard (`--shard`)、test-design の直接実行 (`-t` / `--reporter` / `--pool`)、verification profile (`--browser`) である。利用中の option が漏れている場合は、その caller と値の有無を確認してから本書と L7 の明示集合へ追加する。Vitest の内部 option 定義を自動的に許可集合へ取り込まない。
+現行 caller の確認対象は package scripts (`--exclude`)、Windows shard (`--shard`)、test-design の直接実行 (`-t` / `--reporter` / `--pool`)、verification profile (`--browser`) である。利用中の option が漏れている場合、または Vitest を更新して option が削除・改名された場合は、その caller と値の有無を確認してから本書と L7 の明示集合へ追加する。Vitest の内部 option 定義を自動的に許可集合へ取り込まない。
 
 ## 4. 不変条件
 
@@ -68,3 +72,4 @@ snapshot runner は batch-only であり、`-w`、`--watch`、`--watch=<value>` 
 | I2 | runner は Vitest の option 全体を暗黙に許可せず、本書の allowlist と separator escape hatch のみを使う |
 | I3 | 許可 option の値・位置、positional test path、separator passthrough は入力 argv の token を損なわない |
 | I4 | watch は snapshot と整合しないため、batch-only 拒否を維持する |
+| I5 | 受理集合の option はすべて、固定した Vitest 版の実際の CLI 定義が受け付ける (§2.1)。削除済みの `--minWorkers` は受理せず §2.5 で拒否する |

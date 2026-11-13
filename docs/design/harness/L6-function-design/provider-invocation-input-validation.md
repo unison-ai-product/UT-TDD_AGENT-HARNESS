@@ -27,7 +27,7 @@ CLIからprovider invocationを組み立てる前にmodel / reasoning effortを�
 | 値 | 正本 | M1契約 |
 |---|---|---|
 | model override | `src/schema/team.ts` の `modelOverrideSchema` | 既存の受理集合をそのまま使用する。新しいmodel文法・aliasを足さず、受理集合を狭めない。 |
-| reasoning effort | `src/schema/team.ts` の `reasoningEffortSchema` | 既存の受理集合をそのまま使用する。既存の`medium` / `middle`正規化を保つ。 |
+| reasoning effort | `src/schema/team.ts` の `reasoningEffortSchema` | 受理集合は `low` / `medium` / `middle` / `high` / `xhigh` / `max` とする (`max` を追加。issue #733)。既存の`medium` / `middle`正規化を保つ。Claude Code CLI は `--effort` として `low, medium, high, xhigh, max` を受理する (実測 2026-11-11: Claude Code 2.1.293 の `claude --help`)。したがってClaudeへ渡すeffortは`middle`→`medium`以外では下げず、`xhigh` / `max` はそのまま argv (`--effort`) と env (`CLAUDE_EFFORT_ENV`) へ渡す。Codexの挙動は変えない。`max` はClaude専用で、providerがcodexでeffortが`max`のときは`resolveDelegationRouting`と`buildAdapterPlan`の両入口で`provider_effort_invalid`として拒否する (Codexの`max`の実機受理が未測定のため。測ったら別の改訂で開く)。 |
 
 省略値 (`undefined`) は任意入力として許可する。空文字列や既存schemaに適合しない値は拒否する。schemaを複製したり、CLIごとに別の受理集合を定義したりしない。`[1m]`のような個別入力を根拠に受理文法を追加・変更しない。
 
