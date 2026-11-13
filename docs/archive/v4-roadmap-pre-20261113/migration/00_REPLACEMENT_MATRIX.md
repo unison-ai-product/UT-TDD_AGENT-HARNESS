@@ -1,5 +1,7 @@
 # 新旧置換・維持・退役マトリクス
 
+> **退役 (2026-11-13、#1672):** 2026-11-13 の見直し前の計画の派生物。要件の区分と版のはしご (`docs/governance/candidates/v4-roadmap/README.md`) と trace に置き換わったため、ここへ移した。現行の割り当てには使わない。
+
 生成元：data/migration_manifest.json。各Rは[版一覧](../01_RELEASE_MATRIX.md)参照。defaultは対象scope/consumerでの承認済み切替であり、全導入先への自動適用ではない。退役審査版でも証拠不足なら削除せず理由と残存ownerを記録する。
 
 旧writer停止は対象recordの旧書込み停止を指す。licenseや既定policyは「旧規定を新規配布へ適用しない開始点」であり、既存許諾の取消しではない。併存期間でも同一recordの二重writerは許さない。

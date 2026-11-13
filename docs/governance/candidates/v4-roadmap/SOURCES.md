@@ -1,5 +1,7 @@
 # 出典と観測範囲
 
+> **2026-11-13 の見直し前の記録。現行の割り当ては README の版のはしご** ([README](README.md))。要件の区分は `ut-tdd-concept-v4-requirements.md` の最初の表が正本で、この文書に残る旧版 (R03〜R09、0.6.0〜0.9.0 など) の割り当てや要件の区分は、見直し前のものである。
+
 2026-09-08に計画を改訂。GH-MAIN/GH-PKG/GH-PR517/GH-PR517-FR/GH-PR517-AC/GH-481/GH-480は今回コネクタから取得。他は前版の固定引用を継承。法律・費用・versioningの一次資料も確認した。全リポジトリ/全コードの再監査ではない。
 
 | 参照ID | 対象 | 根拠/限定 |
@@ -7,7 +9,7 @@
 | GH-MAIN | [2026-09-08 mainの取得](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/commit/84cd7f896f7dfbd67b38b250b5a943eaee3f6640) | main=84cd7f89、#521契約PRのmerge。現在の全CIや全Issue状態をこの文書で保証しない。 |
 | GH-PKG | [main package.json](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/blob/84cd7f896f7dfbd67b38b250b5a943eaee3f6640/package.json) | version=0.2.0-canary.1、license=MIT。packageのversionは公開済みreleaseの証明ではない。 |
 | GH-PR517 | [PR #517](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/517) | draft/open、HEAD=c21b54fb0d3f2d5a73a7826cc41233634456cac9。新規版番号は本計画案。 |
-| GH-PR517-FR | [#517要件候補](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/blob/c21b54fb0d3f2d5a73a7826cc41233634456cac9/docs/governance/candidates/ut-tdd-concept-v4-requirements.md) | FR-001..059。sourceのIDを保存してsummary/版を対応付ける。 |
+| GH-PR517-FR | [#517要件候補](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/blob/c21b54fb0d3f2d5a73a7826cc41233634456cac9/docs/governance/candidates/ut-tdd-concept-v4-requirements.md) | FR 59 件 (番号 001 から 059)。sourceのIDを保存してsummary/版を対応付ける。 |
 | GH-PR517-AC | [#517受入候補](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/blob/c21b54fb0d3f2d5a73a7826cc41233634456cac9/docs/governance/candidates/ut-tdd-concept-v4-acceptance.md) | AC-001..072。候補であり実行済みtestではない。 |
 | GH-PR517-BR | [#517要求候補](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/blob/c21b54fb0d3f2d5a73a7826cc41233634456cac9/docs/governance/candidates/ut-tdd-concept-v4-requests.md) | BR-001..032。今回のtraceは各FRに記載されたBRを対応付ける。 |
 | GH-PR517-CONCEPT | [構想v4候補](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/blob/c21b54fb0d3f2d5a73a7826cc41233634456cac9/docs/governance/candidates/ut-tdd-concept-v4.0.md) | 6 Plane、human-on-the-loop、narrative/record/view、TypeScript/Node継承。 |
@@ -26,6 +28,6 @@
 | WEB-SCHED | [資源と先行制約によるschedule](https://developers.google.com/optimization/scheduling/job_shop) | 先行制約と資源の競合という問題整理のみ参考。OR-Tools採用や最適解保証はしない。 |
 
 ## 入力ファイル
-前版v1.3ロードマップと差し込み指示を全範囲読んで再編。原本は変更せず、sha256をdata/input_inventory.jsonへ記録。本版は説明/版計画を置換するが、前版の決定を後述の明示変更以外で撤回しない。
+前版v1.3ロードマップと差し込み指示を全範囲読んで再編。原本は変更せず、sha256を`docs/archive/v4-roadmap-pre-20261113/data/input_inventory.json`へ記録。本版は説明/版計画を置換するが、前版の決定を後述の明示変更以外で撤回しない。
 
 本資料のR/SL/MIG/SCHEDはローカルの提案ID。UTの正規PLAN、GitHub Issue、承認receiptを発行したものではない。GitHubへのwriteは実行していない。

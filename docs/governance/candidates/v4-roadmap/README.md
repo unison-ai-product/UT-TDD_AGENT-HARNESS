@@ -3,7 +3,7 @@
 > **版2.5 の改訂メモ (2026-11-13、#1005 のコメント 6822862705 / 6844628646、見直しの 2 本目):** v4 の要求 80 件の区分 (残す 12 / 簡素化 32 / 先送り 21 / 撤回 15。正本は `../ut-tdd-concept-v4-requirements.md` の最初の表の行頭の印) に合わせ、次を改めた。
 > - **版の割当を 1.0.0 までの 4 段 (0.3.0 / 0.4.0 / 0.5.0 / 1.0.0) にした。** 区分が残す・簡素化の要求 44 件は、必ずどれかの段に割り当てた (下の「版のはしご」)。先送り 21 件と撤回 15 件は段に入れず、下の「1.0.0 の対象外」に載せた。区分は 4 つだけで、「1.0.0 の後でよい簡素化」という置き場は持たない。
 > - 旧 0.6.0〜0.9.0 は無くなった。工程 ④ (ディレクトリ再編、UTV4-FR-070 (先送り)) の canary も出さない。チケットの正本は GitHub Issue とする (UTV4-FR-004)。1.0.0 が保証する運用形態は hybrid だけとする (UTV4-FR-023)。
-> - 本文のうち、これと食い違う記述 (旧 R03〜R09 の範囲、`data/*.json` と、それから生成した表) は、この改訂メモと「版のはしご」を優先する。`data/*.json` と生成表は再生成していない (再生成して差分 0 にするのは UTV4-FR-080 の範囲で、手順が決まった後)。
+> - 本文のうち、これと食い違う記述 (旧 R03〜R09 の範囲など) は、この改訂メモと「版のはしご」を優先する。見直し前の計画の派生物 (`data/*.json`、それから作った版一覧・能力表・移行表・作業計画など) は、repo に生成スクリプトが無く、版のはしごと trace に置き換わったので、2026-11-13 に `docs/archive/v4-roadmap-pre-20261113/` へ退役した (#1672。一覧は同 dir の README)。残した文書には冒頭に「見直し前の記録」と注記した。
 > - 区分と版の割当の整合は `node docs/governance/candidates/v4-ledger-check.mjs` が機械で確かめる。
 
 **文書版2.4／2026-11-10 (版2.3 は 2026-10-14、版2.2 は 2026-10-13、版2.1 は 2026-10-08、版2.0 は 2026-09-08)。** 版2.4 では、2026-11-10 時点の現在地と、PO 判断 (2026-10-20、#1078 コメント 6287013301) による順序の変更 (PLAN の縮退 → Pack のデプロイ → 自己導入) を反映し、次の Pack (canary.8) の扱いを改めました。open issue の割当表 ([execution/04_ISSUE_INTAKE.md](execution/04_ISSUE_INTAKE.md)) も 2026-11-10 時点の 241 件で作り直しました。版2.3 では、PO の指示 (2026-10-14) に合わせて、② の進め方を「PLAN を消して壊れる依存だけを外し、② の中で PLAN を退役させる」に改め、PLAN 退役から ⑧ までの暫定の運用と、⑩ の Office 書き出し (#1033) を足しました。版2.2 では、2026-10-13 時点の現在地 (下の「現在地」)、工程 ③ への版上げの集約、移行の進み具合の 3 指標を足しました。 版2.0 の版別計画を、2026-10-08 に PO が決めた v4 完遂までの工程順 ①〜⑪ (#530 コメント 6051336079、補足 6051373331) に合わせて直しました。**工程順が版割当より優先します。** 版割当が工程順と食い違う箇所は工程順に合わせ、決められない対応は「⑥ で確定」としています。runtime 実装・CI 実行・製品受入は行っていません。
@@ -37,7 +37,7 @@
 | Pack 公開前の安全修理 (② と並行) | **進行中**。次の Pack (canary.8) に入れる修理。worktree ごとの runtime の導入 (#1525、実装 #1594 を 2026-11-10 に merge)、Claude Code の旧版で guard が fail-open になる件 (#1561、Red の PR #1591 を review 中)、guard hook の fail-close (#1521 / #1538)、導入が途中で失敗したときの rollback (#1592)、Node の脆弱性修正版への pin 上げ (#1589、2026-11-11 のリリース後)。merge の判定の詰まりを減らす #1559 の実装も並行する。公開の前に、中断した review request の回収経路 (#493 / #1600) と、Pack の Issue 4 件 (#971 / #972 / #1057 / #1072) を次の Pack に入れるかを決める (#1078 コメント 6288697358) | #1078 コメント 6756026088、#1528 |
 | ③ | 未着手。着手条件は、② の凍結完了、次の Pack (canary.8) の公開、worktree・ブランチの全面クリーン化 (下の「③ の着手条件」) | #961 |
 
-**版2.3 で置き換える旧記述**: ② の進め方と ⑧ の PLAN 廃止について、本 README の版2.3 の記述が、同じ dir の旧い記述より優先する。置き換える旧記述は、`00_VERSION_STRATEGY.md` の「⑧ の最初の版で PLAN を廃止する」、`execution/01_DEPENDENCIES_AND_WORK_PACKAGES.md` の「② で全 PLAN を仕分け、生きている PLAN の契約を反映し設計を再編する」、`execution/04_ISSUE_INTAKE.md` の「#959 は全 PLAN の仕分け」と、② の (a)〜(d) を旧い定義で参照している箇所。これらの文書は、② の作業で触るときに版2.3 に合わせて直す。
+**版2.3 で置き換える旧記述**: ② の進め方と ⑧ の PLAN 廃止について、本 README の版2.3 の記述が、同じ dir の旧い記述より優先する。置き換える旧記述は、`00_VERSION_STRATEGY.md` の「⑧ の最初の版で PLAN を廃止する」、`execution/01_DEPENDENCIES_AND_WORK_PACKAGES.md` (退役済み) の「② で全 PLAN を仕分け、生きている PLAN の契約を反映し設計を再編する」、`execution/04_ISSUE_INTAKE.md` の「#959 は全 PLAN の仕分け」と、② の (a)〜(d) を旧い定義で参照している箇所。これらの文書は、② の作業で触るときに版2.3 に合わせて直す。
 
 **版2.4 で置き換える旧記述**: 順序と canary.8 について、本 README の版2.4 の記述が、同じ dir の旧い記述より優先する。置き換える旧記述は、本 README の旧「canary.8 の扱い (PO 判断 2026-10-13)」のうち「版上げは ③ でまとめて作り、その時点の canary として出す」を canary.8 にも当てはめていた読み方と、`execution/04_ISSUE_INTAKE.md` の 2026-10-08 版の表・2026-10-13 の追補 (2026-11-10 版で置き換えた)。
 
@@ -71,7 +71,7 @@
 
 ## 簡易の複数人運用 (PO 2026-10-08)
 
-チケットへ切り替えた時点から、複数人で回せる形にします。R05 (0.5.0) のチケット自動発行・lease・動的な再計画は待ちません。
+チケットへ切り替えた時点から、複数人で回せる形にします。旧 R05 のチケット自動発行・lease・動的な再計画 (作らない。UTV4-FR-073 (撤回)) は待ちません。
 
 - 配り方は「最初にまとめて配り、各自が消化する」にします。サイクルの初めに、互いに依存しない機能・責務の単位でチケットを複数枚切り (UTV4-FR-032)、触る path が重ならないことを確かめてから一度に配ります。各自は自分に割り当てられた分だけを消化します。途中で配り直したり取り合ったりしないので、lease や動的な再計画が無くても衝突が起きにくくなります。依存が残る部分は、先にインターフェースだけを決めるチケットを切ります。サイクル中に新しく出た作業は次のサイクルで配ります。blocker だけは例外として、その場で 1 人に割り当てます。
 - チケットの正本は GitHub Issue / Sub-issue / PR です (2026-11-12 の見直し、UTV4-FR-004)。独自のチケット store・tracked 記録・投影・ずれ検出は作りません。主担当は assignee 1 人 (UTV4-FR-003) で、着手の宣言 (claim) は self-assign とし、assign 済みへの 2 人目の assign は lint か bot で拒否します (UTV4-FR-005)。担当替えは GitHub の timeline に残ります (UTV4-FR-030 (撤回))。成果物は PR です。Issue は作業の許可であって権限を持たず、契約本文は設計文書に置きます。
@@ -105,23 +105,9 @@
 - **撤回 (15 件):** FR-007 / 016 / 020 / 021 / 022 / 030 / 036 / 041 / 047 / 060 / 061 / 062 / 068 / 073 / 076
 
 
-## 参考：版2.0 の版別範囲 (2026-09-08)
+## 参考：版2.0 の版別範囲 (退役)
 
-下表は版2.0 の版別範囲です。**R02〜R10 の中身と順序は ⑥ で見直します。** R00/R01 の行は実績と食い違っています (Pack は canary.1〜5 を公開済み、ライセンスは MPL-2.0 ではなく Apache-2.0)。
-
-| 配布版案 | 利用可能にする範囲 | まだ有効にしないもの |
-|---|---|---|
-| 0.2.0-canary.1 | 現行MITの初回Pack-only受入 | v4新機能をCanaryの追加blockerにしない |
-| 0.2.0-canary.2 | **UT本体のMPL-2.0移行**、管理・権利・対象版の定義 | 過去MIT版の書換え、機能全有効化 |
-| 0.2.0 | updater、A/B独立更新・rollback、現行運用基盤 | v4全体の完成主張 |
-| 0.3.0 | **共通JSON契約・reader/writer・移行adapter** | 予測だけを根拠とする配布、書込BugBot |
-| 0.4.0 | consumer低コストCI、表・図、**読取専用の作業順序予測** | 自動配布、推定値の確定時刻扱い |
-| 0.5.0 | 4階層ticket、**制約付き配布・再計画**、排他・安全・回復 | 実Botによる自動修正 |
-| 0.6.0 | **UT準拠の限定BugBot**、再現→修正→独立受入 | 自己承認、検査緩和、無限retry |
-| 0.7.0 | 上流要求・PoC・画面製本、backflow・再compile、active PLAN移行 | 学習器のauthority変更 |
-| 0.8.0 | provider-native生成、単一providerの補償統制、能力再評価 | provider名だけを根拠とする独立性認定 |
-| 0.9.0 | 対策資産・context縮退・低価格化、**実績で校正する順序予測** | 新モデルだから安全/速いという無根拠昇格 |
-| 1.0.0 | **構想v4の全範囲・移行・consumer統合受入**とpublic API安定化 | 未移行のactive二重writer・架空のPASS |
+版2.0 (2026-09-08) の版別範囲の表 (0.2.0-canary.1 から 1.0.0 までの 11 行。0.3.0〜0.9.0 を前提にしていた) は、2026-11-13 に退役した。現行の割り当ては上の「版のはしご」で、旧表の 0.6.0 (限定 BugBot) は、それを裏付ける要求が無く、無くなった。旧表と元の版一覧は `docs/archive/v4-roadmap-pre-20261113/01_RELEASE_MATRIX.md` にある。
 
 **構想v4.0とpackage4.0.0は同じではありません。** 2026-10-13 時点で Pack は 0.2.0-canary.7 まで公開済みです (prerelease、Windows 受入 PASS、#946)。source の package.json の表示は 0.2.0-canary.1 のままです (#867)。本計画では構想v4統合受入をpackage1.0.0へ対応付けます。版割当は今回の具体案であり、公開済みtagでも正式採番の完了でもありません。[GH-PKG][GH-PR517]
 
@@ -130,28 +116,19 @@
 | 確認したいこと | ファイル |
 |---|---|
 | 版番号、patch/minor、channel、サポート、branchのルール | [00_VERSION_STRATEGY.md](00_VERSION_STRATEGY.md) |
-| 各版の差分・対応範囲 | [01_RELEASE_MATRIX.md](01_RELEASE_MATRIX.md) → `releases/`の11文書 |
-| 各版時点で何がどこまで使えるか（累積） | [trace/CAPABILITY_MATRIX.md](trace/CAPABILITY_MATRIX.md) |
+| 各版の差分・対応範囲 | `releases/`の11文書 (R06〜R09 は無くなった版。現行の割り当ては上の「版のはしご」) |
 | 現行資産の再利用・変更しないもの | [02_CURRENT_BASELINE.md](02_CURRENT_BASELINE.md) |
-| 20領域の旧→新、既定化、旧writer停止、退役判定 | [migration/00_REPLACEMENT_MATRIX.md](migration/00_REPLACEMENT_MATRIX.md) |
-| JSON/PLAN/権限の一正本移行と失敗回復 | [migration/01_AUTHORITY_AND_RECORDS.md](migration/01_AUTHORITY_AND_RECORDS.md) |
 | consumerの段階更新・状態互換・rollback | [migration/02_CONSUMER_UPGRADE_AND_ROLLBACK.md](migration/02_CONSUMER_UPGRADE_AND_ROLLBACK.md) |
 | CI/role/Memory/図などの個別置換 | [migration/03_COMPONENT_CUTOVERS.md](migration/03_COMPONENT_CUTOVERS.md) |
-| 実コード面と契約族別のread/write切替 | [migration/05_SURFACE_AND_SCHEMA_PLAN.md](migration/05_SURFACE_AND_SCHEMA_PLAN.md) |
 | MPL対象、旧MIT、第三者、コピーされる生成物 | [migration/04_LICENSE_BOUNDARY.md](migration/04_LICENSE_BOUNDARY.md) |
-| 順序予測・配布・再計画の仕様案と14受入ケース | [workstreams/01_SCHEDULING.md](workstreams/01_SCHEDULING.md) |
-| AI/CIコスト、セキュリティ、管理、context、BugBot | `workstreams/02`〜`06` |
-| 実装順・並行可能範囲・責務別作業単位 | [execution/01_DEPENDENCIES_AND_WORK_PACKAGES.md](execution/01_DEPENDENCIES_AND_WORK_PACKAGES.md) |
-| #517へ渡す短い差し込み指示 | [execution/02_PR517_INTEGRATION.md](execution/02_PR517_INTEGRATION.md) |
-| 実装前に採択する16契約判断 | [execution/03_CONTRACT_DECISIONS.md](execution/03_CONTRACT_DECISIONS.md) |
+| AI/CIコスト、セキュリティ、管理、context (見直し前の記録) | `workstreams/02`〜`05` |
 | open issue を閉じる工程 | [execution/04_ISSUE_INTAKE.md](execution/04_ISSUE_INTAKE.md) |
-| 旧候補 (32BR・59FR・72AC) をどの版で閉じるか。現行の候補は 50BR・80FR・95AC (release 必須 38) で、対応表の再計算は ⑥ | [trace/REQUIREMENT_COVERAGE.md](trace/REQUIREMENT_COVERAGE.md) / [AC_COVERAGE.md](trace/AC_COVERAGE.md) |
-| 今回までの追加13要求 | [trace/ADDITIONS.md](trace/ADDITIONS.md) |
+| 現行の候補 (50BR・80FR・95AC、release 必須 38) をどの版で閉じるか。区分と新しい版の列は要件候補・受入候補と版のはしごに揃えてある | [trace/REQUIREMENT_COVERAGE.md](trace/REQUIREMENT_COVERAGE.md) / [AC_COVERAGE.md](trace/AC_COVERAGE.md) |
 | 出典と、行った資料検査の範囲 | [SOURCES.md](SOURCES.md) / [VALIDATION.md](VALIDATION.md) |
 
 ## 実装担当へ渡す単位
 
-最初に版規則と当該release文書を読み、その版のSL、対象MIG、FR/AC、該当workstreamだけを渡します。全資料を毎回promptへ投入しません。Markdownは方針説明、`data/*.json`はこの**計画資料**の版・依存・対応表の正本です。製品の実行用schemaやapproval recordではありません。ただし `data/*.json` の版・channel・公開手順 (例: `data/releases.json` の R02 / 0.2.0 stable、「canary/rc で A/B 検証後 stable channel へ」) は版2.0 (2026-09-08) の旧参考です。工程順 ①〜⑪ と、正式版を 1.0.0 だけにする PO 決定 (2026-10-13、#530 コメント 6139060937) と食い違う箇所は、上の結論表と [00_VERSION_STRATEGY.md](00_VERSION_STRATEGY.md) を正とします。
+最初に版規則と当該release文書を読み、その版のSL、対象MIG、FR/AC、該当workstreamだけを渡します。全資料を毎回promptへ投入しません。Markdownは方針説明です。版・依存・対応表の正本は、要件の区分表 (`../ut-tdd-concept-v4-requirements.md`) と上の「版のはしご」で、製品の実行用schemaやapproval recordではありません。旧 `data/*.json` (版2.0 の版・channel・公開手順を持つ) は退役しました。工程順 ①〜⑪ と、正式版を 1.0.0 だけにする PO 決定 (2026-10-13、#530 コメント 6139060937) と食い違う箇所は、上の結論表と [00_VERSION_STRATEGY.md](00_VERSION_STRATEGY.md) を正とします。
 
 各release文書は「できること／未対応／旧新／依存／作業単位／受入／有効化／切戻し／退役／要求対応／読取範囲」を持ちます。既定化はそのconsumerの承認と移行成立後であり、全導入先への強制更新ではありません。
 
@@ -163,24 +140,9 @@
 
 予測・チケット生成・配布は別責務です。先行taskが予測時刻になっても、それだけでは着手できません。実際の依存証拠・権限・資源・leaseを直前に再確認します。
 
-## 前版からの移設表
+## 前版からの移設表 (退役)
 
-| v1.3の章/段階 | 本版の主な置き場 |
-|---|---|
-| §1〜3 方針・M0〜M6 | 00/01、release別文書、累積capability表 |
-| §4 MPL | migration/04、R01 |
-| §5 JSON・費用 | migration/01、workstreams/02、R03/R04 |
-| §6 自動修正・回復 | workstreams/06、R05/R06 |
-| §7.1〜7.5 元v4機能 | 全FR/ACのtrace、R04〜R09、migration/03 |
-| §7.6 安全性 | workstreams/03、R01/R03/R05の先行境界 |
-| §7.7〜7.8 context/対策 | workstreams/05、R03計測→R09昇格 |
-| §7.9 管理体制 | workstreams/04、R01方針→R03契約→R05強制 |
-| §8 契約論点 | execution/03、migration全体 |
-| §9〜10 対応・測定 | trace、data、各版AC・作業単位 |
-| §13 #517差し込み | execution/02 |
-| 今回追加の順序予測 | workstreams/01、07、R03/R04/R05/R09、RM-ADD-12 |
-
-前版は履歴として保持します。本版が版配分/移行順の最新版です。旧版の「詳細は後で」の割当だけを併用して、別々の実行計画を立てないでください。
+v1.3 から版2.0 への章の移設表は、移設先の多く (版一覧、能力表、`workstreams/01`・`06`・`07`、`execution/01`〜`03`) が退役したので 2026-11-13 に削除した。前版は履歴として保持する。版配分と移行順の最新は、上の結論表と「版のはしご」である。
 
 ## 資料検査の再実行
 

@@ -4,7 +4,7 @@
 
 **2026-10-08 の注記 (2026-11-13 に改訂):** 「一式受入目標 (旧版)」は旧候補 72 AC の割当です。旧版の割当と新しい版が食い違うときは、「新しい版」の列を使います。
 
-生成元：data/requirement_trace.json。各候補をtest-designへ降下して実行する計画。すべて未実行であり、表の行があることをテスト通過と数えない。
+生成元：生成元は無い。2026-11-13 に要件候補・受入候補・README の版のはしごから作り直した表で、再生成の仕組みは UTV4-FR-080 の範囲 (退役した旧 data/requirement_trace.json は `docs/archive/v4-roadmap-pre-20261113/data/` にある)。各候補をtest-designへ降下して実行する計画。すべて未実行であり、表の行があることをテスト通過と数えない。
 
 | AC | 対応FR | 一式受入目標 (旧版) | release 必須 | 新しい版 | 状態 |
 |---|---|---|---|---|---|
@@ -105,4 +105,4 @@
 | UTV4-AC-095 | UTV4-FR-079 | ― | yes | 0.3.0 | 未実行 |
 | UTV4-AC-096 | UTV4-FR-080 | ― | no | 0.3.0 | 未実行 |
 
-元の刺激/oracleはPR #517の固定HEADの候補を参照。追加要求はADDITIONS.mdと各workstream。sourceへの参照は[出典](../SOURCES.md)。
+元の刺激/oracleはPR #517の固定HEADの候補を参照。追加要求は退役した旧 ADDITIONS (`docs/archive/v4-roadmap-pre-20261113/trace/ADDITIONS.md`) と各workstream。sourceへの参照は[出典](../SOURCES.md)。
