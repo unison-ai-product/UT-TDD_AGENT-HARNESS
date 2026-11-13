@@ -28,6 +28,8 @@ export interface DoctorDeps {
   listDir: (dir: string) => string[];
   /** Optional PF3 input; node deps populate it, tests may provide facts directly. */
   worktreeTopology?: WorktreeTopologyProvider;
+  /** Optional Claude Code probe; tests can avoid invoking a host executable. */
+  readPathClaudeVersion?: () => string | null;
 }
 
 export function handoverDeps(deps: DoctorDeps): HandoverDeps {

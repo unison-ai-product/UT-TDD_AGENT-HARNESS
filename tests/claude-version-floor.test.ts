@@ -279,7 +279,7 @@ describe.sequential("Claude Code version floor warning (Issue #1561)", () => {
     expect(readFileSync(eventPath, "utf8")).toContain('"session_id":"ccver-precondition"');
   });
 
-  it.fails("U-CCVER-001: warns only below the floor using one hook JSON object", () => {
+  it("U-CCVER-001: warns only below the floor using one hook JSON object", () => {
     const violations: string[] = [];
     for (const [index, { latest, result }] of prepared.cases001.entries()) {
       if (index === 0) {
@@ -305,7 +305,7 @@ describe.sequential("Claude Code version floor warning (Issue #1561)", () => {
     expect(violations).toEqual([]);
   });
 
-  it.fails("U-CCVER-002: reports when the running Claude version cannot be read", () => {
+  it("U-CCVER-002: reports when the running Claude version cannot be read", () => {
     const violations: string[] = [];
     for (const { name, result } of prepared.cases002) {
       if (
@@ -318,7 +318,7 @@ describe.sequential("Claude Code version floor warning (Issue #1561)", () => {
     expect(violations).toEqual([]);
   });
 
-  it.fails("U-CCVER-003: emits the warning once per session", () => {
+  it("U-CCVER-003: emits the warning once per session", () => {
     const sessionIds = ["ccver-003-a", "ccver-003-a", "ccver-003-a", "ccver-003-b"];
     const violations: string[] = [];
     const outputs = prepared.outputs003;
@@ -340,7 +340,7 @@ describe.sequential("Claude Code version floor warning (Issue #1561)", () => {
     expect(violations).toEqual([]);
   });
 
-  it.fails("U-CCVER-004: keeps the floor consistent and doctor advisory", async () => {
+  it("U-CCVER-004: keeps the floor consistent and doctor advisory", async () => {
     const violations: string[] = [];
     if (!prepared.case004.adapterDoc.includes(prepared.case004.floor)) {
       violations.push("adapter doc must contain the shared floor");
@@ -362,7 +362,7 @@ describe.sequential("Claude Code version floor warning (Issue #1561)", () => {
     expect(violations).toEqual([]);
   });
 
-  it.fails("U-CCVER-005: makes the shared floor authoritative across seams", async () => {
+  it("U-CCVER-005: makes the shared floor authoritative across seams", async () => {
     const violations: string[] = [];
     if (prepared.case005.evaluated !== "below") {
       violations.push("comparison must follow the mocked shared floor");
@@ -419,7 +419,7 @@ describe.sequential("Claude Code version floor warning (Issue #1561)", () => {
     expect(failures).toEqual([]);
   });
 
-  it.fails("U-CCVER-007: warns only in a Claude runtime", () => {
+  it("U-CCVER-007: warns only in a Claude runtime", () => {
     const violations: string[] = [];
     for (const { suffix, sessionId, result, expectsWarning } of runtimeCases007) {
       if (expectsWarning) {
@@ -445,7 +445,7 @@ describe.sequential("Claude Code version floor warning (Issue #1561)", () => {
     expect(violations).toEqual([]);
   });
 
-  it.fails("U-CCVER-008: warns on every hook when the marker cannot be written", () => {
+  it("U-CCVER-008: warns on every hook when the marker cannot be written", () => {
     const violations: string[] = [];
     let warningCount = 0;
     for (const [index, result] of markerFailureCases008.entries()) {

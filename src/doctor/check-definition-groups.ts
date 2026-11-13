@@ -4,6 +4,7 @@ import { checkDocSplit } from "../lint/doc-split-inputs.ts";
 import { checkErasableSyntax } from "../lint/erasable-syntax.ts";
 import { checkImportSpecifiers } from "../lint/import-specifier.ts";
 import type { LintResult } from "../plan/lint.ts";
+import { checkClaudeVersionFloor } from "./claude-version-floor-check.ts";
 import {
   checkAgentContractDetection,
   checkDbProjectionCoverage,
@@ -132,6 +133,48 @@ function fullAndToolchain(id: string, run: () => LintResult): DoctorCheckDefinit
   return { id, profiles: fullAndToolchainProfiles, run };
 }
 
+function dependencyAndDbGroup(
+  deps: DoctorDeps,
+  options: DoctorOptions,
+  state: DoctorCheckDefinitionGroupState,
+): DoctorCheckDefinitionGroup {
+  return {
+    id: "dependency-and-db",
+    definitions: [
+      full("dependency-drift", () => {
+        const result = checkDependencyDrift(deps.repoRoot);
+        state.dependencyDriftResult = result.result;
+        return result;
+      }),
+      full(
+        "regression-expansion",
+        () => checkRegressionExpansion(deps.repoRoot, state.dependencyDriftResult),
+        ["dependency-drift"],
+      ),
+      full("db-projection-coverage", () => checkDbProjectionCoverage(deps.repoRoot)),
+      full("db-projection-ingestion", () => checkDbProjectionIngestion(deps.repoRoot, options)),
+      full("design-detection", () => checkDesignDetection(deps.repoRoot)),
+      full("design-doc-cross-integrity", () => checkDesignDocCrossIntegrity(deps.repoRoot)),
+      full("typed-spec-trace-closure", () => checkTypedSpecTraceClosure(deps.repoRoot)),
+      full("typed-spec-ledger-body-sync", () => checkTypedSpecLedgerBodySync(deps.repoRoot)),
+      full("typed-spec-owned-artifact-dispersal", () =>
+        checkTypedSpecOwnedArtifactDispersal(deps.repoRoot),
+      ),
+      full("typed-spec-phase-layer-alignment", () =>
+        checkTypedSpecPhaseLayerAlignment(deps.repoRoot),
+      ),
+      full("agent-contract-detection", () => checkAgentContractDetection(deps.repoRoot)),
+      full("doc-consistency", () => checkDocConsistency(deps.repoRoot)),
+      full("entity-coverage", () => checkEntityCoverage(deps.repoRoot)),
+      full("fr-registry-audit", () => checkFrRegistryAudit(deps.repoRoot)),
+      full("resource-kernel-fixture-manifest", () =>
+        checkResourceKernelFixtureManifest(deps.repoRoot),
+      ),
+      full("resource-kernel-pair-mapping", () => checkResourceKernelPairMapping(deps.repoRoot)),
+    ],
+  };
+}
+
 export function buildDoctorCheckDefinitionGroups(
   deps: DoctorDeps,
   options: DoctorOptions = {},
@@ -195,6 +238,9 @@ export function buildDoctorCheckDefinitionGroups(
         full("codex-wrapper-parity", () => checkCodexWrapperParity(deps)),
         full("windows-hide", () => checkWindowsHide(deps.repoRoot)),
         fullAndToolchain("toolchain-pin", () => checkToolchainPin(deps.repoRoot)),
+        fullAndToolchain("claude-version-floor", () =>
+          checkClaudeVersionFloor({ readPathClaudeVersion: deps.readPathClaudeVersion }),
+        ),
       ],
     },
     {
@@ -229,41 +275,7 @@ export function buildDoctorCheckDefinitionGroups(
         ),
       ],
     },
-    {
-      id: "dependency-and-db",
-      definitions: [
-        full("dependency-drift", () => {
-          const result = checkDependencyDrift(deps.repoRoot);
-          state.dependencyDriftResult = result.result;
-          return result;
-        }),
-        full(
-          "regression-expansion",
-          () => checkRegressionExpansion(deps.repoRoot, state.dependencyDriftResult),
-          ["dependency-drift"],
-        ),
-        full("db-projection-coverage", () => checkDbProjectionCoverage(deps.repoRoot)),
-        full("db-projection-ingestion", () => checkDbProjectionIngestion(deps.repoRoot, options)),
-        full("design-detection", () => checkDesignDetection(deps.repoRoot)),
-        full("design-doc-cross-integrity", () => checkDesignDocCrossIntegrity(deps.repoRoot)),
-        full("typed-spec-trace-closure", () => checkTypedSpecTraceClosure(deps.repoRoot)),
-        full("typed-spec-ledger-body-sync", () => checkTypedSpecLedgerBodySync(deps.repoRoot)),
-        full("typed-spec-owned-artifact-dispersal", () =>
-          checkTypedSpecOwnedArtifactDispersal(deps.repoRoot),
-        ),
-        full("typed-spec-phase-layer-alignment", () =>
-          checkTypedSpecPhaseLayerAlignment(deps.repoRoot),
-        ),
-        full("agent-contract-detection", () => checkAgentContractDetection(deps.repoRoot)),
-        full("doc-consistency", () => checkDocConsistency(deps.repoRoot)),
-        full("entity-coverage", () => checkEntityCoverage(deps.repoRoot)),
-        full("fr-registry-audit", () => checkFrRegistryAudit(deps.repoRoot)),
-        full("resource-kernel-fixture-manifest", () =>
-          checkResourceKernelFixtureManifest(deps.repoRoot),
-        ),
-        full("resource-kernel-pair-mapping", () => checkResourceKernelPairMapping(deps.repoRoot)),
-      ],
-    },
+    dependencyAndDbGroup(deps, options, state),
     {
       id: "workflow-and-final",
       definitions: [

@@ -104,6 +104,7 @@ export const FULL_DOCTOR_OUTPUT_IDS = [
   "codex-wrapper-parity",
   "windows-hide",
   "toolchain-pin",
+  "claude-version-floor",
   "l6-fr-coverage",
   "readability",
   "runtime-readability",
@@ -152,7 +153,7 @@ export const FULL_DOCTOR_OUTPUT_IDS = [
   "advisory-strict-gate-aging",
 ] as const;
 
-export const TOOLCHAIN_DOCTOR_OUTPUT_IDS = ["toolchain-pin"] as const;
+export const TOOLCHAIN_DOCTOR_OUTPUT_IDS = ["toolchain-pin", "claude-version-floor"] as const;
 export const SOURCE_DOC_LANE_OUTPUT_IDS = [
   "readability",
   "runtime-readability",

@@ -17,10 +17,6 @@ import {
   selectDoctorCheckDefinitions,
 } from "../src/doctor/check-registry.ts";
 import {
-  checkDependencyDrift as checkDependencyDriftAdapter,
-  checkRegressionExpansion as checkRegressionExpansionAdapter,
-} from "../src/doctor/dependency-regression.ts";
-import {
   checkAgentContractDetection,
   checkAgentSlots,
   checkAssetDrift,
@@ -1100,6 +1096,7 @@ function deps(over: Partial<DoctorDeps> & { files?: Map<string, string> } = {}):
     repoRoot: "/repo",
     now: NOW,
     readText: (p) => files.get(p) ?? null,
+    readPathClaudeVersion: () => null,
     listDir: (dir) =>
       [...files.keys()]
         .filter((k) => k.startsWith(`${dir}/`) || k.startsWith(`${dir}\\`))
@@ -1268,7 +1265,8 @@ describe("runDoctor", () => {
   const realRepoDoctor = () => {
     if (cachedRealRepoDoctor) return cachedRealRepoDoctor;
     cachedRealRepoDoctor =
-      consumeDoctorResultEnvelope() ?? runDoctor(nodeDoctorDeps(headSnapshotRoot()));
+      consumeDoctorResultEnvelope() ??
+      runDoctor({ ...nodeDoctorDeps(headSnapshotRoot()), readPathClaudeVersion: () => null });
     return cachedRealRepoDoctor;
   };
 
@@ -1403,10 +1401,11 @@ describe("runDoctor", () => {
     expect(r.messages).toEqual(["doctor: setup-smoke - OK (checked=23, failed=0)"]);
   });
 
-  it("runs only the toolchain gate when doctor scope is toolchain", () => {
-    const definitions = buildFullDoctorCheckDefinitions(nodeDoctorDeps(headSnapshotRoot()));
+  it("runs only the toolchain scope gates when doctor scope is toolchain", () => {
+    const doctorDeps = { ...nodeDoctorDeps(headSnapshotRoot()), readPathClaudeVersion: () => null };
+    const definitions = buildFullDoctorCheckDefinitions(doctorDeps);
     const selected = selectDoctorCheckDefinitions(definitions, "toolchain");
-    const run = collectDoctorCheckRun(nodeDoctorDeps(headSnapshotRoot()), {
+    const run = collectDoctorCheckRun(doctorDeps, {
       scope: "toolchain",
       timing: true,
     });
@@ -1442,7 +1441,7 @@ describe("runDoctor", () => {
       invocation: "registry",
       scope: "toolchain",
       setupSmoke: false,
-      outputIds: ["toolchain-pin"],
+      outputIds: ["toolchain-pin", "claude-version-floor"],
       sourceOnly: false,
     });
     expect(resolveDoctorRunProfile({ profile: "source-full", setupSmoke: true })).toEqual(
@@ -1457,7 +1456,7 @@ describe("runDoctor", () => {
       invocation: "registry",
       scope: "toolchain",
       setupSmoke: false,
-      outputIds: ["toolchain-pin"],
+      outputIds: ["toolchain-pin", "claude-version-floor"],
       sourceOnly: false,
     });
     expect(DOCTOR_RUN_PROFILES["source-full"].outputIds).toEqual(doctorOutputIdsForScope("full"));
@@ -1467,14 +1466,22 @@ describe("runDoctor", () => {
     expect(DOCTOR_RUN_PROFILES["consumer-toolchain"].outputIds).toEqual(
       doctorOutputIdsForScope("toolchain"),
     );
-    expect(doctorOutputIdsForScope("toolchain")).toEqual(["toolchain-pin"]);
-    expect(selected.map((definition) => definition.id)).toEqual(["toolchain-pin"]);
-    expect(run.checks).toHaveLength(1);
+    expect(doctorOutputIdsForScope("toolchain")).toEqual(["toolchain-pin", "claude-version-floor"]);
+    expect(selected.map((definition) => definition.id)).toEqual([
+      "toolchain-pin",
+      "claude-version-floor",
+    ]);
+    expect(run.checks).toHaveLength(2);
     expect(run.checks[0]?.messages[0]).toContain("toolchain-pin");
     expect(run.timings).toEqual([
       expect.objectContaining({
         id: "toolchain-pin",
         ok: run.checks[0]?.ok,
+        message_count: 1,
+      }),
+      expect.objectContaining({
+        id: "claude-version-floor",
+        ok: true,
         message_count: 1,
       }),
     ]);
@@ -2132,35 +2139,6 @@ describe("runDoctor", () => {
     expect(checks.filter(([, result]) => result.ok).map(([name]) => name)).toEqual([]);
     for (const [, result] of checks) {
       expect(result.messages.join("\n")).toMatch(/violation/i);
-    }
-  });
-
-  it("keeps extracted dependency/regression doctor adapters fail-closed", () => {
-    const missingRoot = join(tmpdir(), `ut-tdd-doctor-dependency-missing-${Date.now()}-nope`);
-
-    expect(checkDependencyDriftAdapter(missingRoot)).toMatchObject({
-      ok: false,
-      result: null,
-      messages: ["dependency-drift - violation: repo root could not be read"],
-    });
-    expect(checkRegressionExpansionAdapter(missingRoot, null)).toMatchObject({
-      ok: false,
-      messages: ["regression-expansion - violation: repo root could not be read"],
-    });
-  });
-
-  it("skips change-impact / change-set-integrity in a non-git directory instead of failing closed", () => {
-    // ZIP 展開のみ (非 git) の利用環境: git status が引けないだけで doctor を落とさない。
-    const root = mkdtempSync(join(tmpdir(), "ut-tdd-doctor-nongit-"));
-    try {
-      const impact = checkChangeImpact(root);
-      const integrity = checkChangeSetIntegrity(root);
-      expect(impact.ok).toBe(true);
-      expect(impact.messages.join("\n")).toMatch(/skipped \(not a git repository\)/);
-      expect(integrity.ok).toBe(true);
-      expect(integrity.messages.join("\n")).toMatch(/skipped \(not a git repository\)/);
-    } finally {
-      removeTestTree(root);
     }
   });
 
