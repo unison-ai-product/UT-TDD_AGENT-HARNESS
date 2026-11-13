@@ -260,7 +260,7 @@ describe("L7 CLI surface closure", () => {
       plan_id: "text:expose-a-json-command-surface",
       reason: expect.stringContaining("source=text"),
     });
-  }, 30_000); // 13.1s measured (Windows, vitest 2.1.9), #1247
+  }, 60_000); // 13.1s measured (Windows, vitest 2.1.9; 50.9s under local load), #1247
 
   it("exposes strict telemetry provenance as a doctor verification flag", () => {
     const run = runCli(["doctor", "--help"]);
