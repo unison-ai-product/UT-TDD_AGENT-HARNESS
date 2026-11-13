@@ -31,7 +31,7 @@ vmodel-consumer-lint:1
 release-consumer-gates:15
 consumer-g14-static:3
 consumer-g1-screen-namespace:1
-doctor-test-repository-isolation:1 persistent-db-cleanup-contract:1 memory-clean-cut-removal:1 memory-legacy-archive:1 memory-clean-cut-non-read:1 memory-curation-ledger:1
+doctor-test-repository-isolation:1 persistent-db-cleanup-contract:1 memory-clean-cut-removal:1 memory-legacy-archive:1 memory-clean-cut-non-read:1 memory-curation-ledger:1 doctor-source-preflight-profile:1
 secret-scan-diff:1
 feedback-log:2
 github-repository-policy:3 consumer-ci-guard-red:1 consumer-ci-push-merge-control:1
