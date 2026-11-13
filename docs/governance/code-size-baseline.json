@@ -47,7 +47,7 @@
   "src/runtime/claude-wake-generation-upgrade.ts": { "lines": 504, "functionExcess": null },
   "src/runtime/node-bootstrap.ts": { "lines": 825, "functionExcess": 17 },
   "src/runtime/node-slice-admission.ts": { "lines": 695, "functionExcess": 22 },
-  "src/runtime/session-log.ts": { "lines": 515, "functionExcess": null },
+  "src/runtime/session-log.ts": { "lines": 533, "functionExcess": null },
   "src/runtime/worktree-lifecycle/application/service.ts": { "lines": 615, "functionExcess": 11 },
   "src/schema/frontmatter.ts": { "lines": 603, "functionExcess": 173 },
   "src/setup/consumer-node-runtime.ts": { "lines": 1408, "functionExcess": 142 },

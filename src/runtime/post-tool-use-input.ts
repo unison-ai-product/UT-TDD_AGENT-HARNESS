@@ -7,6 +7,13 @@ interface PostToolUseOptions {
   outcome?: "ok" | "error";
 }
 
+export function outcomeOf(input: SessionHookInput): "ok" | "error" | undefined {
+  const r = input.tool_response as { outcome?: string } | undefined;
+  if (r?.outcome === "error") return "error";
+  if (r?.outcome === "ok") return "ok";
+  return undefined;
+}
+
 export function createPostToolUseInput(
   input: SessionHookInput,
   options: PostToolUseOptions,
