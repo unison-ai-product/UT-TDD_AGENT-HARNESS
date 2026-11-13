@@ -357,7 +357,7 @@ export function parseSnapshotRunnerArgs(args: readonly string[]): SnapshotRunner
       args,
       token: optionName,
       message:
-        `Unknown snapshot runner option ${JSON.stringify(optionName)}. ` +
+        `Unknown snapshot runner option ${JSON.stringify(token)}. ` +
         `Allowed options: ${SNAPSHOT_ALLOWED_OPTIONS}. ` +
         "To pass other Vitest arguments, use -- as a standalone token before them.",
     };

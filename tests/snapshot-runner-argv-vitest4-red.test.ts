@@ -49,6 +49,15 @@ describe("snapshot runner argv vs pinned Vitest (issue #1247)", () => {
     }
   });
 
+  it("U-SNAPARG-002 the diagnostic keeps the original input token (--name=value) while token is the option name", () => {
+    const parsed = parseSnapshotRunnerArgs(["--foo=1"]);
+    expect(parsed.kind).toBe("unknown-option");
+    if (parsed.kind === "unknown-option") {
+      expect(parsed.token).toBe("--foo");
+      expect(parsed.message).toContain("--foo=1");
+    }
+  });
+
   it("U-SNAPARG-004 every allowlisted option is accepted by the real pinned Vitest CLI", () => {
     const options = allowedOptionsReportedByRunner();
     expect(options.length).toBeGreaterThan(0);
