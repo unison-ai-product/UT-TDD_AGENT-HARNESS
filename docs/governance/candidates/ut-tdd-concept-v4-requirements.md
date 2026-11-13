@@ -11,8 +11,9 @@ revision_base_artifact: docs/design/harness/L1-requirements/vmodel-engine-swap-r
 # UT-TDD 構想書 v4.0 L3 要件候補 (チーム開発版)
 
 > **改訂メモ (2026-11-12 / 2026-11-13、#1005 のコメント 6822862705 と 6844628646):** v4 の要求 79 件を見直し、区分ごとに本文を改めた。2026-11-13 の追補で区分を **4 つだけ** に確定した (「1.0.0 の後でよい簡素化」という 5 番目の置き場は無い。残す・簡素化する要求は必ず 1.0.0 までの段に割り当て、1.0.0 の後に回すものは区分を「先送り」にする)。
-> 残す 12 件 (文言どおり) / 簡素化 33 件 (本文を小さい形へ書き直し、行頭に【2026-11-12 簡素化】) / 先送り 20 件 (1.0.0 の対象外、行頭に【2026-11-12 先送り】、旧文または簡素化後の形を残す) / 撤回 15 件 (作らない、行頭に【2026-11-12 撤回】と 1 行の理由)。計 80 件。**ID は消さず、振り直さない** (他の文書と Issue が引く)。
+> 残す 12 件 (文言どおり) / 簡素化 32 件 (本文を小さい形へ書き直し、行頭に【2026-11-12 簡素化】) / 先送り 21 件 (1.0.0 の対象外、行頭に【2026-11-12 先送り】、旧文または簡素化後の形を残す) / 撤回 15 件 (作らない、行頭に【2026-11-12 撤回】と 1 行の理由)。計 80 件。**ID は消さず、振り直さない** (他の文書と Issue が引く)。
 > 2026-11-13 の追補: FR-008 (Office への一方向の書き出し) は簡素化のまま 1.0.0 までの段に割り当てる (#1033)。FR-012 / 028 / 040 / 046 / 053 / 056 / 059 / 072 の 8 件は「先送り」に変えた (発火条件: 簡素化後の形で、1.0.0 の後に必要が実測されたら。FR-040 の #727 の棚卸しは先送りと関係なく進めてよい)。
+> 2026-11-13 の追補 2: 「1.0.0 の対象外」は区分ではなく、先送りの行にだけ付く。残す・簡素化の要求に 1.0.0 が適用する部分が残るときは簡素化のまま、行の中で適用しない部分に印を付ける (FR-023: 適用する 3 点を本文に明記し、単一 provider の運用に印)。適用する部分が無いときは先送りにする (FR-024: 発火条件「最初の導入先が片方の provider しか使えないと分かったら」)。
 > 決定: スプレッドシート・Office・Google 文書は人間が読む一方向の書き出しで書き戻しは作らない。チケットの正本は GitHub Issue。管理知能 (別プロセスの Python) は作らない。1.0.0 が保証する運用形態は hybrid だけ。層番号の振り直しとディレクトリ再編は先送り。上流の製品工程はテンプレートとチェックリストだけ。新しい要件として UTV4-FR-080 (派生する一覧は手で編集しない) を足した。この 5 つの決定に反する旧文は、各要件の本文に「適用しない」と印を付けて残した。
 > ADR-001 の決定 4 (管理知能は別プロセスの Python) との食い違いは、この PR では ADR を変えず、別に扱う。
 > 以下の本文と、他の節に残る記述が食い違うときは、この改訂メモと要件候補表の行頭の区分を優先する。
@@ -45,7 +46,7 @@ node docs/governance/candidates/v4-ledger-check.mjs
 
 区分の意味: 維持 = 文言をそのまま残した。既存を更新 = 同じ ID のまま決定に合わせて書き直した。新規 = どの既存の要件にも無い論点。
 
-集計: 維持 23 件 / 既存を更新 37 件 / 新規 19 件 (計 79 件)。この集計は 2026-11-12 の見直し前の「区分」列の数である。見直し後の区分は行頭の印で読む (残す 12 / 簡素化 33 / 先送り 20 / 撤回 15)。UTV4-FR-080 は 2026-11-12 に新規で足した (計 80 件)。
+集計: 維持 23 件 / 既存を更新 37 件 / 新規 19 件 (計 79 件)。この集計は 2026-11-12 の見直し前の「区分」列の数である。見直し後の区分は行頭の印で読む (残す 12 / 簡素化 32 / 先送り 21 / 撤回 15)。UTV4-FR-080 は 2026-11-12 に新規で足した (計 80 件)。
 
 ## 要件候補
 
@@ -73,8 +74,8 @@ node docs/governance/candidates/v4-ledger-check.mjs
 | UTV4-FR-020 | 【2026-11-12 撤回】学習資産 (CASE / SCENE / PATTERN 等) の owner と縮退状態の管理は作らない。ハーネス固有の教訓は FR-019 の仕組み化で扱う。 | UTV4-BR-011 | V4D-005 | 維持 | FR-003 exactly-one owner を学習資産へ適用 (#413) |
 | UTV4-FR-021 | 【2026-11-12 撤回】skill 適用範囲の typed registry は作らない。skill の段階読み込みは Claude Code / Codex の標準と、既存の `src/skill-engine/recommend.ts` で足りる。 | UTV4-BR-012 | V4D-006 | 維持 | `skills/` frontmatter と `ut-tdd skill suggest` (`src/skill-engine/`) の入力契約を registry 化 |
 | UTV4-FR-022 | 【2026-11-12 撤回】知識 packet の決定的 compile・firing telemetry・quarantine は作らない。skill の一括注入禁止は運用規律で足りる。昇格の「単一 episode で昇格しない」は FR-010 に残す。 | UTV4-BR-012 | V4D-006 | 維持 | CLAUDE.md §Skills「bulk-load 禁止」、FR-010「単一 episode で昇格しない」を一契約へ |
-| UTV4-FR-023 | 【2026-11-12 簡素化】provider topology は project 設定の 1 項目 (`hybrid` / `single-provider` / `standalone`) とする。1.0.0 が保証するのは `hybrid` だけで、単一 provider は現在の fallback (`intra_runtime_subagent` 記録、CLAUDE.md「唯一の回避条件」) のままにする。最初の導入先が片方の provider しか使えないと分かった時点で見直す (その場合の最小形は、receipt の evidence tier 欄と、別 session・上位 tier の要求)。同一 session 内 subagent の review は全 profile で独立 review にならない。 | UTV4-BR-013 | V4D-023 | 維持 | delegation-routing / agent-guard / review-evidence gate (`checkCrossAgentModelPair`) の判定軸を role × tier × session へ拡張 |
-| UTV4-FR-024 | 【2026-11-12 簡素化】単一 provider の補償統制 (高影響境界への人間 review、月次の手動 sampling、doctor の fail-close 化、mutation 検証) は、FR-023 で単一 provider を採るときに作る。1.0.0 の対象外 (hybrid のみ保証)。採るときの最小形は、高影響境界の人間 review と月次の手動 sampling (#787) とし、doctor の fail-close 化と mutation 検証は後回しにする。 | UTV4-BR-013 | V4D-023 | 維持 | CLAUDE.md「唯一の回避条件: 利用上限による停止」を record 化 |
+| UTV4-FR-023 | 【2026-11-12 簡素化】provider topology は project 設定の 1 項目 (`hybrid` / `single-provider` / `standalone`) とする。1.0.0 が適用するのは次の 3 点である: (1) 保証する運用形態は `hybrid` だけ。(2) 利用上限による停止の記録なしに hybrid から fallback へ下げない。fallback は現在のまま (`intra_runtime_subagent` 記録、CLAUDE.md「唯一の回避条件」) とし、`cross_agent` / `cross_family` を僭称しない。(3) 同一 session 内 subagent の review は全 profile で独立 review にならない。(旧文の単一 provider の運用 (`single-provider` profile を admit すること、`same_family_separated` の evidence tier、別 session・上位 tier を独立 review として扱うこと) は適用しない。最初の導入先が片方の provider しか使えないと分かったら (2026-11-12 の control の決定) 見直す。) | UTV4-BR-013 | V4D-023 | 維持 | delegation-routing / agent-guard / review-evidence gate (`checkCrossAgentModelPair`) の判定軸を role × tier × session へ拡張 |
+| UTV4-FR-024 | 【2026-11-12 先送り: 1.0.0 の対象外。必要が実測されたときに扱う。発火条件: 最初の導入先が片方の provider しか使えないと分かったら (2026-11-12 の control の決定)】簡素化後の形: 単一 provider の補償統制 (高影響境界への人間 review、月次の手動 sampling、doctor の fail-close 化、mutation 検証) は、FR-023 で単一 provider を採るときに作る。採るときの最小形は、高影響境界の人間 review と月次の手動 sampling (#787) とし、doctor の fail-close 化と mutation 検証は後回しにする。 | UTV4-BR-013 | V4D-023 | 維持 | CLAUDE.md「唯一の回避条件: 利用上限による停止」を record 化 |
 | UTV4-FR-025 | 【2026-11-12 簡素化】新しく作る変更は、PR テンプレートの「削るもの / 無し + 理由」欄で、削る対象を書く (収支原則)。surface の 7 class 分類・計測 record・段階機械 (planned〜retired) は作らない。縮退は #1084 系が機構なしで進める。 | UTV4-BR-014 | V4D-029, V4D-036, V4D-103 | 既存を更新 | 旧文に、版別の段階と入れ替えの順序と収支原則を加えた。版番号の割当は PO 未採択 (V4D-029)。削る対象の出し方は決まった (旧 U-2、V4D-103 で解消) |
 | UTV4-FR-026 | 【2026-11-12 簡素化】DB schema の変更は、データを失わない migration と doctor gate (live schema vs canonical) を伴う。legacy token の完全 inventory は、退役ごと (Bun・PLAN など) に限る。 | UTV4-BR-014 | V4D-029 | 維持 | Bun 撤去 (#487 / #450)、旧 9-mode 残骸、`docs/migration/` snapshot、harness.db schema に適用 |
 | UTV4-FR-027 | review receipt は candidate workspace と repository identity に束縛して保管し、malformed receipt は削除せず訂正世代を積む。reviewer session id は実在 attestation を要求し、admission 失敗は typed reason で返す。worktree / branch の回収は「origin/main の ancestor かつ clean」の証明付きで dry-run 既定、未 commit 残置・未 push branch・stale base・projection の silent skip は doctor finding として surface する。 | UTV4-BR-013, UTV4-BR-014 | V4D-035 | 維持 | #505 / #493 / #439 / #386 / #384 / #426 / #169 系の恒久対策を 1 契約へ |
