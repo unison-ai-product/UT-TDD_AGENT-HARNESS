@@ -101,17 +101,17 @@ function matrixOf(workflow: Workflow): Record<string, unknown> {
 
 type Mutant = readonly [label: string, mutator: (workflow: Workflow) => unknown];
 
-// 今日は変異が判定を変えない (strategy / --shard の照合が policy に無い) ので Red にする。
+// policy が strategy / --shard を照合するので、変異は判定を変える。
 function redMutants(id: string, mutants: readonly Mutant[]): void {
   for (const [label, mutator] of mutants) {
-    it.fails(`${id}: rejects ${label}`, () => {
+    it(`${id}: rejects ${label}`, () => {
       expect(addedBy(mutated(mutator)).length).toBeGreaterThan(0);
     });
   }
 }
 
 describe("Issue #1063 Windows leg 3 shard contract (登録 + Red)", () => {
-  it.fails("CANDIDATE-U-CISHARD-001: accepts the exact 3 shard matrix workflow", () => {
+  it("CANDIDATE-U-CISHARD-001: accepts the exact 3 shard matrix workflow", () => {
     expect(findings(compliantWorkflow())).toEqual([]);
   });
 

@@ -70,6 +70,7 @@ interface WorkflowJob {
   needs?: unknown;
   if?: unknown;
   "runs-on"?: unknown;
+  strategy?: unknown;
   steps?: unknown;
 }
 
@@ -366,6 +367,12 @@ const nodeGenerationUploadStep = (lane: (typeof NODE_GENERATION_LEGS)[number]) =
       "if-no-files-found": "error",
     },
   });
+const WINDOWS_SHARD_TEST_COMMAND = ["npm run test:windows -- --shard=$", "{{ matrix.shard }}"].join("");
+const WINDOWS_SHARD_STRATEGY = JSON.stringify({
+  "fail-fast": false,
+  matrix: { shard: ["1/3", "2/3", "3/3"] },
+});
+
 const RUNTIME_STEP_MANIFESTS: Record<(typeof RUNTIME_LEGS)[number], readonly object[]> = {
   "harness-check-linux": [
     ...commonRuntimeSteps,
@@ -533,7 +540,7 @@ fi`,
     run("db rebuild (deterministic projection on Windows SQLite)", DB_REBUILD, LANE_FULL_ONLY_IF),
     run(
       "test — Windows full 回帰 (vitest run, windows leg)",
-      "npm run test:windows",
+      WINDOWS_SHARD_TEST_COMMAND,
       LANE_FULL_ONLY_IF,
     ),
     run("doc lane source checks", DOC_LANE_DOCTOR, LANE_DOC_ONLY_IF),
@@ -571,12 +578,23 @@ function checkLaneSkipSafety(input: {
   for (const [index, leg] of input.legs.entries()) {
     if (!leg) continue;
     const name = RUNTIME_LEGS[index];
-    if (!hasExactKeys(leg, ["runs-on", "steps"])) {
+    const sharded = name === "harness-check-windows";
+    if (!hasExactKeys(leg, sharded ? ["runs-on", "strategy", "steps"] : ["runs-on", "steps"])) {
       pushViolation({
         violations: input.violations,
         doc: input.doc,
         reason: "missing_runtime_leg",
-        detail: `jobs.${name} must contain only runs-on and steps`,
+        detail: sharded
+          ? `jobs.${name} must contain only runs-on, strategy and steps`
+          : `jobs.${name} must contain only runs-on and steps`,
+      });
+    }
+    if (sharded && JSON.stringify(leg.strategy) !== WINDOWS_SHARD_STRATEGY) {
+      pushViolation({
+        violations: input.violations,
+        doc: input.doc,
+        reason: "missing_runtime_leg",
+        detail: `jobs.${name}.strategy must be fail-fast false with matrix.shard exactly 1/3, 2/3, 3/3`,
       });
     }
     if (leg.if !== undefined) {

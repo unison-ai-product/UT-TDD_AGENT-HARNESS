@@ -260,6 +260,10 @@ jobs:
   # へ分離する (PLAN-L7-448 スコープ 2)。
   harness-check-windows:
     runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ["1/3", "2/3", "3/3"]
     steps:
       - name: checkout
         uses: actions/checkout@v5
@@ -298,7 +302,7 @@ jobs:
 
       - name: test — Windows full 回帰 (vitest run, windows leg)
         if: ${{ steps.classify.outputs.lane == 'full' }}
-        run: npm run test:windows
+        run: npm run test:windows -- --shard=${{ matrix.shard }}
 
       - name: doc lane source checks
         if: ${{ steps.classify.outputs.lane == 'doc' }}
