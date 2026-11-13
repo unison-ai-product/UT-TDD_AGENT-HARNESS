@@ -3,9 +3,11 @@ import { join } from "node:path";
 // wrapper 正規形から構築する (gate 要求と setup 生成物の再乖離防止、PLAN-RECOVERY-06)。
 import { codexCommandString } from "../lint/hook-invocation.ts";
 import { guardBootstrapHookArgs, wrapperHookArgs } from "../lint/project-hook.ts";
+import { CLAUDE_CODE_VERSION_FLOOR } from "../runtime/claude-version-floor.ts";
 // model ID は SSoT (src/team/model-policy.ts MODEL_IDS) 参照のみ。生 literal の二重保持は
 // 世代 drift の温床 (A-177 F-5 / PLAN-L7-256: templates が opus-4-7 のまま SSoT と乖離した実績)。
 import { MODEL_IDS } from "../team/model-policy.ts";
+import { CLAUDE_COMMAND_FILES, CLAUDE_COMMAND_TEMPLATE_SET } from "./claude-command-templates.ts";
 import { CONSUMER_CI_WORKFLOW } from "./consumer-ci-workflow.ts";
 import { renderConsumerNodeWrapper } from "./consumer-node-runtime.ts";
 import type { GeneratedFile } from "./index.ts";
@@ -18,49 +20,6 @@ const CLAUDE_HAIKU = MODEL_IDS.claude.haiku;
 const GPT_FRONTIER = MODEL_IDS.codex.frontier;
 const GPT_WORKER = MODEL_IDS.codex.worker;
 const GPT_SPARK = MODEL_IDS.codex.spark;
-
-const CLAUDE_COMMAND_TEMPLATES = [
-  ["build", "Implement against a frozen UT-TDD spec/test design."],
-  ["code-simplify", "Identify the smallest safe simplification for the selected code."],
-  ["sdd-plan", "Create a spec-driven UT-TDD plan before implementation."],
-  ["sdd-review", "Review a spec/design against UT-TDD trace and gate requirements."],
-  ["ship", "Prepare release evidence, rollback notes, and final verification."],
-  ["spec", "Author a spec-first design before any implementation."],
-  ["test", "Run targeted UT-TDD verification for the current change."],
-] as const;
-
-function commandTemplate(name: string, description: string): string {
-  return [
-    "---",
-    `description: ${description}`,
-    'argument-hint: "<target>"',
-    "---",
-    "",
-    `Command: ${name}`,
-    "",
-    "Target: $ARGUMENTS",
-    "",
-    "Use repository-local UT-TDD commands. Start with `ut-tdd status --json`, run the narrow verification for the target, use `ut-tdd doctor --profile consumer-setup-smoke` for generated adapter/setup health, and use `ut-tdd doctor --profile consumer-toolchain` for consumer-safe toolchain health. Full `ut-tdd doctor` is for source/governance repositories with governance/design/test-design artifacts.",
-    "",
-  ].join("\n");
-}
-
-const CLAUDE_COMMAND_TEMPLATE_SET: TemplateSet = Object.fromEntries(
-  CLAUDE_COMMAND_TEMPLATES.map(([name, description]) => [
-    `adapter/.claude/commands/${name}.md`,
-    commandTemplate(name, description),
-  ]),
-);
-
-const CLAUDE_COMMAND_FILES: { template: string; file: GeneratedFile }[] =
-  CLAUDE_COMMAND_TEMPLATES.map(([name]) => ({
-    template: `adapter/.claude/commands/${name}.md`,
-    file: {
-      path: join(".claude", "commands", `${name}.md`),
-      category: "A",
-      purpose: `Claude slash command template: ${name}`,
-    },
-  }));
 
 export const BUILTIN_GITHUB_TEMPLATES: TemplateSet = {
   ...CLAUDE_COMMAND_TEMPLATE_SET,
@@ -139,6 +98,7 @@ export const BUILTIN_GITHUB_TEMPLATES: TemplateSet = {
     "- `ut-tdd status` reports the local runtime mode.",
     "- `ut-tdd doctor --profile consumer-setup-smoke` runs consumer-safe setup and hook checks.",
     "- `ut-tdd doctor --profile consumer-toolchain` runs consumer-safe toolchain checks.",
+    `- Claude Code ${CLAUDE_CODE_VERSION_FLOOR} or newer is required because older versions can ignore guard hooks' \`onFailure: "block"\` setting.`,
     "- Full `ut-tdd doctor` is for source/governance repositories with governance/design/test-design artifacts.",
     "- `ut-tdd handover` reads and writes cross-runtime handover state.",
     '- `ut-tdd codex --role <role> --task "..."` delegates to Codex.',

@@ -27,6 +27,7 @@ import { checkWorktreeTopologyAdvisory } from "./worktree-topology-advisory.ts";
 export { checkErasableSyntax } from "../lint/erasable-syntax.ts";
 export { checkImportSpecifiers } from "../lint/import-specifier.ts";
 export type { DoctorOptions } from "./check-registry.ts";
+export { checkClaudeVersionFloor } from "./claude-version-floor-check.ts";
 export {
   checkAgentContractDetection,
   checkDbProjectionCoverage,

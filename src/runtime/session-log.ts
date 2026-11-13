@@ -20,6 +20,7 @@ import {
 import { dirname, join } from "node:path";
 import { ensureDir } from "../shared/fs.ts";
 import { evaluateMemoryPromotion } from "./memory-promotion.ts";
+import { outcomeOf } from "./post-tool-use-input.ts";
 import { classifyVerificationVerb } from "./verb-classify.ts";
 
 export type SessionEventType =
@@ -63,6 +64,7 @@ export interface PlanDigest {
 export interface SessionHookInput {
   hook_event_name?: string;
   session_id?: string;
+  transcript_path?: string;
   plan_id?: string | null;
   tool_name?: string;
   tool_input?: Record<string, unknown>;
@@ -141,13 +143,6 @@ function isPath(s: string): boolean {
 /** session_id / plan_id を file 名に使う前に path 分離子を除去 (traversal 防止)。 */
 export function safeName(s: string): string {
   return s.replace(/[^A-Za-z0-9._-]/g, "_");
-}
-
-function outcomeOf(input: SessionHookInput): "ok" | "error" | undefined {
-  const r = input.tool_response as { outcome?: string } | undefined;
-  if (r?.outcome === "error") return "error";
-  if (r?.outcome === "ok") return "ok";
-  return undefined;
 }
 
 function isMemoryWriteInput(input: SessionHookInput): boolean {
