@@ -314,7 +314,6 @@ const SNAPSHOT_VALUE_OPTIONS = [
   "--testNamePattern",
   "--reporter",
   "--maxWorkers",
-  "--minWorkers",
   "--shard",
   "--exclude",
   "--pool",
@@ -352,10 +351,11 @@ export function parseSnapshotRunnerArgs(args: readonly string[]): SnapshotRunner
       continue;
     }
 
+    const optionName = token.startsWith("--") ? token.split("=")[0] : token;
     return {
       kind: "unknown-option",
       args,
-      token,
+      token: optionName,
       message:
         `Unknown snapshot runner option ${JSON.stringify(token)}. ` +
         `Allowed options: ${SNAPSHOT_ALLOWED_OPTIONS}. ` +

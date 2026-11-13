@@ -183,7 +183,7 @@ beforeAll(() => {
 
 afterAll(() => {
   if (scratchRoot) rmSync(scratchRoot, { recursive: true, force: true });
-});
+}, 120000); // afterAll >10s on Windows (file 479s, hook unmeasured), bounded per #1063
 
 describe("privacy scan candidate oracles (distribution)", () => {
   it("U-PRIVSCAN-014: distribution stops before writing when the Pack scan fails", () => {

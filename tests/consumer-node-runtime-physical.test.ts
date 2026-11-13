@@ -635,7 +635,7 @@ describe("physical consumer Node runtime adapter", () => {
     expect(readFileSync(pointerPath)).toEqual(priorPointer);
     for (const [name, bytes] of Object.entries(priorFiles))
       expect(readFileSync(join(priorBundle.bundle_path, name))).toEqual(bytes);
-  });
+  }, 240000); // 115s measured, #1063
 
   // This measures the producer-byte/setup/wrapper subcase of 001/002/003 and
   // the checkout-deletion launch path; it does not claim the full 007 oracle

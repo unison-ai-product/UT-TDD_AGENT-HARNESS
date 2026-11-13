@@ -1345,7 +1345,7 @@ describe("Issue #1062: runtime notifications are memory-free", () => {
         join(runtimeRoot, "review-claimed.claim"),
         `${JSON.stringify({ id: claimedReview.id })}\n`,
       );
-    }, 30_000);
+    }, 300000); // file 163s, hook unmeasured, #1063
 
     afterAll(() => {
       for (const root of Object.values(fixtureRoots)) removeTestTree(root);

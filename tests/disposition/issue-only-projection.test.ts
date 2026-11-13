@@ -56,7 +56,7 @@ let issueOnlyFixtureRoot: string;
 
 beforeAll(() => {
   issueOnlyFixtureRoot = createIssueOnlyFixture();
-});
+}, 120000); // 48s measured, bounded per #1063
 
 afterAll(() => {
   if (issueOnlyFixtureRoot) rmSync(issueOnlyFixtureRoot, { recursive: true, force: true });

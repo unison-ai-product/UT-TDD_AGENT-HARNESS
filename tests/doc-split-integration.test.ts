@@ -205,7 +205,7 @@ beforeAll(() => {
         largestL7BaselineFixture = copyLiveDocsWithBaseline("largest-l7-baseline", largestL7[0]);
     }
   }
-});
+}, 60000); // 23s measured, bounded per #1063
 
 afterAll(() => {
   if (scratchRoot) rmSync(scratchRoot, { recursive: true, force: true });

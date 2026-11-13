@@ -120,7 +120,7 @@ describe("consumer worktree runtime setup entry Red (#1525)", () => {
     expect(existsSync(fixture.cache)).toBe(true);
     expect(existsSync(fixture.networkStub)).toBe(true);
     expect(existsSync(fixture.networkMarker)).toBe(false);
-  });
+  }, 240000); // 93s measured, #1063
 
   it("prerequisite: cache-missing, invalid-anchor, and explicit version-B cases are distinct", () => {
     const names = readdirSync(fixture.cache).sort();

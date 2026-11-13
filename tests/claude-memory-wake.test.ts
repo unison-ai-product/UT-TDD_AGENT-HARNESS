@@ -361,7 +361,7 @@ describe("Claude HARNESS memory async wake", () => {
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
-  });
+  }, 60000); // 27s measured, #1063
 
   it("U-PMEMROOT-007 review composition: v4 review claims through the same guard", async () => {
     const root = fixture();

@@ -710,5 +710,5 @@ describe("issue #693 子プロセス windowsHide 既定 (Red)", () => {
         result.status,
         `${result.error?.message ?? ""}\n${result.stdout}\n${result.stderr}`,
       ).toBe(0);
-    }));
+    }, 300000)); // 142s measured, #1063
 });

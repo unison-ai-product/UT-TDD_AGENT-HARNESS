@@ -41,11 +41,20 @@ console.log(JSON.stringify(rejected));
 `;
 
 describe("snapshot runner argv vs pinned Vitest (issue #1247)", () => {
-  it.fails("U-SNAPARG-003 rejects --minWorkers (removed in Vitest 4) as an unknown option", () => {
+  it("U-SNAPARG-003 rejects --minWorkers (removed in Vitest 4) as an unknown option", () => {
     for (const args of [["--minWorkers=1"], ["--minWorkers", "1"]]) {
       const parsed = parseSnapshotRunnerArgs(args);
       expect(parsed.kind).toBe("unknown-option");
       if (parsed.kind === "unknown-option") expect(parsed.token).toBe("--minWorkers");
+    }
+  });
+
+  it("U-SNAPARG-002 the diagnostic keeps the original input token (--name=value) while token is the option name", () => {
+    const parsed = parseSnapshotRunnerArgs(["--foo=1"]);
+    expect(parsed.kind).toBe("unknown-option");
+    if (parsed.kind === "unknown-option") {
+      expect(parsed.token).toBe("--foo");
+      expect(parsed.message).toContain("--foo=1");
     }
   });
 
