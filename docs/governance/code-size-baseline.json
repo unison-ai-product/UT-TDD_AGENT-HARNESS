@@ -26,7 +26,7 @@
   "src/lint/db-projection-coverage.ts": { "lines": 544, "functionExcess": null },
   "src/lint/ddd-tdd-rules.ts": { "lines": 762, "functionExcess": 38 },
   "src/lint/descent-obligation.ts": { "lines": 533, "functionExcess": 12 },
-  "src/lint/github-ci-policy.ts": { "lines": 1273, "functionExcess": 62 },
+  "src/lint/github-ci-policy.ts": { "lines": 1269, "functionExcess": 61 },
   "src/lint/oracle-test-trace.ts": { "lines": 750, "functionExcess": null },
   "src/lint/proposal-document-coverage.ts": { "lines": null, "functionExcess": 16 },
   "src/lint/relation-graph.ts": { "lines": 613, "functionExcess": null },

@@ -429,8 +429,8 @@ describe("github-ci-policy lint", () => {
     for (const workflow of [
       SOURCE_WORKFLOW.replace("runs-on: windows-latest", "runs-on: ubuntu-latest"),
       SOURCE_WORKFLOW.replace(
-        "  harness-check-windows:\n    runs-on: windows-latest\n    steps:",
-        "  harness-check-windows:\n    runs-on: windows-latest\n    continue-on-error: true\n    steps:",
+        "  harness-check-windows:\n    runs-on: windows-latest\n    strategy:",
+        "  harness-check-windows:\n    runs-on: windows-latest\n    continue-on-error: true\n    strategy:",
       ),
     ]) {
       expect(analyzeGithubCiPolicy(docs(workflow)).violations).toContainEqual({
