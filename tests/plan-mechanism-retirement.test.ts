@@ -157,23 +157,6 @@ function testCallbacks(source: string, path: string): Map<string, string> {
   return callbacks;
 }
 
-function variableInitializer(source: string, path: string, name: string): string | undefined {
-  const file = ts.createSourceFile(path, source, ts.ScriptTarget.ES2022, true, ts.ScriptKind.TS);
-  let initializer: string | undefined;
-  const visit = (node: ts.Node): void => {
-    if (
-      ts.isVariableDeclaration(node) &&
-      ts.isIdentifier(node.name) &&
-      node.name.text === name &&
-      node.initializer
-    )
-      initializer = node.initializer.getText(file);
-    ts.forEachChild(node, visit);
-  };
-  visit(file);
-  return initializer;
-}
-
 const retiredGithubWriterExports = [
   "recordGithubBinding",
   "queueGithubProjection",
@@ -204,20 +187,6 @@ const retiredForwardStoreTestIds = [
   "U-GHPROJ-044",
   "U-GHPROJ-045",
   "U-GHPROJ-052",
-];
-
-const retainedForwardStoreTestIds = [
-  "U-GHPROJ-010",
-  "U-GHPROJ-012",
-  "U-GHPROJ-030",
-  "U-GHPROJ-031",
-  "U-GHPROJ-032",
-  "U-GHPROJ-034",
-  "U-GHPROJ-035",
-  "U-GHPROJ-036",
-  "U-GHPROJ-037",
-  "U-GHPROJ-046",
-  "U-GHPROJ-047",
 ];
 
 describe("PLAN 機構の S1 退役", () => {
@@ -369,7 +338,7 @@ describe("PLAN 機構の S4 退役", () => {
 });
 
 describe("PLAN 機構の S5 退役", () => {
-  it("U-PLANRET-014: S5のProject/binding surfaceを退役し、readinessを保持する", () => {
+  it("U-PLANRET-014: S5のProject/binding surfaceを退役し、outboxを保持する", () => {
     const cliSource = readFileSync(join(snapshotRoot, "src/cli.ts"), "utf8");
     const github = githubCommandSurface(cliSource);
     expect(github.groupFound).toBe(true);
@@ -389,7 +358,6 @@ describe("PLAN 機構の S5 退役", () => {
     const githubForwardExports = Object.keys(githubForwardProjection);
     for (const name of [...retiredGithubWriterExports, ...retiredGithubForwardHelpers])
       expect(githubForwardExports, name).not.toContain(name);
-    expect(typeof githubForwardProjection.rebuildExecutionReadiness).toBe("function");
 
     const forwardStorePath = "tests/github-forward-store.test.ts";
     const forwardStoreSource = readFileSync(join(snapshotRoot, forwardStorePath), "utf8");
@@ -400,18 +368,13 @@ describe("PLAN 機構の S5 退役", () => {
       .sort();
     for (const id of retiredForwardStoreTestIds)
       expect(actualForwardStoreIds, id).not.toContain(id);
-    expect(actualForwardStoreIds).toEqual([...retainedForwardStoreTestIds].sort());
+    expect(actualForwardStoreIds).toEqual(["U-GHPROJ-012"]);
 
     const pendingCase = [...forwardStoreCases].find(([title]) =>
       title.startsWith("U-GHPROJ-012:"),
     )?.[1];
     expect(pendingCase).toContain("INSERT INTO github_projection_outbox");
-    const bindingInitializer = variableInitializer(
-      forwardStoreSource,
-      forwardStorePath,
-      "insertGithubBinding",
-    );
-    expect(bindingInitializer).toContain("INSERT INTO github_object_bindings");
+
     expect(forwardStoreSource).not.toContain("recordGithubBinding");
   });
 });
