@@ -323,13 +323,13 @@ Pack の PLAN 運用は Issue 参照に置き換える (PO 判断)。**互換性
 
 - **PLAN 凍結の節の置き換え** (`CLAUDE.md` の §PLAN Filing Rules): S8 で PLAN 凍結の節と PLAN 起票規律・設計系 PLAN の 4 項目の節は、最小の形に置き換える。置き換え後の文言は「新しい作業の正本は設計文書 (`docs/design/` / `docs/test-design/`) と GitHub Issue」とし、PLAN の起票・改訂・参照追加の規則は書かない (PLAN 機構が無いため)。工程 (pair-freeze、改訂の cross-review) の規律はそのまま守る。
 
-**S4・S5・S7 の補足**: 3 本とも、`src` を含まない前段の PR を置く。型は「S2・S3 の前段と同期」の節と同じで、実装 PR は `src` を含むので `docs/design/`・`docs/test-design/` を変更できず (`protected-modified`)、宣言だけ・テストだけを片側で消すと未宣言 citation か未 citation の宣言になる。
+**S4・S5・S7 の補足**: S4・S5 は `src` を含まない前段の PR を置く。実装 PR は `src` を含むので `docs/design/`・`docs/test-design/` を変更できず (`protected-modified`)、宣言だけ・テストだけを片側で消すと未宣言 citation か未 citation の宣言になる。S7 の `github-forward-store` / 登録同期は、まず契約と根拠だけの docs-only PR-A を merge し、その後の PR-B で対象 test と `CONTRACT_ROWS` を同期する (対象範囲は下記)。
 
 - **S5 の前段**: 機械強制ではなく契約整合のためである。実際の oracle 関数で測ると、S5 のテスト削除による orphan は 0 件で (範囲表記の行は宣言として収集されない)、stale citation の baseline の 39 件 (project-v2 のテスト 10、repository-bindings のテスト 17、`tests/github-forward-store.test.ts` の 12) は baseline から除くと通る。件数は `loadOracleTestTraceInput` と `analyzeOracleTestTrace` で測った値である。したがって S5 の前段が無くても gate は落ちないが、書き手 8 export と呼び手が無くなる export の削除、provider の起動点の数と post 条件、`tests/github-forward-store.test.ts` の扱い、L7 の宣言行 (`L7-unit-test-design.md` の範囲表記の行) を実装前に契約へ揃える。
 - **S4 の前段**: `U-PLANRET-020` の再作成の検証を退役契約の検証へ改訂し (§3)、テスト設計 §4 で Red にしない維持確認として扱う。custody v2 の oracle (006・007・016) は変えない。
 - **S7 の前段**: 固定 HEAD に対する削除集合 (消す module・test・宣言) を §3 と `L7-plan-mechanism-retirement-test-design.md` §3、`L7-unit-test-design.md` の S7 処分注記で先に確定する。共有機能と mixed test は実 caller と assertion を照合し、処分単位を明らかにする。実際の oracle 関数 (`loadOracleTestTraceInput`・`analyzeOracleTestTrace`) で、現況、test だけを除いた状態、test と宣言を同期した将来状態を区別して orphan と stale citation を測る。実測の基準 HEAD・再現経路・結果は前段 PR の根拠に記録し、数値は本書に固定しない。
 
-  この前段 PR は契約と根拠の用意だけを行い、現行 test・citation・宣言は削除しない。後続の src-free Red / 宣言同期段階で、test (専用 helper / fixture の本文引用を含む) と宣言を同じ PR で処分し、protected design/test-design の片側だけが残る期間を作らない。
+  PR-A は本書 §8 と L7 §3.1 の契約文言だけを整え、現行 test・citation・宣言・baseline・source は変更しない。PR-A merge 後の PR-B では `tests/github-forward-store.test.ts` の readiness 専用 10 case / helper を退役させ、`U-GHPROJ-012` の旧 DDL fixture と assertion を維持しつつ、`src/doctor/test-repository-isolation.ts` の `CONTRACT_ROWS` を同じ PR で同期する。`U-PLANRET-014` の S5 残存 ID list / readiness / 旧 binding helper の残存 assertion の整理も PR-B で行う。この10 IDは現行 canonical declaration に無い citation baseline の債務なので、PR-B では実測に基づく baseline の縮小を許容し、protected docs の宣言行は変更しない。その他の PLAN 専用 test / 宣言の同期は従来どおり src-free で行い、別の mixed test や S7 source へ PR-B の範囲を広げない。
 
 **S4・S7 の共用機能と SQL 読み手の補足** (advisor `gpt-6.1-sol` の回答を実物で確かめて採った):
 
