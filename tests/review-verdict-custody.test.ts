@@ -660,19 +660,16 @@ describe("repo-local review verdict custody (U-RVATT-030..035)", () => {
 const fault = vi.hoisted(() => ({ path: "", mode: "none", parsed: false }));
 vi.mock("node:fs", async (importOriginal) => {
   const actual = await importOriginal<typeof import("node:fs")>();
-  const read: typeof actual.readFileSync = ((
-    path: Parameters<typeof actual.readFileSync>[0],
-    options: Parameters<typeof actual.readFileSync>[1],
-  ) => {
-    if (String(path) === fault.path && !fault.parsed && fault.mode === "initial-unreadable") {
+  const read: typeof actual.readFileSync = ((...a: Parameters<typeof actual.readFileSync>) => {
+    if (String(a[0]) === fault.path && !fault.parsed && fault.mode === "initial-unreadable") {
       fault.parsed = true;
       throw Object.assign(new Error("injected first-read failure"), { code: "EACCES" });
     }
-    if (String(path) === fault.path && fault.parsed && fault.mode === "unreadable") {
+    if (String(a[0]) === fault.path && fault.parsed && fault.mode === "unreadable") {
       throw Object.assign(new Error("injected second-read failure"), { code: "EACCES" });
     }
-    const result = actual.readFileSync(path, options);
-    if (String(path) === fault.path && !fault.parsed) {
+    const result = actual.readFileSync(...a);
+    if (String(a[0]) === fault.path && !fault.parsed) {
       fault.parsed = true;
       if (fault.mode === "delete") actual.unlinkSync(fault.path);
       if (fault.mode === "replace") {
