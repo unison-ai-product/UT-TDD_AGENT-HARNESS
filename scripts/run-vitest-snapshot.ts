@@ -314,7 +314,6 @@ const SNAPSHOT_VALUE_OPTIONS = [
   "--testNamePattern",
   "--reporter",
   "--maxWorkers",
-  "--minWorkers",
   "--shard",
   "--exclude",
   "--pool",
