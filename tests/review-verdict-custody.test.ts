@@ -660,7 +660,10 @@ describe("repo-local review verdict custody (U-RVATT-030..035)", () => {
 const fault = vi.hoisted(() => ({ path: "", mode: "none", parsed: false }));
 vi.mock("node:fs", async (importOriginal) => {
   const actual = await importOriginal<typeof import("node:fs")>();
-  const read: typeof actual.readFileSync = ((path, options) => {
+  const read: typeof actual.readFileSync = ((
+    path: Parameters<typeof actual.readFileSync>[0],
+    options: Parameters<typeof actual.readFileSync>[1],
+  ) => {
     if (String(path) === fault.path && !fault.parsed && fault.mode === "initial-unreadable") {
       fault.parsed = true;
       throw Object.assign(new Error("injected first-read failure"), { code: "EACCES" });
