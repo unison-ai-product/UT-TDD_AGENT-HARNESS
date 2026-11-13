@@ -23,7 +23,7 @@ import { nodeDoctorDeps } from "../src/doctor/runtime-state.ts";
  * oracle: docs/test-design/harness/L7-doctor-source-preflight-profile-test-design.md (§4、§6)
  *
  * 区分 A (001) は it.fails、区分 B は前提 (登録) を it.skipIf で包み、区分 C (006 / 007 / 010) は
- * HEAD でも緑の guard である。前提は oracle の assertion の外に置く (test 設計 §4)。
+ * HEAD でも緑の guard である (010 は HEAD の toolchain 値 `claude-version-floor` 込みの literal)。前提は oracle の assertion の外に置く (test 設計 §4)。
  */
 
 const ID = "source-preflight";
@@ -43,11 +43,14 @@ const PREFLIGHT_IDS = [
   "readability",
 ];
 
-// L7 §4.1 の固定値 (origin/main de6da7e4d)。src/doctor/profiles.ts の定数から組み立てない。
+// L7 §4.1 の固定値は origin/main de6da7e4d の値だが、契約 merge (#1663) の直後に #1662 (f2d9558e4) が
+// toolchain 2 profile へ claude-version-floor を足した。HEAD の値に合わせた literal を置く。
+// L7 §4.1 / L6 I4a の固定値の改訂は別の docs PR で行う (本 PR は docs に触れない)。
+// src/doctor/profiles.ts の定数から組み立てない。
 const SMALL_PROFILE_OUTPUT_IDS: Record<string, string[]> = {
   "source-doc-lane": ["readability", "runtime-readability", "rule-drift", "secret-scan"],
-  "source-toolchain": ["toolchain-pin"],
-  "consumer-toolchain": ["toolchain-pin"],
+  "source-toolchain": ["toolchain-pin", "claude-version-floor"],
+  "consumer-toolchain": ["toolchain-pin", "claude-version-floor"],
   "consumer-setup-smoke": [],
 };
 
