@@ -260,7 +260,7 @@ describe("L7 CLI surface closure", () => {
       plan_id: "text:expose-a-json-command-surface",
       reason: expect.stringContaining("source=text"),
     });
-  }, 15_000);
+  }, 30_000); // 13.1s measured (Windows, vitest 2.1.9), #1247
 
   it("exposes strict telemetry provenance as a doctor verification flag", () => {
     const run = runCli(["doctor", "--help"]);
@@ -937,7 +937,7 @@ describe("L7 CLI surface closure", () => {
       removeTestTree(binDir);
       removeTestTree(runtimeRoot);
     }
-  }, 20_000);
+  }, 120_000); // 51.6s measured (Windows shard under load, vitest 4), 1.3-2.2s unloaded, #1247
 
   it("fails closed when the distribution source tag is unavailable", () => {
     const outDir = mkdtempSync(join(tmpdir(), "ut-tdd-package-out-"));
