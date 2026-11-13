@@ -10,7 +10,7 @@ next_pair_freeze: L7
 issue: 1037
 ---
 
-> **L6 contract marker**: `resolveDoctorRunProfile(options: DoctorRunProfileResolutionOptions) => DoctorRunProfile` に、PR を出す前の点検用の名前付き profile `source-preflight` を足す unit-test-granularity contract である。候補 oracle は `CANDIDATE-U-PREFLIGHT-001` から `CANDIDATE-U-PREFLIGHT-013`。oracle の詳細は `docs/test-design/harness/L7-doctor-source-preflight-profile-test-design.md` が固定する。
+> **L6 contract marker**: `resolveDoctorRunProfile(options: DoctorRunProfileResolutionOptions) => DoctorRunProfile` に、PR を出す前の点検用の名前付き profile `source-preflight` を足す unit-test-granularity contract である。候補 oracle は `CANDIDATE-U-PREFLIGHT-001` から `CANDIDATE-U-PREFLIGHT-014`。oracle の詳細は `docs/test-design/harness/L7-doctor-source-preflight-profile-test-design.md` が固定する。
 
 > **状態**: 本書は issue #1037 の最初の切り出しに対する**未実装の目標契約**である。実装 (Green) は本書と対の L7 を凍結し、Red を入れた後に別 PR で行う。方式の変更が必要になったら実装を止め、本書と対の L7 を同時に改訂する。
 
@@ -107,7 +107,8 @@ control lane が決め、本書はそれを記録する。再検討の対象に�
 | I1 | `source-preflight` の `outputIds` は `FULL_DOCTOR_OUTPUT_IDS` の部分集合である。CI が流さない check を足さない |
 | I2 | 新しい check の論理を足さない。member の check は registry の既存の定義をそのまま呼ぶ |
 | I3 | doctor singleton を守る。lock の取得は既存の CLI 経路のまま全 profile に共通で、本 profile だけの迂回路を作らない |
-| I4 | 既存の 5 profile (`source-full`、`source-doc-lane`、`source-toolchain`、`consumer-toolchain`、`consumer-setup-smoke`) の check 集合 (`outputIds`) と、consumer 向けの profile 一覧は変えない。変える前の集合は L7 が固定値で持つ |
+| I4a | 小さい既存 profile (`source-doc-lane`、`source-toolchain`、`consumer-toolchain`、`consumer-setup-smoke`) の check 集合 (`outputIds`) と、consumer 向けの profile 一覧は変えない。この 4 つの集合を契約として持つのは本書であり、L7 が固定値の oracle で常に検査する。集合を変えるときは、先に本書のこの行を改訂して著者でない family の review を通し、実装 PR で test の literal を改訂後の文面に合わせる。reviewer は literal を改訂後の文面と照合し、`src/doctor/profiles.ts` の定数とは照合しない |
+| I4b | 本切り出しの Green PR は `FULL_DOCTOR_OUTPUT_IDS` と `source-full` の entry を変えない。**unit の oracle では機械検査しない**。`source-full` は check が足されるたびに正規に増える集合なので、固定値を test に持つと定数と同時に書き換える台帳になり、co-edit を止められず、導出できる一覧を手で保守しない原則 (Issue #587) と最小実装の原則にも反する (control の決定)。代わりに Green PR の review で、§8 の受け入れ条件として確かめる |
 | I5 | 結果は助言であり、merge の gate (`ut-tdd pr merge`、CI `harness-check`) は本 profile の結果を読まない |
 
 ## 6. origin/main で確かめた事実
@@ -134,6 +135,7 @@ control lane が決め、本書はそれを記録する。再検討の対象に�
 - [ ] `ut-tdd doctor --profile source-preflight` が §4.2 の 8 件だけを流し、それ以外の check を流さない。
 - [ ] member の 1 件が violation のとき終了コード `1`、全件 OK のとき `0`。
 - [ ] 未知の profile は終了コード `1` で拒否され、既定の profile の check 集合は変わらない。
+- [ ] (I4b、review で確かめる) `git diff $(git merge-base origin/main <head>)..<head> -- src/doctor/profiles.ts` の差分が §7 に挙げた追加だけであり、reviewer が merge-base と head のそれぞれで評価した `FULL_DOCTOR_OUTPUT_IDS` が同じ配列であることを verdict に記録している (手順は L7 §4.2)。
 - [ ] L7 の候補 oracle がすべて正式 ID に昇格し、Red → Green → Refactor の順で入っている。
 
 ## 9. #1037 に残るもの
