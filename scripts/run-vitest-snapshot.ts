@@ -351,12 +351,13 @@ export function parseSnapshotRunnerArgs(args: readonly string[]): SnapshotRunner
       continue;
     }
 
+    const optionName = token.startsWith("--") ? token.split("=")[0] : token;
     return {
       kind: "unknown-option",
       args,
-      token,
+      token: optionName,
       message:
-        `Unknown snapshot runner option ${JSON.stringify(token)}. ` +
+        `Unknown snapshot runner option ${JSON.stringify(optionName)}. ` +
         `Allowed options: ${SNAPSHOT_ALLOWED_OPTIONS}. ` +
         "To pass other Vitest arguments, use -- as a standalone token before them.",
     };
