@@ -10,6 +10,16 @@ issue: 530
 
 # UT-TDD Agent Harness 構想書 v4.0 候補 (チーム開発版 Verified Change Harness)
 
+> **改訂メモ (2026-11-12 / 2026-11-13、#1005 のコメント 6822862705 と 6844628646):** v4 の要求 79 件の見直し (2026-11-13 の追補で区分は 4 つだけに確定: 残す 12 / 簡素化 33 / 先送り 20 / 削る 15、詳細は要件候補の改訂メモ) の決定を、この構想書に反映する。本書の本文は構想の記録として残し、次の 6 点と食い違う記述は、この改訂メモを優先する。
+> 1. スプレッドシート・Office・Google 文書は、人間が読むための一方向の書き出しである。書き戻し (admission 経由の逆流) は作らない。
+> 2. チケットの正本は GitHub Issue / Sub-issue / PR である。独自のチケット store・tracked 記録・一方向投影・ずれ検出は作らない (Issue は作業の許可で、権限を持たず、契約本文は設計文書に置く)。
+> 3. 管理知能 (別プロセスの Python) は作らない。control lane (LLM) が GitHub と CLI で指揮し、閉じる権限は gate だけが持つ。実装言語は TypeScript / Node 一本のままである。
+> 4. 1.0.0 が保証する運用形態は hybrid だけである。単一 provider は今ある fallback のままにし、最初の導入先が片方の provider しか使えないと分かった時点で見直す。
+> 5. 層番号の振り直しとディレクトリ再編 (product/ と dev/ の分離) は先送りにする。上流の製品工程 (要求の整理・PoC・画面プロト・製本) は、テンプレートとチェックリストだけを配る。
+> 6. 派生する一覧は手で編集せず、再生成のコマンドを 1 本にして CI で「再生成しても差分が出ない」ことを確かめる (UTV4-FR-080)。
+> 7. 本文のうち、lease / fence / budget、ticket compiler、大・中・小・原子の 4 階層、管理知能、単一 provider の保証、層番号の振り直し、ディレクトリ再編を前提にする記述は、上の 1〜6 と各節の冒頭の注記に従って適用しない (本文は構想の記録として残す)。ADR-001 の決定 4 (管理知能は別プロセスの Python) との食い違いは、この PR では ADR を変えず、別に扱う。
+> 版のはしごは 7 段から 3 段 + rc に減らした (v4-roadmap/README.md の「版のはしご (2026-11-12 の見直し)」)。
+
 ## Authority 境界
 
 本書は **未承認候補**であり、現行 concept v3.1 と要件定義書 v1.2 を置換しない。L1 要求候補
@@ -41,9 +51,11 @@ v3.1 は V-model L0-L14、4 artifact + 3 段階 freeze、9-mode、配線、5 役
 本書は PO が提示した個人開発ハーネスの構想 v4.0 候補 (Verified Change Operating System) から、**チーム開発に必要な部分だけ**を翻案する。参照元の 8 Plane のうち、Sovereignty / Change Contract Compiler /
 Control Plane / Assurance Kernel / Evidence Ledger / Adaptation を採り、Execution Plane の provider 非依存 lane と
 Release / Lifecycle Plane は既存の tier-router / Pack 配布 (PLAN-L6-63 系) へ写像するに留める。参照元の
-Python 恒久意味コアは採らない (ADR-001: TypeScript/Node 一本)。
+Python 恒久意味コアは採らない (ADR-001: TypeScript/Node 一本)。2026-11-12 の見直しで、管理知能 (別プロセスの Python) も作らないことにした。
 
 ## 北極星
+
+> **2026-11-12 の見直し:** 「lease を持つ actor」は、Issue の self-assign で二重着手を防ぐ形に置き換える (UTV4-FR-005)。
 
 人間は価値・要求・体験・不可逆作用の許可・authority 候補の承認・チーム内の責務配分を所有する。ハーネスは
 意図の構造化、責務分解、チケット生成、bounded execution、検証、merge、証拠の閉包、改善候補の生成を所有する。
@@ -71,6 +83,8 @@ judgement record として蓄積し、繰り返し現れる判断を安価なモ
 
 ## 7 原則
 
+> **2026-11-12 の見直し:** 原則 4 の lease / fence / budget による束縛と、チケットの機械 compile・batch admission は採らない (UTV4-FR-004 / 005 / 035 の簡素化)。原則 6 の書き戻しは、人間向けの書き出しには作らない (冒頭の改訂メモ 1)。
+
 1. **Human Sovereignty (層別 human-on-the-loop)**: request / selection / approval / decision / disposition を分離し、
    source・actor・target・scope・revision へ束縛する。人間の関与点は層と作用の種類で決まり、会話や memory から
    approval を生成しない。
@@ -86,7 +100,7 @@ judgement record として蓄積し、繰り返し現れる判断を安価なモ
    読む narrative は markdown 正本 (typed spec block で機械可読部を埋め込む)。機械が生成・集計・遷移させる record
    (チケット / schedule / verdict / receipt / evidence) は 1 record = 1 JSON/YAML file の構造化正本とし、
    markdown・spreadsheet・ダッシュボードはすべて generated view とする。双方向書き戻しは構造化正本に対してのみ
-   admission 経由で許し、markdown 正本への機械書き戻しは行わない。
+   admission 経由で許し、markdown 正本への機械書き戻しは行わない。(2026-11-12 の見直し: スプレッドシート・Office・Google 文書の書き戻しは作らない。冒頭の改訂メモ 1 を優先する。)
 7. **Controlled Adaptation (人間とハーネスへの二方向還流)**: FLAG・incident・運用観測は直接 authority を書き換えず、
    改善候補として既存 V-model (Reverse / Requirement Re-entry) へ戻す。同じ候補を人間可読 digest としてチームへも
    配る。単一 episode で規則や機構へ昇格しない。
@@ -117,6 +131,8 @@ schedule を新たな record 種別として追加する。
 
 ### 3. Control Plane (統制面・チーム協調)
 
+> **2026-11-12 の見直し:** 次の記述のうち、機械が compile するチケットの既定発行、大・中・小・原子の 4 階層、lease / fence / budget、tracked のチケット正本と GitHub の一方向投影は採らない (UTV4-FR-004 / 035 / 036 の簡素化・撤回)。チケットは GitHub Issue / Sub-issue / PR の 3 段で、claim は self-assign とする。
+
 統括 owner 1 名 (program owner、人間) が、チケット・PR・CI・review・merge から生成される進捗 projection を見て判断する: 発散区間の開始 / 終了、合流点の owner 指名と takeover 承認、再集計上限超過の差し戻し先、リリース切り分け、WIP 上限とキャパシティ配分、blocked チケットの escalation。進捗を手で更新する層ではなく判断だけを持つ層である。
 
 チケットは **既定で機械が compile** する: L4 基本設計の typed block (責務 × path × 依存の行列) から詳細設計・仕様・実装チケットと合流点の統合チケットを、L2 の screen id / 仮説 id から画面プロト・PoC チケットを、admission receipt から検証チケットを生成する。人は個票ではなく batch 単位で admission し、AI lane への割当は routing policy で自動、人間 owner の割当だけを手で行う。手発行は例外経路で、理由を record に残す。発行と判断の重みは層で勾配を持つ: L0〜L3 (企画・画面プロト・PoC・要件) は人が発行・割当し機械は候補起草まで、L4 は文書 1 名でチケット化しない、L5 以下は機械 compile が既定。
@@ -126,7 +142,7 @@ schedule を新たな record 種別として追加する。
 queue、assignment (チケット)、owner、branch / worktree、base / HEAD、lease / fence、heartbeat、budget、
 provider capability、PR / review / CI state を管理する。**人間ユーザーも AI lane も同じ assignment model に載る**。
 GitHub Issue / Projects は read 側 projection (一方向同期) であり、GitHub 側の編集は Issue admission 経由で
-のみ正本へ戻る (docs/governance/github-issue-hierarchy.md と U23 Execution Ledger を継承・拡張)。
+のみ正本へ戻る (docs/governance/github-issue-hierarchy.md と U23 Execution Ledger を継承・拡張)。(2026-11-12 の見直し: チケットの正本は GitHub Issue 自身で、tracked の正本・投影・admission は作らない。冒頭の改訂メモ 2 を優先する。)
 起動時は文書を順不同で読ませず、authority root・Requirement IR・V-pair・責務・assignment・HEAD・lease・
 runtime capability・approval 境界を解決した startup packet を決定的に生成する。
 
@@ -175,6 +191,8 @@ PO は 2 大要求 (A / B) に加えて、参照元の個人開発ハーネス�
 
 ## Provider topology (単一 provider でも成立する構成)
 
+> **2026-11-12 の見直し:** 1.0.0 が保証するのは hybrid だけである。ここに書く単一 provider の補償統制と evidence tier の運用 (UTV4-FR-023 / 024) は、最初の導入先が片方の provider しか使えないと分かった時点で見直す。それまで、単一 provider は今の fallback (`intra_runtime_subagent` 記録) のままにする。
+
 本構想は特定の provider 組合せを前提にしない。独立 review の本質は **authoring context からの分離 + reviewer attestation + exact HEAD / CI generation への束縛** であり、provider family の分離はその最も強い実装であって唯一の実装ではない。チームが利用できる provider は契約・予算・地域で変わるため、次の 3 profile を同じ契約の上で選べるようにする。
 
 | profile | 創出 (worker) | 判断 (review / gate) | 独立性の担保 | evidence tier | 補償統制 |
@@ -205,6 +223,8 @@ hybrid 基準比較 (FR-024) で見逃し率を継続計測する。これらは
 参照元でも中間 tier の退役と 2 層 (判断 = frontier、創出 = 実装量産 tier) への集約が検討されており、single-provider profile はその 2 層構成をそのまま 1 provider 内で実現する形である。
 
 ## 標準工程 flow (チーム開発版、PO 提示 2026-09-04)
+
+> **2026-11-12 の見直し:** この表の lease・原子チケット・統合チケットの takeover (lease 移転)・チケットの機械 compile は採らない (UTV4-FR-004 / 005 / 030 / 035 / 036 の簡素化・撤回)。チケットは GitHub Issue / Sub-issue / PR の 3 段、二重着手は Issue の self-assign で防ぐ。
 
 1 名が収束させる点と集団が発散する区間を交互に置く。発散区間の出口は必ず event / receipt で閉じ、合流点には統合チケットの owner 1 名を置く。
 
@@ -260,6 +280,8 @@ v3.1 資産から新体制への移行は Reverse → ずれの判定 (正解 = 
 
 ## 全体影響バグ・改善データ・製本点・実録学習 (PO 指示 2026-09-04)
 
+> **2026-11-12 の見直し:** 全体影響バグの扱いは `incident` Issue と `hold` ラベルに簡素化した (UTV4-FR-037)。依存 graph からの影響範囲の機械判定、中 / 大チケットの admission 停止、原子チケット、fence は作らない (簡素化後の形で、1.0.0 の後に必要が実測されたら扱う)。
+
 | 論点 | 方式 |
 |---|---|
 | 全体に影響するバグ | 影響範囲は依存 graph (中チケットの責務 × path 行列) からの projection で機械が判定し、複数の中チケットに跨る欠陥は **stop-the-line incident** として統括 owner の decision record で扱う。対処は (1) 該当する中 / 大チケットの admission を一時停止 (fence)、(2) 修正は原子チケットとして発行し、影響下の小チケットの lease を takeover receipt 付きで一時回収、(3) 契約の誤りなら Reverse (要求 / 設計への還流) を必ず対にする。場当たりの hotfix branch と lease 無視の直接 push は deny。 |
@@ -268,6 +290,8 @@ v3.1 資産から新体制への移行は Reverse → ずれの判定 (正解 = 
 | 実録からの学習 | 一般手順を書いた汎用 skill (provider が既知の知識) は退役対象 (FR-025 の GENERIC_PROCEDURE class) とし、skill・判断パック・機構は **実録 (receipt / finding / review verdict / incident / S4 record) から抽出した CASE / SCENE / PATTERN** に provenance を束縛して生成・昇格する。実録 provenance の無い skill は昇格できず、既存 skill は実録との照合で quarantine 判定を受ける。 |
 
 ## 判断の蓄積と機械判断化 (自己学習型ハーネス、PO 指示 2026-09-04)
+
+> **2026-11-12 の見直し:** 全 LLM 判断の judgement record 化 (FR-041) は撤回し、calibration と frontier の降格 (FR-042 / 043 / 045) は先送りにした (発火条件: AI 費用か review 費用が PO の決めた予算を超えたとき)。判断を良否軸と選好軸に分け、選好の指摘で merge を止めない規則 (FR-044) だけを残す。
 
 | 論点 | 方式 |
 |---|---|
@@ -281,6 +305,8 @@ v3.1 資産から新体制への移行は Reverse → ずれの判定 (正解 = 
 
 ## ハーネス標準共有機構: 機械認識の可視化と齟齬検出 (PO 指示 2026-09-04)
 
+> **2026-11-12 の見直し:** スプレッドシート・Office・Google 文書は一方向の書き出しで、書き戻しの admission と discrepancy record は作らない (FR-008 の簡素化、FR-009 の先送り、FR-047 の撤回)。図は必要なときに生成する (FR-046)。派生物は手で編集せず、再生成の差分 0 を CI で確かめる (FR-080)。
+
 | 論点 | 方式 |
 |---|---|
 | 図は generated view | 依存グラフ (PLAN の requires / references、中チケットの責務 × path 行列、admission 履歴)、画面遷移図 (FR-039 の prototype record が持つ surface / action / state)、ER 図 (schema record) は、機械が認識している record から **決定的に描画** し、生成元 id・revision・digest を図に刻む。手描き図・貼り付け画像は正本にならず、参照は generated 図の id で行う。現行の harness.db `graph_nodes` / `dependency_edges` と docs の mermaid 描画が起点。 |
@@ -289,6 +315,8 @@ v3.1 資産から新体制への移行は Reverse → ずれの判定 (正解 = 
 | 適用層 | L1 (要求 → 要件のトレース図)、L3 (要件 IR ↔ 画面遷移)、L4 (責務 × 依存)、L5 / L6 (ER・API・状態遷移)、チケット (大 → 中 → 小 → 原子の入れ子とレース状況)。各層の図は同じ生成契約を使い、層ごとに描画器を発明しない。 |
 
 ## 画面プロト工程の構成 (PO 指示 2026-09-04: 本開発では構成が薄い、しっかり見る)
+
+> **2026-11-12 の見直し:** 画面プロトの工程は、record のエンジンではなく、consumer に配るテンプレートとチェックリストで持つ (FR-056 の簡素化)。画面の製本 (FR-039 / 057) は先送りにした (発火条件: UI を持つ consumer で、画面と要件の食い違いが繰り返し記録されたとき)。
 
 製本点 (a)(b) だけでは工程が成立しない。画面プロトは **要求を整理し要件を固めるための検証装置** であり、次の構成要素を
 record と generated view で持つ。ハーネス自身の人間向け面 (スプレッドシート view、digest、ダッシュボード、CLI の対話面) も同じ工程を通す
@@ -324,6 +352,8 @@ deep を要する典型は 2 種 (PO 2026-09-04): (1) **意味ロジック** (�
 
 ## 下流から上流への還流 (Reverse) のチーム化 (PO 確認 2026-09-04)
 
+> **2026-11-12 の見直し:** 還流は、設計文書の path を名指す `backflow` Issue と `hold` ラベルに簡素化した (UTV4-FR-048)。ticket compiler による再 compile と lease を前提にする下の記述は適用しない。
+
 現行の Reverse (R0〜R4、`backprop_decision`、supersedes 双方向) は 1 PLAN 対 1 REVERSE の文書対であり、1 人運用では
 成立している。チームでは次の 4 点を record 化しないと破綻する: (1) 多数の原子 / 小チケットから同じ上流契約へ還流が集中し、
 上流 owner (L3 / L4 は 1 人) が bottleneck になる、(2) 同じ契約に対する還流が lane ごとに重複起票される、(3) 還流中の
@@ -338,6 +368,10 @@ deep を要する典型は 2 種 (PO 2026-09-04): (1) **意味ロジック** (�
 | 昇格の抑制 | 1 件の backflow で規則・機構を変えない (原則 7)。同種 backflow の反復は judgement record の calibration へ入り、契約テンプレートや check の改善候補になる。 |
 
 ## Sub-agent 機構の再編: 論理 role record と provider-native 写像 (PO 指示 2026-09-04)
+
+> **2026-11-12 の見直し (追記):** 「control plane が原子チケット (role + lease + budget) を lane へ dispatch する」形式は作らない。control lane (LLM) が GitHub と CLI で指揮し、閉じる権限は gate だけが持つ (UTV4-FR-050)。単一 provider の運用は 1.0.0 の保証の外である (UTV4-FR-023)。
+
+> **2026-11-12 の見直し:** 手書きの subagent 定義は撤去済み (#1002) で、role の根拠は `src/team/delegation-routing.ts` を単一とする。残すのは、モデルを世代固定の ID で持たず alias で解決し、解決した ID を receipt に残すこと (FR-049 の簡素化)。provider 定義の生成は作らない。
 
 実測 (HEAD 2026-09-04): `.claude/agents/` に Claude Code 固有形式の手書き subagent 20 本 (role・model floor・tools・
 プロンプトを焼き付け)、`delegation-routing.ts` に別系統の role 登録 (gate / review / worker)、`agent-guard.ts` は
@@ -354,6 +388,8 @@ subagent ファイル名で allowlist と floor を判定する。同じ「revie
 | 移行 | 既存 20 subagent は role record + skill へ分解し、生成 view として再出力する。生成物と手書き定義の一致を doctor で照合し、手書き残置は drift として fail-close。 |
 
 ## 削る機構: リファクタリングと退役の階層別責務 (PO 指示 2026-09-04)
+
+> **2026-11-12 の見直し:** 大・中・小・原子の階層別の責務は適用しない。refactor は専用の種類のチケット (Issue) で行う (UTV4-FR-052 / 053)。
 
 ## 要求の暫定性: AI が要求を勝手に freeze しない (PO 指示 2026-09-04)
 
@@ -395,6 +431,8 @@ production path へ昇格しない (FR-018 と同一)。PoC 期の設定・規�
 
 ## 三者分離: author / reviewer / admitter と merge lane のパス (PO 指示 2026-09-04)
 
+> **2026-11-12 の見直し:** admission チケット (lease 付き) と readiness の状態機械は作らない。三者分離は GitHub の状態と HEAD からの再検証で代える (UTV4-FR-054)。人間 review の対象は結合面に限る (UTV4-FR-055)。
+
 > 本節の前提として、**要求は既定で「修正が出るもの」** である (下記 §要求の暫定性)。
 
 PR の merge lane を author から別の人へ渡す構造を、チケット責務として固定する。「作る」「独立 review する」「main へ入れる判断を
@@ -425,6 +463,8 @@ projection であり、LLM の「気づき」だけで発火させない (気づ
 
 ## 正規情報 flow
 
+> **2026-11-12 の見直し:** 下の流れにある lease 付きのチケット (assignment record) と管理知能は採らない (UTV4-FR-004 / 005 / 060)。
+
 ~~~text
 人の意図 / 運用観測 / 外部変化
 → 型付き受付 (request record)
@@ -444,9 +484,9 @@ projection であり、LLM の「気づき」だけで発火させない (気づ
 1. canonical authority より先に runtime behavior を current 化しない。
 2. チケット・finding・learning asset は exactly-one primary owner を持つ。
 3. provenance の無い human authority claim を生成しない (memory、session summary、AI 解釈から approval を作らない)。
-4. lease の無い書き込み、owner の無いチケット、HEAD 未解決の作業者を起動しない。
+4. lease の無い書き込み、owner の無いチケット、HEAD 未解決の作業者を起動しない。(2026-11-12 の見直し: lease は作らない。二重着手は Issue の self-assign で防ぐ、UTV4-FR-005。)
 5. author runtime の内部 review を独立 review へ昇格しない。wrong HEAD の review を再利用しない。
-6. generated view を編集して正本へ戻さない。書き戻しは構造化正本への admission 経由のみ。
+6. generated view を編集して正本へ戻さない。書き戻しは構造化正本への admission 経由のみ。(2026-11-12 の見直し: 人間向けの書き出しからの書き戻しは作らない。冒頭の改訂メモ 1 を優先する。)
 7. unknown を none / unchanged / healthy / green へ変換しない。
 8. 単一 episode で規則や機構へ昇格しない。高価な監査を admission なしで起動しない。
 9. 人間の介入点を層別境界表の外へ増やさない (反射的エスカレーション禁止) し、表の内側を AI が越権しない。
@@ -498,7 +538,7 @@ goal は、Design 移行済みの範囲から開発ハーネスを **Pack 自己
 
 prompt 集、persona 集、multi-agent chat room、全会話保存、Issue を意味正本にする project manager、DB を意味正本に
 する workflow engine、latest model 自動追従器ではない。完全自動を理由に human authority を AI へ移さない。
-949 PLAN の一括 JSON 化は行わない (record 化は新規種別から段階導入)。
+949 PLAN の一括 JSON 化は行わない (record 化は新規種別から段階導入)。ハーネス独自のチケット store、別プロセスの管理知能、スプレッドシートからの書き戻しも作らない (2026-11-12 の見直し)。
 
 ## 昇格条件
 
