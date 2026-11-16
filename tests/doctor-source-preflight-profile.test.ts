@@ -28,7 +28,7 @@ import { headSnapshotRoot } from "./support/workspace-roots.ts";
  */
 
 const ID = "source-preflight";
-// CLI も HEAD の観測も複製元も headSnapshotRoot() (変更できない detached HEAD、実行 root と同じ commit) から読む。
+// HEAD の観測と複製元は headSnapshotRoot() (変更できない detached HEAD) から読む。CLI は node_modules のある実行 root (snapshot runner が設定) から起動する。
 
 // L6 §4.2 の宣言順。FULL_DOCTOR_OUTPUT_IDS などの定数から組み立てない。
 const PREFLIGHT_IDS = [
