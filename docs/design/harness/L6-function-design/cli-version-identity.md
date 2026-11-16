@@ -14,7 +14,7 @@ issue: 867
 
 L6 contract marker: CLI の `--version` 表示と update-check の local version を、実行形態ごとの識別元から解決する。
 DbC pre は無し (**never throws**)、post は表示が「識別済みの version」か明示的な `unidentified` のどちらかであり、
-識別できないことを `0.0.0` で隠さないこと、oracle は `CANDIDATE-U-RELVER-010..017`
+識別できないことを `0.0.0` で隠さないこと、oracle は `CANDIDATE-U-RELVER-010..018`
 (`docs/test-design/harness/L7-release-version-identity-test-design.md` §5) とする。
 
 ## 現状 (origin/main 262746842 の実測)
@@ -50,6 +50,7 @@ DbC pre は無し (**never throws**)、post は表示が「識別済みの versi
    c. 上のどれにも当たらない → `unidentified` を表示する。`0.0.0` を返す経路を持たない。
    sealed で manifest が無い・壊れている・digest が合わない・`release_tag` が無い場合は (a) に落ちず、(b) へも降りず (c) とする
    (bundle 外の `package.json` を拾って別物の version を出さない)。リポジトリ外へ手で置いた bundle (#1692 の再現) も (c) になる。
+   **適用境界**: この (c) は bundle 内 entry を直接起動したとき (CLI 自体の識別失敗) の表示である。launcher (`.ut-tdd/bin/ut-tdd.mjs`) 経由では、起動前の検証が manifest 欠落・不正 JSON を `consumer_runtime_absent`、pointer・digest の不一致を `consumer_runtime_identity_mismatch` / `consumer_runtime_digest_mismatch` で deny し (`src/setup/consumer-node-runtime.ts:658-662`)、CLI の起動 (同 `:702`) に到達しないため `--version` は何も表示しない。この deny は本契約で緩めない (version 表示のために launcher の fail-close を緩めない)。launcher が通す破損は `release_tag` 欠落で digest が整合する旧 generation だけで、その場合は (c) の `unidentified` を表示する。
 2. **`release_tag` は identity の field として保存し digest に含める**。値は installer が asset 名と release 文書の
    `release.tag` の一致を検証した後の tag だけで、`bundle_digest` の入力に入る (identity の一部なので追加の配線は要らない)。
    `release_id` から tag を導出しない。tag の書式は既存の `U-RELVER-006` と同じ `v<package version>` を要求し、一致しなければ
@@ -97,8 +98,9 @@ L6 contract marker: `resolveCliVersion(source: VersionSource) => CliVersionResol
 
 | 単位 | 入力 | pre | post | 不変条件 | oracle |
 | --- | --- | --- | --- | --- | --- |
-| `resolveCliVersion(source)` | 形態 (`__UT_TDD_BUNDLED__` の有無)、entry のディレクトリ、source の harness root | never throws | 契約 1 の優先順位 (a sealed の `release_tag` → b source の `package.json` → c `unidentified`) の結果を返す。`0.0.0` を返す経路を持たない | sealed で識別できなければ b へ降りず c とする。bundle 外の `package.json` を読まない | `CANDIDATE-U-RELVER-010`, `011`, `012` |
-| `readSealedReleaseTag(entryDir)` | bundle の entry と同じディレクトリ | `__UT_TDD_BUNDLED__ === true` | 検証順は、`bundle-manifest.json` の読取 → `validateConsumerNodeRuntimeBundle` → `identity.release_tag` の存在、の順。全て通ったときだけ先頭の `v` を除いた tag を返し、それ以外は `null` | 導入元の Release ディレクトリ・network・Pack checkout を読まない。`release_id` から tag を導出しない | `CANDIDATE-U-RELVER-012`, `013`, `015` |
+| `resolveCliVersion(source)` | 形態 (`__UT_TDD_BUNDLED__` の有無)、entry のディレクトリ、source の harness root | never throws | 契約 1 の優先順位 (a sealed の `release_tag` → b source の `package.json` → c `unidentified`) の結果を返す。`0.0.0` を返す経路を持たない | sealed で識別できなければ b へ降りず c とする。bundle 外の `package.json` を読まない | `CANDIDATE-U-RELVER-010`, `011`, `012` (012 は bundle 内 entry の直接起動で観測する) |
+| `readSealedReleaseTag(entryDir)` | bundle の entry と同じディレクトリ | `__UT_TDD_BUNDLED__ === true` | 検証順は、`bundle-manifest.json` の読取 → `validateConsumerNodeRuntimeBundle` → `identity.release_tag` の存在、の順。全て通ったときだけ先頭の `v` を除いた tag を返し、それ以外は `null` | 導入元の Release ディレクトリ・network・Pack checkout を読まない。`release_id` から tag を導出しない | `CANDIDATE-U-RELVER-012`, `013` (いずれも bundle 内 entry の直接起動で観測), `015` |
 | installer の identity 構築 | 検証済みの asset 名と release 文書の `release.tag` | tag が `v<package version>` の書式で asset 名・`release.tag` と一致 | `identity.release_tag` が保存され `bundle_digest` の入力に入る。不一致は `consumer_runtime_identity_mismatch` で deny、consumer root への write 0 | `release_tag` なしの旧 generation の launch を妨げない (`unidentified`) | `CANDIDATE-U-RELVER-014` |
 | `checkForUpdate(deps)` | local version は `resolveCliVersion` と同じ解決 | never throws | `unidentified` のとき `checked=false`、`detail` は `harness version unidentified`、表示行に `v0.0.0` を出さない。remote の解決順は不変 | 沈黙の条件 (override も `repository.url` も無い) は従来どおり | `CANDIDATE-U-RELVER-016` |
 | producer の source binding | artifact commit の `package.json` / lockfile の version と tag | なし | 不一致は出力前に typed error で fail-close し asset 0 (P1、別 PR) | | `CANDIDATE-U-RELVER-017` |
+| launcher の起動拒否 (既存、変更しない) | `.ut-tdd/bin/ut-tdd.mjs` 経由の起動、破損した manifest・pointer・digest | 既存の launcher 検証 | 検証失敗は deny し CLI を起動せず version を表示しない。`release_tag` 欠落で digest が整合する旧 generation だけ通り `unidentified` を表示する | version 表示のために launcher の fail-close を緩めない。`resolveCliVersion` の `unidentified` は launcher の deny を代替しない | `CANDIDATE-U-RELVER-018` |
