@@ -2,13 +2,14 @@ import { execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
   analyzePrivacyScan,
   findEmailHitLines,
   type PrivacyUnit,
 } from "../src/lint/privacy-scan.ts";
 import { loadDiffPrivacyUnits, loadTreePrivacyUnits } from "../src/lint/privacy-scan-inputs.ts";
+import { heavyAfterAll, heavyBeforeAll } from "./support/hook-bounds.ts";
 
 // Keep the synthetic address out of the source text: tree mode also scans tests/.
 const P = ["s".repeat(65), "@", "mail-provider.jp"].join("");
@@ -66,7 +67,7 @@ function scan(root: string, base: string, head: string) {
   });
 }
 
-beforeAll(() => {
+heavyBeforeAll("git", () => {
   const scratchBase = process.env.UT_TDD_1467_SCRATCH_ROOT?.trim() || tmpdir();
   mkdirSync(scratchBase, { recursive: true });
   scratchRoot = mkdtempSync(join(scratchBase, "ut-tdd-privacy-diff-hunk-"));
@@ -87,7 +88,7 @@ beforeAll(() => {
   replacementHead = commit(replacementRoot, "restore old line");
 });
 
-afterAll(() => {
+heavyAfterAll("teardown", () => {
   if (scratchRoot) rmSync(scratchRoot, { recursive: true, force: true });
 });
 

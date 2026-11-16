@@ -9,12 +9,13 @@ import {
   writeFileSync,
 } from "node:fs";
 import { dirname, join } from "node:path";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { setupConsumerWorktreeRuntime } from "../src/setup/index.ts";
 import {
   cleanupConsumerWorktreeRuntimeFixture,
   createConsumerWorktreeRuntimeFixture,
 } from "./support/consumer-worktree-runtime.ts";
+import { heavyAfterAll, heavyBeforeAll } from "./support/hook-bounds.ts";
 
 let fixture: Awaited<ReturnType<typeof createConsumerWorktreeRuntimeFixture>>;
 
@@ -71,15 +72,15 @@ function rollbackSnapshotPaths(worktreePath: string): readonly string[] {
 }
 
 describe("consumer worktree runtime rollback Red (#1592)", () => {
-  beforeAll(async () => {
+  heavyBeforeAll(["git", 300_000], async () => {
     fixture = await createConsumerWorktreeRuntimeFixture([
       "011-success",
       "011-empty",
       "011-existing",
     ]);
-  }, 300_000);
+  });
 
-  afterAll(() => cleanupConsumerWorktreeRuntimeFixture());
+  heavyAfterAll("teardown", () => cleanupConsumerWorktreeRuntimeFixture());
 
   describe.sequential("CANDIDATE-U-CWTRT-011 production transaction", () => {
     type InitialState = "absent" | "existing-sentinel";

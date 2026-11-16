@@ -4,7 +4,7 @@
  * 注入境界は checkBaselineConflict(repoRoot, headSha, { gates, pr })。
  */
 import { execFileSync } from "node:child_process";
-import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   BASELINE_GATES,
   checkBaselineConflict,
@@ -35,6 +35,7 @@ import {
   verifyLineBaselineGrowthFixture,
   worktreePaths,
 } from "./fixtures/baseline-recompute-fixture.ts";
+import { heavyAfterAll } from "./support/hook-bounds.ts";
 
 const gitFault = vi.hoisted(() => ({
   active: false,
@@ -470,7 +471,7 @@ describe.sequential("review merge gate baseline recompute (Issue #1559)", {
     }
   });
 
-  afterAll(() => {
+  heavyAfterAll("teardown", () => {
     for (const testFixture of fixtures.values()) cleanFixture(testFixture);
   });
 });

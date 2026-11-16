@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { checkBaselineConflict } from "../src/feedback/baseline-conflict.ts";
 import { CODE_SIZE_BASELINE_PATH } from "../src/lint/code-size.ts";
 import { checkCodeSize } from "../src/lint/code-size-inputs.ts";
@@ -15,6 +15,7 @@ import {
   TARGET,
   verifyConflictAndCleanPreview,
 } from "./fixtures/baseline-recompute-fixture.ts";
+import { heavyAfterEach, heavyBeforeEach } from "./support/hook-bounds.ts";
 
 const wrapperBaseline = '{\n  "src/alpha.ts": {"lines": null, "functionExcess": null}\n}\n';
 
@@ -37,7 +38,7 @@ function readLatestMergeResultReceipt(receiptPath: string | null): Record<string
   return receipt ?? {};
 }
 
-beforeEach(() => {
+heavyBeforeEach(["git", 420_000], () => {
   testFixture = buildFixture(
     {
       [TARGET]: separatedFile("const left = 1;", "const right = 1;"),
@@ -61,9 +62,9 @@ beforeEach(() => {
     removeFixturePreviewWorktree(fixture, preview.path);
   }
   expect(() => checkBaselineConflict(fixture.work, fixture.headSha, { pr: 1559 })).not.toThrow();
-}, 420_000);
+});
 
-afterEach(() => {
+heavyAfterEach("teardown", () => {
   const fixture = testFixture;
   testFixture = undefined;
   if (fixture) cleanFixture(fixture);

@@ -1775,7 +1775,7 @@ describe("Issue #1062: runtime notifications are memory-free", () => {
         // Process-spawn / signal failures are setup failures, not accepted Red.
         expectStarted(notificationResult);
         expect(notificationResult.status, "CLI must exit normally").not.toBeNull();
-      });
+      }, 120_000); // git/CLI fixture の準備の許容時間, 計測未配線 (code-size baseline), #1673
 
       afterAll(() => {
         try {
@@ -1796,7 +1796,7 @@ describe("Issue #1062: runtime notifications are memory-free", () => {
         } finally {
           if (root) removeTestTree(root);
         }
-      });
+      }, 60_000); // fixture 後始末の許容時間, 計測未配線 (code-size baseline), #1673
 
       it.fails("U-STCHAN-018: notify succeeds with the memory directory unreadable", () => {
         // Before the notify command exists, this is only a command-surface Red:

@@ -13,7 +13,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { buildFullDoctorCheckDefinitions } from "../src/doctor/check-registry.ts";
 import { nodeDoctorDeps } from "../src/doctor/runtime-state.ts";
 import {
@@ -23,6 +23,7 @@ import {
   parseDocSplitBaseline,
 } from "../src/lint/doc-split.ts";
 import { checkDocSplit, loadDocSplitSources } from "../src/lint/doc-split-inputs.ts";
+import { heavyAfterAll, heavyBeforeAll } from "./support/hook-bounds.ts";
 import { headSnapshotRoot } from "./support/workspace-roots.ts";
 
 const BASELINE_PATH = "docs/governance/doc-split-baseline.json";
@@ -182,7 +183,7 @@ function stateMtimes(root: string): Map<string, number> {
   return state;
 }
 
-beforeAll(() => {
+heavyBeforeAll(["git", 60000], () => {
   authorRoot = process.cwd();
   scratchRoot = mkdtempSync(join(tmpdir(), "doc-split-integration-"));
   initialGrowthRoot = makeInitialBaselineFixture("grown");
@@ -205,9 +206,9 @@ beforeAll(() => {
         largestL7BaselineFixture = copyLiveDocsWithBaseline("largest-l7-baseline", largestL7[0]);
     }
   }
-}, 60000); // 23s measured, bounded per #1063
+}); // 23s measured, bounded per #1063
 
-afterAll(() => {
+heavyAfterAll("teardown", () => {
   if (scratchRoot) rmSync(scratchRoot, { recursive: true, force: true });
 });
 

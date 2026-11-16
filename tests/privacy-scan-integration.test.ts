@@ -11,7 +11,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import {
   analyzePrivacyScan,
   findEmailHitLines,
@@ -24,6 +24,7 @@ import {
   loadTreePrivacyUnits,
   readPrivacyDenylistFile,
 } from "../src/lint/privacy-scan-inputs.ts";
+import { heavyAfterAll } from "./support/hook-bounds.ts";
 
 // L7 §2: no source line may match the email shape, so addresses are joined at runtime.
 const at = "@";
@@ -98,7 +99,7 @@ beforeAll(() => {
   scratchRoot = mkdtempSync(join(tmpdir(), "privacy-scan-integration-"));
 });
 
-afterAll(() => {
+heavyAfterAll("teardown", () => {
   if (scratchRoot) rmSync(scratchRoot, { recursive: true, force: true });
 });
 

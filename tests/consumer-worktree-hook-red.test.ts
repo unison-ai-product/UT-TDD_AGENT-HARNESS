@@ -10,9 +10,10 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { BUILTIN_GITHUB_TEMPLATES } from "../src/setup/templates.ts";
 import { gitTextTrimmed as git } from "./support/git.ts";
+import { heavyAfterEach } from "./support/hook-bounds.ts";
 import { removeFixtureTree } from "./support/pack-consumer-runtime.ts";
 
 type ClaudeHook = {
@@ -104,7 +105,7 @@ function expectMissingRuntimeGuidance(output: string, fixture: HookFixture): voi
   );
 }
 
-afterEach(() => {
+heavyAfterEach("teardown", () => {
   for (const root of fixtureRootsForThisFile.splice(0)) removeFixtureTree(root);
 });
 

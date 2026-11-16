@@ -19,10 +19,11 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { Command } from "commander";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { registerPrMergeCommands } from "../src/cli/pr-merge.ts";
 import { BASELINE_GATES, evaluateBaselineConflict } from "../src/feedback/baseline-conflict.ts";
 import { type GhPrMergePorts, runPrMerge } from "../src/feedback/review-merge-gate.ts";
+import { heavyAfterAll, heavyBeforeAll } from "./support/hook-bounds.ts";
 
 const now = "2026-10-28T01:00:00.000Z";
 
@@ -170,11 +171,11 @@ function buildTemplate(): string {
   return base;
 }
 
-beforeAll(() => {
+heavyBeforeAll("git", () => {
   templateDir = buildTemplate();
 });
 
-afterAll(() => {
+heavyAfterAll("teardown", () => {
   if (templateDir) rmSync(templateDir, { recursive: true, force: true });
 });
 
