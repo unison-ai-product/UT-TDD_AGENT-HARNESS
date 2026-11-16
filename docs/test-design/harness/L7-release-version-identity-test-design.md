@@ -2,6 +2,8 @@
 artifact_type: test_design
 layer: L7
 executed_at_layer: L7
+pair_artifact: docs/design/harness/L6-function-design/
+parent_doc: docs/design/harness/L6-function-design/cli-version-identity.md
 status: confirmed
 plan_id: PLAN-L7-523-release-version-identity
 ---
