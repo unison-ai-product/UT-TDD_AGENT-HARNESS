@@ -698,7 +698,7 @@ describe("codex-hook-adapter — Codex hooks.json parity (PLAN-L7-139, PLAN-L7-6
       });
       expect(configured.status, `${configured.stdout}\n${configured.stderr}`).toBe(0);
 
-      // active runtime pointer を外すと session hook は fail-open (exit 0、#1602 契約 §4 (b)) で案内を返し、bare `node` の SyntaxError とは区別する。
+      // active runtime pointer を外すと session hook は fail-open (exit 0、契約 §4 (b)) で案内を返し、bare `node` の SyntaxError とは区別する。
       const pointerPath = join(consumer, ".ut-tdd", "runtime", "activation", "active.json");
       const pointerBytes = readFileSync(pointerPath);
       rmSync(pointerPath, { force: true });

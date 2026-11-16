@@ -65,7 +65,7 @@ guard の `onFailure` そのものは `docs/test-design/harness/L7-claude-hook-o
 | `CANDIDATE-U-CCVER-016` | 窓の上の境界 (L6 §5、#1676) | 入力: §2 の transcript で、R の先頭から末尾までを 4,194,304 bytes にする。期待: `readTranscriptClaudeVersion` は `null`。反例: §5 の M18、M19a、M19b、M25。 |
 | `CANDIDATE-U-CCVER-017` | 窓の下の境界 (L6 §5、#1676) | 入力: §2 の transcript で、R の先頭から末尾までを 4,194,303 bytes にする。期待: `readTranscriptClaudeVersion` は `"2.1.293"`。反例: §5 の M20。 |
 | `CANDIDATE-U-CCVER-018` | fence が効いている (L6 §6、#1677) | 入力: test の worker の中で、`process.env.UT_TDD_CLAUDE_FENCE_DIR` と PATH の先頭の要素を読み、fence の記録 file の行数を数えてから、注入しない `checkClaudeVersionFloor()` を呼ぶ。期待: 環境変数が有り、PATH の先頭の要素がその dir と等しく (Windows は大小を無視して比べる)、記録の行数が呼ぶ前より 1 行多い。表示の文言は見ない (014 が受け持つ)。反例: §5 の M21、M22。 |
-| `CANDIDATE-U-CCVER-019` | CLI の子 process の doctor も fence を通る (L6 §6、#1677) | 前提: 018 の構造の条件 (環境変数が有り、PATH の先頭がその dir) が真。偽なら `it.skipIf` で skip し、検出に数えない。入力: `process.env` をそのまま継承して `node <実行 root>/src/cli.ts doctor --profile consumer-toolchain --json` を起動する (`tests/cli-surface.test.ts` の `runCli` と同じ形)。期待: fence の記録の行数が起動の前より 1 行多い。終了コードと表示の文言は見ない。反例: §5 の M23。テストレベル: CLI process。 |
+| `CANDIDATE-U-CCVER-019` | CLI の子 process の doctor も fence を通る (L6 §6、#1677) | 前提: 018 の構造の条件 (環境変数が有り、PATH の先頭がその dir) が真。偽なら `it.skipIf` で skip し、検出に数えない。入力: `process.env` をそのまま継承して `node <実行 root>/src/cli.ts doctor --profile consumer-toolchain --json` を起動する (`tests/cli-surface.test.ts` の `runCli` と同じ形)。期待: stdout の JSON の `messages` に `doctor: claude-version-floor - OK: PATH の claude の版 (9999.0.0)` の行がある (`9999.0.0` は fence の偽物の版で、ほかの fixture が使う版と重ならない)。記録の行数は数えない (2026-11-16 改訂: 子 process の doctor は `detectMode` (`src/runtime/detect.ts`) も PATH の claude を起動しうるので、行数は環境で変わる)。終了コードは見ない。反例: §5 の M23 と M16 (表示から版を除く変異で、014 も赤にする)。テストレベル: CLI process。 |
 | `CANDIDATE-U-CCVER-020` | 絶対 path で起動する (L6 §3、#1674) | 入力: 偽物の dir に偽の claude (`2.1.318`) を置き、PATH を「空の要素、偽物の dir」の順にして、in-process で `probePathClaude(env, process.platform)` を呼ぶ。期待: 結果は `{ kind: "found", version: "2.1.318" }` で、偽物の記録が 1 行だけあり、その起動名 (`%~0` / `$0`) が偽物の絶対 path と一致する (Windows は大小を無視して比べる)。009 は「別の file を起動しない」ことを見るが、素の名前で起動しても spawn の cwd が候補の dir なら同じ file が起動されるので、起動の形はこの oracle が見る。反例: §5 の M1。両方の platform で流す。 |
 | `CANDIDATE-U-CCVER-021` | 読む量 (L6 §5 と §8 の I3、#1676) | 前提: 016 と同じ transcript で `readTranscriptClaudeVersion` が `null` を返す。偽なら `it.skipIf` で skip し、検出に数えない (結果が違う変異は 016 が受け持つ)。入力: §2 の `node:fs` の差し替えの下で、016 と同じ transcript を読む。期待: `readSync` で読んだ bytes の合計が 4,194,304 以下で、`readFileSync`・`readFile`・`createReadStream` の呼び出しが 0 回。反例: §5 の M24、M26。テストレベル: unit (専用の test file)。 |
 
@@ -115,7 +115,7 @@ L6 `claude-version-probe.md` の正しい実装に、次の変異を 1 つだけ
 
 ## 6. 反例と oracle の対応表 (009〜021)
 
-行は反例、列は oracle の番号 (`CANDIDATE-U-CCVER-` を省いた数字)。`●` はその oracle の assertion が赤になること、`前` は前提が偽で skip されることを示す。空欄は緑 (その platform で流れない oracle を含む) である。各行の `●` は 1 つだけで、各列に `●` が 1 つ以上ある。最終行は正しい実装で、どの oracle も緑になる。001〜008 は、これらの反例のどれでも緑のままである (001〜003 と 007、008 の transcript は 4 MiB より十分小さく読み始めが 0 なので、窓と最初の行の扱いの反例が届かない。004 と 005 は probe を差し替える)。
+行は反例、列は oracle の番号 (`CANDIDATE-U-CCVER-` を省いた数字)。`●` はその oracle の assertion が赤になること、`前` は前提が偽で skip されることを示す。空欄は緑 (その platform で流れない oracle を含む) である。各行の `●` は 1 つだけ (M16 は 014 と 019 の 2 つ。2026-11-16 の 019 の改訂で、019 が doctor の OK の行の版を見るようになったため) で、各列に `●` が 1 つ以上ある。最終行は正しい実装で、どの oracle も緑になる。001〜008 は、これらの反例のどれでも緑のままである (001〜003 と 007、008 の transcript は 4 MiB より十分小さく読み始めが 0 なので、窓と最初の行の扱いの反例が届かない。004 と 005 は probe を差し替える)。
 
 | 反例 | 009 | 010 | 011 | 012 | 013 | 014 | 015 | 016 | 017 | 018 | 019 | 020 | 021 |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
@@ -131,7 +131,8 @@ L6 `claude-version-probe.md` の正しい実装に、次の変異を 1 つだけ
 | M8 拡張子の固定の順 | | | | ● | | | | | | | | | |
 | M9 拡張子の無い名前を先頭に | | | | ● | | | | | | | | | |
 | M10 実行権限を見ない | | | | | ● | | | | | | | | |
-| M11〜M16 表示 (各 1 行) | | | | | | ● | | | | | | | |
+| M11〜M15 表示 (各 1 行) | | | | | | ● | | | | | | | |
+| M16 OK の表示から版を除く | | | | | | ● | | | | | ● | | |
 | M17 見つからないを `found` に | | | | | | | ● | | | | | | |
 | M18 全体を読んで走査 | | | | | | | | ● | | | | | 前 |
 | M19a 窓 4 MiB + 1 | | | | | | | | ● | | | | | 前 |
@@ -159,7 +160,11 @@ L6 `claude-version-probe.md` の正しい実装に、次の変異を 1 つだけ
 
 ### 6.2 一対一であることの確かめ方
 
-probe の解決と実行 (起動名の記録を含む)、doctor の表示、transcript の窓 (byte 単位の offset と最初の行の扱い、読んだ bytes と API の記録)、fence を、L6 `claude-version-probe.md` §3〜§6 の規則どおりに写した使い捨てのモデルを書き (repo には入れない)、正しい実装と §5 の各変異 (それぞれ 1 か所の変更) に、本書の §3 に書いた観測と前提だけを評価させた。Windows と POSIX、PATH に本物の claude がある開発機と無い CI の 4 通りで流し、§6 の全行で `●` が 1 つ (どの環境でも同じ oracle)、全列で `●` が 1 つ以上、正しい実装で全件緑になることを確かめた。窓は上の 7 つの大きさでも流した。モデルは §2 の前提 (009〜013 と 020 の fixture の path は空白と `cmd` の特殊文字を含まない、vitest の cwd に `claude.*` が無い、`cmd` は拡張子の無い file を起動しない) を置いている。`cmd` と libuv の実際の探索の挙動は、実装の PR の変異の確認で確かめる (Red の PR の head から切った使い捨ての branch で変異ごとに commit し、`node scripts/run-vitest-snapshot.ts <test file>` を流す。手順は `L7-doctor-source-preflight-profile-test-design.md` §6 と同じ)。
+probe の解決と実行 (起動名の記録を含む)、doctor の表示、transcript の窓 (byte 単位の offset と最初の行の扱い、読んだ bytes と API の記録)、fence を、L6 `claude-version-probe.md` §3〜§6 の規則どおりに写した使い捨てのモデルを書き (repo には入れない)、正しい実装と §5 の各変異 (それぞれ 1 か所の変更) に、本書の §3 に書いた観測と前提だけを評価させた。Windows と POSIX、PATH に本物の claude がある開発機と無い CI の 4 通りで流し、§6 の全行で `●` が 1 つ (どの環境でも同じ oracle)、全列で `●` が 1 つ以上、正しい実装で全件緑になることを確かめた。窓は上の 7 つの大きさでも流した。この確認は 019 を改訂する前の revision (origin/main `262746842a12aec8835d104244969ab4b6e35f8c`、019 の観測が fence の記録の行数だった版) に対するものである。
+
+2026-11-16 の 019 の改訂 (観測を doctor の OK 行の版 `9999.0.0` にした) 後の再検証は、019 の観測が動く表示 (M11〜M16) と fence (M21〜M23) の行に限って、同じ形の模型 (014・018・019 の文面の観測だけを評価) で行った。結果は、正しい実装で 014・018・019 が緑、M11〜M15 は 014 だけ、M16 は 014 と 019 の 2 つ (この 1 行だけが「● は 1 つ」の例外)、M21 と M22 は 018 が赤で 019 が skip、M23 は 019 だけが赤である。上の旧観測での確認は、改訂後の対応表全体の確認としては使わない。M1〜M10、M17〜M20、M24〜M26 の行が 019 の改訂で動かないことは、観測の読みから判断したもので、改訂後の revision では模型を流していない。
+
+モデルは §2 の前提 (009〜013 と 020 の fixture の path は空白と `cmd` の特殊文字を含まない、vitest の cwd に `claude.*` が無い、`cmd` は拡張子の無い file を起動しない) を置いている。`cmd` と libuv の実際の探索の挙動は、実装の PR の変異の確認で確かめる (Red の PR の head から切った使い捨ての branch で変異ごとに commit し、`node scripts/run-vitest-snapshot.ts <test file>` を流す。手順は `L7-doctor-source-preflight-profile-test-design.md` §6 と同じ)。
 
 ## 7. 既存 test の更新 (oracle ではない)
 
