@@ -57,6 +57,8 @@ issue: 1364
 
 ## 3.1 S7 削除・宣言同期 disposition
 
+本件 issue #1379 の36 test file / 152 oracle の exact-head 退役宣言は [S7 36-file freeze](./L7-s7-36-retirement-freeze-test-design.md) に固定する。
+
 S7 の `github-forward-store` / 登録同期は二段階とする。PR-A は本書 §3.1 と L6 §8 の契約文言だけを整える docs-only PR で、現行 test・citation・oracle 宣言・baseline・source は変更しない。PR-A の merge 後、PR-B では `tests/github-forward-store.test.ts` の readiness 専用 10 case / helper を退役し、`U-GHPROJ-012` の旧 DDL fixture と assertion を維持したまま、`src/doctor/test-repository-isolation.ts` の `CONTRACT_ROWS` を同じ差分で同期する。`U-PLANRET-014` の S5 残存 ID list / readiness / 旧 binding helper の残存 assertion も PR-B で整理する。readiness 専用10 case の ID は現行 canonical declaration に無い citation baseline の債務なので、baseline は実測に基づいて PR-B で縮小できるが、protected docs の宣言行は PR-B に含めない。その他の PLAN 専用 test / 宣言は従来どおり src-free の同期段階で処分する。直接 import の共有 test は `src` の directory 名だけで判定せず、caller と assertion を照合する。
 
 `CANDIDATE-U-PLANRET-008` は `plan_registry` 3 行と `schedule_entries` 2 行の旧 DDL / 行数保持をそのまま検証する。別の ID は作らず、`CANDIDATE-U-PLANRET-018(g)` に `github_object_bindings`・`github_project_item_projection`・`github_projection_outbox` の旧 DDL / 行数保持と、PLAN 由来行を非 PLAN recommendation・digest・design projection が読まない性質を含める。`github_review_lane_receipts` は §3 の PLAN 表 9 件に含まれる。`U-PLANRET-020` は S4 の維持確認後、S7 で同 test と宣言を処分する。custody v2 receipt (`U-PLANRET-006`・`007`・`016`) と `reviewReceiptDigest` は維持する。 `U-PLANRET-014` の S4/S5 command・Project退役確認は維持する。S5 test にある `rebuildExecutionReadiness` 残存 assertion、S5 時点の readiness test ID list、旧 binding helper の残存 assertion は、PR-A merge 後の PR-B で整理する。同じケースは S7 後の export 不在と `U-GHPROJ-012` のみの残存を確認する。
