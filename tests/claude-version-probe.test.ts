@@ -15,9 +15,6 @@ import {
 } from "./support/claude-probe-fixture.ts";
 import { removeTestTree } from "./support/temp-tree.ts";
 
-// Red の段 (L7 claude-version-floor §4): stub は常に { found, null } を返すので、
-// 期待を満たし得ない oracle は it.fails、その platform で流れない oracle は skip にする。
-const failsOn = (applies: boolean) => (applies ? it.fails : it.skip);
 const FIXTURES: string[] = [];
 function fixtureDir(prefix?: string): string {
   const dir = makeFixtureDir(prefix);
@@ -33,7 +30,7 @@ function probe(pathValue: string, extra: Record<string, string | undefined> = {}
 }
 
 describe("Claude Code version probe (Issue #1674 / #1675)", () => {
-  it.fails("CANDIDATE-U-CCVER-009 does not run decoys from cwd, empty, dot or relative PATH entries, nor a path with a percent sign", () => {
+  it("CANDIDATE-U-CCVER-009 does not run decoys from cwd, empty, dot or relative PATH entries, nor a path with a percent sign", () => {
     const root = fixtureDir();
     const decoy = join(root, "decoy");
     const fake = join(root, "fake");
@@ -85,7 +82,7 @@ describe("Claude Code version probe (Issue #1674 / #1675)", () => {
     }
   }, 60_000);
 
-  failsOn(IS_WINDOWS)(
+  it.skipIf(!IS_WINDOWS)(
     "CANDIDATE-U-CCVER-010 runs a cmd shim under a dir with spaces and symbols through an absolute ComSpec",
     () => {
       const dir = fixtureDir(`UT-TDD probe & (x) !-${Math.random().toString(36).slice(2, 8)}`);
@@ -100,7 +97,7 @@ describe("Claude Code version probe (Issue #1674 / #1675)", () => {
     },
   );
 
-  it.fails("CANDIDATE-U-CCVER-011 runs only the first candidate even when it fails", () => {
+  it("CANDIDATE-U-CCVER-011 runs only the first candidate even when it fails", () => {
     const root = fixtureDir();
     const a = join(root, "a");
     const b = join(root, "b");
@@ -111,7 +108,7 @@ describe("Claude Code version probe (Issue #1674 / #1675)", () => {
     expect(readInvocations(b)).toEqual([]);
   });
 
-  failsOn(IS_WINDOWS)(
+  it.skipIf(!IS_WINDOWS)(
     "CANDIDATE-U-CCVER-012 follows PATHEXT order and skips extensionless claude",
     () => {
       const dir = fixtureDir();
@@ -122,7 +119,7 @@ describe("Claude Code version probe (Issue #1674 / #1675)", () => {
     },
   );
 
-  failsOn(!IS_WINDOWS)("CANDIDATE-U-CCVER-013 skips a non-executable claude", () => {
+  it.skipIf(IS_WINDOWS)("CANDIDATE-U-CCVER-013 skips a non-executable claude", () => {
     const root = fixtureDir();
     const a = join(root, "a");
     const b = join(root, "b");
@@ -131,12 +128,12 @@ describe("Claude Code version probe (Issue #1674 / #1675)", () => {
     expect(probe(joinPath(a, b))).toEqual({ kind: "found", version: "2.1.318" });
   });
 
-  it.fails("CANDIDATE-U-CCVER-015 returns not_found without running anything", () => {
+  it("CANDIDATE-U-CCVER-015 returns not_found without running anything", () => {
     const dir = fixtureDir();
     expect(probe(dir)).toEqual({ kind: "not_found" });
   });
 
-  it.fails("CANDIDATE-U-CCVER-020 runs the candidate by its absolute path", () => {
+  it("CANDIDATE-U-CCVER-020 runs the candidate by its absolute path", () => {
     const dir = fixtureDir();
     const file = writeFakeClaude(dir, { version: "2.1.318" });
     expect(probe(joinPath("", dir))).toEqual({ kind: "found", version: "2.1.318" });

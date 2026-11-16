@@ -17,6 +17,7 @@ import {
 } from "../runtime/agent-slots.ts";
 import type { WorktreeTopologyInput } from "../runtime/worktree-topology.ts";
 import { collectWorktreeTopology } from "../runtime/worktree-topology-collector.ts";
+import type { PathClaudeProbe } from "./claude-path-probe.ts";
 
 export type WorktreeTopologyProvider = WorktreeTopologyInput | (() => WorktreeTopologyInput);
 
@@ -29,7 +30,7 @@ export interface DoctorDeps {
   /** Optional PF3 input; node deps populate it, tests may provide facts directly. */
   worktreeTopology?: WorktreeTopologyProvider;
   /** Optional Claude Code probe; tests can avoid invoking a host executable. */
-  readPathClaudeVersion?: () => string | null;
+  probePathClaude?: () => PathClaudeProbe;
 }
 
 export function handoverDeps(deps: DoctorDeps): HandoverDeps {
