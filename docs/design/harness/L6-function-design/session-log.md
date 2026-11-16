@@ -157,6 +157,10 @@ project-local bundled `.mjs` consumerを使った。直接SessionStartを3回起
 後続Greenでは、既存のtimeout parity testを対象外hookのみ不変とする検査へ更新する。source開発repo設定と
 consumer templateは記録hookの30秒で揃えるが、guard等の対象外hookを含む全面一致は要求しない。
 
+> **2026-11-13 改訂 (Issue #1057)**: 本節の予算の値 (記録hookの30秒、guard hookの予算は変更しない) は
+> `hook-timeout-budget.md` が置き換える (guardと同期の記録hookを60秒にそろえる)。本節のfail-openの扱い
+> (記録の未保証、自動再実行やqueueを持たない、detachする作業は予算に含めない) は変えない。
+
 ## §6 fail-open 設計 (agent-guard fail-close との対比)
 
 | 比較項目 | agent-guard | session-log |
