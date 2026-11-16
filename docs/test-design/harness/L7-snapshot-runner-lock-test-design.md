@@ -3,7 +3,8 @@ title: "L7 snapshot runner lock test design"
 layer: L7
 executed_at_layer: L7
 artifact_type: test_design
-pair_artifact: docs/design/harness/L6-function-design/snapshot-runner-lock.md
+pair_artifact: docs/design/harness/L6-function-design/
+parent_doc: docs/design/harness/L6-function-design/snapshot-runner-lock.md
 status: confirmed
 updated: 2026-11-16
 issue: 1665
@@ -13,7 +14,7 @@ issue: 1665
 
 ## 1. 位置付け
 
-対になる設計文書は `docs/design/harness/L6-function-design/snapshot-runner-lock.md` (未実装の目標契約) と、そこから取得の手順と記録の読み取りを分けた `docs/design/harness/L6-function-design/snapshot-runner-lock-protocol.md` (以下「手順書」、同じく本書を対に持つ) である。本書は設計の §4 lock の範囲と置き場、手順書 §2 世代ファイルによる取得と解放、§6 待ち方と順番、手順書 §3 記録の読み取りと古い claim の判定、§8 入れ子の実行と CI、§9 終了コードと出力、§10 Vitest の一時 dir の衝突、§11 の DbC を検証する oracle を、候補 ID `CANDIDATE-U-SNAPLOCK-001`〜`031` で宣言する。共有の `docs/test-design/harness/L7-unit-test-design.md` には、この PR では索引の行を足さない (設計 §14 の 3 で足す)。
+対になる設計文書は `docs/design/harness/L6-function-design/snapshot-runner-lock.md` (未実装の目標契約) と、そこから取得の手順と記録の読み取りを分けた `docs/design/harness/L6-function-design/snapshot-runner-lock-protocol.md` (以下「手順書」、同じく本書を対に持つ) である。2 本の設計を 1 本で受けるので、frontmatter の `pair_artifact` は両者の置き場の dir を指し、`parent_doc` で本体を指す (`L7-confirmed-document-placeholder-detection-test-design.md` と同じ形)。本書は設計の §4 lock の範囲と置き場、手順書 §2 世代ファイルによる取得と解放、§6 待ち方と順番、手順書 §3 記録の読み取りと古い claim の判定、§8 入れ子の実行と CI、§9 終了コードと出力、§10 Vitest の一時 dir の衝突、§11 の DbC を検証する oracle を、候補 ID `CANDIDATE-U-SNAPLOCK-001`〜`031` で宣言する。共有の `docs/test-design/harness/L7-unit-test-design.md` には、この PR では索引の行を足さない (設計 §14 の 3 で足す)。
 
 進め方は設計保護 gate の三段階に従う。
 
