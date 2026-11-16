@@ -1,16 +1,18 @@
 import { cpSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { heavyAfterAll, heavyBeforeAll } from "./hook-bounds.ts";
 import { ensureTrackedProjectIdentity } from "./project-identity-fixture.ts";
 
 /**
  * Seeds one tracked git repo (build) and hands out an identical, isolated copy
  * per test (copy). Each copy keeps its own .git, so runtime state under the
  * git common dir is per-test. dispose removes the template.
+ * build / dispose は呼び出し側 file の hook として、有限の上限つきで自分で登録する (#1673 1b)。
  */
 export function seedFixtureTemplate(repositoryIdentity: string, prefix: string) {
   let template: string | undefined;
-  return {
+  const fixture = {
     build(): void {
       template = mkdtempSync(join(tmpdir(), `${prefix}-template-`));
       ensureTrackedProjectIdentity(template, repositoryIdentity);
@@ -26,4 +28,7 @@ export function seedFixtureTemplate(repositoryIdentity: string, prefix: string) 
       template = undefined;
     },
   };
+  heavyBeforeAll("git", fixture.build);
+  heavyAfterAll("teardown", fixture.dispose);
+  return fixture;
 }

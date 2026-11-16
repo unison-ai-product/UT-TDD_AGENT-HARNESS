@@ -2,7 +2,7 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 import {
   analyzeGithubCiPolicy,
@@ -11,6 +11,7 @@ import {
 } from "../src/lint/github-ci-policy.ts";
 import { runSetup, type SetupDeps } from "../src/setup/index.ts";
 import { BUILTIN_GITHUB_TEMPLATES } from "../src/setup/templates.ts";
+import { heavyAfterAll, heavyBeforeAll } from "./support/hook-bounds.ts";
 import { removeTestTree } from "./support/temp-tree.ts";
 import { headSnapshotRoot } from "./support/workspace-roots.ts";
 
@@ -164,13 +165,13 @@ const RANGE_GUARD_RUN = [
 ].join("\n");
 
 describe("consumer CI workflow registered Red oracles (#1522 / #1523)", () => {
-  beforeAll(() => {
+  heavyBeforeAll("git", () => {
     cleanGitFixture = createGitFixture(false);
     dirtyGitFixture = createGitFixture(true);
     nonGitFixture = mkdtempSync(join(tmpdir(), "ut-tdd-cicons-non-git-"));
   });
 
-  afterAll(() => {
+  heavyAfterAll("teardown", () => {
     if (cleanGitFixture) removeTestTree(cleanGitFixture);
     if (dirtyGitFixture) removeTestTree(dirtyGitFixture);
     if (nonGitFixture) removeTestTree(nonGitFixture);

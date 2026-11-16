@@ -11,7 +11,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { MemoryEntry } from "../src/memory/index.ts";
 import {
   buildClaudeInboxEntry,
@@ -87,8 +87,6 @@ function inboxFileStem(entryId: string): string {
 }
 
 const wakeFixture = seedFixtureTemplate("fixture/claude-memory-wake", "ut-tdd-claude-wake");
-beforeAll(wakeFixture.build);
-afterAll(wakeFixture.dispose);
 const fixture = (): string => wakeFixture.copy();
 
 function wakeRuntimeRoot(root: string): string {

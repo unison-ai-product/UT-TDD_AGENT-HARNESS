@@ -2,7 +2,8 @@ import { spawnSync } from "node:child_process";
 import { existsSync, lstatSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
+import { heavyAfterAll, heavyBeforeAll } from "./support/hook-bounds.ts";
 import { removeTestTree } from "./support/temp-tree.ts";
 
 const snapshotRepoRoot = process.cwd();
@@ -14,7 +15,7 @@ describe("U-GATE-011: human gate evidence warning uses stderr", () => {
   let stdout = "";
   let stderr = "";
 
-  beforeAll(() => {
+  heavyBeforeAll(["git", 45_000], () => {
     fixtureRoot = mkdtempSync(join(tmpdir(), "ut-tdd-gate-stderr-"));
     // A regular file at .ut-tdd deterministically prevents creation of the
     // gate_runs evidence directory while leaving the gate itself runnable.
@@ -58,9 +59,9 @@ describe("U-GATE-011: human gate evidence warning uses stderr", () => {
     expect(stdout).toMatch(/^gate G0\.5: passed mode=standalone review=human\b/m);
     expect(`${stdout}\n${stderr}`).toContain(warning);
     expect(`${stdout}\n${stderr}`).toContain("gate_runs");
-  }, 45_000);
+  });
 
-  afterAll(() => {
+  heavyAfterAll("teardown", () => {
     if (fixtureRoot) removeTestTree(fixtureRoot);
   });
 

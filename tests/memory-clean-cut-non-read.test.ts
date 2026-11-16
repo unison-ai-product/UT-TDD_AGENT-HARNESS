@@ -13,7 +13,6 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, relative, resolve } from "node:path";
-import { afterAll, describe, expect, it } from "vitest";
 import { canonicalAuthoredMemoryPath } from "../src/cli/review-live.ts";
 import { canonicalProjectIdentityBytes } from "../src/kernel/project-identity.ts";
 import { loadMemorySyncInput } from "../src/lint/memory-sync.ts";
@@ -22,6 +21,7 @@ import { LEGACY_MEMORY_ARCHIVE_ROOT, sha256Hex } from "../src/memory/legacy-arch
 import { loadMemoryCorpus, readMemory } from "../src/memory/service.ts";
 import { defaultHarnessDbPath, openHarnessDb } from "../src/state-db/index.ts";
 import { gitTextTrimmedDefaultStdio as git } from "./support/git.ts";
+import { describe, expect, heavyAfterAll, it } from "./support/hook-bounds.ts";
 import { removeTestTree } from "./support/temp-tree.ts";
 
 // PLAN-L6-104 §3.1 判断 5 / PLAN-L7-566 §3: canonical root, tracked archive and linked-worktree
@@ -47,7 +47,7 @@ interface Fixture {
   linkedLegacyRoot: string;
 }
 const fixtures: Fixture[] = [];
-afterAll(() => {
+heavyAfterAll("teardown", () => {
   for (const fixture of fixtures) removeTestTree(fixture.root);
 });
 
@@ -427,7 +427,7 @@ describe("memory clean-cut PR-2: db rebuild fails closed on a linked worktree wi
     linked: string;
   }
   const driftFixtures: DriftFixture[] = [];
-  afterAll(() => {
+  heavyAfterAll("teardown", () => {
     for (const fixture of driftFixtures) removeTestTree(fixture.root);
   });
 

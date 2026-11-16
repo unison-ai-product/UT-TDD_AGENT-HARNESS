@@ -13,7 +13,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
-import { afterAll, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
   buildConsumerNodeRuntimeBundle,
   buildConsumerNodeRuntimePayloads,
@@ -33,6 +33,7 @@ import {
   runtimeIdentity,
   WORKTREE_RUNTIME_TAG_B,
 } from "./consumer-worktree-runtime.ts";
+import { heavyAfterAll } from "./hook-bounds.ts";
 import { removeFixtureTree } from "./pack-consumer-runtime.ts";
 
 interface MalformedActiveFixture {
@@ -257,7 +258,7 @@ function replaceCacheWithRelease(cache: string, release: string): void {
 export function registerConsumerWorktreeRuntime010Tests(
   getFixture: () => ConsumerWorktreeRuntimeFixture,
 ): void {
-  afterAll(() => {
+  heavyAfterAll("teardown", () => {
     for (const root of malformedFixtureRoots.splice(0)) removeFixtureTree(root);
     malformedFixtures.splice(0);
   });

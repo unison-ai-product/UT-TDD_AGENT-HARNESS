@@ -10,7 +10,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { GitAuthoringProvenance } from "../../src/disposition/adapters/git-authoring-provenance.ts";
 import { parseStrictMarkdownTable } from "../../src/disposition/adapters/strict-markdown-table.ts";
 import { buildTrackedTargetRegistry } from "../../src/disposition/adapters/tracked-target-registry.ts";
@@ -23,6 +23,7 @@ import {
 import { openHarnessDb } from "../../src/state-db/index.ts";
 import { migrate } from "../../src/state-db/migration.ts";
 import { projectVmodelAuthoring } from "../../src/state-db/vmodel-projections.ts";
+import { heavyAfterAll, heavyBeforeAll } from "../support/hook-bounds.ts";
 import { headSnapshotRoot } from "../support/workspace-roots.ts";
 
 const issueOnlyCatalogPaths = [
@@ -54,11 +55,11 @@ const issueOnlyTargetHeaders = [
 
 let issueOnlyFixtureRoot: string;
 
-beforeAll(() => {
+heavyBeforeAll(["db", 120000], () => {
   issueOnlyFixtureRoot = createIssueOnlyFixture();
-}, 120000); // 48s measured, bounded per #1063
+}); // 48s measured, bounded per #1063
 
-afterAll(() => {
+heavyAfterAll("teardown", () => {
   if (issueOnlyFixtureRoot) rmSync(issueOnlyFixtureRoot, { recursive: true, force: true });
 });
 

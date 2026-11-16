@@ -10,8 +10,9 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { resolveRuntimeRepoRoot } from "../src/runtime/repo-root.ts";
+import { heavyAfterEach } from "./support/hook-bounds.ts";
 import { removeTestTree } from "./support/temp-tree.ts";
 
 const cliPath = resolve("src/cli.ts");
@@ -87,7 +88,7 @@ function writtenPaths(stdout: string): string[] {
   return [...stdout.matchAll(/^ {2}\+ (.+)$/gm)].map((match) => match[1] as string);
 }
 
-afterEach(() => {
+heavyAfterEach("teardown", () => {
   for (const root of fixtures.splice(0)) removeTestTree(root);
 });
 

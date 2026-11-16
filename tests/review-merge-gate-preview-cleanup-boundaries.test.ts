@@ -1,7 +1,7 @@
 import { execFileSync as realExecFileSync } from "node:child_process";
 import { existsSync, readFileSync, realpathSync, rmSync as realRmSync } from "node:fs";
 import { basename, dirname, parse, resolve } from "node:path";
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { BASELINE_GATES } from "../src/feedback/baseline-conflict.ts";
 import { CODE_SIZE_BASELINE_PATH } from "../src/lint/code-size.ts";
 import {
@@ -12,6 +12,7 @@ import {
   separatedFile,
   TARGET,
 } from "./fixtures/baseline-recompute-fixture.ts";
+import { heavyAfterAll, heavyBeforeAll } from "./support/hook-bounds.ts";
 
 const injected = vi.hoisted(() => ({
   fixtureRoot: "",
@@ -187,7 +188,7 @@ function enableCleanupFaults(input: {
 }
 
 describe.sequential("review merge gate preview cleanup boundaries (U-RVMG-052)", () => {
-  beforeAll(() => {
+  heavyBeforeAll("git", () => {
     fixture = buildFixture(
       {
         [TARGET]: separatedFile("const left = 1;", "const right = 1;"),
@@ -207,7 +208,7 @@ describe.sequential("review merge gate preview cleanup boundaries (U-RVMG-052)",
     vi.restoreAllMocks();
   });
 
-  afterAll(() => {
+  heavyAfterAll("teardown", () => {
     cleanFixture(fixture);
   });
 
