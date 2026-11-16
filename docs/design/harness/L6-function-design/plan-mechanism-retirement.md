@@ -178,6 +178,8 @@ Pack の PLAN 運用は Issue 参照に置き換える (PO 判断)。**互換性
 
 ## 8. 縮退の順序と sub-issue (凍結点 6)
 
+**S7 の test / declaration 同期**: 残る mixed test 5 本 (`tests/handover.test.ts`、`tests/session-log.test.ts`、`tests/session-start-digest.test.ts`、`tests/setup-project-identity-bootstrap.test.ts`、`tests/design-root.test.ts`) はファイルごと消さず、PLAN 専用 case / assertion だけを処分し、共有機能の assertion は維持する。A (docs-only freeze) はこの5本、L7 の宣言、baseline、`src/` を変更しない。A の merge 後の B で、次の宣言を、それぞれの PLAN 専用 case の退役と同じ差分で同期して処分する: `U-HOVER-006`、`U-HOVER-008`、`U-HOVER-009`、`U-HOVER-015`、`U-RCDEV-013`、`U-SCHEDULE-LIVE-001`、`U-SCHEDULE-LIVE-003`、`U-SLOG-001`、`U-SLOG-003`、`U-SLOG-004`、`U-SLOG-008`。`U-SCHEDULE-LIVE-002` は後続 source step まで `tests/projection-writer.test.ts` の既存 case とともに維持し、専用工程表・最新 test/gate・review snapshot の判定契約を保つ。`U-SLOG-009` も維持し、120文字を超える file-path target を入力前提に含め、長い path の truncate 防止と secret mask の両方を確かめる。件数は実測として PR に記録し、本文に固定カウンタを設けない。
+
 **削除 (#1365) の前**: #1365 の前提 (#1354〜#1359、PLAN 台帳専用の check の退役 2/2、#1363) に、PLAN を前提にした実 repo テストの付け替え (#1430、2026-10-28 に追加) を加える。これ以上は増やさない。§3 で行を凍結しない案を採ったので、データのための前段は要らない。
 
 #1430 の扱いは次の規則で決める。テストが守る性質の入力が PLAN の台帳そのもの (§3 の PLAN 用の表、PLAN の `review_evidence`・`generates`・`derives-from`、PLAN を対象にする spec / activation / schedule の行) なら、その assertion かテストを退役させる。それ以外の性質 (rebuild の原子性、再 rebuild の決定性、設計品質の投影、通過証明書の読み取り、relation graph の端点の実在) は、PLAN 以外の実 repo データか fixture に入力を替えて残す。どちらの場合も、`docs/plans` の有無を見て黙って return する分岐を置かない。代わりに、入力が 0 件で空振りしないこと (対象の行や edge が 1 件以上あること) を同じテストで確かめる。oracle は `docs/test-design/harness/L7-plan-mechanism-retirement-test-design.md` §6 が固定する。
