@@ -10,7 +10,7 @@ next_pair_freeze: L7
 issue: 1525
 ---
 
-> **L6 contract marker**: 本書は consumer の linked git worktree へ runtime を入れる入口、runtime が無いときの guard 失敗の案内、および新規 install の launcher 公開前失敗に対する transaction rollback を凍結する (未実装の目標契約)。版の更新と別の版へのロールバックは #930 / #481 の範囲であり、本書は扱わない。oracle (`U-CWTRT-001`〜`010`) は `docs/test-design/harness/L7-consumer-worktree-runtime-test-design.md` が固定し、導入途中の rollback 境界の候補 oracle は同書が `CANDIDATE-U-CWTRT-011` として定義する。行番号は 2026-11-04 の `origin/main` で測った。
+> **L6 contract marker**: 本書は consumer の linked git worktree へ runtime を入れる入口、runtime が無いときの guard 失敗の案内、および新規 install の launcher 公開前失敗に対する transaction rollback を凍結する (未実装の目標契約)。版の更新と別の版へのロールバックは #930 / #481 の範囲であり、本書は扱わない。oracle (`U-CWTRT-001`〜`011`) は `docs/test-design/harness/L7-consumer-worktree-runtime-test-design.md` が固定する (導入途中の rollback 境界の `U-CWTRT-011` は 2026-11-16 に候補 ID から正式 ID へ昇格、Issue #1592)。行番号は 2026-11-04 の `origin/main` で測った。
 
 # consumer worktree の runtime 入口 — 関数設計 (issue #1525)
 
@@ -99,4 +99,4 @@ consumer は runtime と launcher (`.ut-tdd/bin/ut-tdd.mjs`) を commit しな�
 - pre: `worktreePath` は linked worktree の絶対パスである。main の active pointer が有効である (§3 手順 1、2)。
 - post: 成功時は launcher と runtime が揃い、入れた版は main の版と一致する。guard と CLI の直接起動の案内の経路は exit 2 で終わり、記録 / session hook は exit 0 で終わる (§4、§5。2026-11-10 改訂、Issue #1602)。
 - invariant: 失敗時は worktree・main・キャッシュのどれにも何も残さない。版を選べる入力は無い。`MODULE_NOT_FOUND` のスタックを block 理由にしない (§5)。
-- oracle: `U-CWTRT-001`〜`010` が既存の入口・案内契約を固定し、`CANDIDATE-U-CWTRT-011` が新規 install transaction rollback の契約候補を固定する。`U-CWTRT-012`〜`015` が runtime 欠落時の launcher の三分割 (§4、Issue #1602) を固定する (2026-11-10 に候補 ID から正式 ID へ昇格、Issue #1602)。
+- oracle: `U-CWTRT-001`〜`010` が既存の入口・案内契約を固定し、`U-CWTRT-011` が新規 install transaction rollback の契約を固定する (2026-11-16 に候補 ID から正式 ID へ昇格、Issue #1592)。`U-CWTRT-012`〜`015` が runtime 欠落時の launcher の三分割 (§4、Issue #1602) を固定する (2026-11-10 に候補 ID から正式 ID へ昇格、Issue #1602)。
