@@ -105,4 +105,4 @@
 | UTV4-AC-095 | UTV4-FR-079 | ― | yes | 0.3.0 | 未実行 |
 | UTV4-AC-096 | UTV4-FR-080 | ― | no | 0.3.0 | 未実行 |
 
-元の刺激/oracleはPR #517の固定HEADの候補を参照。追加要求は退役した旧 ADDITIONS (`docs/archive/v4-roadmap-pre-20261113/trace/ADDITIONS.md`) と各workstream。sourceへの参照は[出典](../SOURCES.md)。
+元の刺激/oracleはPR #517の固定HEADの候補を参照。追加要求の対応は[要件の対応表](REQUIREMENT_COVERAGE.md)と各workstreamにある。sourceへの参照は[出典](../SOURCES.md)。
