@@ -45,6 +45,8 @@ output digest、evidence path を含め、別 HEAD の実行結果や digest を
 mandatory 行は pass した実行 evidence に、deferred 行は明示的かつ stale でない defer に結び付ける。
 current evidence の欠落は G9 failure とする。
 
+限定例外 (control 採択 #1379 comment 6913172002): source-free の契約freeze PRでは、そのPRで新設するL9行のbindingだけを対象とする実測済みcurrent sidecarを同じPRに含めてよい。対象は新規追加行に限定し、既存行のpass/deferを拡張しない。sidecarは実行command、対象のcommit済みsubject HEAD、実際のexit code、output digest、evidence pathを記録し、別HEADの証跡を流用しない。既存の2つの日付付きcurrent manifestのbytes・status・digestを変更せず、移動・再生成もしない。この限定例外でのG9判定は既存manifestが持つ既存行のcoverageとsidecarが持つ追加行のbindingだけを合成し、他の未解決行をpassへ読み替えない。 後続#1696では既存2件の日付付きmanifestとsidecarを内容変更せずarchiveへ保全し、commit済みHEADで実測した全行bindingを含むfreshな統合current manifestを1件作る。sidecar本数と採取状態が確定した後にG9 golden件数を再測定する。
+
 ST-FUNC-03 の契約である完全な Red→Green→refactor と本体先行 fail-close は縮小しない。現行の
 `tests/forward/fsm.test.ts` U-FSM-001/002/003 は Red 順序・拒否動作の部分証拠に限られ、Refactor
 完了の証明ではないため、OPEN Issue #1335/#1336/#1337 の Refactor 判定 gate 完了まで

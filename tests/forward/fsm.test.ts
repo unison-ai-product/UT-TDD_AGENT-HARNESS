@@ -65,7 +65,7 @@ describe("Forward FSM", () => {
     expect((app.ledger as InMemoryForwardLedger).appended).toHaveLength(12);
   });
 
-  it("U-FSM-001: evaluates the complete 17 state by 17 event closed world", () => {
+  it("U-FSM-001: evaluates the complete 17 state by 17 event closed world [ST-FUNC-11 support]", () => {
     const evidencePolicy = new ForwardEvidencePolicy(verifier);
     for (const state of FORWARD_STATES) {
       const workflow = ForwardWorkflow.reconstruct(subject, eventsForState(state), evidencePolicy);
@@ -88,7 +88,7 @@ describe("Forward FSM", () => {
     }
   });
 
-  it("U-FSM-002: refuses skip, reverse, and terminal commands without changing state", () => {
+  it("U-FSM-002: refuses skip, reverse, and terminal commands without changing state [ST-FUNC-11 support]", () => {
     const app = createApp();
     const before = app.status(subject);
     const result = app.transition({
@@ -106,7 +106,7 @@ describe("Forward FSM", () => {
     });
   });
 
-  it("U-FSM-003: specialized implementation admission fails closed and emits no write", () => {
+  it("U-FSM-003: specialized implementation admission fails closed and emits no write [ST-FUNC-11]", () => {
     const app = createApp();
     seedTo(app, "pair_frozen");
     const result = app.transition({ ...request("begin-implementation"), evidence: [] });
