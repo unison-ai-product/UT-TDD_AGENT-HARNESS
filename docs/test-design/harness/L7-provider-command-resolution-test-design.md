@@ -11,7 +11,7 @@ issue: 1694
 
 # provider の実行ファイルの解決テスト設計 (issue #1694)
 
-> **状態**: 本書は pair-freeze のための候補 test design で、非著者の closing review 前である。ID は正式 oracle ではない。上位の契約 `docs/design/harness/L6-function-design/provider-command-resolution.md` の D1 / D2 が control の判断で覆ったら、本書の §3 と §5 を同時に改訂する。
+> **状態**: 本書は pair-freeze のための候補 test design で、非著者の closing review 前である。ID は正式 oracle ではない。上位の契約 `docs/design/harness/L6-function-design/provider-command-resolution.md` の D1 / D2 は control が決定した (同書 §5)。
 
 ## 1. 対象と上位の契約
 

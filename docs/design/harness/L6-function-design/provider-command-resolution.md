@@ -12,7 +12,7 @@ issue: 1694
 
 > **L6 contract marker**: `findOnPath(command: string, env: NodeJS.ProcessEnv, platform: NodeJS.Platform, fs?: PathFs) => string | null` (新しい module `src/runtime/path-lookup.ts`) を新設し、`resolveClaudeNativeCommand` / `resolveCodexNativeCommand` の PATH 解決 (`firstOnPath`) をそれへ置き換える。`isProviderCommandSpawnable` は、解決できなかった provider を起動せず `false` を返す。unit-test-granularity contract で、DbC は §6、oracle は `docs/test-design/harness/L7-provider-command-resolution-test-design.md` の `CANDIDATE-U-PCMDRES-001`〜`013` が受け持つ。
 
-> **契約状態**: 本書は pair-freeze のための契約案で、非著者の closing review 前である。§5 の D1 (走査の共有) と D2 (解決できないときの扱い) は推奨の案で本文を書いており、control の判断で覆ったら §2〜§4 を改訂する。source 実装・実行証跡を示さない。
+> **契約状態**: 本書は pair-freeze のための契約案で、非著者の closing review 前である。§5 の D1 (走査の共有) と D2 (解決できないときの扱い) は、control が 2026-11-16 に #1708 で決定した (§5)。source 実装・実行証跡を示さない。
 
 # provider の実行ファイルの解決 (Issue #1694)
 
@@ -67,9 +67,9 @@ PATH の解決は、外部 command (`where.exe` / `which`) に任せず、`findO
 
 POSIX の `which` は、PATH の空要素や相対要素を shell によって current directory として扱うことがある。`findOnPath` はそれらを飛ばすので、PATH に相対要素を置いていた構成は provider を見つけられなくなる。この変更は意図したものである (`claude-version-probe.md` §3 と同じ)。
 
-## 5. 方式の判断
+## 5. 方式の判断と決定
 
-| 論点 | 採る方式 (推奨) | 採らない方式と理由 |
+| 論点 | 採る方式 | 採らない方式と理由 |
 |---|---|---|
 | D1 走査を共有するか | `probePathClaude` と provider の解決で同じ `findOnPath` を使う (§2)。規則の正本は 1 か所 (`claude-version-probe.md` §3) | 別々に実装する: 実装が `src/doctor` と `src/runtime` の 2 か所に分かれ、片方だけ規則が変わる drift が起きうる (空要素の扱いが 2 通りになる)。利点は `src/doctor/claude-path-probe.ts` の実装 PR (#1693 の実装) と独立に進められること。共有は、先に入る側が `src/runtime/path-lookup.ts` を作り、後の側が import する順序の制約を持つ |
 | D1' 外部 command を残す | 採らない: `where.exe` を cwd の外で動かす (spawn の `cwd` を System32 などにする) 案は、拡張子なしの file が返る問題 (§1) と PATH の相対要素の扱いが残る。結果を後から current directory で絞る案は、symlink と大小の違いで脆い | |
@@ -96,3 +96,8 @@ POSIX の `which` は、PATH の空要素や相対要素を shell によって c
 ## 8. V-pair
 
 対のテスト設計は `docs/test-design/harness/L7-provider-command-resolution-test-design.md` で、oracle は `CANDIDATE-U-PCMDRES-001`〜`013`、反例と oracle の対応は同書の §4 と §5 にある。
+
+**決定 (control、2026-11-16、#1708)**
+
+- D1 = 案 A (走査を共有する): 規則の正本を `claude-version-probe.md` §3 の 1 か所に保ち、空要素などの扱いが 2 通りになる drift を防ぐため。先に merge される実装 PR が `src/runtime/path-lookup.ts` を作り、後の PR がそれを使う (順序は control が実装の段で決める)。
+- D2 = 案 A (`isProviderCommandSpawnable` が spawn せず `false`): 既存の fail-close の方針から決まり、素の名前への fallback を残さず、`src/cli.ts` を変えずに済むため。
