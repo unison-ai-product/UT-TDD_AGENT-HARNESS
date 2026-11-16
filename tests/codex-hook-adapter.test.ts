@@ -687,7 +687,7 @@ describe("codex-hook-adapter — Codex hooks.json parity (PLAN-L7-139, PLAN-L7-6
       ).toBe(0);
     }, 420_000);
 
-    it.fails("U-CXHOOKCMD-005: consumer launcher は active runtime 不在時、session hook は exit 0 で案内する", () => {
+    it("U-CXHOOKCMD-005: consumer launcher は active runtime 不在時、session hook は exit 0 で案内する", () => {
       const command = commandFor("SessionStart");
       expect(command).toContain(".ut-tdd/bin/ut-tdd.mjs");
 

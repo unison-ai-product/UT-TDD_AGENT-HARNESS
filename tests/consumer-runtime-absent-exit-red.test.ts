@@ -63,7 +63,7 @@ afterEach(() => {
 });
 
 describe("issue #1602 consumer runtime absent exit split", () => {
-  it.fails("U-CWTRT-012: record and session hooks fail open with one stderr line", () => {
+  it("U-CWTRT-012: record and session hooks fail open with one stderr line", () => {
     const fixture = createAbsentRuntimeWorktree();
     for (const argv of RECORD_ARGV) {
       const result = runLauncher(fixture, argv);
@@ -102,7 +102,7 @@ describe("issue #1602 consumer runtime absent exit split", () => {
     expect(denied.stderr.trim()).toBe("consumer_runtime_resolution_denied");
   });
 
-  it.fails("U-CWTRT-015: the fail-open set is derived from the project-hook definitions", async () => {
+  it("U-CWTRT-015: the fail-open set is derived from the project-hook definitions", async () => {
     const derived = REQUIRED.filter((hook) => !("onFailure" in hook)).map((hook) =>
       hook.wrapperArgs.slice(1, 3),
     );
