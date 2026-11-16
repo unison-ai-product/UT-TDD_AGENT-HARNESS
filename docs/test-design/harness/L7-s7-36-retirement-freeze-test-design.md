@@ -90,6 +90,16 @@ U-RECHAIN-019, U-REVIEW-001, U-REVIEW-002, U-REVIEW-003, U-REVIEW-004, U-REVIEW-
 U-REVIEW-008, U-REVIEW-009, U-REVIEW-010, U-REVIEW-011, U-REVIEW-012, U-REVIEW-013, U-TORDER-001, U-TORDER-002
 U-TORDER-003, U-TORDER-004, U-TORDER-005, U-XREVIEW-001, U-XREVIEW-002, U-XREVIEW-003, U-XREVIEW-004, U-XREVIEW-005
 
+
+## 3.1 限定監査で確認した退役・保持境界
+
+以下は指定 audit の bounded set (PoC / green PLAN / sealed-lineage 22 ID) だけを実 test / callee / L6・L7 契約で照合した結果であり、36 file 全体の監査を意味しない。
+
+- PoC projector/domain: tests/poc-evaluation.test.ts の U-DOMAIN-002 は summarizePocEvaluations の outcome 集計を、U-FR-L1-43 は plan_registry から projectPocEvaluations を通す集計を検証する。tests/projection-store-contract.test.ts の U-DOMAIN-003 も src/projection/application/project-poc-evaluations.ts のみを呼び、generic ProjectionStore は検証しない。PLAN registry が唯一の入力で pure projector を退役し、poc_evaluations の table / columns は維持する (L6 plan-mechanism-retirement.md §3、L7-plan-mechanism-retirement-test-design.md §3.1)。
+- Green PLAN command: tests/review-evidence.test.ts の U-GREENDEF-008 は analyzeReviewEvidence → greenCommandViolationReason で completed_at が tests_green_at より後になる PLAN の lint finding を検証する。この PLAN review_evidence reader / lint は退役する。G1/G3 trace と custody v2 receipt handling は維持する (L7-plan-mechanism-retirement-test-design.md §3.1、§3 U-PLANRET-006/007/016)。
+- L8 sealed-lineage: tests/plan-asset/sealed-lineage-local-migration.test.ts の U-PA-SEAL-011..028 は L8-integration-test-design.md の対応 oracle 行 (314–332) に対し、Transaction.migrate / executeSealedLineageRecovery と PlanAsset 固有の ledger・Issue authority・revision 経路を検証する。共通 CustodyDecision / project identity 型の利用だけでは generic custody / identity の検証にならず、これらの PlanAsset 固有 assertion は caller とともに退役する (L7-plan-mechanism-retirement-test-design.md §3.1)。
+- 保持・移設境界: generic project identity kernel は tests/project-identity-kernel.test.ts と src/kernel/project-identity.ts で維持し、U-PA-008 の exact-HEAD blob / receipt success・failure assertion を同 test へ移す。custody v2 receipt contract (U-PLANRET-006/007/016) と src/kernel/github-closure-receipt.ts の reviewReceiptDigest も維持する (L7-plan-mechanism-retirement-test-design.md §3 / §3.1、L6 plan-mechanism-retirement.md §8 補足)。
+
 ## 4. B の baseline 同期境界
 
 A では baseline を変更しない。B では §2 の削除後に実測し、citation baseline は退役に対応する stale 43 key を縮小対象として確認する。code-size baseline は現在対象36本のうち次の4 entryだけを実測に従って縮小する: tests/frontmatter.test.ts、tests/plan-asset/sealed-lineage-local-migration.test.ts、tests/rechain-verifier.test.ts、tests/review-evidence.test.ts。実測に無い追加・拡大をしない。widened baseline は現在の312 entryを維持し、増やさない。いずれも削除差分を推定値や件数合わせで作らず、B の検証根拠と実測結果に結び付ける。
