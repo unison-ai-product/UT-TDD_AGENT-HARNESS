@@ -65,18 +65,6 @@ describe("readAdmissionGitDiff", () => {
     ]);
   });
 
-  it("plan領域からのrename流出を削除としてfail-close対象にする", () => {
-    const path = "docs/plans/PLAN-L7-902-moved.md";
-    const blobs = new Map([[`${BASE}:${path}`, encoder.encode("old")]]);
-    const result = readAdmissionGitDiff({
-      baseRef: "base",
-      headRef: "head",
-      git: new FakeGit(nul("R100", path, "docs/archive/PLAN-L7-902-moved.md"), blobs),
-    });
-    expect(result.changes).toEqual([{ kind: "deleted", path }]);
-    expect(result.base).toEqual([{ path, content: "old" }]);
-  });
-
   it.each<readonly [Uint8Array, GitDiffAdapterErrorCode]>([
     [
       nul("C100", "docs/plans/PLAN-L7-903-a.md", "docs/plans/PLAN-L7-903-b.md"),

@@ -237,30 +237,6 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 
 | U-ID | 対象関数 | DbC oracle |
 |---|---|---|
-| U-REVIEW-001 | `hasReviewEvidence` | frontmatter (or bare YAML) の `review_evidence` 配列に `reviewer` を持つ entry ≥1 → true (コメント行・空行・キー順・flow style に依存しない) / key だけ・空配列・reviewer なし・YAML 不正・無し → false (presence のみ、shape は zod) |
-| U-REVIEW-002 | `parseReviewPlan` | plan_id/kind/status/hasEvidence を frontmatter から抽出 |
-| U-REVIEW-003 | `analyzeReviewEvidence` (missing) | confirmed の design/impl 系で evidence 無し → `missing` + `ok=false` |
-| U-REVIEW-004 | `analyzeReviewEvidence` (ok) | design/add-design/impl/add-impl すべて evidence あり → `missing=[]`/`ok=true` |
-| U-REVIEW-005 | `analyzeReviewEvidence` (対象外) | draft (未確定) / poc・charter・reverse (非 design-impl) / archived は missing にしない (過検知回避) |
-| U-REVIEW-006 | `loadReviewPlans`+`analyzeReviewEvidence` (実 repo CI fail-close ガード) | hard 化後 (IMP-071): 実 repo の confirmed design/impl PLAN は全件 review_evidence あり (`missing==[]`) + cross_agent 違反0 (`crossReviewViolations==[]`)。以後 review 証跡なし PLAN を足すと red |
-| U-REVIEW-007 | `analyzeReviewEvidence` (stale approval、IMP-080) | draft / 降格 PLAN に `verdict=approve` が残る → `staleApprovalViolations` + `ok=false` |
-| U-REVIEW-008 | `analyzeReviewEvidence` (stale approval ok) | confirmed + approve / draft + 証跡なし → stale approval ではない |
-| U-REVIEW-009 | `greenCommandViolationReason` (anchor 必須、issue #191) | 発効時刻より前の `completed_at` を自己申告しても anchor 無しは `missing_anchor_commit`。**判定入力に自己申告値を使わない** (段階導入は書き手が過去日時を書けば迂回できるため撤回) |
-| U-REVIEW-010 | `greenCommandViolationReason` (anchor 欠落) | `anchor_commit` 無し / 空白のみ → `missing_anchor_commit` + `ok=false` |
-| U-REVIEW-011 | `greenCommandViolationReason` (anchor 正常) | `^[0-9a-f]{7,40}$` の git object name → violation なし |
-| U-REVIEW-012 | `greenCommandViolationReason` (anchor 形式外) | `main` のような可変参照 → `invalid_anchor_commit`。可変参照では「測定時点の固定」を達成できないため anchor と認めない |
-| U-REVIEW-013 | `loadReviewPlans`+`analyzeReviewEvidence` (実 repo ガード) | 実 repo の全 green_command entry が anchor 違反 0。既存 corpus を壊さずに必須化できていることを実測で保つ (以後 anchor 無し entry を足すと red) |
-| U-XREVIEW-001 | `analyzeReviewEvidence` (cross_agent ok) | cross_agent で worker_model≠reviewer_model → `crossReviewViolations=[]` / `ok=true` (IMP-076) |
-| U-XREVIEW-002 | `analyzeReviewEvidence` (same_model) | cross_agent で worker≡reviewer の同一 model → violation / `ok=false` (same_model_approval、concept §2.1.2.1) |
-| U-XREVIEW-003 | `analyzeReviewEvidence` (model 欠落) | cross_agent で model 欠落 → violation (単体 runtime は相異 model 供給不可 = cross_agent 僭称を弾く) |
-| U-XREVIEW-004 | `analyzeReviewEvidence` (非 cross_agent) | intra_runtime_subagent は model 同一/欠落でも対象外 (cross-provider 要件は cross_agent のみ) |
-| U-XREVIEW-005 | `extractReviewEntries` | frontmatter yaml から review_kind/worker_model/reviewer_model/reviewed_at/tests_green_at を抽出 (parse 失敗/不在は []) |
-| U-TORDER-001 | `analyzeReviewEvidence` (順序 ok) | tests_green_at ≤ reviewed_at → `testBeforeReviewViolations=[]` / `ok=true` (IMP-077) |
-| U-TORDER-002 | `analyzeReviewEvidence` (順序違反) | tests_green_at > reviewed_at → `review_before_test` violation / `ok=false` |
-| U-TORDER-003 | `analyzeReviewEvidence` (欠落) | tests_green_at 欠落 → `missing_tests_green_at` violation |
-| U-TORDER-004 | `analyzeReviewEvidence` (全駆動モデル普遍) | kind=reverse 等 非 design/impl でも review_evidence entry があれば順序対象 |
-| U-TORDER-005 | `analyzeReviewEvidence` (対象外) | draft (未確定) は順序対象外 |
-| U-GREENDEF-008 | `analyzeReviewEvidence` (review 証跡完了時刻) | completed_at > tests_green_at の場合 `completed_after_tests_green_at` violation / `ok=false` |
 
 ### §1.16 U-MDRIFT (module-drift lint = 設計⊇実在の包含、PLAN-L7-16 / IMP-075)
 
@@ -422,8 +398,6 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 | U-ID | Target | Oracle |
 |---|---|---|
 | U-DOMAIN-001 | neutral `normalizePath` boundary | Windows/POSIX separatorを同じpathへ正規化し、旧lint importは同一関数の互換re-exportである。 |
-| U-DOMAIN-002 | PoC pure projector | permitted decisionだけを正規化し、DB・filesystem・clockへ直接依存せずdeterministic eventを返す。 |
-| U-DOMAIN-003 | PoC application ports | read portの意味的countをdomainへ渡し、生成eventだけをstoreへ記録する。SQL文字列をportへ漏らさない。 |
 | U-DOMAIN-004 | `SqliteProjectionStore` / `clearRebuildableProjectionTables` | unknown tableをfail-closeし、schema列とPKを正規化し、free-form secretを永続化前に拒否する。未解決PLAN joinとstale runtime contextを区別し、audit/compound contextを誤検出しない。再構築ではrebuildable rowを消去する一方、`refactor_candidates`負債ledgerを保持する。 |
 | U-DOMAIN-005 | model evaluation domain/application/config/SQLite read | S7 前は success rate 4桁、token効率2桁、cost効率6桁をpure計算する。S7 後は success_count / success_rate / tokens_per_success / cost_per_success を NULL とし、token/cost総量、disabled/malformed opt-in の read/store 0、cold-startのstore 0、注入時刻を維持する。generic success-rate計算を残さない。 |
 | U-DOMAIN-006 | operational metrics domain/application/SQLite read | drive成功集合と丸め前0.8境界、hook trouble、workflow blocked/human/retry、0母数、4桁表示をpure policyで固定する。N drive modeからN+4 eventをhost locale非依存のcode-unit順・一意ID・注入時刻で生成する。同一mode factは合算する。SQLite grouped readはretryをplan/workflow/phase単位で数え、NULL/literal unknown modeを同一groupへ正規化してcompletedとsignalを失わず、非0signalを隠さない。 |
@@ -883,7 +857,6 @@ SMB/NFS/OneDrive をまたぐ strict lease、heartbeat、clock-skew 耐性は主
 
 | U-ID | 関数 | oracle (DbC) |
 |------|------|--------------|
-| U-FR-L1-43 | `projectPocEvaluations` | **S7 前**: PoC PLAN decision rows から summary を計算する。S7 では唯一の PLAN input と pure projector を退役し、`poc_evaluations` 表 / 列は保持するが新たな Issue 集計 source を作らない。詳細な旧計算条件は S7 前の契約。 S7処分は [L7 §3.1](L7-plan-mechanism-retirement-test-design.md) を参照。 |
 
 ### 2026-06-15 Model Evaluation Oracle (FR-L1-38, PLAN-L7-53)
 
@@ -1463,37 +1436,11 @@ spec:
 | `U-PA-011` | ledger version 0/current/future、repo外path | `openPlanLedger` / `migratePlanLedger` | 専用pathだけversion 1へtransactional作成。future/schema不一致は`plan-ledger-unavailable`、repo外はfail-close |
 | `U-PA-012` | plan/reservation/migration subject別global receipt、架空revision、plan列混入 | `append_command_receipts` typed CHECK/composite FK | plan subjectだけ実在asset+revision必須、他subjectはplan列NULL。違反はSQLiteが拒否 |
 | `U-PA-013` | valid current ledgerのevent/revision/receipt/reduction digestを1列改竄 | `migratePlanLedger` row digest/reduction verifier | DDL形状が同一でも`plan-ledger-unavailable`でfail-closeし、空ledgerとして補完しない |
-| `U-PA-014` | valid asset、未予約ordinal | `PlanLedger.reserve` | event/current/receiptを同一transactionで各1件appendしreopen検証Green |
-| `U-PA-015` | 同一command IDの同一payload／異payload再送 | `PlanLedger.reserve` | 同一payloadは同じresultをreplayし行増加0、異payloadは`plan-id-reservation-command-conflict` |
-| `U-PA-016` | active leaseへrelease/expireを競合実行 | `PlanLedger.release/expire` | token/expiry guardを通った一方だけterminal eventをappendし、敗者は`plan-id-reservation-not-active` |
-| `U-PA-017` | active ordinalへ別reservationをappend | `PlanLedger.reserve` | `plan-id-reservation-conflict`でevent/current/receiptを全rollbackし部分commit 0 |
-| `U-PA-018` | reservation receiptのsubject/result kind/command type/recorded timeを改竄 | `migratePlanLedger` receipt/event bijection verifier | event subject/payload/result/timeとの不一致を`plan-ledger-unavailable`でfail-close |
-| `U-PA-021` | 固定入力の合成inventory projection fixture | `inventoryProjectionDigest` | 独立 oracle の canonical digest と一致し、source commit変更でdigestが変わる |
-| `U-PA-022` | anchor/alias/merge/custom tag/non-string key/unsafe integerを含むfrontmatter | `parseLegacyPlanSource` | lossless canonical化できないYAMLを全件fail-close |
 | `U-PA-023` | empty state + valid pending observe | `reduceLegacyMigration` / append port | observed event/current/receiptのみatomic append、PlanAsset/revision/alias行0 |
-| `U-PA-024` | state×observe/decide/revise全組合せ | migration transition table | 許可pairだけ次state、禁止pairは`plan-migration-transition-invalid`でdelta 0 |
-| `U-PA-025` | decision 4種×field有無mutation | decision field matrix | 必須/禁止組合せをapplicationとSQLiteが同じruleでfail-close |
-| `U-PA-026` | stale expectedSequence/expectedDecision、2 writer | migration append | 一方だけ成功し敗者`plan-migration-state-conflict`、部分commit 0 |
-| `U-PA-027` | 同command ID同payload／異payload | migration append | 同一は同result replay・行増加0、異payloadはglobal command conflict |
-| `U-PA-028` | migrated/rekeyed decision | migration transaction | PlanAsset revision 1、alias、migration event/current、receiptを同一transactionで生成し全provenance digest一致 |
-| `U-PA-029` | rejected decision | migration transaction | migration event/current/receiptだけ生成しPlanAsset/revision/alias行0 |
-| `U-PA-030` | event/current/receipt各方向の孤児・subject/type/result/time/payload改竄 | ledger verifier | 双方向bijection/reducer replay不一致を`plan-ledger-unavailable`でfail-close |
-| `U-PA-031` | sequence/kind/time/identity/source digest mutation | `reduceLegacyMigration` | first observed・連続列・非減少時刻・immutable provenance違反を全件拒否 |
-| `U-PA-032` | 各append境界fault injection | migration transaction port | event/current/asset/revision/alias/receiptの全table delta 0 |
-| `U-PA-033` | valid ledger close→file reopen/rebuild | migration reconstruct | state/event/payload/provenance digest集合が完全一致 |
-| `U-PA-043` | `leaseMs`付きreservation commandを初回/再送 | `ReservationService` + versioned key-ring/clock port | raw tokenを返しDB/event/current/receipt保存0、再送はclock進行後も同一token/expiry、異payloadはconflict |
-| `U-PA-044` | reservation event/current/receipt各append直後にfault注入 | `PlanLedger.reserve` transaction | 各例外後にevent/current/receiptのdelta 0、次の正常commandは成功 |
 | `U-PA-045` | 複数kind/producer/subject/revision/commit/expiry/exit/claims outcomeを組合せたevidence全履歴 | `EvidenceRecord` / `EvidencePolicy` | policy定義と評価contextを分離し、typed claimsRuleに適合するactive frontierだけをmin/max cardinalityへ数え、requirement別missing/rejected IDをstable順で返す |
 | `U-PA-046` | raw/split/env/header/URI secret command、未知kind/producer/exit/claims rule、kind不一致claims、自己/orphan/cycle/fork/逆因果supersede、全record field改変 | `EvidenceRecord.create` / policy frontier / digest | branded redacted argv以外は拒否、claimsを自由文から推測しない、supersession不正とrecord digest不一致を拒否、旧record不変 |
 | `U-PA-047` | v2 ledger（reservation 0件／hash-only reservationあり） | schema v3 migration | 空reservationはtransactionalにexact v3へ移行し、非空hash-onlyは明示manifestなしに変更せずfail-close。key version/event/current/reduction/reopen一致 |
 | `U-PA-048` | unsigned/正規署名/別鍵署名/producer変更/claims・digest変更/attestation replay、key rotation、runtime property列挙 | evidence attestation issuer/verifier + policy | trusted authorityの署名とproducer bindingを満たすrecordだけeligible。未署名・偽署名・改変・replayはfail-closeし、秘密鍵/current versionはruntime propertyへ露出しない |
-| `U-PA-SEAL-004` | E.6 certificate/source authority/review authority digestを各1 bit改変 | `SealedLineageLocalMigration.migrate` のcertificate preflight | `seal-certificate-digest-mismatch` / `seal-source-authority-invalid` / `seal-review-authority-invalid`で拒否し、asset/revision/alias/admission/custody/seal/certificate/receiptのwrite 0 |
-| `U-PA-SEAL-005` | source commit到達不能、source/projection path・blob OID・payload・custody・terminal不一致、HEAD TOCTOU | Git preflight port + tracked source/projection verifier | 各不成立を専用`seal-source-*` / `seal-projection-*` findingでfail-closeし、全8 tableのwrite 0 |
-| `U-PA-SEAL-006` | tracked projectionの最大sequenceが同値で2件存在 | historical projection terminal resolver | terminalを推測で選ばず`seal-projection-terminal-mismatch`で拒否し、全8 tableのwrite 0 |
-| `U-PA-SEAL-007` | Git preflight port未注入 | `SealedLineageLocalMigration.migrate` authority preflight | tracked authorityを補完せず`seal-git-preflight-unavailable`でfail-closeし、全8 tableのwrite 0 |
-| `U-PA-SEAL-008` | review authority port未注入 | `SealedLineageLocalMigration.migrate` custody preflight | review authorityを自己申告値で補完せず`seal-review-authority-invalid`でfail-closeし、全8 tableのwrite 0 |
-| `U-PA-SEAL-009` | seal成功後、Git/review authority portが一時的に例外を返す同payload再送 | durable command replay lookup | authority portを再観測せず既存resultを`replayed: true`で返し、行数を増やさない |
-| `U-PA-SEAL-010` | custody observationが未知reasonまたは同一reason重複を含む | review authority observation validator | canonical reason集合へ推測変換せず`seal-review-authority-invalid`でfail-closeし、全8 tableのwrite 0 |
 | `U-FSM-001` | 正規stateごとの許可された次event、および許可表にないstate/event | transition policy / transition table | 正例は許可表どおりのnext state/eventでexit 0、負例はtyped `forward-transition-illegal`でexit 1・event/外部intent 0件 |
 | `U-FSM-002` | proposed→implementingの飛越し、逆行、terminal後追加 | transition application | 不正な飛越し・逆行・terminal後commandを拒否し、stateを変更せず副作用0件 |
 | `U-FSM-003` | pair freezeまたはRed evidence欠落のimplement command | implementation admission | `forward-red-evidence-missing` でfail-closeし、event/外部intentを0件にする |
@@ -2111,70 +2058,9 @@ Issue #163のadditive deltaは、PLAN IDを共有parserの
 
 | ID | 観点 | fixture / mutation | expected |
 | --- | --- | --- | --- |
-| `U-PADM-001` | 通常Forward | 正規signalとForward tuple | Issueなしでpermit |
-| `U-PADM-002` | 未知/曖昧signal | route候補0件または複数同順位 | Forward fallbackなしでdeny |
-| `U-PADM-003` | 許可tuple | kind/layer/phase/branchを各1変異 | exact tuple外はrule ID付きdeny |
-| `U-PADM-004` | escape必須束縛 | Issue/drive/origin/reentryを各1件欠落 | それぞれdeny、番号だけのIssueを証拠にしない |
-| `U-PADM-005` | 回避耐性 | archivedによる新規起票 | statusで新規authoringを免除しない |
-| `U-PADM-006` | redesign再合流 | 任意の起点証拠 + `design_to_implementation` + supersede対象 + Forward合流先 + 後続実装 | 設計先行の差替えだけpermit |
-| `U-PADM-007` | 遷移方向の分岐 | redesignへ`implementation_to_design`を指定 | deny。実装から設計への引戻しはreverseだけ |
-| `U-PADM-008` | reverse追従 | `implementation_to_design` + 実装origin + Forward合流先 | 実装から設計への追従だけpermit |
-| `U-PADM-009` | 方向と資産状態の整合 | redesignへ`preserved`、reverseへ`none` | 方向は主軸、矛盾する資産状態はdeny |
-| `U-PADM-010` | receipt parse | 厳格frontmatterとroute/Issue二重宣言 | receiptを保持し矛盾をdeny |
-| `U-PADM-011` | redesign receipt | 方向・資産状態・supersedesを一軸変異 | 設計→実装と矛盾するreceiptをdeny |
-| `U-PADM-012` | diff fence permit | 新規PLANと対応tracked projection | binding一致時だけpermit |
-| `U-PADM-013` | diff fence deny | receipt欠落/stale/direct delete | 全経路をfail-close |
-| `U-PADM-014` | projection parse | canonical append-only projection | command lookup可能な厳格projectionだけ受理 |
-| `U-PADM-015` | projection chain | chain改ざん/順序変更/重複binding | 非canonical projectionをdeny |
-| `U-PADM-016` | projection境界 | short hash/PLAN外path/unknown field | schema境界でdeny |
-| `U-PADM-017` | admission-check集約 | projectionと比較の複数欠落 | 全findingを欠落なく集約 |
-| `U-PADM-018` | adapter例外 | Git/projection adapter例外 | 例外をfail-close findingへ変換 |
-| `U-PADM-019` | pure analyzer順序 | 両adapter境界のvalid/invalid | 両境界valid後だけpure analyzerを実行 |
 | `U-PADM-020` | ledger v3 schema | 空DBからv3生成 | receipt/current/event journalを制約付き生成 |
 | `U-PADM-021` | v2→v3 migration | 完全なv2 ledger | 全検証後に原子的migration |
 | `U-PADM-022` | migration fail-close | v1/future/partial/corrupt v2 | mutation 0で拒否 |
-| `U-PADM-023` | draft Saga正常系 | validate→intent→publish→ledger→commit | 二成果物とreceiptを各1回だけ確定 |
-| `U-PADM-024` | committed replay | 同一command再送 | publish/appendなしで既存receiptへ収束 |
-| `U-PADM-025` | command collision | 同一IDでpayload差替え | 副作用なしで拒否 |
-| `U-PADM-026` | ledger failure補償 | publish後にledger失敗 | preimage復元し`recovery_required`を記録 |
-| `U-PADM-027` | restore failure | 補償restoreも失敗 | 自動retryを遮断し曖昧成功にしない |
-| `U-PADM-028` | durable journal | intent→commit | append-only eventとcurrent projectionが一致 |
-| `U-PADM-029` | journal遷移 | command競合/recoveryからの不正遷移 | 状態機械がfail-close |
-| `U-PADM-030` | crash recovery fence | intent残存+ledger receipt | artifact postimageを証明できないため自動commitせず`recovery_required`へ遮断 |
-| `U-PADM-031` | journal tamper | current/event digest・chain改ざん | 読取時に遮断 |
-| `U-PADM-032` | atomic publish | source/projection stage+rename | fsyncを伴うdurable publish |
-| `U-PADM-033` | partial publish補償 | 片側rename後のfault | 両preimageを冪等復元 |
-| `U-PADM-034` | restore retry | restore中fault | 再試行で復元完了 |
-| `U-PADM-035` | filesystem境界 | lexical/symlink root escape | workspace外writeをdeny |
-| `U-PADM-036` | stage cleanup | stage fault | temp/rollback fileを残さない |
-| `U-PADM-037` | new target restore | preimageなしtargetのpartial publish | restoreで新規targetを除去 |
-| `U-PADM-038` | canonical digest | 同一domain commandをjournal/ledgerへ投影 | 同一SHA-256を再現 |
-| `U-PADM-039` | digest非自己申告 | domain command shape検査 | 外部入力digest fieldを持たない |
-| `U-PADM-040` | CLI created | strict manifest+Admission permit | serviceへ渡しcreated/exit 0 |
-| `U-PADM-041` | CLI replay | committed command再送 | replay/exit 0 |
-| `U-PADM-042` | CLI deny | Admission拒否 | factory未生成/exit 1 |
-| `U-PADM-043` | CLI input境界 | unknown field/path traversal | strict parseで副作用前に拒否 |
-| `U-PADM-044` | publish finalize | 公開済みtokenを完了 | 公開内容を保持し補助file/tokenを冪等cleanup |
-| `U-PADM-045` | finalize token境界 | 同一IDの偽造/unknown token | cleanup対象にせずdeny |
-| `U-PADM-046` | finalize retry | cleanup途中fault | 公開内容を戻さず再試行でcleanup完了 |
-| `U-PADM-047` | command assemble | manifest/admission/environment同一入力 | canonical/service commandを決定論生成 |
-| `U-PADM-048` | command identity | plan ID/path/namespace/ordinal各不一致 | 副作用前にdeny |
-| `U-PADM-049` | command digest境界 | manifestへdigest自己申告を混入 | canonical command/digestへ影響0 |
-| `U-PADM-050` | decision binding | admitted requestとdecision tuple不一致 | assemblyをdeny |
-| `U-PADM-051` | receipt render | ledger receipt確定後のsource/projection | 同一bindingとchain recordを生成・再検証 |
-| `U-PADM-052` | escape receipt render | Issue/origin/transition/reentry/escape | 全項目をsource receiptへ欠落なく束縛 |
-| `U-PADM-053` | projection input境界 | caller supplied projection/壊れたchain | render前にdeny |
-| `U-PADM-054` | production runner | 実SQLite+filesystemで同一commandを2回実行 | created後に同一receiptへreplay、record増加0 |
-| `U-PADM-055` | ledger adapter receipt | canonical payload | certificate/command digest付きreceiptへ変換 |
-| `U-PADM-056` | ledger adapter digest | 自己申告digest不一致 | write前にdeny |
-| `U-PADM-057` | ledger adapter deny | ledger rule violation | rule ID付きtyped errorへ変換 |
-| `U-PADM-058` | ledger pending rollback | onPrepared内fault | callbackはCOMMIT前、全9表rollback |
-| `U-PADM-059` | prepared receipt mismatch | journal intentとledger receipt digest不一致 | publish前にdenyしrecovery_required |
-| `U-PADM-060` | restore failure | publish後rollback restore fault | recoveryを記録し自動再実行をdeny |
-| `U-PADM-061` | PLAN identity共通解釈 | 全tokenとzero-padding ordinal | token/ordinal/ordinalTextを単一parserで再現 |
-| `U-PADM-062` | 予約可能identity境界 | 凍結`M`系列、ordinal 0、桁不足、不正token/slug、`070`対`70` | canonical parseとdraft予約可否を分離し、zero-paddingを同一予約座標化 |
-| `U-PADM-063` | Recovery command assemble | `PLAN-RECOVERY-*`とRecovery Admission/source | namespace/ordinalとescape bindingを決定論生成 |
-| `U-PADM-064` | Recovery production runner | 実SQLite+filesystemへ同一Recovery commandを2回実行 | created後replayしsource/projection/receiptを各1件に収束 |
 | `U-PADM-065` | identity/source/Admission binding | Recovery ID/sourceへForward Admissionを混在 | ledger openとfilesystem writeより前にdeny |
 | `CANDIDATE-PADM-009` | authoring Saga強制終了 | DB commit直前直後の強制終了と補償fault | 未完journalをfail-closeし明示recoveryまで非正本 |
 | `CANDIDATE-PADM-010` | GitHub ingress | signature不正/enum不正/stale delivery | quarantine、PLAN admission 0 |
@@ -3092,21 +2978,6 @@ mutation M1–M7は正本§5と同一: exactly-oneへの退行、集合一致へ
 
 | ID | oracle | 違反 / mutation |
 | --- | --- | --- |
-| U-RECHAIN-001 | 簿記のみの re-chain (receipt 1 件の再発行、`generates` 追加 2 件、§8 注記 1 行) で `pass` | (m) whitelist を外す → 002〜006 の負系が pass して失敗 |
-| U-RECHAIN-002 | `R` が PLAN / receipt 以外の path に 1 byte 追加 → `fail` (理由: 非簿記 path) | (m) 1 の比較を省く → pass して失敗 |
-| U-RECHAIN-003 | PLAN 本文の append-only 領域外に手で変更 → `fail` | (m) strip 比較を append 領域だけにする → pass して失敗 |
-| U-RECHAIN-004 | 追加 record の数が `H` と異なる、または別 PLAN を bind → `fail` | (m) 件数と対象の照合を省く |
-| U-RECHAIN-005 | `content_digest` が `R` の PLAN と不一致、chain が不連続 → `fail` | (m) digest の再計算を省く |
-| U-RECHAIN-006 | (正系) `M` が `H` の分岐後に 2 本以上の commit (merge commit を含む) を持つ状態で、merge 1 本と re-chain 1 本の `R` → `pass`。(負系) PR 側に余分な commit を 1 本挟む (`X` と `R` の間、または `H` と `X` の間)、`X` の親の順序が逆、`R` が `H` の子孫でない → いずれも `fail` | (m1) `H..R` の件数 (`--first-parent` なし) で判定する → 正系が `fail` して失敗。(m2) 親の束縛を省き件数だけ見る → 親順序を逆にした負系が `pass` して失敗 |
-| U-RECHAIN-007 | main と PR の双方が `generates` 末尾と §8 末尾に追記 (#685 / #686 型) → 決定的に連結されて `pass`。§8 は採番し直される | (m) 連結順を逆にする → byte 不一致で失敗 |
-| U-RECHAIN-011 | 待機中に `M` が、PR の追加 `artifact_path` を新規作成、または別 PLAN の `generates` に宣言 → `fail` (理由: 再所有) | (m) §2.3-5 を省く → 再所有したまま pass して失敗 |
-| U-RECHAIN-012 | `R` の admission で `PlanAdmissionRequest` のフィールド (`routeMode`・`kind`・`layer`・`workflowPhase`・`routeSignal`・`drive`・`branch`・`status`・`subDoc`・`issue`・`origin`・`transitionDirection`・`implementationDisposition`・`reentry.targetPlanId`・`reentry.phase`・`implementationTarget`・`escapeReason`・`supersedes`) を 1 つずつ改変し、各場合で全 digest (decision_digest を含む) を正しく再計算 → フィールドごとに全て `fail`。`digest(A_H)` が H の tracked `decision_digest` と一致しない候補 `A_H` → `fail`。許容項目だけの変化 (base 束縛、command_id suffix、時刻、`reentry.targetRevision`、再導出 digest) → `pass` | (m1) record 内 digest を信用して再計算しない → 改変が pass して失敗。(m2) 許容項目の列挙に任意の 1 フィールド (例: `branch`) を足す → そのフィールドの改変が pass して失敗。(m3) `A_H` と H の `decision_digest` の照合を省く → 改変した候補が pass して失敗 |
-| U-RECHAIN-014 | 非簿記 path を `H` と `M` の両側が別々に変え、git の内容 merge は成立する fixture → 検証器は `fail` (理由: 両側変更)。簿記 path の両側変更は §2.2 の規則で判定する | (m) path 単位 3-way の「両側変更は対象外」を外し、`X[p]` をそのまま期待値にする → `pass` して失敗 |
-| U-RECHAIN-015 | stack した PR: `H` が含む別 PR の commit `C` が待機中に `M` へ入った fixture (`base` = `C`)。PR 自身の append-only 追加だけが再適用され、`C` の変更は main 由来として扱われて `pass` | (m) `C` より前の旧 base を使う → `C` の変更が PR の追加に数えられて失敗 |
-| U-RECHAIN-016 | 同じ `RechainInput` を key の挿入順だけ変えて 2 通り組むと、`verifierDigest` が完全一致する。domain separator の版を変えると値が変わる | (m) `stableJson` の代わりに `JSON.stringify` を使う → 挿入順で値が変わって失敗 |
-| U-RECHAIN-017 | R の record の `receipt_digest` を任意値に置き換え、frontmatter と record digest を整合させた入力 → `fail` (理由: `receipt_digest_mismatch`)。`actor` を契約定数 `ut-tdd-pr-merge-rechain` 以外、または `sourceCommit` を `M` 以外にして導いた値も `fail` (PLAN-L6-711 §2.3-6 の preimage の源の表) | (m) `derivePlanRevisionDigests` による再導出を省く → 任意 digest が pass して失敗 |
-| U-RECHAIN-018 | 同一 asset について `H` が 2 件 append していた re-chain。(正系) 1 件目 base = (n、`M` の canonical payload digest)、2 件目 base = (n + 1、1 件目の中間 blob の digest) → `pass`。(負系) 2 件目の base を `M` に固定 → `receipt_digest_mismatch`。中間 blob を 1 byte 変える、または status を draft→confirmed に変える (bind 後の digest は key と一致する) → `intermediate_plan_digest_mismatch` (bind 前の blob 自体の digest で照合する)。中間 blob を渡さない → `intermediate_plan_missing`。余分な key、最後の record の `content_digest` を key にした entry、複数再発行が無いときの非空 `intermediatePlans` → `intermediate_plan_unexpected` | (m1) 全 record の base を `M` から取る → 正系が fail。(m2) 中間 blob の digest 照合を省く、または bind 後の digest で照合する → 改変 blob が pass。(m3) 欠落時に `R` の PLAN blob で代用する。(m4) key 集合を superset 許容に緩める |
-| U-RECHAIN-019 | legacy bootstrap 除外 (PLAN-L6-711 §2.3-6、receipt revision 6)。組 (h, r) ごとに `h.binding.asset_id` が `plan:legacy:` で始まり、かつ `h.binding.revision === 2` または `r.binding.revision === 2` なら `fail` (理由: `legacy_bootstrap_unsupported`)。(a1) M に同 asset の revision 1 があり H / R が revision 2 → reasons はちょうど `[legacy_bootstrap_unsupported]`。(a2) M に同 asset の record が無く H が revision 2 → legacy 理由と源の欠落の理由が併存する。a1 / a2 とも `command_id` は `plan-revise:issue-1:legacy-x:r2:000000000000` と `pr154-legacy-x-r2` の 2 形式。(b) H が revision 2、M が待機中に同 asset を revision 2 で admit し R が revision 3 → `fail`。(c) M の最新 revision 2、H / R が revision 3 → `pass`。(d) `plan:<32 hex>` asset で H / R が revision 2 → `pass` | (m1) R 側だけで判定 → b が pass。(m2) prefix だけで判定 → c が fail。(m3) revision 2 だけで判定 → d が fail。(m4) `command_id` の形式で判定 (`/^pr154-/` または `/^plan-revise:/`) → a1 / a2 のどちらかの形式で legacy 理由が出ない。(m5) 源の欠落で短絡 → a2 で legacy 理由が出ない |
 
 ## PLAN-L6-711 S3 adapter / wrapper (Issue #711) — pair-freeze 候補
 
