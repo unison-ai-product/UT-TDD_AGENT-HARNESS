@@ -1,5 +1,7 @@
 # 起点の事実と、既存資産の再利用
 
+> **2026-11-13 の見直し前の記録。現行の割り当ては README の版のはしご** ([README](README.md))。要件の区分は `ut-tdd-concept-v4-requirements.md` の最初の表が正本で、この文書に残る旧版 (R03〜R09、0.6.0〜0.9.0 など) の割り当てや要件の区分は、見直し前のものである。
+
 **2026-10-08 の更新:** 起点は main `3581ee5c` (2026-10-08)。Pack は canary.5 まで公開済み、ライセンスは Apache-2.0、Bun は撤去済み。v4 候補は決定台帳 (PR #892) で 50 BR / 78 FR / 93 AC (release 必須 45) に作り直し、FR-077 (製品保護 profile) と FR-078 (運用証跡の期限) を追加した (#530 6050756161)。open issue の処理順は下の「既存Issueの処理順を決めるルール」ではなく、工程順に沿った [execution/04_ISSUE_INTAKE.md](execution/04_ISSUE_INTAKE.md) を正とする。下の本文は 2026-09-08 時点の記録。
 
 確認日：2026-09-08。main `84cd7f896f7dfbd67b38b250b5a943eaee3f6640`、#517 HEAD `c21b54fb0d3f2d5a73a7826cc41233634456cac9`。

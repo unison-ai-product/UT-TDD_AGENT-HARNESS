@@ -1,5 +1,7 @@
 # 既存コード面・契約族ごとの入替先
 
+> **退役 (2026-11-13、#1672):** 2026-11-13 の見直し前の計画の派生物。要件の区分と版のはしご (`docs/governance/candidates/v4-roadmap/README.md`) と trace に置き換わったため、ここへ移した。現行の割り当てには使わない。
+
 この表は着手先を具体化するための**移行対象inventory案**。既存pathは前版の実読またはPR #517の固定HEAD調査に基づき、新方式の責務は今回の提案。現mainの全fileを網羅した削除manifestではない。実作業では対象tree、reader/writer/consumer一覧、ownerを再確認してSL/PLANへ束縛する。新module名だけを大量予約せず、既存責務へ実装する。[GH-PR517-PLAN][GH-PKG][GH-CI][GH-U23]
 
 ## 1. どの面を改訂するか

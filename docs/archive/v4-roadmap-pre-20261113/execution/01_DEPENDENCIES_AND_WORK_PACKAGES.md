@@ -1,8 +1,10 @@
 # 開発依存とPR分割
 
+> **退役 (2026-11-13、#1672):** 2026-11-13 の見直し前の計画の派生物。要件の区分と版のはしご (`docs/governance/candidates/v4-roadmap/README.md`) と trace に置き換わったため、ここへ移した。現行の割り当てには使わない。
+
 ## 工程順が先 (2026-10-08)
 
-v4 完遂までの工程順 ①〜⑪ ([README](../README.md) の結論表、#530 6051336079) が、下の版別 DAG より優先する。版2.0 の「R02 と R03 は R01 後に並行開発」は取り下げる。v4 機能 (旧 R03〜R09) の実装は ⑦ の後の ⑧ で行う。R03 の契約 inventory は ② の仕分けと設計正本の凍結を入力にする。
+v4 完遂までの工程順 ①〜⑪ ([README](../../../governance/candidates/v4-roadmap/README.md) の結論表、#530 6051336079) が、下の版別 DAG より優先する。版2.0 の「R02 と R03 は R01 後に並行開発」は取り下げる。v4 機能 (旧 R03〜R09) の実装は ⑦ の後の ⑧ で行う。R03 の契約 inventory は ② の仕分けと設計正本の凍結を入力にする。
 
 工程間の前提 (補足 4 点、#530 6051373331):
 
@@ -17,7 +19,7 @@ v4 完遂までの工程順 ①〜⑪ ([README](../README.md) の結論表、#53
 
 runtime 間の作業は GUI 上のレーンで行い、CLI 経由の起動は局所の review に限る。ハーネスが手書きで持つ subagent 定義は基本的に撤廃し (V4D-098)、モデルは常に最新の型番を指す (V4D-097、GPT-5 系は廃止)。OSS は依存として採用せず、考え方を参考にするだけにする (V4D-096)。
 
-open issue をどの工程で閉じるかは [04_ISSUE_INTAKE.md](04_ISSUE_INTAKE.md) にある。
+open issue をどの工程で閉じるかは [04_ISSUE_INTAKE.md](../../../governance/candidates/v4-roadmap/execution/04_ISSUE_INTAKE.md) にある。
 
 ## 版別の依存 (版2.0、⑥ で見直す)
 

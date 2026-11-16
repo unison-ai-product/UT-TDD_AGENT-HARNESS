@@ -1,5 +1,7 @@
 # 順序予測の具体例（架空fixture）
 
+> **退役 (2026-11-13、#1672):** 2026-11-13 の見直し前の計画の派生物。要件の区分と版のはしご (`docs/governance/candidates/v4-roadmap/README.md`) と trace に置き換わったため、ここへ移した。現行の割り当てには使わない。
+
 実UTの所要時間予測ではない。単位はfixture_unit。共通契約A→backend B/front C→統合Iに、独立doc Dを同時投入した例。実装・CI・review・mergeの資源を分ける。
 
 | task | 必要前提 | 実装 | CI | review | merge |

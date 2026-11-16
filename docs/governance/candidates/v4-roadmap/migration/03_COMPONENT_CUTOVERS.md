@@ -1,5 +1,7 @@
 # CI・role・Memory・viewの置換実務
 
+> **2026-11-13 の見直し前の記録。現行の割り当ては README の版のはしご** ([README](../README.md))。要件の区分は `ut-tdd-concept-v4-requirements.md` の最初の表が正本で、この文書に残る旧版 (R03〜R09、0.6.0〜0.9.0 など) の割り当てや要件の区分は、見直し前のものである。
+
 ## CI（R03準備→R04対象切替）
 
 1. consumer既存workflow・required check・UT追加検査・呼出し経路をinventoryし、現状digestを保存。

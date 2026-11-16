@@ -1,5 +1,7 @@
 # 各版で使える範囲（累積）
 
+> **退役 (2026-11-13、#1672):** 2026-11-13 の見直し前の計画の派生物。要件の区分と版のはしご (`docs/governance/candidates/v4-roadmap/README.md`) と trace に置き換わったため、ここへ移した。現行の割り当てには使わない。
+
 生成元：data/capabilities.json。すべて将来の対応計画であり、実装・受入済みの表ではない。前版の受入済み機能を継承し、当該行に記す範囲だけ広げる。package番号と、構想v4への対応状態は別。
 
 ## 初回Canary〜安全な配布
@@ -56,23 +58,23 @@
 
 | capability（計画内ID） | 詳細 |
 |---|---|
-| CAP-LICENSE UT本体のライセンス | [参照](../migration/04_LICENSE_BOUNDARY.md) |
-| CAP-UPDATER consumer更新・rollback | [参照](../migration/02_CONSUMER_UPGRADE_AND_ROLLBACK.md) |
+| CAP-LICENSE UT本体のライセンス | [参照](../../../governance/candidates/v4-roadmap/migration/04_LICENSE_BOUNDARY.md) |
+| CAP-UPDATER consumer更新・rollback | [参照](../../../governance/candidates/v4-roadmap/migration/02_CONSUMER_UPGRADE_AND_ROLLBACK.md) |
 | CAP-JSON 共通JSON正本 | [参照](../migration/01_AUTHORITY_AND_RECORDS.md) |
-| CAP-VIEW 表・図・人間の齟齬受付 | [参照](../migration/03_COMPONENT_CUTOVERS.md) |
-| CAP-CI 低コストconsumer CI | [参照](../workstreams/02_CI_AND_COST.md) |
+| CAP-VIEW 表・図・人間の齟齬受付 | [参照](../../../governance/candidates/v4-roadmap/migration/03_COMPONENT_CUTOVERS.md) |
+| CAP-CI 低コストconsumer CI | [参照](../../../governance/candidates/v4-roadmap/workstreams/02_CI_AND_COST.md) |
 | CAP-FORECAST 作業順序・所要予測 | [参照](../workstreams/01_SCHEDULING.md) |
 | CAP-DISPATCH 実際の自動配布 | [参照](../workstreams/01_SCHEDULING.md) |
-| CAP-TICKET 4階層チケット・合流 | [参照](../releases/R05_0.5.0.md) |
-| CAP-SECURITY 安全境界 | [参照](../workstreams/03_SECURITY.md) |
-| CAP-GOVERNANCE 管理責任・委任 | [参照](../workstreams/04_GOVERNANCE.md) |
+| CAP-TICKET 4階層チケット・合流 | [参照](../../../governance/candidates/v4-roadmap/releases/R05_0.5.0.md) |
+| CAP-SECURITY 安全境界 | [参照](../../../governance/candidates/v4-roadmap/workstreams/03_SECURITY.md) |
+| CAP-GOVERNANCE 管理責任・委任 | [参照](../../../governance/candidates/v4-roadmap/workstreams/04_GOVERNANCE.md) |
 | CAP-BUGBOT 自動バグ修正 | [参照](../workstreams/06_BUGBOT.md) |
 | CAP-RECOVERY 工程単位の回復 | [参照](../workstreams/06_BUGBOT.md) |
-| CAP-UPSTREAM 要求・PoC・製本 | [参照](../releases/R07_0.7.0.md) |
+| CAP-UPSTREAM 要求・PoC・製本 | [参照](../../../governance/candidates/v4-roadmap/releases/R07_0.7.0.md) |
 | CAP-BACKFLOW 還流・影響再計画 | [参照](../migration/01_AUTHORITY_AND_RECORDS.md) |
-| CAP-ROLE 論理role/provider-native | [参照](../migration/03_COMPONENT_CUTOVERS.md) |
-| CAP-SINGLE 単一providerの独立review | [参照](../releases/R08_0.8.0.md) |
-| CAP-CONTEXT モデル進化に応じたcontext削減 | [参照](../workstreams/05_CONTEXT_AND_INCIDENT_LEARNING.md) |
-| CAP-LEARNING 実トラブルの対策化 | [参照](../workstreams/05_CONTEXT_AND_INCIDENT_LEARNING.md) |
+| CAP-ROLE 論理role/provider-native | [参照](../../../governance/candidates/v4-roadmap/migration/03_COMPONENT_CUTOVERS.md) |
+| CAP-SINGLE 単一providerの独立review | [参照](../../../governance/candidates/v4-roadmap/releases/R08_0.8.0.md) |
+| CAP-CONTEXT モデル進化に応じたcontext削減 | [参照](../../../governance/candidates/v4-roadmap/workstreams/05_CONTEXT_AND_INCIDENT_LEARNING.md) |
+| CAP-LEARNING 実トラブルの対策化 | [参照](../../../governance/candidates/v4-roadmap/workstreams/05_CONTEXT_AND_INCIDENT_LEARNING.md) |
 | CAP-RETIRE 旧機構の退役 | [参照](../migration/00_REPLACEMENT_MATRIX.md) |
-| CAP-V4 構想v4の完成判定 | [参照](../releases/R10_1.0.0.md) |
+| CAP-V4 構想v4の完成判定 | [参照](../../../governance/candidates/v4-roadmap/releases/R10_1.0.0.md) |

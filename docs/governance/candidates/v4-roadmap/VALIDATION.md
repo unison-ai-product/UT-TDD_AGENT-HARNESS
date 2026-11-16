@@ -1,5 +1,7 @@
 # 資料の整合検査結果
 
+> **2026-11-13 の見直し前の記録。現行の割り当ては README の版のはしご** ([README](README.md))。要件の区分は `ut-tdd-concept-v4-requirements.md` の最初の表が正本で、この文書に残る旧版 (R03〜R09、0.6.0〜0.9.0 など) の割り当てや要件の区分は、見直し前のものである。
+
 ## 版2.2 (2026-10-13)
 
 `data/*.json` と生成 Markdown は変えていない。README の「現在地」「移行の進み具合の指標」と工程 ③ の行、04_ISSUE_INTAKE の追補だけを足した。検査は次の 2 つ (repo 外の一時コマンド)。
@@ -44,4 +46,4 @@ scheduling例の時間はすべて検証用の架空値です。実プロジェ�
 
 再実行：`python tools/render_roadmap.py --check` / `python tools/validate_roadmap.py`。外部通信なし。
 
-[JSON結果](data/validation_results.json) / [総目次](README.md)
+[JSON結果](../../../archive/v4-roadmap-pre-20261113/data/validation_results.json) / [総目次](README.md)

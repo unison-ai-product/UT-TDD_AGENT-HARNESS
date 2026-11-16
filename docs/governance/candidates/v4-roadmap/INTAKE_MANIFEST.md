@@ -1,5 +1,7 @@
 # v4-roadmap 収容 manifest (INTAKE_MANIFEST)
 
+> **2026-11-13 の見直し前の記録。現行の割り当ては README の版のはしご** ([README](README.md))。要件の区分は `ut-tdd-concept-v4-requirements.md` の最初の表が正本で、この文書に残る旧版 (R03〜R09、0.6.0〜0.9.0 など) の割り当てや要件の区分は、見直し前のものである。
+
 **位置づけ: 非正本の参照資料。** 本ディレクトリは PO 提示 (2026-09-08) の計画資料
 「UT_V4_RELEASE_ROADMAP_v2.0」を原文のまま収容したものであり、UT-TDD の正本ではない。
 R / SL / MIG / DEC / RM-ADD / SCHED の各 ID は資料内のローカル提案 ID で、正規 PLAN・GitHub Issue・
@@ -10,6 +12,8 @@ R / SL / MIG / DEC / RM-ADD / SCHED の各 ID は資料内のローカル提案 
 **2026-10-08 から改訂を始めた (版2.1)。** 工程順 ①〜⑪ の PO 決定 (#530 6051336079) に合わせ、README・00・02・execution・trace・
 一部の release / migration 文書を直した。以後、本ディレクトリは原文のままではない。下表の sha256 は収容時の原本の値で、
 改訂の内容は `CHANGELOG.md` にある。`data/*.json` は 2026-09-08 の版2.0 の記録のまま変えていない (再計算は工程 ⑥)。
+
+**2026-11-13 (#1672):** 下表の included のうち、`data/*.json` 10 本、`01_RELEASE_MATRIX.md`、`VIEWER_CHECK.md`、`trace/CAPABILITY_MATRIX.md`、`trace/ADDITIONS.md`、`migration/00_REPLACEMENT_MATRIX.md` / `01_AUTHORITY_AND_RECORDS.md` / `05_SURFACE_AND_SCHEMA_PLAN.md`、`workstreams/01_SCHEDULING.md` / `06_BUGBOT.md` / `07_SCHEDULING_EXAMPLE.md`、`execution/01〜03` は、見直し前の計画の派生物として `docs/archive/v4-roadmap-pre-20261113/` へ移した (同じ相対 path。一覧は同 dir の README)。下表の path は収容時の位置で、sha256 は収容時の値のまま。
 
 ## 原本
 

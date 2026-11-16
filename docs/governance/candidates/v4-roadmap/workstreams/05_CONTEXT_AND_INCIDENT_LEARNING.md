@@ -1,5 +1,7 @@
 # AIの進化に合わせ、説明を減らし実トラブルを対策にする
 
+> **2026-11-13 の見直し前の記録。現行の割り当ては README の版のはしご** ([README](../README.md))。要件の区分は `ut-tdd-concept-v4-requirements.md` の最初の表が正本で、この文書に残る旧版 (R03〜R09、0.6.0〜0.9.0 など) の割り当てや要件の区分は、見直し前のものである。
+
 R03はrecord/packet識別と計測、R04は限定比較、R05/R06は共通guard/修理、R08はmodel/provider更新評価、R09は継続的calibration/退役。新しいmemory engineや学習Planeを作らない。
 
 ## 残す情報・減らす情報
