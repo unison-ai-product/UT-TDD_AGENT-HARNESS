@@ -29,7 +29,7 @@ updated: 2026-11-16
 
 L4 基本設計の各設計要素が L9 総合テスト (ST-*) で被覆されること (孤児 = 0)。
 
-- **data.md**: 5 集約の不変条件 (§6) / 集約間整合 (§7) / state schema (§8) → 整合性 ST 必須
+- **data.md**: 5 集約の不変条件 (§6) / state schema (§8) → 整合性 ST 必須。集約間整合 (§7) は各規則を §2 で既存 ST / gate に対応づける。対応が無い規則は量閉じ済みと扱わず、未閉包として解消先を明記する
 - **architecture.md**: building block 依存方向 (§3、schema 一方向・循環禁止) / fail-close (§2/§5) / hook 配線 (§6) → 統合 ST 必須
 - **function.md**: CLI コマンド (§2) / workflow オーケストレーション (§3 = Forward spine + 9 駆動モデル + 2 工程専門) / signal→mode routing 優先度 (§3.2) / 機能間依存 (§7) → end-to-end ST 必須
 - **external-if.md**: 境界 DbC (§3) / 失敗時 degradation (§4) / adapter (§6) → 境界統合 ST 必須
@@ -49,7 +49,7 @@ L4 基本設計の各設計要素が L9 総合テスト (ST-*) で被覆され�
 | ST-DATA-04 | state schema ↔ src/schema 突合 (§8) | enum 齟齬 → doctor check_business_entity_coverage | vitest doctor |
 | ST-DATA-06 | 宣言型 spec IR 論理モデル (§1.1 / §8.1) | SpecDef / SpecRelation / ScheduleEntry / ActivationEntry / DetectorFinding が既存集約境界に割り当てられ、DB projection が authoring source に昇格しない。L5/L8 では IT-SPECIR-01..04 へ降下し、U3 L7 で vitest DB projection + doctor coverage に落とす | vitest DB projection + doctor coverage (U3 L7) |
 
-ST-DATA-03 の旧定義 (`artifact.trace` と PLAN の `generates` の不整合を doctor が検出する不変条件) は、PLAN 機構の縮退契約 (`docs/design/harness/L6-function-design/plan-mechanism-retirement.md` §1、§8 の S7) に合わせ、現行 ST-* から退役させる。同じ ID を別の predicate に再定義しない。これは PLAN を対象にした当該要求の退役であり、一般の設計文書と source の trace 保証は退役対象に含めず維持する。
+ST-DATA-03 の旧定義 (`artifact.trace` と PLAN の `generates` の不整合を doctor が検出する不変条件) は、PLAN 機構の縮退契約 (`docs/design/harness/L6-function-design/plan-mechanism-retirement.md` §1、§8 の S7) に合わせ、現行 ST-* から退役させる。同じ ID を別の predicate に再定義しない。退役対象は PLAN `generates` との対応だけであり、data.md §7 の他の 5 規則は維持する。既存 gate で確認できる範囲と、L9 oracle が未閉包の範囲は §2 に分けて記す。
 
 ST-DATA-05 の旧定義 (PLAN `review_evidence` 欠落を doctor が検査する不変条件) は、PLAN を読む検査の退役に伴い現行 ST-* から除く。同じ ID を PR custody receipt / merge gate の不変条件へ再定義しない。検査の退役と、PR 単位の review 証跡を custody receipt と merge gate で保持する責務は `docs/design/harness/L6-function-design/plan-mechanism-retirement.md` §4 の決定に従う。
 
@@ -106,7 +106,9 @@ ST-FUNC-03 の要求範囲 (完全な Red→Green→refactor 順序と、本体�
 
 ## §2 量閉じ一覧 (L4 設計要素 → ST 被覆、孤児チェック)
 
-- data.md §6 の現行不変条件 → 被覆対応 (m-3 明示): 逆ピラミッド/4-artifact 系 → **ST-DATA-01**、V_MODEL_PAIRS/集約境界系 → **ST-DATA-02**、state schema↔src/schema 系 → **ST-DATA-04**、§1.1/§8.1 宣言型 spec IR / DB projection 境界 → **ST-DATA-06**。PLAN `generates` に依存する ST-DATA-03 と PLAN review 前置証跡の旧検査は現行 ST coverage から除外し、その退役境界は上記 §1.1 の注記に従う。一般の設計文書と source の trace 保証は維持する。
+- data.md §6 の現行不変条件 → 被覆対応 (m-3 明示): 逆ピラミッド/4-artifact 系 → **ST-DATA-01**、V_MODEL_PAIRS/集約境界系 → **ST-DATA-02**、state schema↔src/schema 系 → **ST-DATA-04**、§1.1/§8.1 宣言型 spec IR / DB projection 境界 → **ST-DATA-06**。PLAN `generates` に依存する ST-DATA-03 と PLAN review 前置証跡の旧検査は現行 ST coverage から除外し、その退役境界は上記 §1.1 の注記に従う。
+- data.md §7 の残る集約間整合規則: `pair_artifact` 双方向は既存 **G4 pair-freeze** (`src/vmodel/lint.ts`, `tests/vmodel-pair.test.ts`) で文書ペアの相互参照を検査する。AC↔AT 被覆は **G3-trace** (`src/lint/g3-trace.ts`, `tests/g3-trace.test.ts`) で orphan AC/AT を検査する。これらは既存 gate の証拠であり、L9 system ST の実行証拠とは区別する。
+- data.md §7 の phase↔gate は **ST-FUNC-01** が workflow 遷移を扱うが、phase 遷移と対応 gate pass の一体性を個別に検証する oracle は確認できていないため部分対応とする。evaluation→plan/kpi は data.md §7 / §8 および architecture.md §3 で Phase B carry、derived_view ← 各集約は architecture.md §3 で将来 HM 画面 projection とされる。いずれも現行 L9 に対応 oracle がない。これら 3 規則の要求は削除せず、未閉包として Issue #1705 へ route する。§7 全体の量閉じは未完了であり、上記の既存 gate の存在だけで full coverage を主張しない。
 - architecture.md §3 依存方向 / §2 品質目標 → ST-ARCH-01〜04
 - function.md §3 workflow オーケストレーション (Forward spine + 9 駆動モデル + 2 工程専門) → ST-FUNC-01 (遷移) / ST-FUNC-01b (Forward 合流) / §3.2 routing 優先度 → ST-FUNC-04 / §3.2 mode↔kind → ST-FUNC-05 / §3.1 サインオフ + §3.6 execution mode 別 review tier → ST-FUNC-06 / §3.4 skill (FR-12) → ST-FUNC-07 / §3.6 execution mode degradation → ST-EXT-02 (external-if §4 と共有) / §7 依存 → ST-FUNC-02。孤児 0 (9 駆動 + spine + 工程専門 2 + routing + skill + execution mode 3+1 パターンが全て被覆)
 - **function.md §1.1 C12 内部資産 command (FR-L1-48) の `ut-tdd asset` 残存と `roster list/check` 廃止を ST-ASSET-03 で確認 / architecture §3 skills (FR-L1-47) → ST-ASSET-05 (`src/assets/catalog.ts`, `src/skill-engine/recommend.ts`) / architecture §4.1 drift lint (FR-L1-49) → ST-ASSET-06 (`src/lint/asset-drift.ts`)**
