@@ -282,8 +282,8 @@ field は `type`・`command`・`timeout`・`statusMessage`・`async`・`addition
 |---|---|---|
 | 下限の正本 | `src/runtime/claude-version-floor.ts` の `CLAUDE_CODE_VERSION_FLOOR` | `string` (`"2.1.295"`)。この module は定数だけを持ち、関数を持たない。 |
 | 版の比較 | `src/runtime/claude-version-check.ts` の `evaluateClaudeVersion(version: string | null): "ok" | "below" | "unknown"` | 下限は `claude-version-floor.ts` から import する (引数で受けない)。`x.y.z` の数値で比べ、読めない値は `"unknown"`。 |
-| transcript から版を読む | 同じ module の `readTranscriptClaudeVersion(transcriptPath: string | undefined): string | null` | 最後の message の行の `version` を返す。読めなければ `null`。 |
-| doctor の check | 新しい module `src/doctor/claude-version-floor-check.ts` の `checkClaudeVersionFloor(deps?: { readPathClaudeVersion?: () => string | null })` | 既定の `readPathClaudeVersion` は PATH の `claude --version` を呼ぶ。テストはこの引数で差し替え、実際の Claude Code を起動しない。doctor への登録 (既存の check の一覧への追加) は実装 PR で行う。既存の module (`src/doctor/toolchain.ts` など) に export を足す形にしないのは、登録と Red の PR で既存の src を変えずに済ませるためである (`design-protection-diff-gate.md` §10.3 の手順 1' は、新しい module の stub だけを許す)。 |
+| transcript から版を読む | 同じ module の `readTranscriptClaudeVersion(transcriptPath: string | undefined): string | null` | 最後の message の行の `version` を返す。読めなければ `null`。読む範囲は file の末尾 4 MiB に限る (2026-11-16 改訂、`claude-version-probe.md` §5、Issue #1676)。 |
+| doctor の check | 新しい module `src/doctor/claude-version-floor-check.ts` の `checkClaudeVersionFloor(deps?: { readPathClaudeVersion?: () => string | null })` | 既定の `readPathClaudeVersion` は PATH の `claude --version` を呼ぶ。テストはこの引数で差し替え、実際の Claude Code を起動しない。**2026-11-16 改訂 (Issue #1674 / #1675)**: 注入口は `checkClaudeVersionFloor(deps?: { probePathClaude?: () => PathClaudeProbe })` に改め、`readPathClaudeVersion` は廃止する。probe の解決・実行と表示の 4 状態は `claude-version-probe.md` §2〜§4 が定める。doctor への登録 (既存の check の一覧への追加) は実装 PR で行う。既存の module (`src/doctor/toolchain.ts` など) に export を足す形にしないのは、登録と Red の PR で既存の src を変えずに済ませるためである (`design-protection-diff-gate.md` §10.3 の手順 1' は、新しい module の stub だけを許す)。 |
 | adapter の生成 | `src/setup/templates.ts` | 下限は `claude-version-floor.ts` から import して本文に埋める。 |
 
 下限の定数を関数と別の module に置くのは、`vi.mock` で定数の module を差し替えたときに、比較・doctor・adapter の生成がそろって追従することを確かめるためである (同じ module の中の参照は `vi.mock` では差し替わらない)。
@@ -297,10 +297,12 @@ field は `type`・`command`・`timeout`・`statusMessage`・`async`・`addition
 
 **marker を書けないとき (2026-11-11 追記、Issue #1561)**。「1 session に 1 回」の警告済みの印を作る・書く処理が、`EEXIST` 以外のどのエラーで失敗しても、版の警告は出し続ける (hook が動くたびに出す)。印を書けないことを理由に黙る側へ倒さない。警告の目的は、古い Claude では guard が fail-open になることを知らせることであり、印を書けないときに黙るほうが、警告が繰り返されるより害が大きいためである。版の警告 (下限未満と「版を確かめられない」) は従来どおり stdout の単一の `{"systemMessage":...}` JSON で出し、印の保存に失敗しても、同じ session の以後の呼び出しで毎回出す。印の保存の失敗 (`EEXIST` 以外) の診断は stderr に出す (警告を stderr へ移さない)。どちらの場合も hook の exit code と判定は変えない。`EEXIST` は「すでに警告済み」を意味するので、従来どおり出さない。対応する oracle は `U-CCVER-008` である。
 
+**版の取得と doctor の表示 (2026-11-16 追記、Issue #1674〜#1677)**。PATH の claude の解決と実行 (current directory と相対の PATH 要素を実行しない)、doctor の表示の 4 状態 (PATH に claude が無いときは OK ではなく SKIP)、transcript の末尾 4 MiB だけを読むこと、テストで本物の claude を起動しないことは `claude-version-probe.md` が定める。本節の警告・下限・方式 4 の判定は変えない。
+
 採らない方式。
 
 - SessionStart で版を読む方式: hook の stdin に版が無く、`source=startup` の時点では transcript に message の行がまだ無いことがある。
 - わざと失敗する検査用の hook を置く方式: 新しい版では全 tool を止めて作業できなくなり、古い版では無音になる。
 - guard の内部エラーをすべて exit 2 にして版に頼らない方式: 古い版で効かなかったのは guard の script を起動できない場合であり、script の中で例外を捕まえても救えない。work-guard の「内部エラーは fail-open (exit 0)」は既存の契約で、本節では変えない。
 
-対応する自動テスト oracle は `docs/test-design/harness/L7-claude-version-floor-test-design.md` の `U-CCVER-001`〜`005` と `U-CCVER-007`〜`008` である。実画面での確認は、同書の `CANDIDATE-U-CCVER-006` を実装後に行う。
+対応する自動テスト oracle は `docs/test-design/harness/L7-claude-version-floor-test-design.md` の `U-CCVER-001`〜`005` と `U-CCVER-007`〜`008`、版の取得については `CANDIDATE-U-CCVER-009`〜`019` である。実画面での確認は、同書の `CANDIDATE-U-CCVER-006` を実装後に行う。
