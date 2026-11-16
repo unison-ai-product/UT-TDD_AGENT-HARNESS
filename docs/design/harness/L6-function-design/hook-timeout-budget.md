@@ -46,9 +46,14 @@ phase ごとの所要 (node の起動、module の読み込み、git、DB) は�
 **コード** (origin/main `09ce4e761`)。
 
 - **予算の現状**: guard (agent-guard・work-guard) は 5 秒、記録 hook (SessionStart・PostToolUse・Stop の session summary) は 30 秒、Claude の Stop の claude-memory-wake は 930 秒、Claude の SubagentStop は 5 秒。source の `.claude/settings.json`・`.codex/hooks.json`、`src/setup/templates.ts` の生成物、`docs/templates/adapter/` の mirror の 6 面で同じである。記録 hook の 30 秒は #1087 (契約と Red)・#1094 (昇格)・#1102 (Green) で入った (`session-log.md` §5)。
-- **起動の経路**: source の guard は `node .claude/hooks/<guard>.ts` で、小さい module だけを import する (Codex は shell で `git rev-parse --show-toplevel` を先に呼ぶ)。consumer の Claude の guard は `node -e <MISSING_RUNTIME_GUARD_BOOTSTRAP>` が `.ut-tdd/bin/ut-tdd.mjs` を `spawnSync` で起動するので、node の process が 2 つになり、2 つ目は CLI 全体を読み込む (`src/lint/project-hook.ts` の `guardBootstrapHookArgs`)。記録 hook は source でも consumer でも CLI 全体を読み込む。
-- **失敗時の扱い**: Claude の guard は `onFailure: "block"` を持ち、起動失敗・時間切れ・exit 1 で tool を止める (`session-log.md` の Issue #1521 節)。記録 hook は `onFailure` を持たない (fail-open)。Codex には `onFailure` に当たる field が無く、guard の時間切れで tool が止まるかは未実測である (`session-log.md` の Issue #1538 節、`CANDIDATE-U-HOOKEXEC-017`)。
-- **work-guard の内部エラー**: work-guard は git の失敗・入力の解析失敗などの内部エラーでは exit 0 (通す) である (`.claude/hooks/work-guard.ts`、`src/cli.ts` の `hook work-guard`)。一方、host が時間切れで打ち切ると Claude では拒否になる。本書はこの非対称を変えない。
+- **起動の経路**: source の guard は `node .claude/hooks/<guard>.ts` で、小さい module だけを import する (Codex は shell で `git rev-parse --show-toplevel` を先に呼ぶ)。consumer の Claude の guard は `node -e <MISSING_RUNTIME_GUARD_BOOTSTRAP>` が `.ut-tdd/bin/ut-tdd.mjs` を `spawnSync` で起動するので、node の process が 2 つになり、2 つ目は CLI 全体を読み込む (`src/lint/project-hook.ts` の `guardBootstrapHookArgs`)。bootstrap は launcher が無ければ exit 2 (`consumer_runtime_absent`)、spawn に失敗すれば exit 78 を返し、それ以外は子の exit code をそのまま返す (`MISSING_RUNTIME_GUARD_BOOTSTRAP`)。consumer の Codex の guard は bootstrap を挟まず、launcher を直接起動する (`src/setup/templates.ts` の `wrapperHookArgs`)。記録 hook は source でも consumer でも CLI 全体を読み込む。
+- **失敗時の扱い**: Claude の guard は `onFailure: "block"` を持ち、起動失敗・時間切れ・exit 1 で tool を止める (`session-log.md` の Issue #1521 節)。`onFailure` が効くのは Claude Code 2.1.295 以降であり、それ未満の版では無視されて止まらない (`session-log.md` の Issue #1561 節)。記録 hook は `onFailure` を持たないので、Claude では exit code にかかわらず作業は止まらない (fail-open)。CLI の記録 hook は内部で例外が出ると、CLI の最上位の catch で exit 1 になる (`src/cli.ts` の `program.parseAsync(...).catch`)。Codex には `onFailure` に当たる field が無い。guard の時間切れ・exit 1 で tool が止まるかは未実測であり (`session-log.md` の Issue #1538 節、`CANDIDATE-U-HOOKEXEC-017`)、記録 hook の失敗時の挙動も実測していない。
+- **guard の内部エラー (source と consumer で異なる)**:
+  - agent-guard は、source の shim (`.claude/hooks/agent-guard.ts`) も consumer の `hook agent-guard` (`src/cli.ts`) も、stdin の JSON 解析の失敗では exit 2 (拒否) である。consumer では repo root を解決できないとき `requireRuntimeRepoRoot` が例外を投げ、exit 1 になる。Claude ではどちらも拒否になる。
+  - work-guard の source の shim (`.claude/hooks/work-guard.ts`。source の Claude と Codex の両方が使う) は、stdin の解析失敗と、git の失敗を含む判定中の例外をすべて catch して exit 0 (通す) にする。shim が起動できない場合 (node の不在、import の失敗) は catch の外であり、Claude では拒否になる。
+  - work-guard の consumer の `hook work-guard` (`src/cli.ts`) は、stdin の JSON 解析の失敗だけを exit 0 にする。`loadChangedFiles` (`src/lint/change-impact.ts` の `execFileSync("git", ["status", "--porcelain"])`) は catch なしで呼ばれるので、git の失敗は CLI の最上位の catch へ伝わり exit 1 になる。repo root を解決できない場合も exit 1 になる。bootstrap はこの exit 1 をそのまま返すので、consumer の Claude では `onFailure: "block"` により編集が拒否される。consumer の Codex で exit 1 がどう扱われるかは未実測である (Issue #1538 節)。
+  - host が時間切れで打ち切った場合は、source でも consumer でも、Claude では拒否になる。
+  - 本書は予算だけを変える。上の内部エラーの扱い (source の shim の fail-open、consumer の exit 1) はどちらも変えない。両者をそろえるかは本書の範囲外とする (§10)。
 - **記録と guard の結合**: work-guard は「この session が触ったファイル」を `.ut-tdd/logs/session/<session_id>.jsonl` (PostToolUse の記録) から読む (`src/cli.ts` の `sessionTouchedFilesForGuard`、`.claude/hooks/work-guard.ts` の `sessionTouchedFiles`)。PostToolUse の記録が時間切れで落ちると、この session が新しく作った uncommitted のファイルを次に編集するとき、work-guard は他の runtime のファイルとみなして拒否する。コードを読んで確かめた経路であり、実害はまだ観測していない。
 - **記録の順序**: `hook post-tool-use` は session event の追記 (`dispatch`) を先に行い、その後に encoding guard (`git status` を読む) と Claude Code の版の警告を行う (`src/cli.ts`)。
 - **SubagentStop の記録**: `hook subagent-stop` は agent-slots の slot を 1 件 release する。release が落ちても、slot は次の fire のときに 5 分 (`DEFAULT_STALE_MINUTES`) で失効し、影響は並列数の警告 (助言) だけである (`src/runtime/agent-slots.ts`)。
@@ -59,12 +64,14 @@ phase ごとの所要 (node の起動、module の読み込み、git、DB) は�
 | hook id (`REQUIRED`) | event | 分類 | 失敗時の扱い | 時間切れの影響 |
 |---|---|---|---|---|
 | `agent-guard` | PreToolUse (`Agent\|Task`、Codex は `spawn_agent\|spawn_agents_on_csv`) | guard | Claude: 拒否 (`onFailure: "block"`)。Codex: 確定 deny だけが阻止として実測済み | Claude では subagent の起動の拒否。判定ではない |
-| `work-guard` | PreToolUse (`Edit\|Write\|MultiEdit`、Codex は `apply_patch\|write_file`) | guard | 同上。内部エラーは exit 0 (既存の契約) | Claude では編集の拒否。判定ではない |
+| `work-guard` | PreToolUse (`Edit\|Write\|MultiEdit`、Codex は `apply_patch\|write_file`) | guard | 同上。内部エラーの扱いは source と consumer で異なる。source の shim は git の失敗などで exit 0 (通す)。consumer の CLI は git の失敗で exit 1 となり、Claude では拒否になる (§2) | Claude では編集の拒否。判定ではない |
 | `session-start` | SessionStart | 記録 (handover と feedback の表示を含む) | fail-open | session_start の記録と表示が落ちる |
 | `post-tool-use` | PostToolUse | 記録 (work-guard の入力) | fail-open | 記録が落ちる。§2 の「記録と guard の結合」により、次の編集が work-guard に拒否されうる |
 | `session-summary` | Stop | 記録 | fail-open | digest の更新が落ちる。detach する DB refresh は予算の外 |
 | `claude-memory-wake` | Stop (Claude だけ) | 通知 (`asyncRewake`) | fail-open | 通知の待機が終わる |
 | `subagent-stop` | SubagentStop (Claude だけ) | 記録 (助言) | fail-open | slot の release が落ちる。5 分で自己回復 |
+
+記録 hook の「fail-open」は、Claude で `onFailure` を省略していることによる。内部エラーでの exit code は 0 とは限らず、exit 1 でも作業は止まらない (§2)。Codex の記録 hook の失敗時の挙動は実測していない。
 
 今後 PreToolUse に `onFailure: "block"` で足す guard (例: `workflow-model-guard.md` の workflow-guard) は、本書の guard の予算に従う。
 
@@ -204,4 +211,5 @@ advisor への相談 (2026-11-13、`ut-tdd advisor --decision implementation`、
 - source の開発 repo の `.claude/CLAUDE.md` に §5.1 と同じ規律を書く (adapter の規律ファイルの改訂の範囲で行う)。
 - consumer の実際の guard と記録 hook の全体の所要を、負荷時に同じ run で測る (bootstrap、2 つ目の node、hook 本体、I/O)。60 秒を超える値が出たら本書を改訂する。
 - 方式 C (入口を軽くする) は、上の計測で phase ごとの所要が分かってから、issue #1057 の対応方針 2 として別に切り出す。
+- consumer の `hook work-guard` が git の失敗で exit 1 になり、Claude で拒否になること (§2。source の shim は通す) を、source の shim の扱いにそろえるかの判断。予算とは別の論点なので、別 Issue で扱う。
 - 既存の consumer は、setup の confirm を経た上書きで新しい予算を受け取る。移行の仕組みは作らない。Pack のリリースノートで知らせる。
