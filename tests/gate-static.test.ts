@@ -110,7 +110,7 @@ const HARNESS_GATE_BASELINE = [
     gate: "G9",
     ok: true,
     messages: [
-      "g9-system-workflow - OK (st_cases=30, manifests=2, selected_st=28, mandatory_st=28)",
+      "g9-system-workflow - OK (st_cases=29, manifests=2, selected_st=28, mandatory_st=28)",
     ],
   },
   {
