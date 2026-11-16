@@ -11,7 +11,7 @@ created: 2026-11-13
 issue: 1665
 ---
 
-> **L6 contract marker**: 本書は snapshot runner (`scripts/run-vitest-snapshot.ts`) の**同時実行の排他**の契約である (未実装の目標契約)。判定は `src/runtime/snapshot-runner-lock.ts` の純関数 (`resolveSnapshotLockMode` / `parseSnapshotLockWaitMs` / `presenceFromKill` / `interpretSnapshotLockRead` / `classifySnapshotLockClaim` / `decideSnapshotLockStep` / `identityProbeDue` / `snapshotStageEnv` / `snapshotLockDir`) が持ち、ファイルの操作と process の観測は port 越しに注入する。取得・検証・解放の手順とその安全性の論証、記録の読み取りと生存の分類と失敗の扱いは `snapshot-runner-lock-protocol.md` (以下「手順書」) に分けた (本書の §5 と §7 はそこを指す)。型と DbC は §11 にまとめる。oracle は `docs/test-design/harness/L7-snapshot-runner-lock-test-design.md` の候補 ID `CANDIDATE-U-SNAPLOCK-001`〜`031` が固定する。行番号と実測は 2026-11-13 の `main` (`09ce4e761`)、Windows 11、node v24.22.3 で取った。
+> **L6 contract marker**: 本書は snapshot runner (`scripts/run-vitest-snapshot.ts`) の**同時実行の排他**の契約である (未実装の目標契約)。判定は `src/runtime/snapshot-runner-lock.ts` の純関数 (`resolveSnapshotLockMode` / `parseSnapshotLockWaitMs` / `presenceFromKill` / `interpretSnapshotLockRead` / `classifySnapshotLockClaim` / `decideSnapshotLockStep` / `identityProbeDue` / `snapshotStageEnv` / `snapshotLockDir`) が持ち、ファイルの操作と process の観測は port 越しに注入する。取得・解放の手順とその安全性の論証、記録の読み取りと生存の分類と失敗の扱いは `snapshot-runner-lock-protocol.md` (以下「手順書」) に分けた (本書の §5 と §7 はそこを指す)。型と DbC は §11 にまとめる。oracle は `docs/test-design/harness/L7-snapshot-runner-lock-test-design.md` の候補 ID `CANDIDATE-U-SNAPLOCK-001`〜`032` (022 と 030 は r2 で退役) が固定する。行番号と実測は 2026-11-13 の `main` (`09ce4e761`)、Windows 11、node v24.22.3 で取った。
 
 # snapshot runner の同時実行の排他 — 関数設計 (issue #1665)
 
@@ -42,15 +42,24 @@ issue: 1665
 
 ## 3. 設計判断 (方式の候補と推奨)
 
-排他の置き場と仕組みについて、次の 3 案を比べた。
+排他の置き場と仕組みについて、次の 3 案を比べた (案 A は r2 の review の後に改めた。経緯と、そのとき比べた別の案は下の「r2 で退けた案」と §15)。
 
 | 案 | 内容 | 長所 | 短所 |
 |---|---|---|---|
-| A | user の tmp dir に置いた lock dir で、**世代番号つきの holder ファイルを hard link で排他的に作り、作った後に自分より大きい番号が無いことを確かめる** (手順書 §2)。古い holder は消さずに次の世代で置き換える | Node の標準 API だけで OS をまたいで書ける。holder の情報 (pid・checkout) をそのまま表示できる。安全性が「最大の番号は消えない」という単調性だけで決まり、process の停止時間に依らない (手順書 §2.3) | pid の再利用を見分けるために process の開始時刻 (startToken) の観測が要る (Windows で 1 回数秒)。lock の範囲が `os.tmpdir()` の一致に依存する |
+| A | user の tmp dir に置いた lock dir で、**連続する番号の holder ファイル (`gen-1.json`, `gen-2.json`, …) を hard link で排他的に作り、一度作ったら消しも置き換えもしない**。現在の世代は決まった名前を前へたどって求める (手順書 §2)。古い holder は次の番号を作ることで置き換える | Node の標準 API だけで OS をまたいで書ける。holder の情報 (pid・checkout) をそのまま表示できる。安全性が「作った番号は消えない」ことと link の `EEXIST` だけで決まり、process の停止時間にも一覧 (readdir) の完全性にも依らない (手順書 §2.3) | pid の再利用を見分けるために process の開始時刻 (startToken) の観測が要る (Windows で 1 回数秒)。lock の範囲が `os.tmpdir()` の一致に依存する。履歴が上限なく増える (1 run で小さいファイル 2 つ。walk の費用は hint で抑える、手順書 §2.4) |
 | B | OS が process の死と同時に解放する予約 (Windows の named pipe、Linux の abstract socket) を排他に使う | 古い lock の判定が要らない | Node に予約の持ち主の pid を問い合わせる API が無く、表示用の記録を別に持つので正本が 2 つになる。macOS には abstract socket が無く、ファイルの socket では古い lock の問題が戻る。sandbox の namespace で予約が分かれるかは未実測 |
 | C | doctor の singleton をそのまま流用し、checkout ごとに lock を掛ける | 実装済みの仕組みを使える | 別の worktree・別の lane・review worktree の実行を排他できず、#1665 の要件を満たさない。45 分の TTL で生きた holder を回収する誤り (#1460) と、読めない claim を stale とする扱いも引き継ぐ |
 
 **推奨は A**。理由: B の利点 (回収が要らない) は、A でも「holder の削除をしない世代方式」と「時刻を使わない identity の判定」で同じ安全性に届き、B の短所 (正本が 2 つ、OS 別の実装、未実測の namespace) を負わずに済む。C は要件を満たさない。
+
+**r2 で退けた案** (2026-11-16 の advisor の相談、§15):
+
+| 案 | 退けた理由 |
+|---|---|
+| 古い世代の整理と一覧による検証を持つ世代方式 (r1 の是正の形) | 整理で消えた番号を、止まっていた取得者が link で作り直せる。一覧の後の検証も、一覧の途中で世代が入れ替わると取りこぼしが起こりうる (一覧は途中で作られた・消されたファイルを含むかどうかが決まっていない) ので、排他を保証できない (r1 と r2 の FLAG) |
+| localhost の TCP port を bind して持つ | Windows の Node (libuv) は `SO_REUSEADDR` も `SO_EXCLUSIVEADDRUSE` も設定しない。別の socket が `SO_REUSEADDR` を使えば同じ port に bind できるので、OS が強制する排他にならない。Node の `exclusive: true` は cluster の handle 共有の指定で、Winsock の `SO_EXCLUSIVEADDRUSE` ではない |
+| OS のファイル lock (Windows の `LockFileEx`・排他の共有モード、Linux の `flock`) | Node の標準 `fs` はこれらを公開しない。補助の process や native addon が要り、その寿命 (補助だけが死んで子が走り続ける場合) まで契約になる |
+| 決まった名前 1 つの lock を、古いと判定したら消して取り直す | A が古い holder の死を確かめて止まり、B が古い lock を消して取得した後に A が再開して消すと、B の生きた lock を消す。消す直前の読み直しでも、確認と削除の間に同じ競合が残る |
 
 あわせて次を決めた (相談の経緯は §15)。
 
@@ -61,7 +70,7 @@ issue: 1665
 | reviewer の実行 | 同じ lock に入る。例外も優先もない | runner は自分の役割を確かめる手段を持たない。役割で優先を付けると、名乗るだけで割り込める口ができる |
 | 待つ順番 | 待つ者どうしは到着順 (FIFO)。即時の exit 2 を選んだ者も、先に待っている者を追い越さない | 40 分待っても順番が来ない事態 (control の観測) を、到着順と待ち位置の表示で防ぐ。順番は公平さのための規則で、排他の安全性は順番に依らない (手順書 §2.3) |
 | 小さい実行の別枠 | 設けない (枠は 1 つ) | 対象が 1〜2 ファイルでも clone・`npm ci`・`db rebuild` の固定費は同じで、メモリと CPU を食うのはこの固定費である。#98 で固定費が下がったら見直す |
-| lock の障害 | **走るかどうかの判定に使う操作の失敗は fail-close** (exit 3、理由を表示)。判定に使わない片付けの失敗は無視する。区別は手順書 §3.3 の表が正本 | 障害時に lock なしで走ると、排他の要件を黙って破る。片付け (古い世代の整理、tmp の削除、stale の待っている者の削除) は排他の安全性に関わらないので、その失敗で run を止めない |
+| lock の障害 | **走るかどうかの判定に使う操作の失敗は fail-close** (exit 3、理由を表示)。判定に使わない片付けの失敗は無視する。区別は手順書 §3.3 の表が正本 | 障害時に lock なしで走ると、排他の要件を黙って破る。片付け (tmp の削除、stale の待っている者の削除) と hint の読み書き は排他の安全性に関わらないので、その失敗で run を止めない |
 | CI | 排他を掛けない (`CI` が `true` のとき) | CI は job ごとに別の機械である |
 
 ## 4. lock の範囲と置き場
@@ -73,13 +82,15 @@ issue: 1665
   - `released-<g>`: 世代 `g` が正常に終わった印。世代 `g` の holder だけが作る。
   - `queue/<lockId>.json`: 待っている者の記録 (待つ場合だけ)。
   - `tmp/<lockId>.json`: hard link や rename の元にする作業用のファイル。
+  - `hint`: walk を始める世代番号の助言 (手順書 §2.4)。lock の記録ではなく、排他の判定に使わない。
+- 世代ファイルと `released-*` は一度作ったら消さず、rename も書き換えもしない (手順書 §2.4。履歴は上限なく残る)。
 - 記録は必ず `tmp/` に全て書いて閉じてから、link (世代ファイル) か rename (queue entry、名前は自分だけのもの) で公開する。**公開された記録は最初から完全な内容を持つ**ので、読めた内容が壊れているのは、この契約の外の書き込みか媒体の障害である (手順書 §3.1 の「壊れている」を fail-close にする根拠)。
-- 前提: lock dir の中のファイルを runner 以外 (人の手、他の tool) が消したり書き換えたりしないこと。これを破った場合の排他は保証しない。
+- 前提: lock dir の中のファイルを runner 以外 (人の手、他の tool) が消したり書き換えたりしないこと。これを破った場合の排他は保証しない。lock dir は local の fs に在ること (network fs の link の性質は前提にしない)。
 - 限界: user ごとに `os.tmpdir()` が違う構成 (別の OS user、WSL2 と Windows の混在、`TMP` を書き換える sandbox) では lock が分かれる。分かれたことが見えるように、lock の行には必ず `lock=<dir>` を出す (§9)。
 
 ## 5. 世代ファイルによる取得と解放
 
-手順書 (`snapshot-runner-lock-protocol.md`) の §2 に分けた (現在の世代、取得の手順、安全性の論証、解放と整理)。
+手順書 (`snapshot-runner-lock-protocol.md`) の §2 に分けた (現在の世代と walk、取得の手順、安全性の論証、解放・履歴・hint)。
 
 ## 6. 待ち方と順番
 
@@ -87,7 +98,7 @@ issue: 1665
 - runner の引数には option を足さない (`snapshot-runner-argv.md` の受理集合を変えない)。
 - 順番 (`decideSnapshotLockStep`): 自分と、`live` に分類した待っている者のうち、`queuedAt` が最も早い者 (同じなら `lockId` の辞書順で前の者) を先頭とする。`stale` の待っている者は数えない。**現在の世代が `live` でなく、かつ自分が先頭のときだけ** `attempt` (次の世代の番号は「現在の世代の番号 + 1」、世代が無ければ 1) とする。そうでなく、待った時間が上限以上なら `give_up`、それ以外は `wait`。取得できる状態なら、上限を過ぎていても `give_up` より `attempt` を先にする。
 - 即時の exit 2 (上限 0) の者は queue entry を書かないが、自分の `queuedAt` は試した時刻なので、先に待っている者を追い越さない。
-- 順番は公平さの規則であり、2 者が同時に自分を先頭と判定しても、排他は 手順書 §2.3 が守る (link の `EEXIST` と検証)。
+- 順番は公平さの規則であり、2 者が同時に自分を先頭と判定しても、排他は手順書 §2.3 が守る (消えない連続の番号への link の `EEXIST`)。
 - 1 回の繰り返しの間隔は 2,000 ms。現在の世代と待っている者の生存は毎回 `process.kill(pid, 0)` で確かめ、identity (startToken) の観測は `identityProbeDue` が真のときだけ行う (初めて見た記録、または前回の観測から 300,000 ms 以上たった記録)。この間隔は回収の速さだけを決め、安全性には関わらない。
 - 待っている者の記録のうち `stale` と分類したものは、見た者が消す (失敗は無視する)。`live` の記録は消さない。queue entry の名前は起動ごとの `lockId` なので、消した名前に別の者の記録が入れ替わることは無い。
 - `busy` と `unavailable` で終えるときも、自分の queue entry を消す (失敗は無視する)。
@@ -104,7 +115,7 @@ issue: 1665
 2. `env.UT_TDD_SNAPSHOT_LOCK_TOKEN` が空でなく、現在の世代の記録の `lockId` と一致し、その世代に `released` の印が無く、holder の `presence` が `false` でなければ `nested`。
 3. それ以外は `acquire`。
 
-- 呼び出しの順序: `acquireSnapshotLock` は最初に `resolveMode({ env, current: null, currentPresence: null })` を呼び、`skip_ci` ならそこで終える (lock dir を読まない)。そうでなければ lock dir を一覧して現在の世代を 手順書 §3.1 で読み、`unavailable` ならそこで終え (mode に依らない)、`absent` なら一覧からやり直し、読めたら (R0 の `free` なら記録を読まず `current` を null として) `resolveMode` をもう一度呼んで `nested` か `acquire` を決める。
+- 呼び出しの順序: `acquireSnapshotLock` は最初に `resolveMode({ env, current: null, currentPresence: null })` を呼び、`skip_ci` ならそこで終える (lock dir を読まない)。そうでなければ walk (手順書 §2.1) で現在の世代を求めて手順書 §3.1 で読み、`unavailable` ならそこで終え (mode に依らない)、読めたら (R0 の `free` なら記録を分類に使わず `current` を null として) `resolveMode` をもう一度呼んで `nested` か `acquire` を決める。
 - `nested` と `skip_ci` は、lock dir へ書かず、identity の port を呼ばない (子 process を起動しない)。`nested` の判定に使うのはファイルの読み取りと `process.kill(pid, 0)` だけである。clone より前の spawn の列を固定している既存のテスト (§2 実測 7) を壊さないためである。
 - token の受け渡し: 取得した runner は、stage の子 process に渡す環境へ `UT_TDD_SNAPSHOT_LOCK_TOKEN=<自分の lockId>` を足す (`snapshotStageEnv(env, acquisition)`)。`nested` と `skip_ci` は環境を変えない (受け継いだ token はそのまま子へ渡る)。entrypoint は `deps.run(args, repoRoot, stageEnv)` を呼び、既定の `run` は `runSnapshotTests(args, repoRoot, getuid, stageEnv)` (第 4 引数は省略可能で、既定は `process.env`) に渡す。`runSnapshotTests` はこの環境を全 stage の子の環境の基にする。既存の 3 引数の呼び出しは変わらない。
 - **保証の範囲**: 排他は「最上位の runner どうし」の間だけで成り立つ。holder の Vitest の中から起動された入れ子の runner は holder の実行の一部であり、入れ子どうしは排他しない (今も並列に走っている)。holder が死んだ後に残った子孫 (`npm ci` / Vitest / 入れ子) は、寿命の契約 (`snapshot-runner-lifecycle.md`) が止めるまで、次の世代の実行と重なりうる。
@@ -116,7 +127,7 @@ issue: 1665
 |---|---|
 | 0 / 1 | 従来どおり (検証の成否、runner の誤り。待ち時間の値の誤りも 1) |
 | 2 | **busy**: 別の最上位の runner が持っていて、上限まで待っても (既定は待たずに) 取れなかった。一時 root も clone も作らない |
-| 3 | **unavailable**: 手順書 §3.3 の表で `unavailable` とした失敗 (lock dir の一覧・作成・書き込み、記録の読み取りの R2 / R3、`EEXIST` 以外の link の失敗、自分の identity を得られない)。一時 root も clone も作らない |
+| 3 | **unavailable**: 手順書 §3.3 の表で `unavailable` とした失敗 (lock dir の作成・書き込み、記録の読み取りの R2 / R3、既知の世代の消失 (`generation_missing`)、`released-<M>` の確かめの失敗、`queue/` の一覧の失敗、`EEXIST` 以外の link の失敗、自分の identity を得られない)。一時 root も clone も作らない |
 | 75 | 寿命の契約の `EXIT_PARENT_LOST` (変えない) |
 
 出力は全て stderr で、各行の先頭を `snapshot-lock:` とし、値は `key=value` で並べる。行の文面は oracle で解析しない (`key=` の有無と値だけを見る)。
@@ -125,7 +136,7 @@ issue: 1665
 |---|---|
 | 取得 | `snapshot-lock: acquired generation=<g> waited_ms=<n> lock=<dir>` |
 | busy | `snapshot-lock: busy holder_pid=<pid> holder_repo=<path> since=<acquiredAt> generation=<g> waited_ms=<n> lock=<dir>` と、待つには `UT_TDD_SNAPSHOT_LOCK_WAIT_MS` を使うこと・死んだ holder は次の起動で置き換えられることを示す 2 行目 |
-| unavailable | `snapshot-lock: unavailable reason=<code> lock=<dir>` (`reason` は 手順書 §3.1 の code か `malformed`) |
+| unavailable | `snapshot-lock: unavailable reason=<code> lock=<dir>` (`reason` は手順書 §3.1 の code、`malformed`、`generation_missing` のどれか) |
 | 解放の失敗 | `snapshot-lock: release-failed reason=<code> generation=<g> lock=<dir>` |
 | 待ち始め | `snapshot-lock: waiting position=<k>/<n> holder_pid=<pid> lock=<dir>` (1 回) |
 | 待っている間 | `snapshot-lock: still-waiting waited_ms=<n> position=<k>/<n>` (60,000 ms ごとに 1 行。繰り返しごとには出さない) |
@@ -192,15 +203,15 @@ export function identityProbeDue(lastProbeMs: number | null, nowMs: number): boo
 export function snapshotStageEnv(env: NodeJS.ProcessEnv, acquisition: SnapshotLockAcquisition): NodeJS.ProcessEnv;
 ```
 
-`acquireSnapshotLock(options: { tmpRoot; repoRoot; env; maxWaitMs }, deps)` の `deps` は、ファイル操作 (`mkdir` / `writeFile` / `rename` / `link` / `readFile` / `readdir` / `unlink`)、`presence(pid)`、`observeIdentity(pid)`、`now()`、`sleep(ms)`、`write(line)`、`resolveMode`、`interpretRead`、`classify`、`decide` を持ち、`resolveMode` / `interpretRead` / `classify` / `decide` の既定は上の純関数である。`readFile` の例外は `{ kind: "error", code: err.code ?? null }` に、成功は `{ kind: "text", text }` に包んで `interpretRead` に渡す。entrypoint は `runSnapshotRunnerMain(argv, env, deps) => number` (終了コード。run の例外は解放の後にそのまま投げ直し、従来どおり未捕捉の例外として終了コード 1 になる) で、`deps` は `acquire`・`release` (既定は acquired の handle の `release()` を呼ぶ)・`run`・`parseWaitMs`・`stageEnv`・`getuid`・`write` を持つ。busy と unavailable の行 (§9) は entrypoint が `SnapshotLockAcquisition` から作り、待ち始め・待っている間・取得・解放の失敗・入れ子・CI の行は `acquireSnapshotLock` と `release()` が出す。
+`acquireSnapshotLock(options: { tmpRoot; repoRoot; env; maxWaitMs }, deps)` の `deps` は、ファイル操作 (`mkdir` / `writeFile` / `rename` / `link` / `readFile` / `readdir` / `unlink`)、`presence(pid)`、`observeIdentity(pid)`、`now()`、`sleep(ms)`、`write(line)`、`resolveMode`、`interpretRead`、`classify`、`decide` を持ち、`resolveMode` / `interpretRead` / `classify` / `decide` の既定は上の純関数である。`readFile` の例外は `{ kind: "error", code: err.code ?? null }` に、成功は `{ kind: "text", text }` に包んで `interpretRead` に渡す。`released-<M>` と hint も `readFile` で読む (`released-<M>` は中身を使わない)。`readdir` は `queue/` の一覧だけに使い、世代の判定には使わない。entrypoint は `runSnapshotRunnerMain(argv, env, deps) => number` (終了コード。run の例外は解放の後にそのまま投げ直し、従来どおり未捕捉の例外として終了コード 1 になる) で、`deps` は `acquire`・`release` (既定は acquired の handle の `release()` を呼ぶ)・`run`・`parseWaitMs`・`stageEnv`・`getuid`・`write` を持つ。busy と unavailable の行 (§9) は entrypoint が `SnapshotLockAcquisition` から作り、待ち始め・待っている間・取得・解放の失敗・入れ子・CI の行は `acquireSnapshotLock` と `release()` が出す。
 
-前提: identity の port (`observeIdentity`) は、同じ process に対して生きている間ずっと同じ `startToken` を返す (手順書 §2.3 の P3)。これを満たさない観測 (書式の揺れ、丸め) は K3 の誤判定を生むので、実装 (§14 の 4) は正規化した値を返す。
+前提: identity の port (`observeIdentity`) は、同じ process に対して生きている間ずっと同じ `startToken` を返す (手順書 §2.3 の A4)。`process.kill(pid, 0)` は同じ pid の process が在ることしか示さず、startToken の確認の代わりにならない。これを満たさない観測 (書式の揺れ、丸め) は K3 の誤判定を生むので、実装 (§14 の 4) は正規化した値を返す。
 
 | 区分 | 内容 |
 |---|---|
 | I1 | claim を経過時間で `stale` にしない。`classifySnapshotLockClaim` は時刻を入力に持たず、取得の手順も記録の `acquiredAt` を判定に使わない |
-| I2 | runner は世代ファイルと `released` の印を、作成と 手順書 §2.4 の整理 (手順 5 で holder と確定した世代 `g` の holder による `g − 32` 以下) 以外で消さず rename もしない。他の世代の印を作らない (手順 5 の一覧の失敗で自分の番号 `n` の印を作る場合を除く) |
-| I3 | holder になるのは、link の成功と手順 5 の検証 (一覧に `n` より大きい番号が無い) の両方を満たしたときだけである。`EEXIST` は他者の取得、それ以外の link の失敗は `unavailable` |
+| I2 | runner は世代ファイルと `released` の印を消さず、rename も書き換えもしない (整理を持たない)。他の世代の印を作らない |
+| I3 | holder になるのは `gen-<n+1>.json` への link の成功だけである。その link は、同じ取得の中で `gen-<n>.json` を読み、世代 `n` を `free` か `stale` と判定した後にだけ試す (`n = 0` は `gen-1.json` が無いと読んだ後)。hint や一覧から番号を推して link しない。`EEXIST` は他者の取得で、その番号から walk を続ける。それ以外の link の失敗は `unavailable` |
 | I4 | 自分の startToken が文字列で得られないとき、queue entry も世代ファイルも書かない |
 | I5 | `nested` と `skip_ci` は lock dir へ書かず、identity の port を呼ばない |
 | I6 | 引数の判定 (help / 未知の option / watch)、root の判定、待ち時間の値の解釈は取得より前に終え、一時 root と clone は取得より後に始める |
@@ -209,7 +220,7 @@ export function snapshotStageEnv(env: NodeJS.ProcessEnv, acquisition: SnapshotLo
 | I9 | 判定関数は純粋である (OS・時刻・環境変数を自分では読まず、引数で受ける) |
 | I10 | 待っている間の出力は、待ち始め 1 行、60,000 ms ごとに 1 行、結果 1 行である |
 | I11 | 記録の読み取りの失敗 (R2) と壊れた記録 (R3) は、holder も待っている者も置き換えず `unavailable` にする。`stale` にするのは 手順書 §3.2 の K1〜K3 だけである |
-| I12 | 排他の安全性 (手順書 §2.3 の S) は、時刻・待ち時間・観測の間隔・整理の余裕 (32) のどれにも依らない |
+| I12 | 排他の安全性 (手順書 §2.3 の S) は、時刻・待ち時間・観測の間隔・一覧 (readdir) の完全性・hint の値のどれにも依らない。hint の読み書きの失敗は `unavailable` にしない |
 
 ## 12. 既存の契約との関係
 
@@ -221,13 +232,14 @@ export function snapshotStageEnv(env: NodeJS.ProcessEnv, acquisition: SnapshotLo
 ## 13. 受け入れ条件
 
 - [ ] 本書と `L7-snapshot-runner-lock-test-design.md` が非著者 family の review で PASS する。
-- [ ] `CANDIDATE-U-SNAPLOCK-001`〜`031` の Red、正式 ID への昇格、Green が §14 の順で入り、Refactor の commit がある (または「Refactor なし (理由)」)。
+- [ ] `CANDIDATE-U-SNAPLOCK-001`〜`032` (退役した 022 と 030 を除く) の Red、正式 ID への昇格、Green が §14 の順で入り、Refactor の commit がある (または「Refactor なし (理由)」)。
 - [ ] 実測 1: 別の worktree で runner を 2 本同時に起動すると、既定では 2 本目が exit 2 と holder の pid・`lock=` を出し、自分の pid の一時 root を作らない。
 - [ ] 実測 2: `UT_TDD_SNAPSHOT_LOCK_WAIT_MS` を与えた 3 本は到着順に 1 本ずつ走り、待っている間は §9 の行だけを出す。
 - [ ] 実測 3: holder を強制終了すると、待っている者が次の世代を作って走り始める (経過時間ではなく 手順書 §3.2 の K1 / K3 による)。
 - [ ] 実測 4: runner の下で U-TESTHYGIENE-043 (runner を子として起動するテスト) を流すと、入れ子として busy にならずに終わる。
 - [ ] 実測 5: CI の log に `snapshot-lock: skipped reason=ci` が出て、lock dir を作らない。
 - [ ] 実測 6: Claude lane、Codex lane、review worktree の runner が同じ `lock=` を出す。
+- [ ] 実測 7: 世代を 10,000 個置いた lock dir で、hint が在るときと消したときの取得にかかる時間を記録する。hint が無いときの時間が運用に耐えないなら、hint の扱いを見直す (排他の規則は変えない)。
 - [ ] U-TESTHYGIENE-050 / 051 が他のテストファイルの一時 root を数えず、消さない。
 - [ ] 規範文書と worker への指示から、手で空きを判定する手順を外す (§14 の後続)。
 
@@ -258,8 +270,16 @@ closing review (r1、非著者 family) の FLAG と扱い:
 
 | 指摘 | 扱い |
 |---|---|
-| 整理 (`g − 32` 以下の削除) の後、止まっていた取得者が消えた番号を link で作り直すと holder になり、生存中の最大の世代と同時に走る。「32 世代進むことは無い」は保証されない | **採用**: link の後に一覧し、自分より大きい番号が在れば孤児として退く検証を足した (手順書 §2.2 手順 5、I3)。安全性は「最大の番号は消えない」という単調性から導き、停止時間・32 の値に依らない (手順書 §2.3、I12)。検出する oracle は 030 |
+| 整理 (`g − 32` 以下の削除) の後、止まっていた取得者が消えた番号を link で作り直すと holder になり、生存中の最大の世代と同時に走る。「32 世代進むことは無い」は保証されない | **採用**: link の後に一覧し、自分より大きい番号が在れば孤児として退く検証を足した (手順書 §2.2 手順 5、I3)。安全性は「最大の番号は消えない」という単調性から導き、停止時間・32 の値に依らない (手順書 §2.3、I12)。検出する oracle は 030。**この是正は r2 で撤去した** (下の表) |
 | 「記録が読めない → stale」(旧 K1) と「lock の読み書き障害 → fail-close」が衝突し、生存中の holder の記録だけが読めないと次の世代を取れてしまう | **採用**: 読み取りを absent / 読み取りの失敗 / 壊れている / 読めた に分け、失敗と壊れた記録は置き換えずに `unavailable` とした (手順書 §3.1、手順書 §3.3、I11)。`classifySnapshotLockClaim` は読めた記録だけを受ける。検出する oracle は 007 と 031 |
+
+closing review (r2、非著者 family) の FLAG と扱い:
+
+| 指摘 | 扱い |
+|---|---|
+| link の後の検証の一覧 (readdir) の途中で 32 世代以上が入れ替わると、一覧に大きい番号が 1 つも現れず、古い番号を作り直した取得者が検証を通って生きている holder と同時に走る。一覧の規則はこの取りこぼしを許す | **採用**: 整理と検証の一覧を撤去し、連続する番号を消さない方式にした (手順書 §2)。現在の世代は決まった名前を前へたどって求め、一覧は排他の判定に使わない。止まっていた取得者の link は、後の番号が消えずに在るので `EEXIST` になる (手順書 §2.3 の補題 2)。検出する oracle は 016 (b)。r1 の是正で足した 030 (検証) と整理の 022 は、性質ごと無くなったので退役させた |
+
+相談 (r2 の後): `ut-tdd advisor --decision implementation --current-model claude-opus-5-5 --execute` → `gpt-6.1-sol` (exit 0、2026-11-16)。整理と一覧に依る方式は反証され、「消さない連続の世代と決まった名前の walk」が、local の fs の no-replace な link・世代の不変・正しい死の判定の前提の下で反例に耐えると判定された (代償は履歴の増加と walk の費用)。TCP port・OS の lock・決まった名前の回収を退けた理由は §3 の「r2 で退けた案」に書いた。control lane がこの推奨を採用した。
 
 未実測の点 (Green の前に測り、本書に追記する):
 
@@ -267,4 +287,4 @@ closing review (r1、非著者 family) の FLAG と扱い:
 - Windows で identity の観測 (PowerShell 経由の CIM) にかかる時間と失敗の頻度。待っている者の 300 秒ごとの観測の負荷が許せるか。
 - Linux の `/proc/<pid>/stat` の starttime と macOS の `ps -o lstart=` での identity の取得 (本書では未実測)。
 - Windows でウイルス対策などが記録の読み取りに一時的な `EBUSY` / `EPERM` を返す頻度。多ければ R2 の exit 3 が増える (安全側だが利便を損なう)。その場合も R2 を `stale` に変えず、読み取りの再試行の回数を足す改訂で扱う。
-- 手順書 §2.3 の P2 (一覧の間ずっと在るファイルは必ず現れる) は POSIX と NTFS の列挙の規則による前提で、本書では実測していない。
+- 履歴の増え方と walk の費用 (実測 7)。hint が無いときに walk が運用に耐えるか。
