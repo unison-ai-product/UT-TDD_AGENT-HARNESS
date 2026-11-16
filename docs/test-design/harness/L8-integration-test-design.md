@@ -311,7 +311,6 @@ L6 `harness-check` aggregate gate / E13 receipt契約を結合境界で検証す
 
 | Oracle ID | Given | When | Then | Fixture / Boundary | Negative / Edge |
 |---|---|---|---|---|---|
-| ↳ tracked remote到達性 | authority観測後、source commitをtracked remoteから到達不能にするか到達性検証を失敗させるadversarial port。 | migrationのtransaction直前reachability検証を実行する。 | `seal-source-commit-unreachable`で拒否し、全8 table write 0。 | tracked remote custodyの最終消費境界。 | HEAD一致だけで到達不能なsource commitをsealしない。 |
 
 実行対応: `tests/plan-asset/sealed-lineage-local-migration.test.ts`
 (`U-PA-SEAL-011..028`)。これらは `src/lint/oracle-test-citation-baseline.ts` への追加対象ではなく、
