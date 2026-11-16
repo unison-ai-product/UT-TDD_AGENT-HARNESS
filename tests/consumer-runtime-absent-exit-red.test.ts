@@ -2,7 +2,7 @@ import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { REQUIRED } from "../src/lint/project-hook.ts";
 import { BUILTIN_GITHUB_TEMPLATES } from "../src/setup/templates.ts";
 
@@ -23,6 +23,15 @@ const GUARD_ARGV: readonly (readonly string[])[] = [
 const OTHER_ARGV: readonly (readonly string[])[] = [["status"], ["hook", "unknown-hook"], []];
 
 const roots: string[] = [];
+
+// 生成 launcher に埋め込まれた fail-open 集合の全体を取り出す。argv の先頭語が hook / session の
+// 2 語配列リテラルだけを対象にする (launcher 内の `["rev-parse", "--git-common-dir"]` などは除く)。
+// 重複も残すので、比較は完全一致 (過不足・重複の両方を検出) で行う。
+function embeddedFailOpenPairs(launcher: string): string[] {
+  return [...launcher.matchAll(/\[\s*"(hook|session)"\s*,\s*"([^"\n]+)"\s*\]/g)]
+    .map((match) => `${match[1]} ${match[2]}`)
+    .sort();
+}
 
 function createAbsentRuntimeWorktree(): { root: string; launcherPath: string } {
   const root = mkdtempSync(join(tmpdir(), "ut-tdd cwtrt absent exit "));
@@ -93,7 +102,7 @@ describe("issue #1602 consumer runtime absent exit split", () => {
     expect(denied.stderr.trim()).toBe("consumer_runtime_resolution_denied");
   });
 
-  it.fails("U-CWTRT-015: the fail-open set is derived from the project-hook definitions", () => {
+  it.fails("U-CWTRT-015: the fail-open set is derived from the project-hook definitions", async () => {
     const derived = REQUIRED.filter((hook) => !("onFailure" in hook)).map((hook) =>
       hook.wrapperArgs.slice(1, 3),
     );
@@ -102,10 +111,45 @@ describe("issue #1602 consumer runtime absent exit split", () => {
     );
 
     const launcher = BUILTIN_GITHUB_TEMPLATES["common/ut-tdd.mjs"];
+    expect(embeddedFailOpenPairs(launcher)).toEqual(derived.map((pair) => pair.join(" ")).sort());
     for (const [first, second] of derived) {
       expect(launcher, `${first} ${second}`).toMatch(
         new RegExp(`${first}[^a-z0-9-]{1,8}${second}`),
       );
+    }
+
+    // 追随と過不足: 定義に記録 hook と guard を 1 つずつ足して生成し直すと、集合は定義どおりに変わる。
+    vi.resetModules();
+    vi.doMock("../src/lint/project-hook.ts", async (original) => {
+      const actual = await original<typeof import("../src/lint/project-hook.ts")>();
+      const wrapperArgs = (name: string) => [".ut-tdd/bin/ut-tdd.mjs", "hook", name];
+      return {
+        ...actual,
+        REQUIRED: [
+          ...actual.REQUIRED,
+          { id: "extra-record", wrapperArgs: wrapperArgs("extra-record") },
+          { id: "extra-guard", wrapperArgs: wrapperArgs("extra-guard"), onFailure: "block" },
+        ],
+      };
+    });
+    try {
+      const { renderConsumerNodeWrapper } = await import("../src/setup/consumer-node-runtime.ts");
+      const fixture = createAbsentRuntimeWorktree();
+      const generated = renderConsumerNodeWrapper();
+      writeFileSync(fixture.launcherPath, generated);
+      const { REQUIRED: mockedRequired } = await import("../src/lint/project-hook.ts");
+      const mockedExpected = mockedRequired
+        .filter((hook) => !("onFailure" in hook))
+        .map((hook) => hook.wrapperArgs.slice(1, 3).join(" "))
+        .sort();
+      expect(embeddedFailOpenPairs(generated)).toEqual(mockedExpected);
+      expect(runLauncher(fixture, ["hook", "extra-record"]).status).toBe(0);
+      expect(runLauncher(fixture, ["hook", "extra-guard"]).status).toBe(2);
+      expect(runLauncher(fixture, ["session", "start"]).status).toBe(0);
+      expect(runLauncher(fixture, ["hook", "work-guard"]).status).toBe(2);
+    } finally {
+      vi.doUnmock("../src/lint/project-hook.ts");
+      vi.resetModules();
     }
   });
 });
