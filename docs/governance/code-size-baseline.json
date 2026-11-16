@@ -53,7 +53,7 @@
   "src/setup/consumer-node-runtime.ts": { "lines": 1408, "functionExcess": 142 },
   "src/setup/consumer-runtime-release.ts": { "lines": 510, "functionExcess": 139 },
   "src/setup/distribution.ts": { "lines": 547, "functionExcess": null },
-  "src/setup/index.ts": { "lines": 1149, "functionExcess": null },
+  "src/setup/index.ts": { "lines": 1148, "functionExcess": null },
   "src/setup/pack-publication-adapter.ts": { "lines": 2163, "functionExcess": 371 },
   "src/setup/pack-publication-admission.ts": { "lines": 763, "functionExcess": 135 },
   "src/setup/release-promotion-rollback-gate.ts": { "lines": 763, "functionExcess": null },
