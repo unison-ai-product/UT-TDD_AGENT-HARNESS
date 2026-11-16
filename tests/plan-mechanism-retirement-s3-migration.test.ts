@@ -38,6 +38,23 @@ describe("CANDIDATE-U-PLANRET-019 frozen v29 migration", () => {
         createHash("sha256").update(JSON.stringify(fixture.schemaDdls), "utf8").digest("hex"),
       );
       expect(fixture.schemaDdls.length).toBeGreaterThan(0);
+      // 全 DDL が流れたこと (黙って飛ばされた DDL を通さない)。
+      const countDdl = (pattern: RegExp) =>
+        fixture.schemaDdls.filter((ddl) => pattern.test(ddl)).length;
+      const tableDdls = countDdl(/^\s*CREATE\s+TABLE/i);
+      const indexDdls = countDdl(/^\s*CREATE\s+(UNIQUE\s+)?INDEX/i);
+      const objectCount = (type: "table" | "index") =>
+        (
+          db
+            .prepare(
+              "SELECT COUNT(*) AS n FROM sqlite_master WHERE type = ? AND name NOT LIKE 'sqlite_%'",
+            )
+            .get(type) as { n: number }
+        ).n;
+      expect(tableDdls).toBeGreaterThan(0);
+      expect(indexDdls).toBeGreaterThan(0);
+      expect(objectCount("table")).toBe(tableDdls);
+      expect(objectCount("index")).toBe(indexDdls);
       expect(db.userVersion()).toBe(29);
       expect(edgeDdl).toContain("plan_id");
       expect(edgeDdl).not.toContain("issue");
