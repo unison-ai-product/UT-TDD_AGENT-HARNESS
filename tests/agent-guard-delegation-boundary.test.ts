@@ -18,7 +18,6 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   canonicalizeReviewRequest,
   issueReviewRequest,
@@ -54,6 +53,7 @@ import {
   resolveDelegationRouting,
 } from "../src/team/delegation-routing.ts";
 import * as modelPolicy from "../src/team/model-policy.ts";
+import { afterAll, beforeAll, describe, expect, heavyIt, it } from "./support/hook-bounds.ts";
 
 // production 定数から独立させるため、旧ソース repo 名はテスト側で実行時に連結する (リテラル禁止)。
 const legacySourceName = ["ai", "dev", "kit", "vscode"].join("-");
@@ -455,7 +455,7 @@ describe("issue #1002 agent-guard と委譲の境界", () => {
     expect(residue.violations.map((v) => v.kind)).toContain("legacy-source-path-residue");
   });
 
-  it("U-AGBOUND-026: roster CLI と registry は撤廃される", async () => {
+  heavyIt("U-AGBOUND-026: roster CLI と registry は撤廃される", ["db", 120_000], async () => {
     for (const sub of ["list", "check"]) {
       const result = spawnSync(process.execPath, [join(root, "src", "cli.ts"), "roster", sub], {
         encoding: "utf8",
