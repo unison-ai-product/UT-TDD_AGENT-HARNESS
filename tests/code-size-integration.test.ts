@@ -12,7 +12,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { buildFullDoctorCheckDefinitions } from "../src/doctor/check-registry.ts";
 import { nodeDoctorDeps } from "../src/doctor/runtime-state.ts";
 import {
@@ -21,6 +21,7 @@ import {
   parseCodeSizeBaseline,
 } from "../src/lint/code-size.ts";
 import { checkCodeSize } from "../src/lint/code-size-inputs.ts";
+import { heavyAfterAll, heavyBeforeAll } from "./support/hook-bounds.ts";
 import { headSnapshotRoot } from "./support/workspace-roots.ts";
 
 const BASELINE_PATH = "docs/governance/code-size-baseline.json";
@@ -147,7 +148,7 @@ function stateMtimes(root: string): Map<string, number> {
   return state;
 }
 
-beforeAll(() => {
+heavyBeforeAll(["git", 240000], () => {
   authorRoot = process.cwd();
   scratchRoot = mkdtempSync(join(tmpdir(), "code-size-integration-"));
   const liveBaselinePath = join(authorRoot, BASELINE_PATH);
@@ -166,9 +167,9 @@ beforeAll(() => {
   });
   cliGreenRoot = createCliFixture("cli-green", false);
   cliViolationRoot = createCliFixture("cli-violation", true);
-}, 240000); // 104s measured, bounded per #1063
+}); // 104s measured, bounded per #1063
 
-afterAll(() => {
+heavyAfterAll("teardown", () => {
   if (scratchRoot) rmSync(scratchRoot, { recursive: true, force: true });
 });
 

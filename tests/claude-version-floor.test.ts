@@ -1,7 +1,7 @@
 import { existsSync, mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   createMarkerFailureFixture,
   type HookResult,
@@ -12,6 +12,7 @@ import {
   writeTranscript,
   writeTranscriptRows,
 } from "./support/claude-version-floor-fixture.ts";
+import { heavyAfterAll, heavyBeforeAll } from "./support/hook-bounds.ts";
 import { removeTestTree } from "./support/temp-tree.ts";
 
 const REPO_ROOT = process.cwd();
@@ -60,12 +61,12 @@ function createFixture(): string {
   return root;
 }
 
-afterAll(() => {
+heavyAfterAll("teardown", () => {
   for (const fixture of FIXTURES.splice(0)) removeTestTree(fixture);
 });
 
 describe.sequential("Claude Code version floor warning (Issue #1561)", () => {
-  beforeAll(async () => {
+  heavyBeforeAll(["db", 300_000], async () => {
     const cases001 = [
       { previous: "2.1.318", latest: "2.1.293" },
       { previous: "2.1.293", latest: "2.1.295" },
@@ -223,7 +224,7 @@ describe.sequential("Claude Code version floor warning (Issue #1561)", () => {
     expect(
       markerFailureCases008.every(({ error, status }) => !error && status === healthyClaudeStatus),
     ).toBe(true);
-  }, 300_000);
+  });
 
   it("Red fixture precondition: version-floor seams and contract inputs are present", async () => {
     const floor = await import("../src/runtime/claude-version-floor.ts");

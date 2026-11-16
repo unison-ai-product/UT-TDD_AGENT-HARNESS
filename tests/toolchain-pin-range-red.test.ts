@@ -10,7 +10,7 @@ const npmPin = NODE_TOOLCHAIN_POLICY.npmVersion;
 const npmIntegrity = NODE_TOOLCHAIN_POLICY.npmIntegrity;
 const direct = {
   "@biomejs/biome": "2.4.15",
-  esbuild: "0.21.5",
+  esbuild: "0.28.2",
 };
 
 function fixture(

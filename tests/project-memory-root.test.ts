@@ -12,7 +12,7 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
 import { Command } from "commander";
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { registerLiveReviewCommands, resolveLiveReviewTaskFile } from "../src/cli/review-live.ts";
 import { writeMemory } from "../src/memory/service.ts";
 import {
@@ -29,6 +29,7 @@ import {
   resolveProjectMemoryRootWithPorts,
 } from "../src/runtime/project-memory-root.ts";
 import { gitTextTrimmed as git } from "./support/git.ts";
+import { heavyAfterEach } from "./support/hook-bounds.ts";
 import { removeTestTree } from "./support/temp-tree.ts";
 
 const cliPath = resolve("src/cli.ts");
@@ -72,7 +73,7 @@ function runCli(cwd: string, args: readonly string[]) {
   });
 }
 
-afterEach(() => {
+heavyAfterEach("teardown", () => {
   while (fixtures.length > 0) {
     const fixture = fixtures.pop();
     if (!fixture) continue;

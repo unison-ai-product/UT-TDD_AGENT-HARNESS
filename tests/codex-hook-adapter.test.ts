@@ -1,7 +1,6 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   analyzeCodexHookAdapter,
   CODEX_DEFERRED_SURFACE,
@@ -30,6 +29,7 @@ import { analyzeReadability } from "../src/lint/readability.ts";
 import { evaluateAgentGuard } from "../src/runtime/agent-guard.ts";
 import { evaluateWorkGuard } from "../src/runtime/work-guard.ts";
 import { BUILTIN_GITHUB_TEMPLATES } from "../src/setup/templates.ts";
+import { describe, expect, heavyAfterAll, heavyBeforeAll, it } from "./support/hook-bounds.ts";
 import {
   createCleanPack,
   createConsumerProject,
@@ -480,17 +480,16 @@ describe("codex-hook-adapter — Codex hooks.json parity (PLAN-L7-139, PLAN-L7-6
 
   describe("U-CXHOOKCMD-003/004/005: hooks.json の command 文字列を Codex と同じ shell 起動形で実行", () => {
     let consumer = "";
-
-    beforeAll(async () => {
+    heavyBeforeAll(["pack", 420_000], async () => {
       const pack = createCleanPack();
       consumer = createConsumerProject("fixture/consumer-cxhookcmd");
       const input = await writeConsumerRuntimeInput(pack, consumer);
       setupConsumerFromPack(pack, consumer, input);
       removeFixtureTree(pack);
       mkdirSync(join(consumer, "subdir"), { recursive: true });
-    }, 420_000);
+    });
 
-    afterAll(() => {
+    heavyAfterAll("teardown", () => {
       // Windows は直前に spawn した pwsh/node 子プロセスがファイルハンドルを解放しきる前に
       // rmSync が走ると EPERM になることがある (teardown のみの transient で、assertion の
       // 失敗ではない)。1 回 retry し、それでも失敗したら best-effort で諦める (残置は OS の

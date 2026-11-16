@@ -10,7 +10,7 @@ export const NODE_TOOLCHAIN_POLICY = {
   npmVersion: "11.19.1",
   npmIntegrity:
     "sha512-ztsxKxt/kkIaAs+2i0GU6I+DRmUdrNasxTZKJe9TCdSjKxlhah/4r/hl5ygMD6XAg1qZ9c2TNomR4qgOydp10g==",
-  esbuildVersion: "0.21.5",
+  esbuildVersion: "0.28.2",
   lockfileVersion: 3,
 } as const;
 

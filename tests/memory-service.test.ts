@@ -3,7 +3,6 @@ import { createHash } from "node:crypto";
 import { mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { afterAll, describe, expect, it } from "vitest";
 import { canonicalProjectIdentityBytes } from "../src/kernel/project-identity.ts";
 import {
   MEMORY_FILENAME_MAX,
@@ -22,6 +21,7 @@ import {
   writeMemory,
 } from "../src/memory/service.ts";
 import { gitTextTrimmed as git } from "./support/git.ts";
+import { describe, expect, heavyAfterAll, it } from "./support/hook-bounds.ts";
 import { removeTestTree } from "./support/temp-tree.ts";
 import { workspaceRead } from "./support/workspace-roots.ts";
 
@@ -721,8 +721,7 @@ describe("ut-tdd memory add --receipt-json (CLI, PLAN-L6-104 §3.1 decision 7)",
       timeout: 30_000,
     });
   }
-
-  afterAll(() => {
+  heavyAfterAll("teardown", () => {
     while (cliFixtures.length > 0) {
       const fixture = cliFixtures.pop();
       if (fixture) removeTestTree(fixture);

@@ -9,7 +9,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { dirname, join } from "node:path";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { verifyConsumerRuntimeReleaseAssets } from "../src/setup/consumer-runtime-release.ts";
 import { releaseArtifactFileNames } from "../src/setup/distribution.ts";
 import { admitReleaseAggregate as admitAggregate } from "../src/setup/release-aggregate-admission.ts";
@@ -26,6 +26,7 @@ import {
   registerConsumerWorktreeRuntime010Tests,
   snapshotTree,
 } from "./support/consumer-worktree-runtime-010.ts";
+import { heavyAfterAll, heavyBeforeAll } from "./support/hook-bounds.ts";
 
 let fixture: Awaited<ReturnType<typeof createConsumerWorktreeRuntimeFixture>>;
 
@@ -35,11 +36,11 @@ function snapshotOptionalPath(path: string): string | null {
 }
 
 describe("consumer worktree runtime setup entry Red (#1525)", () => {
-  beforeAll(async () => {
+  heavyBeforeAll(["git", 300_000], async () => {
     fixture = await createConsumerWorktreeRuntimeFixture();
-  }, 300_000);
+  });
 
-  afterAll(() => cleanupConsumerWorktreeRuntimeFixture());
+  heavyAfterAll("teardown", () => cleanupConsumerWorktreeRuntimeFixture());
 
   it("prerequisite: main and both Releases are valid; candidate worktrees are linked", async () => {
     expect(existsSync(join(fixture.main, ".ut-tdd", "runtime", "activation", "active.json"))).toBe(
