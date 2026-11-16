@@ -34,6 +34,24 @@ evidence manifest as either `mandatory_st_ids` with passing coverage or
 `deferred_st_ids` with an explicit non-stale defer. Missing row evidence is a
 doctor-blocking gate failure.
 
+G9 current system evidence manifests は `.ut-tdd/evidence/g9-system/` 直下の JSON
+ファイルとする。`.ut-tdd/evidence/g9-system/archive/` 以下の JSON は履歴記録であり、current
+manifest として読み込まない。docs-freeze PR では evidence file の移動・作成を行わず、current
+evidence が無い間は G9 成功を主張しない。凍結の merge 後、後続の実装 PR で既存の日付付き
+manifest を内容を変えずに `archive/` へ移し、その PR の commit 済み HEAD で実際に実行した
+command から新しい current manifest を記録する。新しい各 command 記録には実際の exit code、
+output digest、evidence path を含め、別 HEAD の実行結果や digest を新しい実行の証跡として
+再利用しない。`mandatory_st_ids` と `deferred_st_ids` の合計は L9 に残る全 ST-* 行を網羅し、
+mandatory 行は pass した実行 evidence に、deferred 行は明示的かつ stale でない defer に結び付ける。
+current evidence の欠落は G9 failure とする。
+
+ST-FUNC-03 の契約である完全な Red→Green→refactor と本体先行 fail-close は縮小しない。現行の
+`tests/forward/fsm.test.ts` U-FSM-001/002/003 は Red 順序・拒否動作の部分証拠に限られ、Refactor
+完了の証明ではないため、OPEN Issue #1335/#1336/#1337 の Refactor 判定 gate 完了まで
+`deferred_st_ids` に記録し、`mandatory_st_ids` の pass にしてはならない。3 Issue 完了後に全要求を
+実証して current manifest を再採取し、mandatory pass へ戻す。ST-FUNC-03 は v4 / 工程②の完了条件に
+残す。
+
 G10-WORKFLOW minimum mechanization (PLAN-L10 ascent): G10 is no longer closed by
 placeholder UX prose alone. A passing G10 slice requires a UX evidence manifest,
 selected UXV-* coverage across UXV-VISUAL / UXV-TOKEN / UXV-A11Y / UXV-VRT /
