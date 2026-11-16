@@ -39,6 +39,20 @@ export function createLegacyDatabase() {
   roots.push(root);
   mkdirSync(join(root, ".ut-tdd"), { recursive: true });
   const db = openHarnessDb(join(root, ".ut-tdd", "harness.db"), { repoRoot: root });
+  // seed 全体を 1 transaction にする (autocommit だと 162 DDL + INSERT ごとに journal を commit し、Windows で遅い。#1673)。
+  db.exec("BEGIN");
+  try {
+    seedLegacyDatabase(db);
+    db.exec("COMMIT");
+  } catch (error) {
+    db.exec("ROLLBACK");
+    db.close();
+    throw error;
+  }
+  return { root, db };
+}
+
+function seedLegacyDatabase(db: HarnessDb): void {
   for (const ddl of frozenSchema().schemaDdls) db.exec(ddl);
   db.prepare("INSERT INTO plan_registry (plan_id) VALUES (?)").run("PLAN-L6-01");
   db.prepare("INSERT INTO plan_registry (plan_id) VALUES (?)").run("PLAN-L6-02");
@@ -73,7 +87,6 @@ export function createLegacyDatabase() {
     "digest-edge",
   );
   db.setUserVersion(29);
-  return { root, db };
 }
 
 function markdownTable(
