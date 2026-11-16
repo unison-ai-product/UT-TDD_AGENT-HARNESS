@@ -687,7 +687,7 @@ describe("codex-hook-adapter — Codex hooks.json parity (PLAN-L7-139, PLAN-L7-6
       ).toBe(0);
     }, 420_000);
 
-    it("U-CXHOOKCMD-005: consumer launcher は active runtime 不在時 exit 2 で案内する", () => {
+    it("U-CXHOOKCMD-005: consumer launcher は active runtime 不在時、guard は exit 2、session hook は exit 0 で案内する", () => {
       const command = commandFor("SessionStart");
       expect(command).toContain(".ut-tdd/bin/ut-tdd.mjs");
 
@@ -698,7 +698,7 @@ describe("codex-hook-adapter — Codex hooks.json parity (PLAN-L7-139, PLAN-L7-6
       });
       expect(configured.status, `${configured.stdout}\n${configured.stderr}`).toBe(0);
 
-      // active runtime pointer を外すと exit 2 と案内を返し、bare `node` の SyntaxError とは区別する。
+      // active runtime pointer を外すと案内を返し、bare `node` の SyntaxError とは区別する。
       const pointerPath = join(consumer, ".ut-tdd", "runtime", "activation", "active.json");
       const pointerBytes = readFileSync(pointerPath);
       rmSync(pointerPath, { force: true });
@@ -708,10 +708,24 @@ describe("codex-hook-adapter — Codex hooks.json parity (PLAN-L7-139, PLAN-L7-6
           input: JSON.stringify({ session_id: "cxhookcmd-005-absent" }),
           env: { CLAUDE_PROJECT_DIR: consumer, UT_TDD_PROJECT_DIR: consumer },
         });
-        expect(absent.status, `${absent.stdout}\n${absent.stderr}`).toBe(2);
+        // SessionStart は記録 / session hook なので fail-open (exit 0)。案内は stderr に 1 行 (#1602、契約 §4 (b))。
+        expect(absent.status, `${absent.stdout}\n${absent.stderr}`).toBe(0);
         expect(absent.stderr).toContain("consumer_runtime_absent");
         expect(absent.stderr).toContain("setup --worktree");
         expect(absent.stderr).not.toMatch(/SyntaxError/);
+
+        // guard は fail-close (exit 2、契約 §4 (a))。
+        const guard = spawnCodexHookCommand(
+          commandFor("PreToolUse", "spawn_agent|spawn_agents_on_csv"),
+          {
+            cwd: consumer,
+            input: JSON.stringify({ session_id: "cxhookcmd-005-guard" }),
+            env: { CLAUDE_PROJECT_DIR: consumer, UT_TDD_PROJECT_DIR: consumer },
+          },
+        );
+        expect(guard.status, `${guard.stdout}\n${guard.stderr}`).toBe(2);
+        expect(guard.stderr).toContain("consumer_runtime_absent");
+        expect(guard.stderr).toContain("setup --worktree");
       } finally {
         writeFileSync(pointerPath, pointerBytes);
       }
