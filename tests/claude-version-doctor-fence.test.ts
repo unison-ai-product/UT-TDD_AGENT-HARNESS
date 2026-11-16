@@ -1,4 +1,6 @@
-import { delimiter } from "node:path";
+import { spawnSync } from "node:child_process";
+import { existsSync } from "node:fs";
+import { delimiter, join } from "node:path";
 import { describe, expect, it } from "vitest";
 import type { PathClaudeProbe } from "../src/doctor/claude-path-probe.ts";
 import { checkClaudeVersionFloor } from "../src/doctor/claude-version-floor-check.ts";
@@ -11,6 +13,12 @@ function check(probePathClaude: () => PathClaudeProbe) {
   // この 1 か所の型 assertion で渡す。Green の PR で外す (L7 claude-version-floor §4)。
   return checkClaudeVersionFloor({ probePathClaude } as never);
 }
+
+const fenceDir = process.env.UT_TDD_CLAUDE_FENCE_DIR;
+const fenceIsFirst =
+  !!fenceDir &&
+  existsSync(fenceDir) &&
+  samePath((process.env.PATH ?? "").split(delimiter)[0] ?? "", fenceDir);
 
 describe("Claude Code version doctor row and fence (Issue #1675 / #1677)", () => {
   it.fails("CANDIDATE-U-CCVER-014 shows the four states exactly, all ok", () => {
@@ -49,4 +57,25 @@ describe("Claude Code version doctor row and fence (Issue #1675 / #1677)", () =>
     checkClaudeVersionFloor();
     expect(readInvocations(dir ?? "").length).toBe(before + 1);
   });
+
+  // 前提 (fence が PATH の先頭) が偽なら skip し、検出に数えない。真の間は Red (it.fails)。
+  (fenceIsFirst ? it.fails : it.skip)(
+    "CANDIDATE-U-CCVER-019 the doctor CLI child process shows the fence version in its row",
+    () => {
+      const run = spawnSync(
+        process.execPath,
+        [
+          join(process.cwd(), "src", "cli.ts"),
+          "doctor",
+          "--profile",
+          "consumer-toolchain",
+          "--json",
+        ],
+        { cwd: process.cwd(), env: process.env, encoding: "utf8", timeout: 120_000 },
+      );
+      const payload = JSON.parse(run.stdout) as { messages: string[] };
+      expect(payload.messages).toContain(`${PREFIX}OK: PATH の claude の版 (9999.0.0)`);
+    },
+    130_000,
+  );
 });
