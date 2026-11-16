@@ -15,14 +15,15 @@ issue: 1694
 
 ## 1. 対象と上位の契約
 
-対象は、provider (`claude` / `codex`) の実行ファイルの PATH の解決 (`findOnPath`、新しい `src/runtime/path-lookup.ts`)、それを使う `resolveClaudeNativeCommand` / `resolveCodexNativeCommand` の解決の順序、解決できない provider を起動しない `isProviderCommandSpawnable` である。上位の契約は pair の L6 `provider-command-resolution.md` で、走査の規則の正本は `docs/design/harness/L6-function-design/claude-version-probe.md` §3 である (本書の oracle は、その規則が provider の解決でも成り立つことを確かめる)。
+対象は、provider (`claude` / `codex`) の実行ファイルの PATH の解決 (`findOnPath`、新しい `src/runtime/path-lookup.ts`)、それを使う `resolveClaudeNativeCommand` / `resolveCodexNativeCommand` の解決の順序、解決できない provider を起動しない `isProviderCommandSpawnable` と、解決できない provider について素の名前を返さず例外 (`provider_command_unresolved`) を投げる `buildProviderInvocation` である (起動経路は probe を通らないことがある。L6 §1、§3)。上位の契約は pair の L6 `provider-command-resolution.md` で、走査の規則の正本は `docs/design/harness/L6-function-design/claude-version-probe.md` §3 である (本書の oracle は、その規則が provider の解決でも成り立つことを確かめる)。
 
 ## 2. fixture の作り方
 
-- 001〜008、010〜012 は `PathFs` (`isFile` / `canExecute`) を注入する。fake の file の集合を持ち、`isFile` に渡された path を記録する。`platform` を引数で選ぶので、どの OS の CI でも Windows と POSIX の両方を流す。path の連結は、その `platform` の区切り (Windows は `\`、POSIX は `/`) で行う。
+- 001〜008、010〜012、014 は `PathFs` (`isFile` / `canExecute`) を注入する。fake の file の集合を持ち、`isFile` に渡された path を記録する。`platform` を引数で選ぶので、どの OS の CI でも Windows と POSIX の両方を流す。path の連結は、その `platform` の区切り (Windows は `\`、POSIX は `/`) で行う。
 - 「decoy」は、`process.cwd()` の値と名前を `platform` の区切りでつないだ path (相対の要素のときは `<cwd>\rel\<名前>`) に置く fake の file である。実際には作らない。decoy が選ばれる経路を、返り値と `isFile` の記録だけで観測する。
 - 009 は、`UT_TDD_CLAUDE_BIN` と Windows の native の置き場 (`APPDATA\Claude\claude-code\<版>\claude.exe`) だけを一時 dir に実際の file として作り、PATH の側は fake の `PathFs` を使う。`env.APPDATA` と `env.USERPROFILE` は一時 dir を指す (開発機の本物の claude を拾わない)。
 - 011 と 012 は、`runProbe` の spy を `isProviderCommandSpawnable` の `opts` に渡す (spy は `status: 0` を返す)。`env` は `PATH` と、一時 dir を指す `APPDATA` / `USERPROFILE`、012 の `.cmd` では `ComSpec` を `C:\Windows\System32\cmd.exe` にして渡す。
+- 014 は `buildProviderInvocation` と `executeAdapterPlanForCli` を直接呼ぶ。`PathFs` の fake の file の集合を test 側から変えられるようにし、(a) PATH に候補が無い状態で `buildProviderInvocation("claude", ...)` を呼ぶ、(b) 候補がある状態で `isProviderCommandSpawnable` が `true` を返した後に、fake の集合からその file を消して `buildProviderInvocation` を呼ぶ、(c) `buildAdapterPlan` を mode `hybrid` を明示した入力で作り (`detectMode` の probe を通さず `available=true` になる。`team run --mode hybrid` と同じ)、PATH に候補が無い状態で `executeAdapterPlanForCli` を `spawnSync` の spy つきで呼ぶ。spy は呼び出しを数える。
 - 013 だけが実 process を使う (Windows のみ、他は `it.skipIf`)。一時 dir に decoy dir と real dir を作り、それぞれの `claude.cmd` を、自分の dir に印の file を書いてから終了コード 0 で終わる内容にする。node の子 process (`cwd` は decoy dir) で `src/runtime/adapter.ts` を file URL で import し、`isProviderCommandSpawnable("claude", { env })` の結果を stdout の JSON で返させる。`env` は `PATH` が real dir と `System32`、`APPDATA` / `USERPROFILE` が空の一時 dir を指す。in-process の vitest の cwd は変えられないので子 process にする。
 - 期待値の path は test に literal で書き、production の code から生成しない。
 
@@ -42,7 +43,8 @@ issue: 1694
 | `CANDIDATE-U-PCMDRES-010` | claude と codex の配線 | 入力: Windows で `resolveClaudeNativeCommand` と `resolveCodexNativeCommand` を、PATH が `C:\real` だけ (空の要素なし)、cwd に decoy の `claude.cmd` / `codex.cmd`、`C:\real` に `claude.cmd` / `codex.cmd` がある状態で、native と明示の環境変数は無しで呼ぶ。期待: どちらも `C:\real` の path を返し、`isFile` に decoy の path が渡されない。反例: M11、M12。 |
 | `CANDIDATE-U-PCMDRES-011` | 解決できない provider の probe (L6 §3、D2) | 入力: `isProviderCommandSpawnable` を `claude` と `codex` それぞれで、PATH の解決が `null` (候補なし)、native も明示も無し、の状態で呼ぶ。期待: どちらも `false` で、`runProbe` の呼び出しが 0 回。反例: M13。 |
 | `CANDIDATE-U-PCMDRES-012` | 解決した絶対 path の起動 (L6 §6) | 入力: Windows で PATH の `C:\real` に (a) `claude.exe` だけ、(b) `claude.cmd` だけ (`PATHEXT` は `.CMD`) を置き、それぞれ `isProviderCommandSpawnable("claude", ...)` を呼ぶ。期待: (a) は `runProbe` が 1 回で、`command` が `C:\real\claude.exe`、`args` が `["--version"]`。(b) は 1 回で、`command` が `C:\Windows\System32\cmd.exe`、`args[3]` が `"C:\real\claude.cmd"` (引用符つきの絶対 path) を含む。反例: M14。 |
-| `CANDIDATE-U-PCMDRES-013` | current directory の decoy を起動しない (実 process、Windows のみ、#1694 のゴール) | 入力: §2 の実 process の fixture。期待: 子 process の結果が `true`、real dir の印の file がある、decoy dir の印の file が無い。反例: M15。テストレベル: unit (実 process 1 本)。 |
+| `CANDIDATE-U-PCMDRES-013` | current directory の decoy を起動しない (実 process、Windows のみ、#1694 のゴール) | 入力: §2 の実 process の fixture。期待: 子 process の結果が `true`、real dir の印の file がある、decoy dir の印の file が無い。反例: M11、M14、M15 (どれも decoy の起動を観測する。M11 は `resolveClaudeNativeCommand` の探索の先頭に cwd を足すので実在する decoy を選び、M14 は probe に素の名前を渡すので子 process の cwd の decoy を libuv が選び、M15 は `where.exe` が decoy を返す)。テストレベル: unit (実 process 1 本)。 |
+| `CANDIDATE-U-PCMDRES-014` | 全起動経路での素の名前の不 spawn (L6 §3、D2 改訂、r1 FLAG 1) | 入力: §2 の 014 の (a) (b) (c)。期待: (a) は `provider_command_unresolved` の例外で、返り値の invocation が無い。(b) は `isProviderCommandSpawnable` が `true` を返し、候補を消した後の `buildProviderInvocation` が (a) と同じ例外を投げる (probe 時の解決結果を使い回さない)。(c) は `spawnSync` の spy の呼び出しが 0 回で、例外が呼び出し側へ届く (`available=true` でも起動しない)。反例: M16、M17。 |
 
 ## 4. 反例 (変異) の一覧
 
@@ -65,32 +67,36 @@ L6 の正しい実装に、次の変異を 1 つだけ加えたものを反例�
 | M13 | `isProviderCommandSpawnable` が、解決できないとき素の名前で probe を実行する | 両方 |
 | M14 | 解決できても、probe に絶対 path でなく素の名前を渡す | Windows |
 | M15 | PATH の走査の前に `where.exe` へ問い合わせ、結果が返ればそれを使う | Windows |
+| M16 | `buildProviderInvocation` が、解決できないとき例外でなく素の名前の invocation を返す (旧実装の `?? plannedCommand`) | 両方 |
+| M17 | `buildProviderInvocation` が、probe 時に解決した path を保持し、起動の時に再解決せずそれを使う | 両方 |
 
 ## 5. 反例と oracle の対応表、段の扱い、検証
 
-行は反例、列は oracle の番号 (`CANDIDATE-U-PCMDRES-` を省いた数字)。`●` はその oracle の assertion が赤になることを示す。空欄は緑 (その platform で流れない oracle を含む) である。各行の `●` は 1 つ、各列の `●` は 1 つ以上である。
+行は反例、列は oracle の番号 (`CANDIDATE-U-PCMDRES-` を省いた数字)。`●` はその oracle の assertion が赤になることを示す。空欄は緑 (その platform で流れない oracle を含む) である。各列の `●` は 1 つ以上である。各行の `●` は 1 つだが、**M11 と M14 の 2 行だけは 2 つ** (010 または 012 と、実 process の 013) になる。013 は decoy が実際に起動されたかを観測するので、M11 (実在する decoy を探索の先頭で選ぶ) と M14 (probe に素の名前を渡し、子 process の cwd の decoy を libuv が選ぶ) でも赤になるからである。この 2 つの ● は誤りではなく、観測規則から導いたものである。013 を 1 つの変異にだけ割り当てる (fixture を変えて M11 と M14 に反応させない) ことは、013 の目的 (実 process で decoy が起動されないこと) を弱めるので採らない。
 
-| 反例 | 001 | 002 | 003 | 004 | 005 | 006 | 007 | 008 | 009 | 010 | 011 | 012 | 013 |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| M1 空の要素 | ● | | | | | | | | | | | | |
-| M2 `.` の要素 | | ● | | | | | | | | | | | |
-| M3 相対の要素 | | | ● | | | | | | | | | | |
-| M4 `PATHEXT` を見ない | | | | ● | | | | | | | | | |
-| M5 拡張子なし | | | | | ● | | | | | | | | |
-| M6 拡張子の限定なし | | | | | ● | | | | | | | | |
-| M7 実行権限を見ない | | | | | | ● | | | | | | | |
-| M8 後ろから走査 | | | | | | | ● | | | | | | |
-| M9 `Path` を読まない | | | | | | | | ● | | | | | |
-| M10 PATH を先にする | | | | | | | | | ● | | | | |
-| M11 claude だけ cwd | | | | | | | | | | ● | | | |
-| M12 codex だけ cwd | | | | | | | | | | ● | | | |
-| M13 素の名前で probe | | | | | | | | | | | ● | | |
-| M14 素の名前を渡す | | | | | | | | | | | | ● | |
-| M15 `where.exe` を先に | | | | | | | | | | | | | ● |
+| 反例 | 001 | 002 | 003 | 004 | 005 | 006 | 007 | 008 | 009 | 010 | 011 | 012 | 013 | 014 |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| M1 空の要素 | ● |  |  |  |  |  |  |  |  |  |  |  |  |  |
+| M2 `.` の要素 |  | ● |  |  |  |  |  |  |  |  |  |  |  |  |
+| M3 相対の要素 |  |  | ● |  |  |  |  |  |  |  |  |  |  |  |
+| M4 `PATHEXT` を見ない |  |  |  | ● |  |  |  |  |  |  |  |  |  |  |
+| M5 拡張子なし |  |  |  |  | ● |  |  |  |  |  |  |  |  |  |
+| M6 拡張子の限定なし |  |  |  |  | ● |  |  |  |  |  |  |  |  |  |
+| M7 実行権限を見ない |  |  |  |  |  | ● |  |  |  |  |  |  |  |  |
+| M8 後ろから走査 |  |  |  |  |  |  | ● |  |  |  |  |  |  |  |
+| M9 `Path` を読まない |  |  |  |  |  |  |  | ● |  |  |  |  |  |  |
+| M10 PATH を先にする |  |  |  |  |  |  |  |  | ● |  |  |  |  |  |
+| M11 claude だけ cwd |  |  |  |  |  |  |  |  |  | ● |  |  | ● |  |
+| M12 codex だけ cwd |  |  |  |  |  |  |  |  |  | ● |  |  |  |  |
+| M13 素の名前で probe |  |  |  |  |  |  |  |  |  |  | ● |  |  |  |
+| M14 素の名前を渡す |  |  |  |  |  |  |  |  |  |  |  | ● | ● |  |
+| M15 `where.exe` を先に |  |  |  |  |  |  |  |  |  |  |  |  | ● |  |
+| M16 例外でなく素の名前を返す |  |  |  |  |  |  |  |  |  |  |  |  |  | ● |
+| M17 probe 時の解決を使い回す |  |  |  |  |  |  |  |  |  |  |  |  |  | ● |
 
-- 001〜008 と 010〜012 は `platform` を引数で選ぶので、どの OS でも流れる。013 は Windows だけで流れ、他の OS では `it.skipIf` で skip する (M15 は Windows の変異なので、他の OS の検出に数えない)。
-- 登録と Red の PR は、`design-protection-diff-gate.md` §10.3 の手順 1' に従い、新しい module `src/runtime/path-lookup.ts` の stub (`findOnPath` が常に `null` を返す) だけを入れる (既存の src は変えない)。001〜012 は、stub または現行の `firstOnPath` (`pathFs` を読まない) では期待を満たせないので `it.fails`、013 は現行の `where.exe` が decoy を返すので Windows で `it.fails` とする。009 は (a) (b) が現行でも通るが、(c) が `pathFs` を無視して落ちるので全体を `it.fails` にする。昇格 (`src` を含まない PR) と Green (`it` に戻す) は 001〜005 の三段階と同じ。
-- **モデルでの検証**。L6 §2〜§3 の規則を、使い捨てのモデル (repo には入れない) に写し、正しい実装と §4 の 15 の変異 (それぞれ 1 か所の変更) に、§3 に書いた観測だけを評価させた。正しい実装で 13 件すべてが緑、各変異を赤にする oracle がちょうど 1 つで、§5 の表の `●` と一致し、各 oracle が少なくとも 1 つの変異を赤にすることを確かめた (出力は `MATRIX OK`)。モデルは 013 の実 process を、「`where.exe` が実 cwd の decoy を先に返す」変異 (M15) だけが赤にする、と置いている。この置き方は、`where.exe` が fake の `PathFs` の fixture では何も返さない (decoy が実 file として存在しない) ことに依る。`where.exe` の実際の挙動は、実装の PR の変異の確認 (Red の PR の head から切った使い捨ての branch で変異ごとに commit する) で確かめる。
+- 001〜008、010〜012、014 は `platform` を引数で選ぶので、どの OS でも流れる。013 は Windows だけで流れ、他の OS では `it.skipIf` で skip する (M15 は Windows の変異なので、他の OS の検出に数えない)。
+- 登録と Red の PR は、`design-protection-diff-gate.md` §10.3 の手順 1' に従い、新しい module `src/runtime/path-lookup.ts` の stub (`findOnPath` が常に `null` を返す) だけを入れる (既存の src は変えない)。001〜012 と 014 は、stub または現行の `firstOnPath` (`pathFs` を読まない) と素の名前へ fallback する現行の `buildProviderInvocation` では期待を満たせないので `it.fails`、013 は現行の `where.exe` が decoy を返すので Windows で `it.fails` とする。009 は (a) (b) が現行でも通るが、(c) が `pathFs` を無視して落ちるので全体を `it.fails` にする。昇格 (`src` を含まない PR) と Green (`it` に戻す) は 001〜005 の三段階と同じ。014 は `buildProviderInvocation` の変更 (実装 PR) と同時に Green にする。
+- **モデルでの検証** (r1 FLAG 2 の是正で、013 を実際の観測規則で評価し直して作り直した)。L6 §2〜§3 の規則を、使い捨てのモデル (repo には入れない) に写し、正しい実装と §4 の 17 の変異 (それぞれ 1 か所の変更) に、§3 に書いた観測だけを評価させた。013 は、実在する decoy (cwd) と real の両方を実 file として持つ状態で、起動された command が real の path か、を観測する。正しい実装で 14 件すべてが緑、各変異を赤にする oracle の集合が §5 の表の `●` とちょうど一致し (M11 は 010 と 013、M14 は 012 と 013、他の 15 行は 1 つ)、各 oracle が少なくとも 1 つの変異を赤にすることを確かめた (出力は `MATRIX OK`)。`where.exe` の実際の挙動 (M15) は、`where.exe` が fake の `PathFs` の fixture では何も返さず、実 process の fixture では実 cwd の decoy を先に返す、と置いている。この置き方の実機の確認は、実装の PR の変異の確認 (Red の PR の head から切った使い捨ての branch で変異ごとに commit する) で行う。
 
 ## 6. 既存 test の更新 (oracle ではない)
 
