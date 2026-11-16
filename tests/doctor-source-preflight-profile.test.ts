@@ -16,6 +16,7 @@ import {
   selectDoctorCheckDefinitions,
 } from "../src/doctor/check-registry.ts";
 import { nodeDoctorDeps } from "../src/doctor/runtime-state.ts";
+import { headSnapshotRoot } from "./support/workspace-roots.ts";
 
 /**
  * Issue #1037 の Red: doctor の pre-flight 用 profile `source-preflight`。
@@ -27,9 +28,7 @@ import { nodeDoctorDeps } from "../src/doctor/runtime-state.ts";
  */
 
 const ID = "source-preflight";
-// 実行 root は committed HEAD の snapshot (書き込み可)。CLI と HEAD 観測の両方をここから読む。
-const EXECUTION_ROOT = process.cwd();
-const CLI_PATH = join(EXECUTION_ROOT, "src", "cli.ts");
+// CLI も HEAD の観測も複製元も headSnapshotRoot() (変更できない detached HEAD、実行 root と同じ commit) から読む。
 
 // L6 §4.2 の宣言順。FULL_DOCTOR_OUTPUT_IDS などの定数から組み立てない。
 const PREFLIGHT_IDS = [
@@ -87,12 +86,16 @@ afterAll(() => {
 });
 
 function runDoctorCli(cwd: string, profile: string) {
-  const run = spawnSync("node", [CLI_PATH, "doctor", "--profile", profile, "--json"], {
-    cwd,
-    encoding: "utf8",
-    windowsHide: true,
-    maxBuffer: 64 * 1024 * 1024,
-  });
+  const run = spawnSync(
+    "node",
+    [join(headSnapshotRoot(), "src", "cli.ts"), "doctor", "--profile", profile, "--json"],
+    {
+      cwd,
+      encoding: "utf8",
+      windowsHide: true,
+      maxBuffer: 64 * 1024 * 1024,
+    },
+  );
   expect(run.error?.message ?? "", "spawn error").toBe("");
   return {
     status: run.status,
@@ -102,7 +105,7 @@ function runDoctorCli(cwd: string, profile: string) {
 
 /** HEAD の snapshot の複製 (git 付き)。実 repo と HEAD の snapshot には書かない。 */
 function copyHeadSnapshot(label: string): string {
-  const source = EXECUTION_ROOT;
+  const source = headSnapshotRoot();
   const scratch = mkdtempSync(join(tmpdir(), `ut-tdd-preflight-${label}-`));
   scratchRoots.push(scratch);
   cpSync(source, scratch, {
@@ -153,7 +156,7 @@ describe("doctor source-preflight profile (issue #1037 Red)", () => {
   it.skipIf(!gRun)(
     "CANDIDATE-U-PREFLIGHT-004: runs exactly the declared checks in declared order",
     () => {
-      const deps = nodeDoctorDeps(EXECUTION_ROOT);
+      const deps = nodeDoctorDeps(headSnapshotRoot());
       const definitions = buildFullDoctorCheckDefinitions(deps);
       const selected = selectDoctorCheckDefinitions(definitions, "full", outputIds);
       const run = collectDoctorCheckRun(deps, {
@@ -245,6 +248,7 @@ describe("doctor source-preflight profile (issue #1037 Red)", () => {
       expect(payload.ok).toBe(false);
       expect(payload.messages).toHaveLength(1);
       expect(payload.messages[0]).toContain("already running");
+      expect(payload.messages[0]).toContain(`pid=${process.pid}`);
     },
     30_000,
   );
