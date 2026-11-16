@@ -148,6 +148,9 @@ function restoreRuntimeLauncher(snapshot: RuntimeLauncherSnapshot, writtenConten
   }
 }
 
+/** Internal-only test seam; never exposed as a CLI / Pack API option. */
+export type ConsumerWorktreeSetupFault = (barrier: "afterRuntimePublishBeforeLauncher") => void;
+
 export function createConsumerRuntimeOnlyInstaller<TSnapshot>(ports: {
   readonly assertSetupRuntimeRoot: (
     identity: ConsumerNodeRuntimeIdentity,
@@ -160,7 +163,11 @@ export function createConsumerRuntimeOnlyInstaller<TSnapshot>(ports: {
   ) => Promise<SetupConsumerRuntimeInstall>;
 }): {
   readonly ensureLauncher: (repoRoot: string) => void;
-  readonly install: (input: SetupConsumerRuntimeInput, repoRoot: string) => Promise<SetupResult>;
+  readonly install: (
+    input: SetupConsumerRuntimeInput,
+    repoRoot: string,
+    fault?: ConsumerWorktreeSetupFault,
+  ) => Promise<SetupResult>;
 } {
   const ensureLauncher = (repoRoot: string): void => {
     const snapshot = captureRuntimeLauncher(repoRoot);
@@ -182,6 +189,7 @@ export function createConsumerRuntimeOnlyInstaller<TSnapshot>(ports: {
   const install = async (
     input: SetupConsumerRuntimeInput,
     repoRoot: string,
+    fault?: ConsumerWorktreeSetupFault,
   ): Promise<SetupResult> => {
     ports.assertSetupRuntimeRoot(input.identity, repoRoot);
     const runtimeSnapshot = ports.captureRuntimeTree(input.identity.runtime_root);
@@ -190,6 +198,7 @@ export function createConsumerRuntimeOnlyInstaller<TSnapshot>(ports: {
     try {
       const consumerRuntime = await ports.installConsumerRuntimeFromSetup(input);
       if (!consumerRuntime.result.ok) throw new Error(consumerRuntime.result.reason);
+      fault?.("afterRuntimePublishBeforeLauncher");
       writeRuntimeLauncher(launcherSnapshot);
       return {
         phase: "0-A",

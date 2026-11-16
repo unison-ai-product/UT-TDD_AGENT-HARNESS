@@ -15,7 +15,7 @@ const CONTRACT_ROWS = `
 agent-guard-delegation-boundary:1
 asset-catalog:2 asset-drift:1 backfill-pairing:1 cited-command-existence:1 claude-version-floor:1 cli-surface:1 cli:1
 advisory-strict-gate-aging:4
-codex-hook-adapter:5 coding-rules:1 context-doc-router:2 cycle-p4-verification:3 db-currency:1 db-projection-coverage:1 db-projection-ingestion:3
+codex-hook-adapter:5 codex-hook-failure:1 coding-rules:1 context-doc-router:2 cycle-p4-verification:3 db-currency:1 db-projection-coverage:1 db-projection-ingestion:3
 dependency-drift:4 descent-obligation:3 distribution-acceptance:1 distribution-scratch-ignore:1 doctor-runtime-surface:2 doctor:25
 drive-model-passage:1 fr-roadmap-coverage:4 frontend-design-coverage:1 g10-ux-workflow:5 g8-integration-workflow:6 g9-system-workflow:7
 erasable-syntax:1 gate-static:10 import-specifier:2 l6-completion:2 l6-fr-coverage:2 mode-catalog:2 model-id-ssot:1 model-id-ssot-drift:1 module-drift:2 oracle-test-trace:13
@@ -47,7 +47,7 @@ disposition/git-authoring-provenance:3 disposition/projection:6 disposition/trac
   pack-consumer-runtime-release:3 release-consumer-vmodel-template:1
   release-consumer-setup-artifacts:1
   pack-internal-canary-boundary:1 support/pack-internal-canary.ts:1
-  pack-canary-acceptance:2 pack-canary-issue-design:1
+  pack-canary-acceptance:2 pack-canary-issue-design:1 claude-version-doctor-fence:2 claude-version-probe:1
   `;
 
 const repositoryReadContracts: Record<string, RepositoryReadContract> = Object.fromEntries(

@@ -320,6 +320,7 @@ export async function installConsumerRuntimeRelease(input: {
   readonly setupDeps?: () => SetupDeps;
   readonly expectedPin?: ConsumerRuntimePin;
   readonly runtimeOnly?: boolean;
+  readonly fault?: Parameters<typeof installConsumerRuntimeOnly>[2];
 }): Promise<ConsumerRuntimeReleaseInstallResult> {
   const assets = verifyConsumerRuntimeReleaseAssets({
     releaseDirectory: input.releaseDirectory,
@@ -426,7 +427,8 @@ export async function installConsumerRuntimeRelease(input: {
       entryPath: input.executingModulePath,
     }),
     setup: () => {
-      if (input.runtimeOnly) return installConsumerRuntimeOnly(runtimeInput, consumerRoot);
+      if (input.runtimeOnly)
+        return installConsumerRuntimeOnly(runtimeInput, consumerRoot, input.fault);
       if (!input.setupDeps) throw new Error("consumer_runtime_setup_dependencies_missing");
       return runSetupAsync(
         {
@@ -441,12 +443,9 @@ export async function installConsumerRuntimeRelease(input: {
   });
 }
 
-export const setupConsumerWorktreeRuntime = (input: {
-  readonly currentRoot: string;
-  readonly worktreePath: string;
-  readonly releaseDirectory?: string;
-  readonly expectedConsumerDigest?: string;
-}) => setupConsumerWorktreeRuntimeImpl(input, installConsumerRuntimeRelease);
+export const setupConsumerWorktreeRuntime = (
+  input: Parameters<typeof setupConsumerWorktreeRuntimeImpl>[0],
+) => setupConsumerWorktreeRuntimeImpl(input, installConsumerRuntimeRelease);
 
 function hasActiveConsumerRuntime(runtimeRoot: string): boolean {
   return existsSync(join(runtimeRoot, "activation", "active.json"));

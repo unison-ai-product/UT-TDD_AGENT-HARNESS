@@ -1,4 +1,4 @@
-import { afterAll, afterEach, beforeAll, beforeEach } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, it } from "vitest";
 
 // Issue #1673 1b: Vitest 4 は同期 hook にも既定 10000ms の上限を課す。負荷のかかった Windows runner では
 // fixture の準備・後始末が 10s を超えるため、重い hook にだけ有限の上限を明示する (hookTimeout の一括設定はしない)。
@@ -6,7 +6,7 @@ import { afterAll, afterEach, beforeAll, beforeEach } from "vitest";
 // code-size の baseline は非空行数を数える。import を 1 行足せない巨大 test file は、vitest の
 // describe / expect / it をここから import して vitest の import 行と置き換える (行数は増えない)。
 // `vi` は vi.mock の hoist が "vitest" からの import を前提とするため、ここへは通さない。
-export { describe, expect, it } from "vitest";
+export { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 export const HOOK_BOUND_MS = {
   // git の init / commit / worktree / bare remote / clone と repo tree の複製を伴う fixture。
@@ -67,4 +67,14 @@ export function heavyBeforeEach<R>(bound: HookBound, fn: HookBody<R>): void {
 }
 export function heavyAfterEach<R>(bound: HookBound, fn: HookBody<R>): void {
   afterEach(...bounded(bound, fn));
+}
+
+/**
+ * hook ではなく test 本体が重い (子 process の CLI 起動など) 場合の `it`。上限は test ごとの明示値で、
+ * 所要時間を `[hook-timing] <file>:<line> <class> <ms>ms` と同じ形式で出力する (一括の testTimeout 引き上げはしない)。
+ * 例外 (assertion 失敗を含む) はそのまま通す。
+ */
+export function heavyIt<R>(name: string, bound: HookBound, fn: HookBody<R>): void {
+  const [timed, ms] = bounded(bound, fn);
+  it(name, timed, ms);
 }
