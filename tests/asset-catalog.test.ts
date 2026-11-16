@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { catalogAutomationAssets, scanSkillCatalog } from "../src/assets/catalog.ts";
-import { openHarnessDb } from "../src/state-db/index.ts";
+import { defaultHarnessDbPath, openHarnessDb } from "../src/state-db/index.ts";
 import { migrate, rowCounts } from "../src/state-db/migration.ts";
 import { removeTestTree } from "./support/temp-tree.ts";
 
@@ -30,6 +30,13 @@ describe("IT-ASSET-DB-01: automation asset catalog", () => {
           "# Testing",
         ].join("\n"),
       );
+      mkdirSync(join(repo, ".ut-tdd"), { recursive: true });
+      const db = openHarnessDb(defaultHarnessDbPath(repo), { repoRoot: repo });
+      try {
+        migrate(db);
+      } finally {
+        db.close();
+      }
 
       const run = spawnSync(process.execPath, [cliPath, "asset", "catalog", "--json"], {
         cwd: repo,
