@@ -82,7 +82,7 @@ describe("consumer worktree runtime rollback Red (#1592)", () => {
 
   heavyAfterAll("teardown", () => cleanupConsumerWorktreeRuntimeFixture());
 
-  describe.sequential("CANDIDATE-U-CWTRT-011 production transaction", () => {
+  describe.sequential("U-CWTRT-011 production transaction", () => {
     type InitialState = "absent" | "existing-sentinel";
     const rollbackBaselines = new Map<
       InitialState,
@@ -170,7 +170,7 @@ describe("consumer worktree runtime rollback Red (#1592)", () => {
         expect(rollbackBaselines.has(initialState)).toBe(true);
       });
 
-      it.fails(`CANDIDATE-U-CWTRT-011 rollback oracle after runtime publish (${initialState})`, async () => {
+      it.fails(`U-CWTRT-011 rollback oracle after runtime publish (${initialState})`, async () => {
         const baseline = rollbackBaselines.get(initialState);
         if (!baseline) throw new Error(`rollback precondition missing for ${initialState}`);
         const { target, paths, snapshot } = baseline;
