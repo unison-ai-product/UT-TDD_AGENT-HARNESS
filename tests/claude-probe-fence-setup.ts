@@ -1,3 +1,4 @@
+import "../src/runtime/windows-hide.ts";
 import { existsSync, rmSync } from "node:fs";
 import { delimiter } from "node:path";
 import { makeFixtureDir, writeFakeClaude } from "./support/claude-probe-fixture.ts";
