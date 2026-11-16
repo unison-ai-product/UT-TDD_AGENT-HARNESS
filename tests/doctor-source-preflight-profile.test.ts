@@ -1,5 +1,13 @@
 import { execFileSync, spawnSync } from "node:child_process";
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  cpSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { hostname, tmpdir } from "node:os";
 import { join, relative, resolve } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
@@ -83,7 +91,7 @@ const scratchRoots: string[] = [];
 
 afterAll(() => {
   for (const root of scratchRoots) rmSync(root, { recursive: true, force: true });
-});
+}, 120_000);
 
 function runDoctorCli(cwd: string, profile: string) {
   const run = spawnSync(
@@ -189,6 +197,7 @@ describe("doctor source-preflight profile (issue #1037 Red)", () => {
         "docs/design/harness/L6-function-design/doctor-source-preflight-profile.md",
       );
       const text = readFileSync(docPath, "utf8");
+      chmodSync(docPath, 0o666); // 複製は detached HEAD の読み取り専用属性を引き継ぐ
       writeFileSync(docPath, text.replace(/^issue:[^\r\n]*\r?\n/m, ""), "utf8");
 
       const { status, payload } = runDoctorCli(root, ID);
