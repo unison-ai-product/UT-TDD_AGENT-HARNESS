@@ -255,7 +255,7 @@ field は `type`・`command`・`timeout`・`statusMessage`・`async`・`addition
    marker が無ければ hook が阻止した証拠を求め、sandbox の拒否や外側の timeout は「判定不能」とする。
 6. 追加した trust の項目だけを撤回し、設定ファイルが事前と一致することを確かめる。他の設定を退避から丸ごと戻さない。
 
-対応するテスト oracle は `docs/test-design/harness/L7-codex-hook-failure-test-design.md` の `CANDIDATE-U-HOOKEXEC-015`〜`017` である。
+対応するテスト oracle は `docs/test-design/harness/L7-codex-hook-failure-test-design.md` の `U-HOOKEXEC-015`・`016` (2026-11-16 に正式 ID へ昇格) と `CANDIDATE-U-HOOKEXEC-017` である。
 
 ## 2026-11-05 Claude Code の版が下限未満のときの警告 (Issue #1561)
 
