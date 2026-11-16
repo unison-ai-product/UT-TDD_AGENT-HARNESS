@@ -28,7 +28,7 @@ issue: 1379
 | tests/node-atomic-draft-publisher.test.ts | 全体退役 | NodeAtomicDraftPublisher: PLAN source/receiptのdurable publish、rollback/retry、root escape、symlink/CAS drift、cleanup。 |
 | tests/node-plan-draft-runner.test.ts | 全体退役 | NodePlanDraftRunner/evaluatePlanAdmission: PLAN・Recovery source、receipt binding、実SQLiteでの作成/replay。 |
 | tests/plan-admission-diff-fence.test.ts | 全体退役 | analyzePlanAdmissionDiff/canonicalPlanContentDigest: PLAN pathとtracked receiptの一致、missing/stale receiptと直接削除を拒否。 |
-| tests/plan-admission-git-diff-adapter.test.ts | 部分保持 | readAdmissionGitDiff: generic NUL/status/rename parse、rename両側blob、不正path/status/NUL、missing blob/invalid UTF-8を保持。PLAN filterと領域外renameのPLAN削除扱いだけ退役。保持assertionを後続helper移設sliceでsrc/github/git-diff.tsのGitChangeへ移し、その後test全体を退役。 |
+| tests/plan-admission-git-diff-adapter.test.ts | 部分保持 | Bでは `plan領域からのrename流出を削除としてfail-close対象にする` caseだけ退役する。`NUL区切りの変更とrename両側のblobを読み込む`、`未知status・非canonical path・壊れたNUL列を拒否する` の3入力すべて、および `欠落blobと不正UTF-8 blobを区別して拒否する` のassertion/helperは変更せず保持する。後続helper移設sliceで保持assertionを `src/github/git-diff.ts` の `GitChange` 側へ移し、その後test全体を退役。 |
 | tests/plan-admission-tracked-receipt-projection.test.ts | 全体退役 | parseTrackedReceiptProjection: PLAN receipt strict parse、digest chain、revision uniqueness、issuer authenticity、short hash/unknown field拒否。 |
 | tests/plan-admission.test.ts | 全体退役 | evaluatePlanAdmission: route/kind/layer/branch matrix、Forward escape、Issue/reentry、redesign/reverseのPLAN admission policy。U-ISSUEBIND caller casesはPLAN専用。 |
 | tests/plan-asset/ledger-application.test.ts | 全体退役 | PlanLedger.reserve/reconstruct/release/expire: PLAN予約event/projection/receiptのreplay、conflict、expiry、rollback/retry。 |
@@ -63,7 +63,7 @@ issue: 1379
 
 ## 3. oracle declaration の退役案 (152 ID)
 
-152 IDは、実callee/契約照合で全体退役35 file＋partial Git diff fileを保持する処分と一致する宣言行であり、Aで先行削除しない。U-ISSUEBIND-001..005はcanonical issue-binding design §2-4を再照合し、全刺激がPLAN draft/revise/legacy frontmatterに限定、Issue #692の別契約を除外するため退役対象との判断が確定した。物理削除・module graphの結果を主張するものではない。U-PA-008はこの152件に含まれず、§2記載のtestへ移設済みである。
+152 IDは、実callee/契約照合で全体退役35 file＋partial Git diff fileを保持する処分と一致する宣言行であり、Aで先行削除しない。U-ISSUEBIND-001..005はcanonical issue-binding design §2-4を再照合し、全刺激がPLAN draft/revise/legacy frontmatterに限定、Issue #692の別契約を除外するため退役対象との判断が確定した。物理削除・module graphの結果を主張するものではない。U-PA-008はこの152件に含まれず、§3.1記載のtestへ移設済みである。BではL8 `U-PA-SEAL-021` 直下の `↳ tracked remote到達性` 継続行と、L7 `U-GHPROJ-001〜005` range行も処分する。いずれも152 canonical ID一覧の外にある補助行で、152 ID集合は変わらない。
 
 - docs/test-design/harness/L7-issue-binding-projection-state-test-design.md: 5行
 - docs/test-design/harness/L7-unit-test-design.md: 129行
@@ -102,10 +102,10 @@ U-TORDER-003, U-TORDER-004, U-TORDER-005, U-XREVIEW-001, U-XREVIEW-002, U-XREVIE
 - 保持・移設境界: U-PA-008 は移設済みで、実HEAD blob読取りを tests/setup-project-identity-bootstrap.test.ts の bootstrapProjectIdentity / loadProjectIdentityFromHead、pure receipt検証を tests/project-identity-kernel.test.ts の loadTrackedProjectIdentity が担う。generic project identity kernel (src/kernel/project-identity.ts)、custody v2 receipt contract (U-PLANRET-006/007/016)、src/kernel/github-closure-receipt.ts の reviewReceiptDigest も維持する (L7-plan-mechanism-retirement-test-design.md §3 / §3.1、L6 plan-mechanism-retirement.md §8 補足)。
 
 
-Git diff adapter の確定した部分保持: tests/plan-admission-git-diff-adapter.test.ts の readAdmissionGitDiff では、generic な NUL / status / rename parse、rename 両側の blob 読取り、不正 path / status / NUL、missing blob / invalid UTF-8 の assertion を保持する。PLAN path filter と領域外 rename の削除扱いだけを退役対象とする。残す assertion は後続の helper 移設 slice で src/github/git-diff.ts の GitChange 側へ移し、移設先で同じ異常入力を検査できた後に本 test file 全体を退役する (L6 plan-mechanism-retirement.md §8 補足)。
+Git diff adapter の確定した部分保持: tests/plan-admission-git-diff-adapter.test.ts の readAdmissionGitDiff では、Bで `plan領域からのrename流出を削除としてfail-close対象にする` caseだけを退役する。`NUL区切りの変更とrename両側のblobを読み込む`、`未知status・非canonical path・壊れたNUL列を拒否する` の3入力すべて、および `欠落blobと不正UTF-8 blobを区別して拒否する` のassertion/helperはBで変更しない。後続helper移設sliceでこれらを `src/github/git-diff.ts` の `GitChange` 側へ移し、移設後に本test file全体を退役する (L6 plan-mechanism-retirement.md §8 補足)。
 
 ## 4. oracle影響の三状態比較とBのbaseline同期
 
-exact HEAD f8f2c4ad7e777fcf58dbbd2ea94b288641f752ddで、35全体退役fileをin-memoryで除外し、partial Git diff testは全保持したviewを作成した。canonical referencesを再構築し、canonical入力と完全一致した。baseはreferenced 2127、orphans / duplicates / staleDuplicateBaseline / undeclaredCitations / staleCitationBaseline はすべて0。35除外後はreferenced 1930、orphans 152、staleCitationBaseline 43、duplicates / staleDuplicateBaseline / undeclaredCitations は0。partial Git diff fileのoracle IDは0のため、PLAN rename assertionだけを後から除く場合もoracle参照集合は変わらない。
+exact HEAD f8f2c4ad7e777fcf58dbbd2ea94b288641f752ddで、35全体退役fileをin-memoryで除外し、partial Git diff testは全保持したviewを作成した。canonical referencesを再構築し、canonical入力と完全一致した。baseはreferenced 2127、orphans / duplicates / staleDuplicateBaseline / undeclaredCitations / staleCitationBaseline はすべて0。35除外後はreferenced 1930、orphans 152、staleCitationBaseline 43、duplicates / staleDuplicateBaseline / undeclaredCitations は0。partial Git diff fileにoracle IDはないため、BでPLAN領域外rename caseを除いたviewも、file全保持viewとoracle参照集合は同じである。残す3 assertion群は変更せず後続helper移設sliceまで維持する。
 
 宣言152行とcitation baselineの43 keyを同期した将来viewでは、declared 1859から1707となり、orphans / duplicates / staleDuplicateBaseline / undeclaredCitations / staleCitationBaseline の5配列はすべて0、widened baselineは312のまま (増加なし) となった。別のdocs-only投影でも152宣言行を除いてcanonical declaration parserで再収集し、declared 1707・将来impact集合との完全一致・analyzer不整合0を確認した。全状態ともin-memory viewであり、物理削除・module graph検証ではない。Aではbaselineを変更しない。Bは最終assertion処分後に実状態を再計測し、実削除に対応する差分だけを反映する。code-size影響予測の4 pathは tests/frontmatter.test.ts、tests/plan-asset/sealed-lineage-local-migration.test.ts、tests/rechain-verifier.test.ts、tests/review-evidence.test.ts。citation削減数も実測と同期に基づき確定し、widenedは拡大しない。
