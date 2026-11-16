@@ -1,5 +1,5 @@
 ---
-title: "S7: issue #1379 の36 test file / 152 oracle 退役 freeze"
+title: "S7: issue #1379 の36 test file の処分 freeze"
 layer: L7
 executed_at_layer: L7
 artifact_type: test_design
@@ -9,60 +9,61 @@ updated: 2026-11-16
 issue: 1379
 ---
 
-# S7: 36 test file と152 oracle の退役宣言 (issue #1379)
+# S7: 36 test file の処分宣言 (issue #1379)
 
 ## 1. 境界
 
-本書は [PLAN 機構の縮退テスト設計 §3.1](./L7-plan-mechanism-retirement-test-design.md#31-s7-削除宣言同期-disposition) の S7 を、exact HEAD 4df911ffe540e14f97d2b9b398b793693e9a7a26 に対する2本の同期契約として具体化する。A は本書と既存 L7 文書の参照行だけを freeze する docs-only PR、B は A merge 後の src-free 同期 PR とする。A では既存 oracle 宣言、test、citation baseline、code-size baseline、source を変更しない。
+本書は [PLAN 機構の縮退テスト設計 §3.1](./L7-plan-mechanism-retirement-test-design.md#31-s7-削除宣言同期-disposition) の S7 を具体化する。case監査は4df911ffe540e14f97d2b9b398b793693e9a7a26 / d37652b58690b0c403c6c8cabd5f1e4dabe768aaで行われ、親が36候補pathの内容がf8f2c4ad7e777fcf58dbbd2ea94b288641f752ddでも不変と照合した。A は本書と既存 L7 文書の参照行だけを freeze する docs-only PR、B は A merge 後の src-free 同期 PR とする。A では既存 oracle 宣言、test、citation baseline、code-size baseline、source を変更しない。
 
-B で退役する全ファイルは §2、B で既存の宣言行を除く oracle ID は §3 に列挙する。§3 は disposition 参照一覧であり、新しい oracle 宣言や test ID の定義ではない。既存の宣言行を A で動かしたり複製したりしない。B は列挙範囲だけを対象にし、ID 数から削除範囲を自動推定しない。
+§2 は同深度のcase/callee監査に基づくfile単位の処分表、§3 はoracle declarationの退役案である。物理削除・module graphは未検証であり、Bで実装前後を別途確認する。既存の宣言行は A で動かしたり複製したりしない。
 
-## 2. B の退役対象 test file (36)
+## 2. 36 file の監査済み処分表
 
-この36本は exact-head inventory 上で未登録かつ既存 L7 §3.1 の PLAN 機構退役契約に属する full-file candidates である。
+同深度のcase/body/callee監査に基づく。35 fileはPLAN専用caller/assertionとして全体退役、1 fileはgeneric保証を後続sliceへ移すまで部分保持する。
 
-- tests/admission-check.test.ts
-- tests/cli-plan-draft.test.ts
-- tests/node-atomic-draft-publisher.test.ts
-- tests/node-plan-draft-runner.test.ts
-- tests/plan-admission-diff-fence.test.ts
-- tests/plan-admission-git-diff-adapter.test.ts
-- tests/plan-admission-tracked-receipt-projection.test.ts
-- tests/plan-admission.test.ts
-- tests/plan-asset/ledger-application.test.ts
-- tests/plan-asset/legacy-inventory.test.ts
-- tests/plan-asset/legacy-migration-ledger.test.ts
-- tests/plan-asset/legacy-migration.test.ts
-- tests/plan-asset/plan-draft-ledger.test.ts
-- tests/plan-asset/plan-revision-bootstrap.test.ts
-- tests/plan-asset/plan-revision-ledger.test.ts
-- tests/plan-asset/reservation-service.test.ts
-- tests/plan-asset/sealed-lineage-local-migration.test.ts
-- tests/plan-content-binding.test.ts
-- tests/plan-draft-command-assembler.test.ts
-- tests/plan-draft-ledger-adapter.test.ts
-- tests/plan-draft-service.test.ts
-- tests/plan-id-identity.test.ts
-- tests/plan-id-taxonomy.test.ts
-- tests/plan-revise-cli.test.ts
-- tests/rechain-verifier.test.ts
-- tests/sqlite-draft-journal.test.ts
-- tests/tracked-receipt-renderer.test.ts
-- tests/projection-plan-projector.test.ts
-- tests/review-evidence.test.ts
-- tests/poc-evaluation.test.ts
-- tests/plan-draft-command-digest.test.ts
-- tests/plan-mechanism-retirement-s4-db.test.ts
-- tests/frontmatter.test.ts
-- tests/projection-store-contract.test.ts
-- tests/github-forward-readiness.test.ts
-- tests/plan-supersession.test.ts
+| 候補 path | 処分 | 実callee / assertion根拠 |
+|---|---|---|
+| tests/admission-check.test.ts | 全体退役 | checkPlanAdmission: U-PADM-017..019がprojection validity、base/head completeness、adapter failureのfail-close、analyzer実行境界を検証。 |
+| tests/cli-plan-draft.test.ts | 全体退役 | parsePlanDraftManifest/registerPlanDraftCommand→NodePlanDraftRunner: 作成/replay、strict manifest/path traversal、admission拒否時runner非呼出しとartifact不変。U-ISSUEBIND caller casesはPLAN専用。 |
+| tests/node-atomic-draft-publisher.test.ts | 全体退役 | NodeAtomicDraftPublisher: PLAN source/receiptのdurable publish、rollback/retry、root escape、symlink/CAS drift、cleanup。 |
+| tests/node-plan-draft-runner.test.ts | 全体退役 | NodePlanDraftRunner/evaluatePlanAdmission: PLAN・Recovery source、receipt binding、実SQLiteでの作成/replay。 |
+| tests/plan-admission-diff-fence.test.ts | 全体退役 | analyzePlanAdmissionDiff/canonicalPlanContentDigest: PLAN pathとtracked receiptの一致、missing/stale receiptと直接削除を拒否。 |
+| tests/plan-admission-git-diff-adapter.test.ts | 部分保持 | readAdmissionGitDiff: generic NUL/status/rename parse、rename両側blob、不正path/status/NUL、missing blob/invalid UTF-8を保持。PLAN filterと領域外renameのPLAN削除扱いだけ退役。保持assertionを後続helper移設sliceでsrc/github/git-diff.tsのGitChangeへ移し、その後test全体を退役。 |
+| tests/plan-admission-tracked-receipt-projection.test.ts | 全体退役 | parseTrackedReceiptProjection: PLAN receipt strict parse、digest chain、revision uniqueness、issuer authenticity、short hash/unknown field拒否。 |
+| tests/plan-admission.test.ts | 全体退役 | evaluatePlanAdmission: route/kind/layer/branch matrix、Forward escape、Issue/reentry、redesign/reverseのPLAN admission policy。U-ISSUEBIND caller casesはPLAN専用。 |
+| tests/plan-asset/ledger-application.test.ts | 全体退役 | PlanLedger.reserve/reconstruct/release/expire: PLAN予約event/projection/receiptのreplay、conflict、expiry、rollback/retry。 |
+| tests/plan-asset/legacy-inventory.test.ts | 全体退役 | inventoryProjectionDigest/parseLegacyPlanSource: PLAN legacy projection digestとsourceCommit binding、unsafe YAML/frontmatter拒否。 |
+| tests/plan-asset/legacy-migration-ledger.test.ts | 全体退役 | LegacyMigrationLedger: PLAN migration observe/adopt/reject、alias/provenance、replay、orphan receipt、transaction rollback。 |
+| tests/plan-asset/legacy-migration.test.ts | 全体退役 | reduceLegacyMigration/validateMigrationFields: PLAN state transition、terminal matrix、event sequence/provenance/time invariant。 |
+| tests/plan-asset/plan-draft-ledger.test.ts | 全体退役 | PlanDraftLedgerTransaction.append: PLAN draft write-set、reservation/receipt binding、replay/conflict、ordinal race、rollback。 |
+| tests/plan-asset/plan-revision-bootstrap.test.ts | 全体退役 | LegacyPlanRevisionBootstrapTransaction.bootstrap/transact: legacy PLAN rev1 + redesign rev2 atomic bootstrap、identity/receipt binding、rollback。 |
+| tests/plan-asset/plan-revision-ledger.test.ts | 全体退役 | PlanRevisionLedgerTransaction.append/transact: PLAN revision chain、alias/base digest、replay binding、callback rollback。 |
+| tests/plan-asset/reservation-service.test.ts | 全体退役 | ReservationService/PlanLedger: PLAN reservation HMAC frame、raw token非永続化、hash/version、release、race recovery/fail-close。 |
+| tests/plan-asset/sealed-lineage-local-migration.test.ts | 全体退役 | migratePlanLedger / sealed-lineage Transaction / executeSealedLineageRecovery: PLAN ledger lineage、revision、authority/preflight/write-zero failure。共有identity kernelとは別のPLAN adapter/caller。 |
+| tests/plan-content-binding.test.ts | 全体退役 | bindPlanSourceToAdmission/parseLegacyPlanSource: PLAN source frontmatterのadmission由来route/status/issue/supersedes binding。 |
+| tests/plan-draft-command-assembler.test.ts | 全体退役 | assemblePlanDraftCommand/evaluatePlanAdmission/calculatePlanDraftCommandDigests: PLAN draft tuple/source/path/Recovery identity canonical化と不一致拒否。 |
+| tests/plan-draft-ledger-adapter.test.ts | 全体退役 | PlanDraftLedgerAdapter/PlanDraftLedgerTransaction: PLAN tablesのprepared callback、commit/rollback、digest/certificate error mapping。 |
+| tests/plan-draft-service.test.ts | 全体退役 | PlanDraftServiceとPLAN型DraftJournal/Publisher/Ledger ports: PLAN source/receipt publish順、replay/recovery/cleanup。generic journal/publisher実装の保証ではない。 |
+| tests/plan-id-identity.test.ts | 全体退役 | parsePlanIdIdentity/parseReservablePlanIdIdentity: PLAN namespace/token/ordinal grammarとreservation eligibility。 |
+| tests/plan-id-taxonomy.test.ts | 全体退役 | planIdTaxonomyViolations: PLAN prefix/layer/ordinal/slugとfrozen PLAN-M sequenceのtaxonomy rule。 |
+| tests/plan-revise-cli.test.ts | 全体退役 | parsePlanRevisionManifest/registerPlanRevisionCommand→NodePlanRevisionRunner: PLAN revise strict input、admission拒否時source/receipt/ledger write-zero。U-ISSUEBIND caller assertionsはPLAN renderer/parser境界。 |
+| tests/rechain-verifier.test.ts | 全体退役 | PLAN admission/revision/rechain APIs: source bytes/frontmatter、receipt/admission binding、H/M/X/R tree、intermediate PLAN revisions。generic GitChange helper assertionなし。 |
+| tests/sqlite-draft-journal.test.ts | 全体退役 | SqliteDraftJournal/PlanDraftLedgerTransaction: PLAN draft journalのappend/replay/conflict/recovery/cleanup/schema fail-close。generic SQLite transaction contractではない。 |
+| tests/tracked-receipt-renderer.test.ts | 全体退役 | TrackedReceiptRendererとPLAN receipt/parser: docs/plans binding、receipt hash chain、Forward-exit admission、malformed PLAN receipt拒否。U-ISSUEBIND-002はPLAN caller case。 |
+| tests/projection-plan-projector.test.ts | 全体退役 | loadRepositoryPlanSources/projectPlanSources: docs/plans frontmatterをplan_registryへ投影し、body-only fieldsを無視するPLAN loader。 |
+| tests/review-evidence.test.ts | 全体退役 | analyzeReviewEvidence/extractReviewEntries: PLAN review_evidence parse/schema/green-command lint/provider/model/timing。custody-v2 receipt parserを呼ばない。 |
+| tests/poc-evaluation.test.ts | 全体退役 | projectPocEvaluations/summarizePocEvaluations: plan_registryのPoC decisionsからsummary/rateを作るPLAN専用集計。 |
+| tests/plan-draft-command-digest.test.ts | 全体退役 | calculatePlanDraftCommandDigests: PLAN-specific command tupleのdeterministic digest、field mutation、caller digest拒否。production callersはretire対象Plan modules。 |
+| tests/plan-mechanism-retirement-s4-db.test.ts | 全体退役 | S4 helperでU-PLANRET-020のPLAN table/DDL保持を検証。custody auditはprovider-judgment-composition.test.ts CANDIDATE-U-D3BCOMP-017がappend/readback・receipt digest一致、020/022(a)がattempt_completed terminalを同じ欠落/変質mutationで検査。support helper自体は36対象外・保持。 |
+| tests/frontmatter.test.ts | 全体退役 | frontmatterSchema.safeParse: 全fixtureがPLAN impl/design/reverse/recovery/verify frontmatter。issue bindingもPLAN draft/revise/legacy metadata、現行callerはPLAN path。 |
+| tests/projection-store-contract.test.ts | 全体退役 | projectPocEvaluations: PoC countからsummary rowをwriteし、empty countでwriteしないことのみ。generic ProjectionStore contractではない。 |
+| tests/github-forward-readiness.test.ts | 全体退役 | deriveForwardReadiness: PLAN schedule/predecessor/closure evidenceからreadiness/unlock/blockingを判定するPLAN work graph。 |
+| tests/plan-supersession.test.ts | 全体退役 | analyzePlanSupersession/parseSupersedes/planCoreId: PLAN supersedes grammar/target/back-reference/self-baselineとfrozen PLAN ID set。 |
 
-対象範囲の外に置く登録済み候補4本は今回の退役対象に含めない: tests/node-plan-revision-runner.test.ts、tests/plan-asset/ledger-schema.test.ts、tests/plan-lint.test.ts、tests/plan-revision-digest-query.test.ts。登録済み identity loader tests/plan-asset/project-identity-loader.test.ts はこの36本に含めず、その U-PA-008 exact-HEAD blob / receipt success・failure assertion を tests/project-identity-kernel.test.ts へ移して保持する。support helper tests/support/planret-s4-db-oracle.ts も対象外である。各 file の全 assertion が PLAN 専用であるとの一括主張は置かない。B では L7 §3.1 / L6 §8 に照らして対象 test の実 assertion を確認し、共有挙動を担う assertion があれば移設先と保持する ID を記録してから同期する。
 
-## 3. B で既存宣言行を除く oracle ID (152)
+## 3. oracle declaration の退役案 (152 ID)
 
-以下は §2 の test file 削除に伴う既存宣言行の同期対象を exact-head patch map から列挙したもの。152件すべてが単独IDの表行として次の既存文書にあり、全件が対象36 file 群に結び付く。現行 S7 契約に基づく予定 disposition は退役である。これは行数による一括削除許可ではない。B では各 ID の既存契約と test assertion を照合し、共有挙動・明示された維持契約があればその ID の保持または移設先を記録してから宣言を同期する。提供された patch map に列挙された明示移設対象 U-PA-008 はこの152件に含まれず、別個に保持・移設する。
+152 IDは、実callee/契約照合で全体退役35 file＋partial Git diff fileを保持する処分と一致する宣言行であり、Aで先行削除しない。U-ISSUEBIND-001..005はcanonical issue-binding design §2-4を親が再照合し、全刺激がPLAN draft/revise/legacy frontmatterに限定、Issue #692の別契約を除外するため退役対象との判断が確定した。物理削除・module graphの結果を主張するものではない。U-PA-008はこの152件に含まれず、§2記載のtestへ移設済みである。
 
 - docs/test-design/harness/L7-issue-binding-projection-state-test-design.md: 5行
 - docs/test-design/harness/L7-unit-test-design.md: 129行
@@ -91,15 +92,20 @@ U-REVIEW-008, U-REVIEW-009, U-REVIEW-010, U-REVIEW-011, U-REVIEW-012, U-REVIEW-0
 U-TORDER-003, U-TORDER-004, U-TORDER-005, U-XREVIEW-001, U-XREVIEW-002, U-XREVIEW-003, U-XREVIEW-004, U-XREVIEW-005
 
 
-## 3.1 限定監査で確認した退役・保持境界
+## 3.1 重点 oracle と共有保持境界
 
-以下は指定 audit の bounded set (PoC / green PLAN / sealed-lineage 22 ID) だけを実 test / callee / L6・L7 契約で照合した結果であり、36 file 全体の監査を意味しない。
+以下はPoC / green PLAN / sealed-lineage oracleの実test/callee/契約対応の詳細根拠であり、全36 fileの処分は§2の表にまとめた。
 
 - PoC projector/domain: tests/poc-evaluation.test.ts の U-DOMAIN-002 は summarizePocEvaluations の outcome 集計を、U-FR-L1-43 は plan_registry から projectPocEvaluations を通す集計を検証する。tests/projection-store-contract.test.ts の U-DOMAIN-003 も src/projection/application/project-poc-evaluations.ts のみを呼び、generic ProjectionStore は検証しない。PLAN registry が唯一の入力で pure projector を退役し、poc_evaluations の table / columns は維持する (L6 plan-mechanism-retirement.md §3、L7-plan-mechanism-retirement-test-design.md §3.1)。
 - Green PLAN command: tests/review-evidence.test.ts の U-GREENDEF-008 は analyzeReviewEvidence → greenCommandViolationReason で completed_at が tests_green_at より後になる PLAN の lint finding を検証する。この PLAN review_evidence reader / lint は退役する。G1/G3 trace と custody v2 receipt handling は維持する (L7-plan-mechanism-retirement-test-design.md §3.1、§3 U-PLANRET-006/007/016)。
-- L8 sealed-lineage: tests/plan-asset/sealed-lineage-local-migration.test.ts の U-PA-SEAL-011..028 は L8-integration-test-design.md の対応 oracle 行 (314–332) に対し、Transaction.migrate / executeSealedLineageRecovery と PlanAsset 固有の ledger・Issue authority・revision 経路を検証する。共通 CustodyDecision / project identity 型の利用だけでは generic custody / identity の検証にならず、これらの PlanAsset 固有 assertion は caller とともに退役する (L7-plan-mechanism-retirement-test-design.md §3.1)。
-- 保持・移設境界: generic project identity kernel は tests/project-identity-kernel.test.ts と src/kernel/project-identity.ts で維持し、U-PA-008 の exact-HEAD blob / receipt success・failure assertion を同 test へ移す。custody v2 receipt contract (U-PLANRET-006/007/016) と src/kernel/github-closure-receipt.ts の reviewReceiptDigest も維持する (L7-plan-mechanism-retirement-test-design.md §3 / §3.1、L6 plan-mechanism-retirement.md §8 補足)。
+- L8 sealed-lineage: tests/plan-asset/sealed-lineage-local-migration.test.ts の U-PA-SEAL-011..028 は L8-integration-test-design.md の対応 oracle 行 (314–332) に対し、Transaction.migrate / executeSealedLineageRecovery と PlanAsset 固有の ledger・Issue authority・revision 経路を検証する。共通 CustodyDecision / project identity 型の利用だけでは generic custody / identity の検証にならない。全 case の監査でも PLAN 固有の assertion に限られ、§2 のとおり全体退役とする (L7-plan-mechanism-retirement-test-design.md §3.1)。
+- 保持・移設境界: U-PA-008 は移設済みで、実HEAD blob読取りを tests/setup-project-identity-bootstrap.test.ts の bootstrapProjectIdentity / loadProjectIdentityFromHead、pure receipt検証を tests/project-identity-kernel.test.ts の loadTrackedProjectIdentity が担う。generic project identity kernel (src/kernel/project-identity.ts)、custody v2 receipt contract (U-PLANRET-006/007/016)、src/kernel/github-closure-receipt.ts の reviewReceiptDigest も維持する (L7-plan-mechanism-retirement-test-design.md §3 / §3.1、L6 plan-mechanism-retirement.md §8 補足)。
 
-## 4. B の baseline 同期境界
 
-A では baseline を変更しない。B では §2 の削除後に実測し、citation baseline は退役に対応する stale 43 key を縮小対象として確認する。code-size baseline は現在対象36本のうち次の4 entryだけを実測に従って縮小する: tests/frontmatter.test.ts、tests/plan-asset/sealed-lineage-local-migration.test.ts、tests/rechain-verifier.test.ts、tests/review-evidence.test.ts。実測に無い追加・拡大をしない。widened baseline は現在の312 entryを維持し、増やさない。いずれも削除差分を推定値や件数合わせで作らず、B の検証根拠と実測結果に結び付ける。
+Git diff adapter の確定した部分保持: tests/plan-admission-git-diff-adapter.test.ts の readAdmissionGitDiff では、generic な NUL / status / rename parse、rename 両側の blob 読取り、不正 path / status / NUL、missing blob / invalid UTF-8 の assertion を保持する。PLAN path filter と領域外 rename の削除扱いだけを退役対象とする。残す assertion は後続の helper 移設 slice で src/github/git-diff.ts の GitChange 側へ移し、移設先で同じ異常入力を検査できた後に本 test file 全体を退役する (L6 plan-mechanism-retirement.md §8 補足)。
+
+## 4. oracle影響の三状態比較とBのbaseline同期
+
+exact HEAD f8f2c4ad7e777fcf58dbbd2ea94b288641f752ddで、35全体退役fileをin-memoryで除外し、partial Git diff testは全保持したviewを作成した。canonical referencesを再構築し、canonical入力と完全一致した。baseはreferenced 2127、orphans / duplicates / staleDuplicateBaseline / undeclaredCitations / staleCitationBaseline はすべて0。35除外後はreferenced 1930、orphans 152、staleCitationBaseline 43、duplicates / staleDuplicateBaseline / undeclaredCitations は0。partial Git diff fileのoracle IDは0のため、PLAN rename assertionだけを後から除く場合もoracle参照集合は変わらない。
+
+宣言152行とcitation baselineの43 keyを同期した将来viewでは、declared 1859から1707となり、orphans / duplicates / staleDuplicateBaseline / undeclaredCitations / staleCitationBaseline の5配列はすべて0、widened baselineは312のまま (増加なし) と親の再計測が示す。別のdocs-only投影でも152宣言行を除いてcanonical declaration parserで再収集し、declared 1707・将来impact集合との完全一致・analyzer不整合0を確認した。全状態ともin-memory viewであり、物理削除・module graph検証ではない。Aではbaselineを変更しない。Bは最終assertion処分後に実状態を再計測し、実削除に対応する差分だけを反映する。code-size影響予測の4 pathは tests/frontmatter.test.ts、tests/plan-asset/sealed-lineage-local-migration.test.ts、tests/rechain-verifier.test.ts、tests/review-evidence.test.ts。citation削減数も実測と同期に基づき確定し、widenedは拡大しない。
