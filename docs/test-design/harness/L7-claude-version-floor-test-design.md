@@ -160,7 +160,11 @@ L6 `claude-version-probe.md` の正しい実装に、次の変異を 1 つだけ
 
 ### 6.2 一対一であることの確かめ方
 
-probe の解決と実行 (起動名の記録を含む)、doctor の表示、transcript の窓 (byte 単位の offset と最初の行の扱い、読んだ bytes と API の記録)、fence を、L6 `claude-version-probe.md` §3〜§6 の規則どおりに写した使い捨てのモデルを書き (repo には入れない)、正しい実装と §5 の各変異 (それぞれ 1 か所の変更) に、本書の §3 に書いた観測と前提だけを評価させた。Windows と POSIX、PATH に本物の claude がある開発機と無い CI の 4 通りで流し、§6 の全行で `●` が 1 つ (どの環境でも同じ oracle)、全列で `●` が 1 つ以上、正しい実装で全件緑になることを確かめた。窓は上の 7 つの大きさでも流した。モデルは §2 の前提 (009〜013 と 020 の fixture の path は空白と `cmd` の特殊文字を含まない、vitest の cwd に `claude.*` が無い、`cmd` は拡張子の無い file を起動しない) を置いている。`cmd` と libuv の実際の探索の挙動は、実装の PR の変異の確認で確かめる (Red の PR の head から切った使い捨ての branch で変異ごとに commit し、`node scripts/run-vitest-snapshot.ts <test file>` を流す。手順は `L7-doctor-source-preflight-profile-test-design.md` §6 と同じ)。
+probe の解決と実行 (起動名の記録を含む)、doctor の表示、transcript の窓 (byte 単位の offset と最初の行の扱い、読んだ bytes と API の記録)、fence を、L6 `claude-version-probe.md` §3〜§6 の規則どおりに写した使い捨てのモデルを書き (repo には入れない)、正しい実装と §5 の各変異 (それぞれ 1 か所の変更) に、本書の §3 に書いた観測と前提だけを評価させた。Windows と POSIX、PATH に本物の claude がある開発機と無い CI の 4 通りで流し、§6 の全行で `●` が 1 つ (どの環境でも同じ oracle)、全列で `●` が 1 つ以上、正しい実装で全件緑になることを確かめた。窓は上の 7 つの大きさでも流した。この確認は 019 を改訂する前の revision (origin/main `262746842a12aec8835d104244969ab4b6e35f8c`、019 の観測が fence の記録の行数だった版) に対するものである。
+
+2026-11-16 の 019 の改訂 (観測を doctor の OK 行の版 `9999.0.0` にした) 後の再検証は、019 の観測が動く表示 (M11〜M16) と fence (M21〜M23) の行に限って、同じ形の模型 (014・018・019 の文面の観測だけを評価) で行った。結果は、正しい実装で 014・018・019 が緑、M11〜M15 は 014 だけ、M16 は 014 と 019 の 2 つ (この 1 行だけが「● は 1 つ」の例外)、M21 と M22 は 018 が赤で 019 が skip、M23 は 019 だけが赤である。上の旧観測での確認は、改訂後の対応表全体の確認としては使わない。M1〜M10、M17〜M20、M24〜M26 の行が 019 の改訂で動かないことは、観測の読みから判断したもので、改訂後の revision では模型を流していない。
+
+モデルは §2 の前提 (009〜013 と 020 の fixture の path は空白と `cmd` の特殊文字を含まない、vitest の cwd に `claude.*` が無い、`cmd` は拡張子の無い file を起動しない) を置いている。`cmd` と libuv の実際の探索の挙動は、実装の PR の変異の確認で確かめる (Red の PR の head から切った使い捨ての branch で変異ごとに commit し、`node scripts/run-vitest-snapshot.ts <test file>` を流す。手順は `L7-doctor-source-preflight-profile-test-design.md` §6 と同じ)。
 
 ## 7. 既存 test の更新 (oracle ではない)
 
