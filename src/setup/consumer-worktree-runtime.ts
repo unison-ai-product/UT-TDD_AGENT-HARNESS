@@ -21,6 +21,7 @@ import {
 } from "./consumer-node-runtime.ts";
 import type { ConsumerRuntimeReleaseInstallResult } from "./consumer-runtime-contracts.ts";
 import { verifyConsumerRuntimeReleaseAssets } from "./consumer-runtime-release.ts";
+import type { ConsumerWorktreeSetupFault } from "./consumer-runtime-transaction.ts";
 import { releaseArtifactFileNames } from "./distribution.ts";
 
 const RELEASE_ID = /^rel-sha256:([a-f0-9]{64})$/;
@@ -418,6 +419,7 @@ export async function setupConsumerWorktreeRuntime(
     readonly worktreePath: string;
     readonly releaseDirectory?: string;
     readonly expectedConsumerDigest?: string;
+    readonly fault?: ConsumerWorktreeSetupFault;
   },
   installRuntime: (input: {
     readonly releaseDirectory: string;
@@ -427,6 +429,7 @@ export async function setupConsumerWorktreeRuntime(
     readonly executingModulePath: string;
     readonly expectedPin: ConsumerRuntimePin;
     readonly runtimeOnly: true;
+    readonly fault?: ConsumerWorktreeSetupFault;
   }) => Promise<ConsumerRuntimeReleaseInstallResult>,
 ): Promise<{
   readonly status: "installed" | "already-installed";
@@ -458,6 +461,7 @@ export async function setupConsumerWorktreeRuntime(
     executingModulePath: pin.entry_path,
     expectedPin: pin,
     runtimeOnly: true,
+    ...(input.fault ? { fault: input.fault } : {}),
   });
   return { status: result.status, tag, identity: pin };
 }

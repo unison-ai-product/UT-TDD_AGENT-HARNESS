@@ -170,7 +170,7 @@ describe("consumer worktree runtime rollback Red (#1592)", () => {
         expect(rollbackBaselines.has(initialState)).toBe(true);
       });
 
-      it.fails(`U-CWTRT-011 rollback oracle after runtime publish (${initialState})`, async () => {
+      it(`U-CWTRT-011 rollback oracle after runtime publish (${initialState})`, async () => {
         const baseline = rollbackBaselines.get(initialState);
         if (!baseline) throw new Error(`rollback precondition missing for ${initialState}`);
         const { target, paths, snapshot } = baseline;
