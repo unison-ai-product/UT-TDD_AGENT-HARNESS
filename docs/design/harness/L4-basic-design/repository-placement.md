@@ -75,7 +75,7 @@ UT-TDD-agent-harness/
 │   │   ├── b4-services/             サービス (gate・feedback・memory・github・registry)
 │   │   ├── b5-app/                  アプリ (workflow・team・consumer の setup)
 │   │   └── b6-entry/                入口 (CLI・hook の起動口)
-│   ├── intelligence/                管理知能 (Python・別プロセス、P6 決定 #575)
+│   ├── intelligence/                管理知能 (Python・別プロセス、P6 決定 #575。v4 の 1.0.0 では作らない: ADR-001 決定 4 の運用上の注記)
 │   │   ├── planner/                 工程間の境界・チケットの発行
 │   │   ├── team/                    区分ごとのチームチケット・リーダーの全体ビュー
 │   │   └── feedback/                パターン抽出 → 改善先の選択 (R6)
@@ -167,7 +167,7 @@ consumer の都合 (フレームワークが `src/` を要求する場合など)
    Pack 単体の checkout から build を再現できるように、製品の npm manifest・lock・Node の版 (`package.json` / `package-lock.json` / `.node-version`) は `product/` の中に置く (§3.1)。そのため追加 path に数えず、`product/` の中身として Pack に入る。再現確認の CI は、Pack 単体の checkout で固定した Node / npm と lock から compiled ESM を作り、公開した asset と digest を突き合わせる (ADR-001)。
 
    `tests/`・`docs/governance`・`docs/process`・`scripts/`・`vitest.config.ts` は入らない (dev 側)。3,178 本から 998 本を filter で選ぶ方式 (allowlist / denylist) をやめ、構造で決まるようにする。dev 専用 path の漏出検査は、「`dev/` が入っていないこと」の 1 行になる。テストと受入は、出荷前に source 側で済ませる。
-2. **Release asset** = `product/` をビルドしたもの (現行の 5 本)。builtin のテンプレートは、`product/parts/templates/` から build 時に生成する (#872 のズレが構造的に起きなくなる)。管理知能 (Python) の配布物は、v4 の実装時に asset の一覧の契約へ追加する。
+2. **Release asset** = `product/` をビルドしたもの (現行の 5 本)。builtin のテンプレートは、`product/parts/templates/` から build 時に生成する (#872 のズレが構造的に起きなくなる)。管理知能 (Python) の配布物は、管理知能を作ると決めた時 (v4 の 1.0.0 では作らない。ADR-001 決定 4 の運用上の注記) に asset の一覧の契約へ追加する。
 3. **consumer の project** = asset をインストールした結果 (§3.3 の形)。この repo の root の生成物 (▲) も、consumer と同じ手順で作られる。
 
 source の `product/` → Pack repo → asset → consumer とこの repo の root、という 1 本の流れにし、配る物と配らない物が混ざる場所をなくす。
