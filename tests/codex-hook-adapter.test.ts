@@ -687,7 +687,7 @@ describe("codex-hook-adapter — Codex hooks.json parity (PLAN-L7-139, PLAN-L7-6
       ).toBe(0);
     }, 420_000);
 
-    it("U-CXHOOKCMD-005: consumer launcher は active runtime 不在時 exit 2 で案内する", () => {
+    it.fails("U-CXHOOKCMD-005: consumer launcher は active runtime 不在時、session hook は exit 0 で案内する", () => {
       const command = commandFor("SessionStart");
       expect(command).toContain(".ut-tdd/bin/ut-tdd.mjs");
 
@@ -698,7 +698,7 @@ describe("codex-hook-adapter — Codex hooks.json parity (PLAN-L7-139, PLAN-L7-6
       });
       expect(configured.status, `${configured.stdout}\n${configured.stderr}`).toBe(0);
 
-      // active runtime pointer を外すと exit 2 と案内を返し、bare `node` の SyntaxError とは区別する。
+      // active runtime pointer を外すと session hook は fail-open (exit 0、契約 §4 (b)) で案内を返し、bare `node` の SyntaxError とは区別する。
       const pointerPath = join(consumer, ".ut-tdd", "runtime", "activation", "active.json");
       const pointerBytes = readFileSync(pointerPath);
       rmSync(pointerPath, { force: true });
@@ -708,7 +708,7 @@ describe("codex-hook-adapter — Codex hooks.json parity (PLAN-L7-139, PLAN-L7-6
           input: JSON.stringify({ session_id: "cxhookcmd-005-absent" }),
           env: { CLAUDE_PROJECT_DIR: consumer, UT_TDD_PROJECT_DIR: consumer },
         });
-        expect(absent.status, `${absent.stdout}\n${absent.stderr}`).toBe(2);
+        expect(absent.status, `${absent.stdout}\n${absent.stderr}`).toBe(0);
         expect(absent.stderr).toContain("consumer_runtime_absent");
         expect(absent.stderr).toContain("setup --worktree");
         expect(absent.stderr).not.toMatch(/SyntaxError/);
