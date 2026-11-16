@@ -1,0 +1,384 @@
+/**
+ * snapshot runner の同時実行の排他 (issue #1665) の Red。
+ * 契約: docs/design/harness/L6-function-design/snapshot-runner-lock.md と
+ * snapshot-runner-lock-protocol.md、対の oracle は
+ * docs/test-design/harness/L7-snapshot-runner-lock-test-design.md (§3)。
+ * 実装 PR (Green) で `it.fails` を `it` に戻す。block A は snapshot-runner-lock.test.ts、029 は tests/snapshot-root-hygiene.test.ts。
+ */
+import {
+  linkSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  renameSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { describe, expect, it } from "vitest";
+import {
+  acquireSnapshotLock,
+  type ProcessObservation,
+  type SnapshotLockAcquisition,
+  type SnapshotLockDeps,
+} from "../src/runtime/snapshot-runner-lock.ts";
+import {
+  lineKind,
+  lineValue,
+  liveSet,
+  lockPath,
+  makeLockHarness,
+  makeRecord,
+  rec,
+  T0,
+} from "./support/snapshot-lock-fake.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
+
+describe("snapshot runner lock: block B acquisition and release", () => {
+  const reasonOf = (a: SnapshotLockAcquisition): unknown =>
+    a.kind === "unavailable" ? a.reason : undefined;
+  const holderGen = (a: SnapshotLockAcquisition): unknown =>
+    a.kind === "busy" ? a.holder?.generation : undefined;
+
+  it.fails("CANDIDATE-U-SNAPLOCK-014: nested and skip_ci neither write nor probe identity", () => {
+    const nested = makeLockHarness({
+      resolveMode: ({ current }) => (current === null ? "acquire" : "nested"),
+    });
+    nested.fs.seedGen(1, rec("L1", { gen: 1 }));
+    expect(acquireSnapshotLock(nested.options, nested.deps)).toEqual({
+      kind: "nested",
+      generation: 1,
+    });
+    expect(nested.lines.map(lineKind)).toContain("nested");
+    expect(nested.fs.writeOpCount()).toBe(0);
+    expect(nested.observed).toHaveLength(0);
+
+    const ci = makeLockHarness({ resolveMode: () => "skip_ci" });
+    ci.fs.seedGen(1, rec("L1", { gen: 1 }));
+    expect(acquireSnapshotLock(ci.options, ci.deps)).toEqual({ kind: "skipped_ci" });
+    expect(ci.lines).toContainEqual(expect.stringMatching(/^snapshot-lock: skipped reason=ci/));
+    expect(ci.fs.writeOpCount()).toBe(0);
+    expect(ci.observed).toHaveLength(0);
+    expect(ci.fs.ops).toHaveLength(0);
+  });
+
+  it.fails("CANDIDATE-U-SNAPLOCK-015: a live generation is never replaced because of elapsed time", () => {
+    const h = makeLockHarness({ maxWaitMs: 4000, classify: () => "live" });
+    const old = makeRecord({ lockId: "OLD", generation: 1, queuedAtMs: T0 - 10 * 3600_000 });
+    h.fs.seedGen(1, old);
+    const result = acquireSnapshotLock(h.options, h.deps);
+    expect(result.kind).toBe("busy");
+    expect(holderGen(result)).toBe(1);
+    expect(h.fs.has("gen-2.json")).toBe(false);
+    expect(h.fs.has("gen-1.json")).toBe(true);
+  });
+
+  it.fails("CANDIDATE-U-SNAPLOCK-016: a stalled attempt cannot link over a number that other runners advanced past", () => {
+    const run = (setup: (dir: string) => void, expectedHolder: number) => {
+      const root = mkdtempSync(join(tmpdir(), "snaplock-016-"));
+      try {
+        const dir = join(root, "ut-tdd-snapshot-runner-lock");
+        mkdirSync(dir, { recursive: true });
+        writeFileSync(
+          join(dir, "gen-1.json"),
+          JSON.stringify(makeRecord({ lockId: "G1", generation: 1 })),
+        );
+        writeFileSync(join(dir, "released-1"), "");
+        const links: string[] = [];
+        let armed = true;
+        const base = makeLockHarness({ maxWaitMs: 0, classify: liveSet("H", "H100") });
+        const deps: SnapshotLockDeps = {
+          ...base.deps,
+          io: {
+            mkdir: (p) => void mkdirSync(p, { recursive: true }),
+            writeFile: (p, d) => writeFileSync(p, d),
+            rename: (a, b) => renameSync(a, b),
+            link: (a, b) => {
+              links.push(b);
+              if (armed && /gen-2\.json$/.test(b)) {
+                armed = false;
+                setup(dir);
+              }
+              linkSync(a, b);
+            },
+            readFile: (p) => readFileSync(p, "utf8"),
+            readdir: (p) => readdirSync(p),
+            unlink: (p) => unlinkSync(p),
+          },
+        };
+        const result = acquireSnapshotLock(
+          { ...base.options, tmpRoot: root, repoRoot: root },
+          deps,
+        );
+        expect(links.filter((p) => /gen-2\.json$/.test(p))).toHaveLength(1);
+        expect(links).toHaveLength(1);
+        expect(result.kind).toBe("busy");
+        expect(holderGen(result)).toBe(expectedHolder);
+        expect(JSON.parse(readFileSync(join(dir, "gen-2.json"), "utf8")).lockId).toBe(
+          expectedHolder === 2 ? "H" : "H2",
+        );
+        expect(base.lines.some((l) => lineKind(l) === "acquired")).toBe(false);
+      } finally {
+        removeTestTree(root);
+      }
+    };
+    run((dir) => {
+      writeFileSync(
+        join(dir, "gen-2.json"),
+        JSON.stringify(makeRecord({ lockId: "H", generation: 2 })),
+      );
+    }, 2);
+    run((dir) => {
+      for (let g = 2; g <= 100; g += 1) {
+        const lockId = g === 2 ? "H2" : g === 100 ? "H100" : `H${g}`;
+        writeFileSync(
+          join(dir, `gen-${g}.json`),
+          JSON.stringify(makeRecord({ lockId, generation: g })),
+        );
+        if (g < 100) writeFileSync(join(dir, `released-${g}`), "");
+      }
+    }, 100);
+  });
+
+  it.fails("CANDIDATE-U-SNAPLOCK-017: release only creates its own released mark and never touches history", () => {
+    const acquire = (extra?: (h: ReturnType<typeof makeLockHarness>) => void) => {
+      const h = makeLockHarness();
+      for (let g = 1; g <= 4; g += 1) {
+        h.fs.seedGen(g, rec(`G${g}`, { gen: g }));
+        h.fs.seedReleased(g);
+      }
+      const acquired = acquireSnapshotLock(h.options, h.deps);
+      expect(acquired.kind).toBe("acquired");
+      expect(acquired.kind === "acquired" ? acquired.generation : undefined).toBe(5);
+      extra?.(h);
+      return { h, acquired };
+    };
+    const topLevel = (h: ReturnType<typeof makeLockHarness>) =>
+      [...h.fs.files.keys()].filter((k) => /\/(gen-\d+\.json|released-\d+)$/.test(k)).sort();
+
+    const a = acquire();
+    const beforeA = topLevel(a.h);
+    const opsBeforeA = a.h.fs.ops.length;
+    if (a.acquired.kind === "acquired") a.acquired.release();
+    expect(topLevel(a.h).filter((k) => !beforeA.includes(k))).toEqual([lockPath("released-5")]);
+    expect(
+      a.h.fs.ops
+        .slice(opsBeforeA)
+        .filter(
+          (op) =>
+            ["unlink", "rename"].includes(op.name) &&
+            /(gen-|released-)\d/.test(`${op.path}${op.from ?? ""}`),
+        ),
+    ).toEqual([]);
+    expect(a.h.fs.has("gen-5.json")).toBe(true);
+
+    const b = acquire((h) => h.fs.seedGen(6, rec("G6", { gen: 6 })));
+    const beforeB = topLevel(b.h);
+    if (b.acquired.kind === "acquired") b.acquired.release();
+    expect(topLevel(b.h).filter((k) => !beforeB.includes(k))).toEqual([lockPath("released-5")]);
+    expect(b.h.fs.has("released-6")).toBe(false);
+    expect(b.h.fs.has("gen-5.json") && b.h.fs.has("gen-6.json")).toBe(true);
+
+    const c = acquire((h) => h.fs.failOn(["link", "writeFile", "rename"], /released-5$/, "EIO"));
+    expect(() => c.acquired.kind === "acquired" && c.acquired.release()).not.toThrow();
+    const failed = c.h.lines.find((l) => lineKind(l) === "release-failed");
+    expect(failed && lineValue(failed, "reason")).toBe("EIO");
+    expect(c.h.fs.has("gen-5.json")).toBe(true);
+  });
+
+  it.fails("CANDIDATE-U-SNAPLOCK-018: link and release-mark read failures are unavailable, not busy", () => {
+    const a = makeLockHarness({ maxWaitMs: 0 });
+    a.fs.failOn(["link", "writeFile", "rename"], /gen-1\.json$/, "EPERM");
+    const ra = acquireSnapshotLock(a.options, a.deps);
+    expect(ra.kind).toBe("unavailable");
+    expect(reasonOf(ra)).toBe("EPERM");
+    expect(a.fs.has("gen-1.json")).toBe(false);
+
+    const b = makeLockHarness({ maxWaitMs: 0, classify: () => "stale" });
+    b.fs.seedGen(1, rec("G1", { gen: 1 }));
+    b.fs.failOn(["readFile"], /released-1$/, "EACCES");
+    const rb = acquireSnapshotLock(b.options, b.deps);
+    expect(rb.kind).toBe("unavailable");
+    expect(reasonOf(rb)).toBe("EACCES");
+    expect(b.fs.generationCreations()).toHaveLength(0);
+    expect(b.fs.has("gen-2.json")).toBe(false);
+  });
+
+  it.fails("CANDIDATE-U-SNAPLOCK-019: the own queue entry is written and removed on every exit path", () => {
+    const own = (h: ReturnType<typeof makeLockHarness>) => {
+      expect(h.fs.everQueue.size).toBe(1);
+      expect(h.fs.queueKeys()).toEqual([]);
+    };
+    const live = makeLockHarness({ maxWaitMs: 4000, classify: () => "live" });
+    live.fs.seedGen(1, rec("G1", { gen: 1 }));
+    acquireSnapshotLock(live.options, live.deps);
+    own(live);
+
+    const free = makeLockHarness({ maxWaitMs: 4000 });
+    acquireSnapshotLock(free.options, free.deps);
+    own(free);
+
+    const failing = makeLockHarness({ maxWaitMs: 4000 });
+    failing.fs.failOn(["link", "writeFile", "rename"], /gen-1\.json$/, "EPERM");
+    acquireSnapshotLock(failing.options, failing.deps);
+    own(failing);
+  });
+
+  it.fails("CANDIDATE-U-SNAPLOCK-020: a stale generation is replaced and nothing in history is removed", () => {
+    const h = makeLockHarness({ maxWaitMs: 0, classify: liveSet() });
+    for (let g = 1; g <= 3; g += 1) h.fs.seedGen(g, rec(`G${g}`, { gen: g }));
+    h.fs.seedReleased(1);
+    h.fs.seedReleased(2);
+    const result = acquireSnapshotLock(h.options, h.deps);
+    expect(result.kind).toBe("acquired");
+    expect(result.kind === "acquired" ? result.generation : undefined).toBe(4);
+    expect(h.fs.historyMutations()).toEqual([]);
+    for (const name of ["gen-1.json", "gen-2.json", "gen-3.json", "released-1", "released-2"]) {
+      expect(h.fs.has(name)).toBe(true);
+    }
+  });
+
+  it.fails("CANDIDATE-U-SNAPLOCK-021: stale waiters are cleaned up and live waiters are kept", () => {
+    const h = makeLockHarness({
+      maxWaitMs: 4000,
+      classify: (r) => (r.lockId === "S" ? "stale" : "live"),
+    });
+    h.fs.seedGen(1, rec("G1", { gen: 1 }));
+    h.fs.seedQueue(rec("S"));
+    h.fs.seedQueue(rec("L"));
+    acquireSnapshotLock(h.options, h.deps);
+    expect(h.fs.files.has(lockPath("queue/S.json"))).toBe(false);
+    expect(h.fs.files.has(lockPath("queue/L.json"))).toBe(true);
+  });
+
+  it.fails("CANDIDATE-U-SNAPLOCK-023: without an own startToken nothing is written", () => {
+    const failures: ProcessObservation[] = ["query_failed", null, { pid: 1, startToken: null }];
+    for (const observation of failures) {
+      const h = makeLockHarness({ maxWaitMs: 4000, observeIdentity: () => observation });
+      const result = acquireSnapshotLock(h.options, h.deps);
+      expect(result.kind).toBe("unavailable");
+      expect(h.fs.writeOpCount()).toBe(0);
+    }
+  });
+
+  it.fails("CANDIDATE-U-SNAPLOCK-024: while waiting only waiting, still-waiting every 60000 ms and the result are printed", () => {
+    const h = makeLockHarness({
+      maxWaitMs: 600000,
+      classify: () => "live",
+      onSleep: (elapsed) => {
+        if (elapsed >= 130000) h.fs.seed(lockPath("released-1"));
+      },
+    });
+    h.fs.seedGen(1, rec("G1", { gen: 1 }));
+    const result = acquireSnapshotLock(h.options, h.deps);
+    expect(result.kind).toBe("acquired");
+    expect(h.lines.map(lineKind)).toEqual([
+      "waiting",
+      "still-waiting",
+      "still-waiting",
+      "acquired",
+    ]);
+    const still = h.lines
+      .filter((l) => lineKind(l) === "still-waiting")
+      .map((l) => lineValue(l, "waited_ms"));
+    expect(still).toEqual(["60000", "120000"]);
+  });
+
+  it.fails("CANDIDATE-U-SNAPLOCK-025: the lock scope is tmpRoot, not the checkout", () => {
+    const first = makeLockHarness({ maxWaitMs: 0, repoRoot: "/repo/a" });
+    const a = acquireSnapshotLock(first.options, first.deps);
+    expect(a.kind).toBe("acquired");
+    first.fs.files.delete(lockPath("hint"));
+    const second = makeLockHarness({
+      maxWaitMs: 0,
+      repoRoot: "/repo/b",
+      fs: first.fs,
+      classify: () => "live",
+    });
+    const b = acquireSnapshotLock(second.options, second.deps);
+    expect(b.kind).toBe("busy");
+    expect(b.kind === "busy" ? b.holder?.lockId : undefined).toBe(
+      a.kind === "acquired" ? a.lockId : "missing",
+    );
+  });
+
+  it.fails("CANDIDATE-U-SNAPLOCK-031: unreadable or malformed records fail closed without replacing anyone", () => {
+    const base = (maxWaitMs: number) => {
+      const h = makeLockHarness({ maxWaitMs, classify: () => "live" });
+      h.fs.seedGen(1, rec("G1", { gen: 1 }));
+      return h;
+    };
+    for (const [code, reason] of [
+      ["EACCES", "EACCES"],
+      ["EIO", "EIO"],
+    ] as const) {
+      const h = base(0);
+      h.fs.failOn(["readFile"], /gen-1\.json$/, code);
+      const r = acquireSnapshotLock(h.options, h.deps);
+      expect(reasonOf(r)).toBe(reason);
+      expect(h.fs.generationCreations()).toHaveLength(0);
+      expect(h.classifyCalls()).toBe(0);
+    }
+    const malformed = base(0);
+    malformed.fs.seed(lockPath("gen-1.json"), "{");
+    const rm = acquireSnapshotLock(malformed.options, malformed.deps);
+    expect(reasonOf(rm)).toBe("malformed");
+    expect(malformed.fs.generationCreations()).toHaveLength(0);
+    expect(malformed.classifyCalls()).toBe(0);
+
+    const vanished = base(4000);
+    vanished.fs.hookBefore("readFile", /gen-1\.json$/, 2, () =>
+      vanished.fs.files.delete(lockPath("gen-1.json")),
+    );
+    const rv = acquireSnapshotLock(vanished.options, vanished.deps);
+    expect(reasonOf(rv)).toBe("generation_missing");
+    expect(vanished.fs.generationCreations()).toHaveLength(0);
+
+    const waiterFail = makeLockHarness({ maxWaitMs: 4000, classify: () => "live" });
+    waiterFail.fs.seedQueue(rec("W"));
+    waiterFail.fs.failOn(["readFile"], /queue\/W\.json$/, "EACCES");
+    const rw = acquireSnapshotLock(waiterFail.options, waiterFail.deps);
+    expect(reasonOf(rw)).toBe("EACCES");
+    expect(
+      waiterFail.fs.generationCreations().filter((op) => /gen-1\.json$/.test(op.path)),
+    ).toHaveLength(0);
+  });
+
+  it.fails("CANDIDATE-U-SNAPLOCK-032: the hint is advice only", () => {
+    const seeded = (
+      hint: ((h: ReturnType<typeof makeLockHarness>) => void) | null,
+      withReleased5 = false,
+    ) => {
+      const h = makeLockHarness({ maxWaitMs: 0, classify: () => "live" });
+      for (let g = 1; g <= 5; g += 1) h.fs.seedGen(g, rec(`G${g}`, { gen: g }));
+      for (let g = 1; g <= (withReleased5 ? 5 : 4); g += 1) h.fs.seedReleased(g);
+      hint?.(h);
+      return h;
+    };
+    const hints: ((h: ReturnType<typeof makeLockHarness>) => void)[] = [
+      (h) => h.fs.seed(lockPath("hint"), "3"),
+      (h) => h.fs.seed(lockPath("hint"), "abc"),
+      (h) => h.fs.seed(lockPath("hint"), "50"),
+      (h) => {
+        h.fs.seed(lockPath("hint"), "5");
+        h.fs.failOn(["readFile"], /\/hint$/, "EACCES");
+      },
+      () => undefined,
+    ];
+    for (const hint of hints) {
+      const h = seeded(hint);
+      const r = acquireSnapshotLock(h.options, h.deps);
+      expect(r.kind).toBe("busy");
+      expect(holderGen(r)).toBe(5);
+      expect(h.fs.generationCreations()).toHaveLength(0);
+    }
+    const f = seeded((h) => h.fs.seed(lockPath("hint"), "50"), true);
+    const rf = acquireSnapshotLock(f.options, f.deps);
+    expect(rf.kind).toBe("acquired");
+    expect(rf.kind === "acquired" ? rf.generation : undefined).toBe(6);
+    expect(f.fs.generationCreations().map((op) => op.path)).toEqual([lockPath("gen-6.json")]);
+    expect(f.fs.text("hint")).toBe("6");
+  });
+});
