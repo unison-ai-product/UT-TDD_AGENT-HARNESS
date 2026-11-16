@@ -88,3 +88,17 @@ DbC pre は無し (**never throws**)、post は表示が「識別済みの versi
 - 同じ PR に入れてよい src: `ConsumerNodeRuntimeIdentity` への field 追加と `validIdentity` / identity 構築 (`consumer-runtime-install.ts`)、
   version 解決関数 (`update-check.ts` 周辺)。案 P1 を採るなら producer の source binding も触れるが、別 PR に分ける (1 PR = 1 論点)。
 - 本契約の凍結 (設計と test design の pair-freeze) と review の後に実装へ進む。
+
+## 単位契約 (unit contract)
+
+契約 1〜6 を単位の入出力の形で書き直したものであり、新しい方式は含まない。関数名は実装 PR が採る契約上の名前である。
+
+L6 contract marker: `resolveCliVersion(source: VersionSource) => CliVersionResolution`、`readSealedReleaseTag(entryDir: string) => string | null`、`checkForUpdate(deps: UpdateCheckDeps) => UpdateCheckResult`。
+
+| 単位 | 入力 | pre | post | 不変条件 | oracle |
+| --- | --- | --- | --- | --- | --- |
+| `resolveCliVersion(source)` | 形態 (`__UT_TDD_BUNDLED__` の有無)、entry のディレクトリ、source の harness root | never throws | 契約 1 の優先順位 (a sealed の `release_tag` → b source の `package.json` → c `unidentified`) の結果を返す。`0.0.0` を返す経路を持たない | sealed で識別できなければ b へ降りず c とする。bundle 外の `package.json` を読まない | `CANDIDATE-U-RELVER-010`, `011`, `012` |
+| `readSealedReleaseTag(entryDir)` | bundle の entry と同じディレクトリ | `__UT_TDD_BUNDLED__ === true` | 検証順は、`bundle-manifest.json` の読取 → `validateConsumerNodeRuntimeBundle` → `identity.release_tag` の存在、の順。全て通ったときだけ先頭の `v` を除いた tag を返し、それ以外は `null` | 導入元の Release ディレクトリ・network・Pack checkout を読まない。`release_id` から tag を導出しない | `CANDIDATE-U-RELVER-012`, `013`, `015` |
+| installer の identity 構築 | 検証済みの asset 名と release 文書の `release.tag` | tag が `v<package version>` の書式で asset 名・`release.tag` と一致 | `identity.release_tag` が保存され `bundle_digest` の入力に入る。不一致は `consumer_runtime_identity_mismatch` で deny、consumer root への write 0 | `release_tag` なしの旧 generation の launch を妨げない (`unidentified`) | `CANDIDATE-U-RELVER-014` |
+| `checkForUpdate(deps)` | local version は `resolveCliVersion` と同じ解決 | never throws | `unidentified` のとき `checked=false`、`detail` は `harness version unidentified`、表示行に `v0.0.0` を出さない。remote の解決順は不変 | 沈黙の条件 (override も `repository.url` も無い) は従来どおり | `CANDIDATE-U-RELVER-016` |
+| producer の source binding | artifact commit の `package.json` / lockfile の version と tag | なし | 不一致は出力前に typed error で fail-close し asset 0 (P1、別 PR) | | `CANDIDATE-U-RELVER-017` |
