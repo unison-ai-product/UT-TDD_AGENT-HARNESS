@@ -13,7 +13,7 @@ issue: 1379
 
 ## 1. 境界
 
-本書は [PLAN 機構の縮退テスト設計 §3.1](./L7-plan-mechanism-retirement-test-design.md#31-s7-削除宣言同期-disposition) の S7 を具体化する。case監査は4df911ffe540e14f97d2b9b398b793693e9a7a26 / d37652b58690b0c403c6c8cabd5f1e4dabe768aaで行われ、親が36候補pathの内容がf8f2c4ad7e777fcf58dbbd2ea94b288641f752ddでも不変と照合した。A は本書と既存 L7 文書の参照行だけを freeze する docs-only PR、B は A merge 後の src-free 同期 PR とする。A では既存 oracle 宣言、test、citation baseline、code-size baseline、source を変更しない。
+本書は [PLAN 機構の縮退テスト設計 §3.1](./L7-plan-mechanism-retirement-test-design.md#31-s7-削除宣言同期-disposition) の S7 を具体化する。case監査は4df911ffe540e14f97d2b9b398b793693e9a7a26 / d37652b58690b0c403c6c8cabd5f1e4dabe768aaで行われ、36候補pathの内容がf8f2c4ad7e777fcf58dbbd2ea94b288641f752ddでも不変と照合した。A は本書と既存 L7 文書の参照行だけを freeze する docs-only PR、B は A merge 後の src-free 同期 PR とする。A では既存 oracle 宣言、test、citation baseline、code-size baseline、source を変更しない。
 
 §2 は同深度のcase/callee監査に基づくfile単位の処分表、§3 はoracle declarationの退役案である。物理削除・module graphは未検証であり、Bで実装前後を別途確認する。既存の宣言行は A で動かしたり複製したりしない。
 
@@ -63,7 +63,7 @@ issue: 1379
 
 ## 3. oracle declaration の退役案 (152 ID)
 
-152 IDは、実callee/契約照合で全体退役35 file＋partial Git diff fileを保持する処分と一致する宣言行であり、Aで先行削除しない。U-ISSUEBIND-001..005はcanonical issue-binding design §2-4を親が再照合し、全刺激がPLAN draft/revise/legacy frontmatterに限定、Issue #692の別契約を除外するため退役対象との判断が確定した。物理削除・module graphの結果を主張するものではない。U-PA-008はこの152件に含まれず、§2記載のtestへ移設済みである。
+152 IDは、実callee/契約照合で全体退役35 file＋partial Git diff fileを保持する処分と一致する宣言行であり、Aで先行削除しない。U-ISSUEBIND-001..005はcanonical issue-binding design §2-4を再照合し、全刺激がPLAN draft/revise/legacy frontmatterに限定、Issue #692の別契約を除外するため退役対象との判断が確定した。物理削除・module graphの結果を主張するものではない。U-PA-008はこの152件に含まれず、§2記載のtestへ移設済みである。
 
 - docs/test-design/harness/L7-issue-binding-projection-state-test-design.md: 5行
 - docs/test-design/harness/L7-unit-test-design.md: 129行
@@ -108,4 +108,4 @@ Git diff adapter の確定した部分保持: tests/plan-admission-git-diff-adap
 
 exact HEAD f8f2c4ad7e777fcf58dbbd2ea94b288641f752ddで、35全体退役fileをin-memoryで除外し、partial Git diff testは全保持したviewを作成した。canonical referencesを再構築し、canonical入力と完全一致した。baseはreferenced 2127、orphans / duplicates / staleDuplicateBaseline / undeclaredCitations / staleCitationBaseline はすべて0。35除外後はreferenced 1930、orphans 152、staleCitationBaseline 43、duplicates / staleDuplicateBaseline / undeclaredCitations は0。partial Git diff fileのoracle IDは0のため、PLAN rename assertionだけを後から除く場合もoracle参照集合は変わらない。
 
-宣言152行とcitation baselineの43 keyを同期した将来viewでは、declared 1859から1707となり、orphans / duplicates / staleDuplicateBaseline / undeclaredCitations / staleCitationBaseline の5配列はすべて0、widened baselineは312のまま (増加なし) と親の再計測が示す。別のdocs-only投影でも152宣言行を除いてcanonical declaration parserで再収集し、declared 1707・将来impact集合との完全一致・analyzer不整合0を確認した。全状態ともin-memory viewであり、物理削除・module graph検証ではない。Aではbaselineを変更しない。Bは最終assertion処分後に実状態を再計測し、実削除に対応する差分だけを反映する。code-size影響予測の4 pathは tests/frontmatter.test.ts、tests/plan-asset/sealed-lineage-local-migration.test.ts、tests/rechain-verifier.test.ts、tests/review-evidence.test.ts。citation削減数も実測と同期に基づき確定し、widenedは拡大しない。
+宣言152行とcitation baselineの43 keyを同期した将来viewでは、declared 1859から1707となり、orphans / duplicates / staleDuplicateBaseline / undeclaredCitations / staleCitationBaseline の5配列はすべて0、widened baselineは312のまま (増加なし) となった。別のdocs-only投影でも152宣言行を除いてcanonical declaration parserで再収集し、declared 1707・将来impact集合との完全一致・analyzer不整合0を確認した。全状態ともin-memory viewであり、物理削除・module graph検証ではない。Aではbaselineを変更しない。Bは最終assertion処分後に実状態を再計測し、実削除に対応する差分だけを反映する。code-size影響予測の4 pathは tests/frontmatter.test.ts、tests/plan-asset/sealed-lineage-local-migration.test.ts、tests/rechain-verifier.test.ts、tests/review-evidence.test.ts。citation削減数も実測と同期に基づき確定し、widenedは拡大しない。
