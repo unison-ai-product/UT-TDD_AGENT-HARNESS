@@ -1,7 +1,7 @@
 import { execFileSync, spawnSync } from "node:child_process";
 import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { hostname, tmpdir } from "node:os";
-import { join, relative } from "node:path";
+import { join, relative, resolve } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
 import {
   buildFullDoctorCheckDefinitions,
@@ -28,7 +28,7 @@ import { headSnapshotRoot } from "./support/workspace-roots.ts";
  */
 
 const ID = "source-preflight";
-// HEAD の観測と複製元は headSnapshotRoot() (変更できない detached HEAD) から読む。CLI は node_modules のある実行 root (snapshot runner が設定) から起動する。
+// HEAD の観測と複製元は headSnapshotRoot() (変更できない detached HEAD) から読む。CLI の path は vitest の cwd (snapshot runner が作る実行 root、node_modules あり) からの相対 resolve で組み立てる (L7 §2)。
 
 // L6 §4.2 の宣言順。FULL_DOCTOR_OUTPUT_IDS などの定数から組み立てない。
 const PREFLIGHT_IDS = [
@@ -88,7 +88,7 @@ afterAll(() => {
 function runDoctorCli(cwd: string, profile: string) {
   const run = spawnSync(
     "node",
-    [join(headSnapshotRoot(), "src", "cli.ts"), "doctor", "--profile", profile, "--json"],
+    [resolve("src", "cli.ts"), "doctor", "--profile", profile, "--json"],
     {
       cwd,
       encoding: "utf8",
