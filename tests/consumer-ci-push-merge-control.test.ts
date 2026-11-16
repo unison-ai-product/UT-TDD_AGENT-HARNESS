@@ -2,7 +2,8 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
+import { heavyAfterAll, heavyBeforeAll } from "./support/hook-bounds.ts";
 import { workspaceRead } from "./support/workspace-roots.ts";
 
 type GuardResult = { ok: boolean; findings: Array<{ code: string; evidence: string }> };
@@ -46,7 +47,7 @@ function runGuard() {
 }
 
 describe("consumer CI push merge control", () => {
-  beforeAll(() => {
+  heavyBeforeAll("git", () => {
     const fixtureParent = process.env.UT_TDD_PUSH_MERGE_FIXTURE_ROOT ?? tmpdir();
     fixtureRoot = mkdtempSync(join(fixtureParent, "ut-tdd-push-merge-control-"));
     git("init", "--quiet", "-b", "main");
@@ -72,7 +73,7 @@ describe("consumer CI push merge control", () => {
       .filter(Boolean);
   });
 
-  afterAll(() => {
+  heavyAfterAll("teardown", () => {
     if (fixtureRoot) rmSync(fixtureRoot, { recursive: true, force: true });
   });
 

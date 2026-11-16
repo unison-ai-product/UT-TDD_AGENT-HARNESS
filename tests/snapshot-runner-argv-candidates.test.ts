@@ -3,7 +3,8 @@ import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
+import { heavyAfterAll, heavyBeforeAll } from "./support/hook-bounds.ts";
 import {
   expectNoForbiddenSnapshotStages,
   isSnapshotResolverGitRead,
@@ -280,7 +281,7 @@ const unknownOptionProbes = new Map<string, RunnerProbe>();
 let validVitestOptionProbe: RunnerProbe;
 
 describe("snapshot runner argv candidates (#1469)", () => {
-  beforeAll(() => {
+  heavyBeforeAll(["db", 180_000], () => {
     fixtureRoot = mkdtempSync(join(tmpdir(), "ut-tdd-argv-preload-"));
     preloadPath = join(fixtureRoot, "spawn-intercept-preload.cjs");
     writeFileSync(
@@ -422,9 +423,9 @@ describe("snapshot runner argv candidates (#1469)", () => {
     for (const testCase of SUPPORTED_ARGUMENT_CASES) {
       supportedArgumentProbes.set(testCase.key, runFakeRunnerProbe(testCase.args, testCase.key));
     }
-  }, 180_000);
+  });
 
-  afterAll(() => {
+  heavyAfterAll("teardown", () => {
     if (fixtureRoot) removeTestTree(fixtureRoot);
     for (const root of fakeRunnerRoots) removeTestTree(root);
   });

@@ -17,8 +17,8 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { buildNodeGeneration } from "../src/runtime/node-bootstrap.ts";
+import { describe, expect, heavyAfterAll, heavyBeforeAll, it } from "./support/hook-bounds.ts";
 
 interface RequiredTemplateExpectation {
   readonly docTypeId: string;
@@ -256,8 +256,7 @@ describe("PR-2c release consumer V-model template writer", () => {
     if (!generation) throw new Error("release-consumer bundle was not built");
     return generation;
   }
-
-  beforeAll(async () => {
+  heavyBeforeAll("pack", async () => {
     buildRoot = mkdtempSync(join(tmpdir(), "ut-tdd-release-consumer-template-build-"));
     const candidateRevision = execFileSync("git", ["rev-parse", "HEAD"], {
       cwd: repoRoot,
@@ -268,7 +267,7 @@ describe("PR-2c release consumer V-model template writer", () => {
     generation = built;
   });
 
-  afterAll(() => {
+  heavyAfterAll("teardown", () => {
     if (buildRoot) removeTestDirectory(buildRoot);
   });
 

@@ -10,7 +10,6 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
 import {
   canonicalProjectIdentityBytes,
   loadProjectIdentityFromHead,
@@ -20,6 +19,7 @@ import {
   bootstrapProjectIdentity,
   repositoryIdentityFromOrigin,
 } from "../src/setup/project-identity-bootstrap.ts";
+import { describe, expect, heavyAfterEach, it } from "./support/hook-bounds.ts";
 import { removeTestTree } from "./support/temp-tree.ts";
 import { headSnapshotRoot } from "./support/workspace-roots.ts";
 
@@ -36,8 +36,7 @@ const expectedCandidateIds = new Set([
   "CANDIDATE-P-PROJID-002",
   "CANDIDATE-P-PROJID-003",
 ]);
-
-afterEach(() => {
+heavyAfterEach("teardown", () => {
   for (const root of fixtures.splice(0)) removeTestTree(root);
 });
 

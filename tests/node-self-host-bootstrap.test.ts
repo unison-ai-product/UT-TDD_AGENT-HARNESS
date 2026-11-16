@@ -14,8 +14,9 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, dirname, join, relative, resolve } from "node:path";
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import * as bootstrap from "../src/runtime/node-bootstrap.ts";
+import { heavyAfterAll, heavyBeforeAll } from "./support/hook-bounds.ts";
 
 const sourceTrackingObservations = vi.hoisted(() => ({ active: false, gitLsFilesCalls: 0 }));
 
@@ -171,13 +172,11 @@ function createVerificationFixture(real: bootstrap.NodeGeneration): {
 }
 
 describe("F0b sealed Node producer candidate oracles", () => {
-  beforeAll(async () => {
+  heavyBeforeAll("pack", async () => {
     rmTestDist(resolve(root, "dist"));
     generation = await build();
   });
-  afterAll(() => {
-    rmTestDist(resolve(root, "dist"));
-  });
+  heavyAfterAll("teardown", () => rmTestDist(resolve(root, "dist")));
 
   it("CAND-NODEBOOT-001/102 seals and reloads one immutable receipt", () => {
     expect(generation.receipt.subject_revision).toBe(candidate);

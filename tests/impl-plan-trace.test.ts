@@ -20,6 +20,7 @@ import {
   IMPL_PLAN_TRACE_BASELINE,
   loadImplPlanTraceInput,
 } from "../src/lint/impl-plan-trace.ts";
+import { heavyAfterAll, heavyBeforeAll } from "./support/hook-bounds.ts";
 import { removeTestTree } from "./support/temp-tree.ts";
 import { headSnapshotRoot } from "./support/workspace-roots.ts";
 
@@ -192,7 +193,7 @@ describe("Impl-Plan-Trace module ownership candidates (U-IPT-007..011)", () => {
   let mutationRoot = "";
   let mutationInput: ReturnType<typeof loadImplPlanTraceInput>;
 
-  beforeAll(() => {
+  heavyBeforeAll("git", () => {
     for (const root of [moduleOwnerRoot, unownedModuleRoot, planOnlyRoot, topLevelRoot]) {
       expect(existsSync(join(root, "src"))).toBe(true);
       expect(existsSync(join(root, "docs/plans/PLAN-fixture.md"))).toBe(root === planOnlyRoot);
@@ -233,7 +234,7 @@ describe("Impl-Plan-Trace module ownership candidates (U-IPT-007..011)", () => {
     expect(mutationInput.tracedPaths.size).toBeGreaterThan(0);
   });
 
-  afterAll(() => {
+  heavyAfterAll("teardown", () => {
     for (const root of [moduleOwnerRoot, unownedModuleRoot, planOnlyRoot, topLevelRoot]) {
       removeTestTree(root);
     }

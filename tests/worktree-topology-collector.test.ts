@@ -2,7 +2,7 @@ import { execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, realpathSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { analyzeWorktreeTopology } from "../src/runtime/worktree-topology.ts";
 import {
   collectWorktreeTopology,
@@ -11,6 +11,7 @@ import {
   observeTopologyPath,
 } from "../src/runtime/worktree-topology-collector.ts";
 import { gitTextTrimmedWindowsHidden as git } from "./support/git.ts";
+import { heavyAfterEach } from "./support/hook-bounds.ts";
 import { removeTestTree } from "./support/temp-tree.ts";
 
 const roots: string[] = [];
@@ -55,7 +56,7 @@ function result(stdout: string, status = 0): GitCommandResult {
   return { status, stdout, stderr: status === 0 ? "" : "fatal: fixture failure" };
 }
 
-afterEach(() => {
+heavyAfterEach("teardown", () => {
   for (const cleanup of cleanups.splice(0)) cleanup();
   for (const root of roots.splice(0)) removeTestTree(root);
 });

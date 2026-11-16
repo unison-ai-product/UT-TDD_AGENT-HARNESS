@@ -20,10 +20,10 @@ import {
 import { tmpdir } from "node:os";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { gunzipSync } from "node:zlib";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { stringify } from "yaml";
 import { projectTrackedTeamBlob } from "../src/setup/authoring-template-inventory.ts";
 import * as setupApi from "../src/setup/index.ts";
+import { describe, expect, heavyAfterAll, heavyBeforeAll, it } from "./support/hook-bounds.ts";
 
 const installerExecutionRoot = resolve(process.cwd());
 
@@ -1107,12 +1107,11 @@ describe("Pack consumer runtime release producer contract", () => {
 
   describe("CANDIDATE-U-PACKRT-012: binds producer channel selection to the tag and rejects v1", () => {
     let fixture: Awaited<ReturnType<typeof createPackrt012Fixture>> | undefined;
-
-    beforeAll(async () => {
+    heavyBeforeAll("pack", async () => {
       fixture = await createPackrt012Fixture();
     });
 
-    afterAll(() => {
+    heavyAfterAll("teardown", () => {
       if (fixture) rmSync(fixture.root, { recursive: true, force: true });
     });
 
@@ -1317,11 +1316,11 @@ describe("Pack consumer runtime release producer contract", () => {
 describe("Pack consumer runtime release producer byte and fail-close oracles", () => {
   let fixture: ProducerFixture;
 
-  beforeAll(async () => {
+  heavyBeforeAll("pack", async () => {
     fixture = await createProducerFixture();
   });
 
-  afterAll(() => {
+  heavyAfterAll("teardown", () => {
     if (fixture) rmSync(fixture.root, { recursive: true, force: true });
   });
 
@@ -1586,11 +1585,11 @@ describe("Pack consumer runtime release producer byte and fail-close oracles", (
 describe("Pack consumer runtime release installer", () => {
   let fixture: RuntimeInstallerFixture;
 
-  beforeAll(async () => {
+  heavyBeforeAll(["pack", 120_000], async () => {
     fixture = await createRuntimeInstallerFixture();
-  }, 120_000);
+  });
 
-  afterAll(() => {
+  heavyAfterAll("teardown", () => {
     if (fixture) removeInstallerFixtureTree(fixture.root);
   });
 
