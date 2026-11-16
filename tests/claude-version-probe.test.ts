@@ -33,7 +33,7 @@ function probe(pathValue: string, extra: Record<string, string | undefined> = {}
 }
 
 describe("Claude Code version probe (Issue #1674 / #1675)", () => {
-  it.fails("CANDIDATE-U-CCVER-009 (a) does not run decoys from cwd, empty, dot or relative PATH entries", () => {
+  it.fails("CANDIDATE-U-CCVER-009 does not run decoys from cwd, empty, dot or relative PATH entries, nor a path with a percent sign", () => {
     const root = fixtureDir();
     const decoy = join(root, "decoy");
     const fake = join(root, "fake");
@@ -73,20 +73,17 @@ describe("Claude Code version probe (Issue #1674 / #1675)", () => {
     });
     expect(readInvocations(decoy)).toEqual([]);
     expect(readInvocations(join(decoy, "rel"))).toEqual([]);
-  }, 60_000);
-
-  failsOn(IS_WINDOWS)(
-    "CANDIDATE-U-CCVER-009 (b) does not run a candidate whose path contains a percent sign",
-    () => {
-      const dir = fixtureDir("utccver%UT_TDD_UNDEFINED_1674%");
-      writeFakeClaude(dir, { version: "2.1.318" });
-      expect(probe(dir, { UT_TDD_UNDEFINED_1674: undefined })).toEqual({
+    if (IS_WINDOWS) {
+      // (b) 名前に %VAR% を含む dir の候補は実行しない。
+      const pct = fixtureDir("utccver%UT_TDD_UNDEFINED_1674%");
+      writeFakeClaude(pct, { version: "2.1.318" });
+      expect(probe(pct, { UT_TDD_UNDEFINED_1674: undefined })).toEqual({
         kind: "found",
         version: null,
       });
-      expect(readInvocations(dir)).toEqual([]);
-    },
-  );
+      expect(readInvocations(pct)).toEqual([]);
+    }
+  }, 60_000);
 
   failsOn(IS_WINDOWS)(
     "CANDIDATE-U-CCVER-010 runs a cmd shim under a dir with spaces and symbols through an absolute ComSpec",
