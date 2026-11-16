@@ -12,7 +12,6 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { afterAll, describe, expect, it } from "vitest";
 import { checkG9SystemWorkflow, checkG10UxWorkflow } from "../src/doctor/workflow-quality.ts";
 import {
   analyzeLayerPairGate,
@@ -33,6 +32,7 @@ import {
   loadCompiledRightArmRegistry,
   VMODEL_CONTRACT_PATH,
 } from "../src/vmodel-contract/adapters/yaml-contract-loader.ts";
+import { describe, expect, heavyAfterAll, it } from "./support/hook-bounds.ts";
 
 const GATE_ASSETS = [
   "docs/governance/gate-design.md",
@@ -1164,8 +1164,7 @@ function makeWritableTree(path: string): void {
     for (const entry of readdirSync(path)) makeWritableTree(join(path, entry));
   }
 }
-
-afterAll(() => {
+heavyAfterAll("teardown", () => {
   for (const root of roots) {
     makeWritableTree(root);
     rmSync(root, { recursive: true, force: true });

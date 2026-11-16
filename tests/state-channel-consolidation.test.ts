@@ -10,7 +10,6 @@
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
-  chmodSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -42,6 +41,8 @@ import { readMemory, writeMemory } from "../src/memory/service.ts";
 import { buildClaudeProviderReviewInboxEntry } from "../src/runtime/claude-provider-envelope.ts";
 import { resolveProjectMemoryRoot } from "../src/runtime/project-memory-root.ts";
 import { defaultHarnessDbPath, openReadOnlyHarnessDb } from "../src/state-db/index.ts";
+import { heavyAfterAll, heavyBeforeAll } from "./support/hook-bounds.ts";
+import { denyDirectoryRead, restoreDirectoryRead } from "./support/permission-denied-fixture.ts";
 import { ensureTrackedProjectIdentity } from "./support/project-identity-fixture.ts";
 import { removeTestTree } from "./support/temp-tree.ts";
 
@@ -1728,7 +1729,7 @@ describe("Issue #1062: runtime notifications are memory-free", () => {
       let permissionMayBeConfigured = false;
       let notificationResult: ReturnType<typeof runCli> | undefined;
       const protectedBytes = "permission-denied memory fixture\n";
-      beforeAll(() => {
+      heavyBeforeAll("git", () => {
         const setupRoot = mkdtempSync(join(tmpdir(), "ut-tdd-state-channel-"));
         const setupMemoryPath = join(setupRoot, ".ut-tdd", "memory");
         const setupMemoryFile = join(setupMemoryPath, "protected.md");
@@ -1740,25 +1741,10 @@ describe("Issue #1062: runtime notifications are memory-free", () => {
         mkdirSync(setupMemoryPath, { recursive: true });
         writeFileSync(setupMemoryFile, protectedBytes);
 
-        if (process.platform === "win32") {
-          // Set the cleanup flag first: even a partially applied ACL is reset by
-          // afterAll, and setup failures cannot be swallowed by `it.fails`.
-          permissionMayBeConfigured = true;
-          const deny = spawnSync(
-            "icacls",
-            [setupMemoryPath, "/deny", `${process.env.USERNAME}:(OI)(CI)(RX)`, "/T", "/C"],
-            {
-              encoding: "utf8",
-              windowsHide: true,
-            },
-          );
-          expect(deny.error?.message ?? "", "icacls deny must start").toBe("");
-          expect(deny.signal, "icacls deny must exit normally").toBeNull();
-          expect(deny.status, String(deny.stderr)).toBe(0);
-        } else {
-          permissionMayBeConfigured = true;
-          chmodSync(setupMemoryPath, 0);
-        }
+        // Set the cleanup flag first: even a partially applied ACL is reset by
+        // afterAll, and setup failures cannot be swallowed by `it.fails`.
+        permissionMayBeConfigured = true;
+        denyDirectoryRead(setupMemoryPath);
 
         expect(
           () => readdirSync(setupMemoryPath),
@@ -1777,20 +1763,10 @@ describe("Issue #1062: runtime notifications are memory-free", () => {
         expect(notificationResult.status, "CLI must exit normally").not.toBeNull();
       });
 
-      afterAll(() => {
+      heavyAfterAll("teardown", () => {
         try {
           if (memoryPath && memoryFile && permissionMayBeConfigured) {
-            if (process.platform === "win32") {
-              const reset = spawnSync("icacls", [memoryPath, "/reset", "/T", "/C"], {
-                encoding: "utf8",
-                windowsHide: true,
-              });
-              expect(reset.error?.message ?? "", "icacls reset must start").toBe("");
-              expect(reset.signal, "icacls reset must exit normally").toBeNull();
-              expect(reset.status, reset.stderr).toBe(0);
-            } else {
-              chmodSync(memoryPath, 0o700);
-            }
+            restoreDirectoryRead(memoryPath);
             expect(readFileSync(memoryFile, "utf8")).toBe(protectedBytes);
           }
         } finally {

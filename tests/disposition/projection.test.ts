@@ -13,7 +13,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, sep } from "node:path";
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { GitAuthoringProvenance } from "../../src/disposition/adapters/git-authoring-provenance.ts";
 import { loadTrackedCatalogInput } from "../../src/disposition/adapters/tracked-vmodel-loader.ts";
 import { DocumentDispositionCatalog } from "../../src/disposition/domain/document-disposition-catalog.ts";
@@ -21,6 +21,12 @@ import { openHarnessDb } from "../../src/state-db/index.ts";
 import { migrate } from "../../src/state-db/migration.ts";
 import { rebuildHarnessDb } from "../../src/state-db/projection-writer.ts";
 import { projectVmodelAuthoring } from "../../src/state-db/vmodel-projections.ts";
+import {
+  heavyAfterAll,
+  heavyAfterEach,
+  heavyBeforeAll,
+  heavyBeforeEach,
+} from "../support/hook-bounds.ts";
 import { headSnapshotRoot } from "../support/workspace-roots.ts";
 
 const tables = [
@@ -76,14 +82,14 @@ describe("I-DISP-001 V-model projection", () => {
     let originalDisposition: string;
     let originalSourceTargets: string;
 
-    beforeAll(() => {
+    heavyBeforeAll(["db", 120000], () => {
       tempRoot = createDocsGitFixture({ ensureTracked: targetPath });
       negativeRoot = createDocsGitFixture({ ensureTracked: targetPath });
       originalDisposition = readFileSync(join(negativeRoot, dispositionPath), "utf8");
       originalSourceTargets = readFileSync(join(negativeRoot, sourceTargetPath), "utf8");
-    }, 120000); // 54s measured, bounded per #1063
+    }); // 54s measured, bounded per #1063
 
-    afterAll(() => {
+    heavyAfterAll("teardown", () => {
       rmSync(tempRoot, { recursive: true, force: true });
       rmSync(negativeRoot, { recursive: true, force: true });
     });
@@ -120,7 +126,7 @@ describe("I-DISP-001 V-model projection", () => {
     });
 
     describe("ID/slot-only binding", () => {
-      beforeEach(() => {
+      heavyBeforeEach("db", () => {
         prepareFixtureCatalogEdits(negativeRoot, [
           { path: dispositionPath, rowId: "ZIP-DOC-001", cells: { 4: "`DOC-L0-CHARTER`" } },
           { path: dispositionPath, rowId: "ZIP-DOC-071", cells: { 4: "`DOC-L0-CHARTER`" } },
@@ -137,7 +143,7 @@ describe("I-DISP-001 V-model projection", () => {
         ]);
       });
 
-      afterEach(() =>
+      heavyAfterEach("db", () =>
         restoreFixtureCatalog(
           negativeRoot,
           dispositionPath,
@@ -153,7 +159,7 @@ describe("I-DISP-001 V-model projection", () => {
     });
 
     describe("different tracked path", () => {
-      beforeEach(() => {
+      heavyBeforeEach("db", () => {
         prepareFixtureCatalogEdits(
           negativeRoot,
           [
@@ -174,7 +180,7 @@ describe("I-DISP-001 V-model projection", () => {
         );
       });
 
-      afterEach(() =>
+      heavyAfterEach("db", () =>
         restoreFixtureCatalog(
           negativeRoot,
           dispositionPath,

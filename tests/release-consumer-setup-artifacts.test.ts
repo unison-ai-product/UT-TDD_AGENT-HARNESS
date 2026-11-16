@@ -10,13 +10,14 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { delimiter, join, resolve } from "node:path";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { parse as parseYaml } from "yaml";
 import { loadTemplates, nodeSetupDeps, runSetup } from "../src/setup/index.ts";
 import { defaultHarnessDbPath, openHarnessDb } from "../src/state-db/index.ts";
 import { harnessDbStatus } from "../src/state-db/maintenance.ts";
 import * as projectionWriter from "../src/state-db/projection-writer.ts";
 import * as tokenTracker from "../src/state-db/token-tracker.ts";
+import { heavyAfterEach } from "./support/hook-bounds.ts";
 import { removeTestTree } from "./support/temp-tree.ts";
 
 const cliPath = resolve("src/cli.ts");
@@ -140,7 +141,7 @@ function assertWorkflowConsumerPackageGuards(source: string): void {
   }
 }
 
-afterEach(() => {
+heavyAfterEach("teardown", () => {
   vi.restoreAllMocks();
   for (const root of fixtures.splice(0)) removeTestTree(root);
 });

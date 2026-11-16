@@ -2,7 +2,8 @@ import { execFileSync, type SpawnSyncReturns, spawnSync } from "node:child_proce
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
+import { heavyAfterAll, heavyBeforeAll } from "./support/hook-bounds.ts";
 import { workspaceRead } from "./support/workspace-roots.ts";
 
 type GuardResult = {
@@ -311,15 +312,15 @@ function prepareCase018(): void {
   });
 }
 
-beforeAll(() => {
+heavyBeforeAll(["git", 180_000], () => {
   prepareCases006To009();
   prepareCase010();
   prepareCases015And016();
   prepareCase017();
   prepareCase018();
-}, 180_000);
+});
 
-afterAll(() => {
+heavyAfterAll("teardown", () => {
   while (fixtures.length > 0) fixtures.pop()?.cleanup();
 });
 

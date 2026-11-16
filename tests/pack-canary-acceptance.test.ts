@@ -19,8 +19,8 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import ts from "typescript";
-import { afterEach, describe, expect, it } from "vitest";
 import { resolveDelegationRouting } from "../src/team/delegation-routing.ts";
+import { describe, expect, heavyAfterEach, it } from "./support/hook-bounds.ts";
 import {
   createCanaryFixture,
   isolatedCanaryEnv,
@@ -198,8 +198,7 @@ const commentUrl =
 const agentCommentUrl =
   "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/946#issuecomment-9460000000";
 const sha = (v: string | Buffer) => `sha256:${createHash("sha256").update(v).digest("hex")}`;
-
-afterEach(() => {
+heavyAfterEach("teardown", () => {
   for (const root of tempRoots.splice(0)) {
     if (root.startsWith(join(tmpdir(), "ut-tdd-packcanary-pr1-"))) removeCanaryFixtureTree(root);
     else removeTestTree(root);

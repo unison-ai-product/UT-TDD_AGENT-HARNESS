@@ -11,7 +11,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { stringify } from "yaml";
 import {
   deriveArtifactInventoryDigest,
@@ -27,6 +27,7 @@ import {
   digestConsumerRuntimeBytes,
   digestMaterializedReleaseEntries,
 } from "../src/setup/index.ts";
+import { heavyAfterAll, heavyBeforeAll } from "./support/hook-bounds.ts";
 
 // L7 §2: no source line may match the email shape, so addresses are joined at runtime.
 const at = "@";
@@ -181,9 +182,9 @@ beforeAll(() => {
   scratchRoot = mkdtempSync(join(tmpdir(), "privacy-scan-integration-"));
 });
 
-afterAll(() => {
+heavyAfterAll(["teardown", 120000], () => {
   if (scratchRoot) rmSync(scratchRoot, { recursive: true, force: true });
-}, 120000); // afterAll >10s on Windows (file 479s, hook unmeasured), bounded per #1063
+}); // afterAll >10s on Windows (file 479s, hook unmeasured), bounded per #1063
 
 describe("privacy scan candidate oracles (distribution)", () => {
   it("U-PRIVSCAN-014: distribution stops before writing when the Pack scan fails", () => {
@@ -293,14 +294,14 @@ describe("privacy scan candidate oracles (distribution)", () => {
     let packDir = "";
     let releaseDir = "";
 
-    beforeAll(() => {
+    heavyBeforeAll(["git", 300_000], () => {
       homes.invalid = makeHome("l-home-invalid", `# ${commentMarker}\n${D}\n${invalidEntry}\n`);
       homes.hit = makeHome("l-home-hit", `# ${commentMarker}\n${D}\n`);
       source = cleanSource("l-source", `mentions ${D}`);
       packDir = join(scratchRoot, "l-pack");
       releaseDir = join(scratchRoot, "l-release");
       mkdirSync(packDir, { recursive: true });
-    }, 300_000);
+    });
 
     const cases = (["invalid", "hit"] as const).flatMap((state) =>
       [true, false].flatMap((json) =>
