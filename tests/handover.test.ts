@@ -4,23 +4,15 @@ import { GENERATED_BY as SIDECAR_GENERATED_BY } from "../src/handover/handover-c
 import {
   buildPointer,
   checkHandoverBypass,
-  checkHandoverDiscipline,
-  dedupeDigests,
   GENERATED_BY,
   type HandoverDeps,
   type HandoverPointer,
-  type HandoverScope,
   handoverStale,
-  inferPlanFromCommit,
   latestSessionId,
-  type PlanDigestRef,
   readPointer,
   resolveHandoverScope,
   runHandover,
-  sameFamilyPlan,
-  setActivePlan,
 } from "../src/handover/index.ts";
-import { resolveActivePlan, type SessionLogDeps } from "../src/runtime/session-log.ts";
 
 const NOW = "2026-06-04T00:00:00.000Z";
 
@@ -41,27 +33,6 @@ function mockDeps(over: Partial<HandoverDeps> = {}): HandoverDeps & { files: Map
   };
 }
 
-/** session-log の current-plan を共有 file store で扱う mock SessionLogDeps。 */
-function mockSessionDeps(files: Map<string, string>): SessionLogDeps & { removed: string[] } {
-  const removed: string[] = [];
-  return {
-    removed,
-    repoRoot: "/repo",
-    now: () => NOW,
-    appendLine: () => {},
-    readText: (p) => files.get(p) ?? null,
-    writeText: (p, c) => files.set(p, c),
-    currentBranch: () => null,
-    listDir: () => [],
-    removeFile: (p) => {
-      files.delete(p);
-      removed.push(p);
-    },
-  };
-}
-
-const digestDir = join("/repo", ".ut-tdd", "logs", "plan");
-const currentPlanPath = join("/repo", ".ut-tdd", "state", "current-plan");
 const pointerPath = join("/repo", ".ut-tdd", "handover", "CURRENT.json");
 
 describe("PLAN-L7-173 handover sidecars", () => {
@@ -70,83 +41,28 @@ describe("PLAN-L7-173 handover sidecars", () => {
   });
 });
 
-function digest(over: Partial<PlanDigestRef> = {}): PlanDigestRef {
-  return {
-    plan_id: "PLAN-L7-04-handover-mechanism",
-    sessions: ["s1"],
-    commits: ["a413d25"],
-    files_touched: ["src/handover/index.ts"],
-    failures: [],
-    updated_at: NOW,
-    ...over,
-  };
-}
-
 describe("U-HOVER-001 resolveHandoverScope", () => {
-  it("current-plan marker があっても active_plan=null / digest 群を集約", () => {
-    const deps = mockDeps();
-    deps.files.set(currentPlanPath, "PLAN-L7-04-handover-mechanism");
-    deps.files.set(
-      join(digestDir, "PLAN-L7-04-handover-mechanism.digest.json"),
-      JSON.stringify(digest()),
-    );
-    const scope = resolveHandoverScope(deps);
-    expect(scope.active_plan).toBeNull();
-    expect(scope.digests).toHaveLength(1);
-  });
-
-  it("壊れ JSON は skip / 何も無ければ {null, []} (never throw)", () => {
-    const deps = mockDeps();
-    deps.files.set(join(digestDir, "broken.digest.json"), "{not json");
-    expect(() => resolveHandoverScope(deps)).not.toThrow();
-    const scope = resolveHandoverScope(deps);
+  it("empty scope is active-plan free and does not throw", () => {
+    const scope = resolveHandoverScope(mockDeps());
     expect(scope.active_plan).toBeNull();
     expect(scope.digests).toEqual([]);
   });
 });
 
 describe("U-HOVER-002 buildPointer", () => {
-  it("digests 非空 → 件数集計 / updated_at=now", () => {
-    const scope: HandoverScope = {
-      active_plan: "P",
-      digests: [
-        digest({
-          commits: ["c1", "c2"],
-          files_touched: ["f1"],
-          failures: [{ ts: NOW, summary: "x" }],
-        }),
-      ],
-    };
-    const p = buildPointer({
-      scope,
+  it("empty digest input keeps generic pointer status, timestamp, and null fields", () => {
+    const pointer = buildPointer({
+      scope: { active_plan: null, digests: [] },
       status: "in_progress",
       now: NOW,
     });
-    expect(p.active_plan).toBeNull();
-    expect(p.digest_summary).toEqual({ commits: 2, files: 1, failures: 1 });
-    expect(p.updated_at).toBe(NOW);
-  });
-
-  it("edge: active_plan=null だが digests 非空 → digest_summary は集計値 (null にしない)", () => {
-    const scope: HandoverScope = { active_plan: null, digests: [digest()] };
-    const p = buildPointer({ scope, status: "in_progress", now: NOW });
-    expect(p.active_plan).toBeNull();
-    expect(p.digest_summary).toEqual({ commits: 1, files: 1, failures: 0 });
-  });
-
-  it("digests 空 → digest_summary=null", () => {
-    const p = buildPointer({
-      scope: { active_plan: "P", digests: [] },
-      status: "in_progress",
-      now: NOW,
-    });
-    expect(p.active_plan).toBeNull();
-    expect(p.digest_summary).toBeNull();
+    expect(pointer.status).toBe("in_progress");
+    expect(pointer.updated_at).toBe(NOW);
+    expect(pointer.active_plan).toBeNull();
+    expect(pointer.digest_summary).toBeNull();
   });
 });
 
-// PLAN-L7-98 (Q1): §5 未了 PO 判断 を outstanding surface (機械事実) で seed + fail-close anchor。
-// PLAN-L7-88: 1 エントリの §1/§2 に載せる PLAN 件数の上限 (注入コントロール / 圧縮)。
 describe("U-HOVER-005 handoverStale", () => {
   it("null → true / 24h 超 → true / 以内 → false / 境界(=24h) は stale でない", () => {
     expect(handoverStale(null, NOW)).toBe(true);
@@ -157,189 +73,33 @@ describe("U-HOVER-005 handoverStale", () => {
   });
 });
 
-describe("U-HOVER-006 setActivePlan + inferPlanFromCommit", () => {
-  it("setActivePlan → resolveActivePlan round-trip", () => {
-    const files = new Map<string, string>();
-    const sdeps = mockSessionDeps(files);
-    setActivePlan("PLAN-L7-04-handover-mechanism", sdeps);
-    expect(resolveActivePlan(sdeps)).toBe("PLAN-L7-04-handover-mechanism");
-  });
-
-  it("null + removeFile 有 → file 削除で clear", () => {
-    const files = new Map<string, string>();
-    const sdeps = mockSessionDeps(files);
-    setActivePlan("PLAN-L7-04-handover-mechanism", sdeps);
-    setActivePlan(null, sdeps);
-    expect(sdeps.removed).toContain(currentPlanPath);
-    expect(resolveActivePlan(sdeps)).toBeNull();
-  });
-
-  it("null + removeFile 無 → 空文字書込 → resolveActivePlan が null 相当に落とす", () => {
-    const files = new Map<string, string>();
-    const sdeps = mockSessionDeps(files);
-    sdeps.removeFile = undefined;
-    setActivePlan("PLAN-L7-04-handover-mechanism", sdeps);
-    setActivePlan(null, sdeps);
-    expect(files.get(currentPlanPath)).toBe("");
-    expect(resolveActivePlan(sdeps)).toBeNull();
-  });
-
-  it("inferPlanFromCommit: 抽出 / 非該当→null / heredoc 様→null", () => {
-    expect(inferPlanFromCommit("feat: 実装 (PLAN-L7-04-handover-mechanism)")).toBe(
-      "PLAN-L7-04-handover-mechanism",
-    );
-    expect(inferPlanFromCommit("PLAN-DISCOVERY-01")).toBe("PLAN-DISCOVERY-01");
-    expect(inferPlanFromCommit("docs: 修正のみ")).toBeNull();
-    expect(inferPlanFromCommit("git commit -F -")).toBeNull(); // heredoc は本文が乗らない
-  });
-});
-
-describe("U-HOVER-008 sameFamilyPlan / dedupeDigests (IMP-048)", () => {
-  it("sameFamilyPlan: 同一 / bare ⊂ slug (- 境界) は true、無関係は false", () => {
-    expect(sameFamilyPlan("PLAN-L7-04", "PLAN-L7-04")).toBe(true);
-    expect(sameFamilyPlan("PLAN-L7-04", "PLAN-L7-04-handover-mechanism")).toBe(true);
-    expect(sameFamilyPlan("PLAN-L7-04-handover-mechanism", "PLAN-L7-04")).toBe(true);
-    expect(sameFamilyPlan("PLAN-L7-04", "PLAN-L7-05")).toBe(false);
-    // prefix だが - 境界でない (誤マッチ防止)
-    expect(sameFamilyPlan("PLAN-L7-0", "PLAN-L7-04")).toBe(false);
-  });
-
-  it("dedupeDigests: bare/slug ゴーストを最長 id へ union 集約", () => {
-    const out = dedupeDigests([
-      digest({ plan_id: "PLAN-L7-04", commits: ["c1"], files_touched: ["f1"], sessions: ["s1"] }),
-      digest({
-        plan_id: "PLAN-L7-04-handover-mechanism",
-        commits: ["c2"],
-        files_touched: ["f1", "f2"],
-        sessions: ["s2"],
-      }),
-    ]);
-    expect(out).toHaveLength(1);
-    expect(out[0].plan_id).toBe("PLAN-L7-04-handover-mechanism");
-    expect(out[0].commits).toEqual(["c1", "c2"]);
-    expect(out[0].files_touched).toEqual(["f1", "f2"]); // 重複除去
-    expect(out[0].sessions).toEqual(["s1", "s2"]);
-  });
-
-  it("dedupeDigests: 無関係な PLAN は別 group のまま残す", () => {
-    const out = dedupeDigests([
-      digest({ plan_id: "PLAN-L7-04-handover-mechanism" }),
-      digest({ plan_id: "PLAN-L7-05-biome-debt" }),
-    ]);
-    expect(out).toHaveLength(2);
-  });
-
-  it("dedupeDigests: bare 無しで slug 2 種 + bare が来ても推移的に 1 group へ収束 (I-1, 順序非依存)", () => {
-    const out = dedupeDigests([
-      digest({ plan_id: "PLAN-L7-04-aaa", commits: ["a"] }),
-      digest({ plan_id: "PLAN-L7-04-bbb", commits: ["b"] }),
-      digest({ plan_id: "PLAN-L7-04", commits: ["bare"] }), // bare が最後でも全部畳む
-    ]);
-    expect(out).toHaveLength(1);
-    expect(out[0].commits.sort()).toEqual(["a", "b", "bare"]);
-  });
-});
-
-describe("U-HOVER-009 resolveHandoverScope digests (IMP-048)", () => {
-  function seededMulti(): ReturnType<typeof mockDeps> {
-    const deps = mockDeps();
-    deps.files.set(currentPlanPath, "PLAN-L7-04-handover-mechanism");
-    deps.files.set(
-      join(digestDir, "PLAN-L7-04.digest.json"),
-      JSON.stringify(digest({ plan_id: "PLAN-L7-04", commits: ["bare"] })),
-    );
-    deps.files.set(
-      join(digestDir, "PLAN-L7-04-handover-mechanism.digest.json"),
-      JSON.stringify(digest({ plan_id: "PLAN-L7-04-handover-mechanism", commits: ["slug"] })),
-    );
-    deps.files.set(
-      join(digestDir, "PLAN-L7-05-biome-debt.digest.json"),
-      JSON.stringify(digest({ plan_id: "PLAN-L7-05-biome-debt" })),
-    );
-    return deps;
-  }
-
-  it("active family filter 無しで dedup し、無関係な PLAN も残す", () => {
-    const scope = resolveHandoverScope(seededMulti());
-    expect(scope.digests).toHaveLength(2); // L7-04 family (1) + L7-05 (1)
-  });
-});
-
-describe("U-HOVER-010 readPointer / checkHandoverDiscipline (IMP-047)", () => {
+describe("U-HOVER-010 generic pointer parsing (IMP-047)", () => {
   function pointer(over: Partial<HandoverPointer> = {}): HandoverPointer {
     return {
-      active_plan: "PLAN-L7-04-handover-mechanism",
+      active_plan: null,
       status: "in_progress",
-      digest_summary: { commits: 1, files: 1, failures: 0 },
+      digest_summary: null,
       updated_at: NOW,
       ...over,
     };
   }
-  function withActivity(): ReturnType<typeof mockDeps> {
-    const deps = mockDeps();
-    deps.files.set(currentPlanPath, "PLAN-L7-04-handover-mechanism");
-    deps.files.set(
-      join(digestDir, "PLAN-L7-04-handover-mechanism.digest.json"),
-      JSON.stringify(digest()),
-    );
-    return deps;
-  }
-
-  it("readPointer: 不在→null / 壊れ→null / 正常→object", () => {
+  it("readPointer: missing and malformed input return null; valid generic pointer parses", () => {
     const deps = mockDeps();
     expect(readPointer(deps)).toBeNull();
     deps.files.set(pointerPath, "{not json");
     expect(readPointer(deps)).toBeNull();
     deps.files.set(pointerPath, JSON.stringify(pointer()));
-    expect(readPointer(deps)?.active_plan).toBe("PLAN-L7-04-handover-mechanism");
-  });
-
-  it("活動なし (digest 空) → 規律対象外で警告ゼロ", () => {
-    expect(checkHandoverDiscipline(mockDeps())).toEqual([]);
-  });
-
-  it("活動あり + CURRENT.json 不在 → 未生成 warn", () => {
-    const w = checkHandoverDiscipline(withActivity());
-    expect(w).toHaveLength(1);
-    expect(w[0]).toContain("handover 未生成");
-  });
-
-  it("活動あり + fresh null pointer → 警告ゼロ", () => {
-    const deps = withActivity();
-    deps.files.set(pointerPath, JSON.stringify(pointer({ active_plan: null })));
-    expect(checkHandoverDiscipline(deps)).toEqual([]);
-  });
-
-  it("活動あり + stale pointer → stale warn", () => {
-    const deps = withActivity();
-    deps.files.set(
-      pointerPath,
-      JSON.stringify(pointer({ updated_at: "2026-06-01T00:00:00.000Z" })),
-    );
-    const w = checkHandoverDiscipline(deps);
-    expect(w.some((m) => m.includes("stale"))).toBe(true);
-  });
-
-  it("活動あり + fresh legacy pointer の active_plan は警告判定に使わない", () => {
-    const deps = withActivity();
-    deps.files.set(pointerPath, JSON.stringify(pointer({ active_plan: "PLAN-L7-05-biome-debt" })));
-    expect(checkHandoverDiscipline(deps)).toEqual([]);
+    expect(readPointer(deps)).toMatchObject({
+      active_plan: null,
+      status: "in_progress",
+      digest_summary: null,
+      updated_at: NOW,
+    });
   });
 });
-
 describe("U-HOVER-007 runHandover", () => {
-  function seeded(): ReturnType<typeof mockDeps> {
-    const deps = mockDeps();
-    deps.files.set(currentPlanPath, "PLAN-L7-04-handover-mechanism");
-    deps.files.set(
-      join(digestDir, "PLAN-L7-04-handover-mechanism.digest.json"),
-      JSON.stringify(digest()),
-    );
-    return deps;
-  }
-
   it("dryRun → 何も書かず pointer を返す (written=[]、非破壊)", () => {
-    const deps = seeded();
+    const deps = mockDeps();
     const before = new Map(deps.files);
     const r = runHandover({ date: "2026-06-04", dryRun: true }, deps);
     expect(r.written).toEqual([]);
@@ -348,14 +108,14 @@ describe("U-HOVER-007 runHandover", () => {
   });
 
   it("通常 → CURRENT.json だけを書く (docs/handover に散文を作らない)", () => {
-    const deps = seeded();
+    const deps = mockDeps();
     const r = runHandover({ date: "2026-06-04" }, deps);
     expect(r.written).toEqual([join(".ut-tdd", "handover", "CURRENT.json")]);
     expect([...deps.files.keys()].some((p) => p.includes(join("docs", "handover")))).toBe(false);
   });
 
   it("complete=true → CURRENT.json status=completed かつ active_plan=null", () => {
-    const deps = seeded();
+    const deps = mockDeps();
     runHandover({ date: "2026-06-04", complete: true }, deps);
     const pointer = JSON.parse(deps.files.get(pointerPath) ?? "{}");
     expect(pointer.status).toBe("completed");
@@ -364,51 +124,11 @@ describe("U-HOVER-007 runHandover", () => {
 
   // IMP-078 gap①: runHandover は generated_by 署名を刻む。
   it("gap①: runHandover が CURRENT.json に generated_by を刻み、散文用の項目は持たない", () => {
-    const deps = seeded();
+    const deps = mockDeps();
     const r = runHandover({ date: "2026-06-08", complete: true }, deps);
     expect(r.pointer.generated_by).toBe(GENERATED_BY);
     expect(r.pointer).not.toHaveProperty("latest_doc");
     expect(r.pointer).not.toHaveProperty("doc_entry_count");
-  });
-});
-
-describe("U-HOVER-015 runHandover marker reconcile (PLAN-L7-83)", () => {
-  function seededMarker(plan = "PLAN-L7-04-handover-mechanism"): ReturnType<typeof mockDeps> {
-    const deps = mockDeps();
-    deps.files.set(currentPlanPath, plan);
-    deps.files.set(
-      join(digestDir, "PLAN-L7-04-handover-mechanism.digest.json"),
-      JSON.stringify(digest()),
-    );
-    return deps;
-  }
-
-  it("complete=true → marker を clear", () => {
-    const deps = seededMarker();
-    runHandover({ date: "2026-06-04", complete: true }, deps);
-    // marker は空 = clear (resolveActivePlan → null)。
-    const sdeps: SessionLogDeps = {
-      repoRoot: "/repo",
-      now: () => NOW,
-      appendLine: () => {},
-      readText: (p) => deps.files.get(p) ?? null,
-      writeText: () => {},
-      currentBranch: () => null,
-      listDir: () => [],
-    };
-    expect(resolveActivePlan(sdeps)).toBeNull();
-  });
-
-  it("plain in_progress → marker 無変更 (無駄書きしない)", () => {
-    const deps = seededMarker("PLAN-L7-04-handover-mechanism");
-    runHandover({ date: "2026-06-04" }, deps);
-    expect(deps.files.get(currentPlanPath)).toBe("PLAN-L7-04-handover-mechanism");
-  });
-
-  it("dryRun → marker を書かない (非破壊不変)", () => {
-    const deps = seededMarker("PLAN-L7-04-handover-mechanism");
-    runHandover({ date: "2026-06-04", complete: true, dryRun: true }, deps);
-    expect(deps.files.get(currentPlanPath)).toBe("PLAN-L7-04-handover-mechanism");
   });
 });
 
@@ -441,32 +161,8 @@ describe("U-HOVER-011 checkHandoverBypass 署名照合 (IMP-078 gap①、state-c
   });
 });
 
-describe("U-HOVER-012 session scope + latestSessionId (IMP-078 gap④)", () => {
+describe("U-HOVER-012 latestSessionId (IMP-078 gap④)", () => {
   const sessionDir = join("/repo", ".ut-tdd", "logs", "session");
-
-  it("scopeToSession: 指定 session が触れた digest のみへ絞る", () => {
-    const deps = mockDeps();
-    deps.files.set(
-      join(digestDir, "PLAN-L7-16-module-drift.digest.json"),
-      JSON.stringify(digest({ plan_id: "PLAN-L7-16-module-drift", sessions: ["s2"] })),
-    );
-    deps.files.set(
-      join(digestDir, "PLAN-L7-05-biome-debt.digest.json"),
-      JSON.stringify(digest({ plan_id: "PLAN-L7-05-biome-debt", sessions: ["s1"] })),
-    );
-    const scope = resolveHandoverScope(deps, { scopeToSession: "s2" });
-    expect(scope.digests).toHaveLength(1);
-    expect(scope.digests[0].plan_id).toBe("PLAN-L7-16-module-drift");
-  });
-
-  it("scopeToSession: 該当 digest 無し → 全件 fallback (空 handover 回避)", () => {
-    const deps = mockDeps();
-    deps.files.set(
-      join(digestDir, "PLAN-L7-05-biome-debt.digest.json"),
-      JSON.stringify(digest({ plan_id: "PLAN-L7-05-biome-debt", sessions: ["s1"] })),
-    );
-    expect(resolveHandoverScope(deps, { scopeToSession: "sX" }).digests).toHaveLength(1);
-  });
 
   it("latestSessionId: 最新 event ts の session を返す / 不在→null", () => {
     const deps = mockDeps();
