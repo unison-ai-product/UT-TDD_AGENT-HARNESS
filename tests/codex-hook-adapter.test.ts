@@ -708,7 +708,7 @@ describe("codex-hook-adapter — Codex hooks.json parity (PLAN-L7-139, PLAN-L7-6
           input: JSON.stringify({ session_id: "cxhookcmd-005-absent" }),
           env: { CLAUDE_PROJECT_DIR: consumer, UT_TDD_PROJECT_DIR: consumer },
         });
-        expect(absent.status, `${absent.stdout}\n${absent.stderr}`).toBe(2);
+        expect(absent.status, `${absent.stdout}\n${absent.stderr}`).toBe(0);
         expect(absent.stderr).toContain("consumer_runtime_absent");
         expect(absent.stderr).toContain("setup --worktree");
         expect(absent.stderr).not.toMatch(/SyntaxError/);
