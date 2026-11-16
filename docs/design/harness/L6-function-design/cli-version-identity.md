@@ -62,25 +62,22 @@ DbC pre は無し (**never throws**)、post は表示が「識別済みの versi
    sealed には `package.json` が無いので、override が無ければ従来どおり沈黙する。
 5. **既存 bundle (canary.6 / canary.7 など `release_tag` を持たない generation)** は launch を妨げない。`--version` は `unidentified`、
    active pointer と bundle は変更しない。update と rollback は本契約の範囲外 (`U-PACKRT-010`、#364)。
-6. **producer 側の手順 (案 P1 を推奨)**。release を切る前に `package.json` と `package-lock.json` の version を
+6. **producer 側の手順 (P1、決定済み)**。release を切る前に `package.json` と `package-lock.json` の version を
    release する version へ揃える commit を入れ、consumer runtime を作る source revision (artifact commit) でその一致を満たす。
    producer の source binding で tag の version と artifact commit の `package.json` の version の不一致を fail-close にする。
-   source checkout の `--version` が最後に切った release を指すためで、release を作るたびに 1 手順が増える。案と trade-off は下記。
+   source checkout の `--version` が最後に切った release を指すためで、release を作るたびに 1 手順が増える。決定の理由は下記。
 
-## 判断を残す点 (確定させない)
+## 決定 (control、2026-11-16、#1704)
 
-| 点 | 案 | trade-off | 推奨 |
-| --- | --- | --- | --- |
-| 識別の保存先 | A: identity に `release_tag` を追加し、実行時に `bundle-manifest.json` を読む | 既存の digest 連鎖で保護され bundle の bytes は変わらない。identity の形が変わり、旧 generation は `unidentified` になる | A |
-| | B: build 時に tag を `define` で bundle へ焼く | 実行時の読取は不要。bundle bytes と `compiled_esm_digest` が tag ごとに変わり、決定論 (`U-PACKRT-001`) の入力に tag が増える。tag は release commit 側で決まるので build 順が逆転する | |
-| 旧 generation の扱い | 1: `unidentified` のまま許容 | 既存 consumer を壊さない。表示は不完全のまま残る | 1 |
-| | 2: `release_tag` 必須にして旧 generation を `consumer_runtime_identity_mismatch` で deny | 表示は常に識別済み。canary.6/7 の consumer の launcher が起動しなくなり、update が未対応 (#364) なので復旧経路が無い | |
-| producer の version 整合 | P1: artifact commit の `package.json` を tag と揃える規則を fail-close にする | source の `--version` が正しくなる。release 前に bump commit が 1 本必要で、producer が拒否するケースが増える | P1 |
-| | P2: 整合を要求せず、sealed の表示だけを tag にする | producer の手順は不変。source の `--version` は release とずれ続ける (#867 の source 側の症状が残る) | |
-| `unidentified` の文字列 | `unidentified` | semver として解釈されず比較に混ざらない。機械が読む出力には向かない | `unidentified` |
-| | `0.0.0-unidentified` | version 形式を期待する consumer script が壊れない。prerelease として比較に混ざる余地が出る | |
-| sealed の update 通知 | 現状維持 (override が無ければ沈黙) | 変更が最小。sealed consumer は更新通知を受けない (#364 が持つ) | 現状維持 |
-| | `repository.url` を build で bundle へ埋め込む | 通知が出る。bundle bytes が変わり、remote の正本が増える | |
+いずれも高影響境界に当たらず、既存の契約 (digest で束縛した identity、`U-PACKRT-001` の決定論、#364 の update 未対応) から一意に決まるため、control の技術判断として確定した。
+
+| 点 | 採った案 | 理由 (1 行) |
+| --- | --- | --- |
+| 識別の保存先 | A: installer が検証済みの `release_tag` を identity に入れて `bundle_digest` に含め、実行時は bundle 内の `bundle-manifest.json` を読む | B (build 時に `define`) は bundle bytes を tag ごとに変え、決定論 (`U-PACKRT-001`) の入力を増やすため採らない |
+| 旧 generation | 1: `release_tag` なしは `unidentified` で許容 | 必須にして deny すると、update 未対応 (#364) で復旧の経路が無い |
+| producer の version 整合 | P1: artifact commit の `package.json` / lockfile を tag と揃える規則を producer で fail-close にする。別の実装 PR | source の `--version` のずれを直す。P2 は症状が残る |
+| 表示の文字列 | `unidentified` | prerelease として比較に混ざる余地を作らない |
+| sealed の update 通知 | 現状維持 (override が無ければ沈黙) | bundle bytes と remote の正本を増やさない。通知は #364 が持つ |
 
 ## 実装 PR の変更範囲
 
