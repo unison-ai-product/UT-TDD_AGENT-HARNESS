@@ -41,8 +41,8 @@ describe("CANDIDATE-U-PLANRET-019 frozen v29 migration", () => {
       // 全 DDL が流れたこと (黙って飛ばされた DDL を通さない)。
       const countDdl = (pattern: RegExp) =>
         fixture.schemaDdls.filter((ddl) => pattern.test(ddl)).length;
-      const tableDdls = countDdl(/^\s*CREATE\s+TABLEb/i);
-      const indexDdls = countDdl(/^\s*CREATE\s+(UNIQUE\s+)?INDEXb/i);
+      const tableDdls = countDdl(/^\s*CREATE\s+TABLE\b/i);
+      const indexDdls = countDdl(/^\s*CREATE\s+(UNIQUE\s+)?INDEX\b/i);
       const objectCount = (type: "table" | "index") =>
         (
           db
