@@ -27,7 +27,7 @@ issue: 1665
 ## 2. テストレベルと fixture
 
 - **block A (純関数)**: `resolveSnapshotLockMode` / `parseSnapshotLockWaitMs` / `presenceFromKill` / `interpretSnapshotLockRead` / `classifySnapshotLockClaim` / `decideSnapshotLockStep` / `identityProbeDue` / `snapshotStageEnv` / `snapshotLockDir` を直接呼ぶ。ファイル・環境変数・時刻・実 process を使わない。入力は設計 §11 の型を手で組み、最小の完備な入力を基準に 1 点だけ変える。
-- **block B (取得と解放の手順)**: `acquireSnapshotLock` と解放を、ファイル操作を記録する偽の io (操作名と path を順に記録し、ファイルの中身を map で持つ) と、`presence` / `observeIdentity` / `now` / `sleep` / `write` の stub で呼ぶ。**`resolveMode` / `interpretRead` / `classify` / `decide` は stub にする** (純関数の変異が block B に漏れないようにするため)。`interpretRead` の stub は「text は JSON.parse して ok (失敗は unavailable `malformed`)、error は code が `ENOENT` なら absent、それ以外は unavailable (reason は code)」に固定する。`decide` の stub は「現在の世代が無いか `free` か `stale` なら次の世代の `attempt`、`live` なら待った時間が上限に届くまで `wait`、届いたら `give_up`」に固定する。env は `{}` (CI も token も無い) を基準にし、lock dir の期待値は `snapshotLockDir(tmpRoot)` から計算する。016 だけは link の排他を実物で確かめるため、`mkdtemp` で作った一時 dir の実 fs を使い、`link` だけを step hook 付きの包み (下記) にする。偽の io の `readdir` は `queue/` の一覧にだけ答える (世代の判定に readdir を使わない、設計 I12)。hint は、明記したケース以外では無い (`ENOENT`)。
+- **block B (取得と解放の手順)**: `acquireSnapshotLock` と解放を、ファイル操作を記録する偽の io (操作名と path を順に記録し、ファイルの中身を map で持つ) と、`presence` / `observeIdentity` / `now` / `sleep` / `write` の stub で呼ぶ。**`resolveMode` / `interpretRead` / `classify` / `decide` は stub にする** (純関数の変異が block B に漏れないようにするため)。`interpretRead` の stub は「text は JSON.parse して ok (失敗は unavailable `malformed`)、error は code が `ENOENT` なら absent、それ以外は unavailable (reason は code)」に固定する。`decide` の stub は「現在の世代が無いか `free` か `stale` なら次の世代の `attempt`、`live` なら待った時間が上限に届くまで `wait`、届いたら `give_up`」に固定する。env は `{}` (CI も token も無い) を基準にし、lock dir の期待値は `snapshotLockDir(tmpRoot)` から計算する。016 だけは link の排他を実物で確かめるため、`mkdtemp` で作った一時 dir の実 fs を使い、`link` だけを step hook 付きの包み (下記) にする。偽の io の `readdir` は `queue/` の一覧にだけ答える (世代の判定に readdir を使わない、設計 I12)。hint は、明記したケース以外では無い (`ENOENT`)。`repoRoot` は 025 以外で `tmpRoot` と同じ値にする (lock dir を checkout から決める変異 M51 が 025 にだけ効くようにするため)。世代ファイルの作成の失敗を注入するときは、その path への作成の操作 (link のほか、writeFile / rename で作る実装でも同じ) に掛ける (作成の操作を差し替える変異 M33 が 016 にだけ効くようにするため)。
 - **step hook** (016 / 031 で使う): io は、操作 (名前・path・何回目か) ごとに 1 回だけ走る callback を登録できる。callback は操作の**前**に走り、fs の中身 (016 は実 fs、それ以外は偽の fs の map) を書き換えてよい。これにより「取得者が判定の後・link の前で任意の時間止まり、その間に他者が何世代も進む」状況を、実時間や thread を使わずに決定的に作る。callback は例外を投げて、その操作の失敗 (code つき) を注入することもできる。
 - **block C (入口の関数)**: `runSnapshotRunnerMain(argv, env, deps)` を、`acquire` / `release` / `run` / `parseWaitMs` / `stageEnv` / `write` の stub と `getuid` の注入で呼び、呼び出しの順序と終了コードと stderr を観測する。
 - **block D (テストの衛生)**: `tests/support/` の `ownSnapshotRootEntries(names, pid)` を直接呼ぶ。
@@ -61,13 +61,13 @@ issue: 1665
 | `CANDIDATE-U-SNAPLOCK-015` | 経過時間を使わない | 世代 1 の記録の `acquiredAt` と `queuedAt` が now の 10 時間前。`classify` の stub は常に `live`。maxWait 4000 | busy で holder は世代 1。`gen-2.json` は作られず、`gen-1.json` は残る (手順書 §3.2、I1) |
 | `CANDIDATE-U-SNAPLOCK-016` | 消えない番号への link の排他 (実 fs、r2 の FLAG の interleaving) | 一時 dir の lock dir に `gen-1.json` と `released-1` (世代 1 は free)。自分 A は walk で世代 1 を読み、世代 2 を `attempt` する。maxWait 0。(a) step hook で、A の `gen-2.json` への link の直前に、他者 H の記録の `gen-2.json` を置く (`classify` の stub は H を `live`) (b) 同じ位置の hook で、他者が世代 2〜100 を順に取得した状態を置く: `gen-2`〜`gen-100` と `released-2`〜`released-99`、`gen-100` は H (`live`) | (a)(b) とも、A の link は `gen-2.json` への 1 回だけで `EEXIST` になり、`gen-2.json` の中身は他者の記録のまま。結果は busy で、holder は (a) 世代 2、(b) 世代 100。`snapshot-lock: acquired` の行が無い (手順書 §2.2 手順 4、§2.3 の補題 2、I3) |
 | `CANDIDATE-U-SNAPLOCK-017` | 解放 | (a) 世代 5 の handle で、現在も世代 5 (b) 世代 5 の handle で、世代 6 が在る (c) (a) で `released-5` の作成が `EIO` を投げる | (a)(b) 新しく作られるのは `released-5` だけ。`gen-5.json` と `gen-6.json` は消えず rename もされない。(b) で `released-6` は作られない。(c) `release()` は例外を投げず、`snapshot-lock: release-failed` の行に `reason=EIO` があり、`gen-5.json` は残る (手順書 §2.4、I2、I7) |
-| `CANDIDATE-U-SNAPLOCK-018` | link と解放の印の確かめの失敗 | maxWait 0。(a) lock dir が空で、`gen-1.json` への link が `EPERM` を投げる (b) `gen-1.json` (`classify` の stub は `stale`) が在り、`released-1` の readFile が `EACCES` を投げる | 各々 `{ kind: "unavailable" }` で reason が `EPERM` / `EACCES`。世代ファイルを作らず、busy も返さない。(b) は link が 0 回 (手順書 §2.2 手順 4、§3.1、§3.3、I3) |
-| `CANDIDATE-U-SNAPLOCK-019` | 自分の queue entry の後始末 | maxWait 4000 で (a) current が live (stub) のまま上限に届く (b) current が無く取得する (c) current が無く、手順 4 の link が `EPERM` を投げる | (a) busy、(b) acquired、(c) unavailable。3 つとも終了時に `queue/<自分の lockId>.json` が無い (手順書 §2.2 手順 5、§6) |
+| `CANDIDATE-U-SNAPLOCK-018` | link と解放の印の確かめの失敗 | maxWait 0。(a) lock dir が空で、`gen-1.json` の作成 (link) が `EPERM` を投げる (b) `gen-1.json` (`classify` の stub は `stale`) が在り、`released-1` の readFile が `EACCES` を投げる | 各々 `{ kind: "unavailable" }` で reason が `EPERM` / `EACCES`。世代ファイルを作らず、busy も返さない。(b) は link が 0 回 (手順書 §2.2 手順 4、§3.1、§3.3、I3) |
+| `CANDIDATE-U-SNAPLOCK-019` | 自分の queue entry の後始末 | maxWait 4000 で (a) current が live (stub) のまま上限に届く (b) current が無く取得する (c) current が無く、手順 4 の `gen-1.json` の作成 (link) が `EPERM` を投げる | 3 つとも終了時に `queue/<自分の lockId>.json` が無い。**観測するのは自分の queue entry の有無だけで、結果の種類 (busy / acquired / unavailable) は検査しない** (結果の種類は (a) が 015、(b) が 020、(c) が 018 の観測である) (手順書 §2.2 手順 5、§6) |
 | `CANDIDATE-U-SNAPLOCK-020` | stale の世代の置き換えと、消さないこと | `gen-1`〜`gen-3` と `released-1`・`released-2` が在り、世代 3 は `classify` の stub で `stale`、待っている者なし | acquired で世代 4。取得の全体 (walk から hint の書き込みまで) で、`gen-*` と `released-*` への unlink も rename も 0 回で、`gen-1`〜`gen-3` と `released-1`・`released-2` は残る (手順書 §2.2、§2.4、I2) |
 | `CANDIDATE-U-SNAPLOCK-021` | 待っている者の記録 | current は live (stub)。queue に S (`classify` の stub は `stale`) と L (`live`)。maxWait 4000 | 終了時に S の記録は消え、L の記録は残る (§6) |
 | `CANDIDATE-U-SNAPLOCK-023` | 自分の identity | `observeIdentity(自分の pid)` が (a) `"query_failed"` (b) null (c) startToken null の identity | 各々 `{ kind: "unavailable" }` で、書き込み系の操作が 0 回 (手順書 §2.2 手順 1、I4) |
 | `CANDIDATE-U-SNAPLOCK-024` | 待っている間の行 | 時計を注入する。current は世代 1 が live で、130,000 ms 後に `released-1` が現れる。maxWait 600000 | `waiting` 1 行、`still-waiting` 2 行 (60,000 ms と 120,000 ms)、`acquired` 1 行の計 4 行だけ (§9、I10) |
-| `CANDIDATE-U-SNAPLOCK-025` | 範囲 | 同じ tmpRoot で repoRoot が違う 2 回の取得。1 回目は取得して解放しない。2 回目は maxWait 0 で、`classify` の stub は 1 回目の記録を `live` とする | 2 回目は busy で、holder の lockId が 1 回目のもの (§4、I8) |
+| `CANDIDATE-U-SNAPLOCK-025` | 範囲 | 同じ tmpRoot で repoRoot が違う 2 回の取得。1 回目は取得して解放しない。テストは 1 回目の後に hint を消す (hint の変異が 025 に効かないようにするため)。2 回目は maxWait 0 で、`classify` の stub は 1 回目の記録を `live` とする | 2 回目は busy で、holder の lockId が 1 回目のもの (§4、I8) |
 | `CANDIDATE-U-SNAPLOCK-031` | 記録の読み取りの境界 (r1 の FLAG 2) | `gen-1.json` (他者の記録) が在り `released-1` は無い。link はどの番号にも成功する (偽の io)。maxWait 0 で (a) `gen-1.json` の readFile が `EACCES` を投げる (b) 同じく `EIO` (c) `gen-1.json` の中身が `"{"`。(d) maxWait 4000、`classify` の stub は `live`。step hook で、2 回目の walk の `gen-1.json` の readFile の直前に `gen-1.json` を偽の fs から消す (e) `gen-1.json` は無く、maxWait 4000 で待っている者 W の `queue/W.json` の readFile が `EACCES` を投げる | (a)(b)(c) unavailable で reason が `EACCES` / `EIO` / `malformed`、`gen-2.json` への link が 0 回、`classify` の stub の呼び出しが 0 回。(d) unavailable で reason `generation_missing`、link が 0 回。(e) unavailable で reason `EACCES`、`gen-1.json` への link が 0 回 (手順書 §3.1、§3.3、I11) |
 | `CANDIDATE-U-SNAPLOCK-032` | hint は助言に過ぎない | `gen-1`〜`gen-5` と `released-1`〜`released-4` が在り、世代 5 は `classify` の stub で `live`、maxWait 0。hint が (a) `3` (低い) (b) `abc` (c) `50` (大きすぎる) (d) readFile が `EACCES` を投げる (e) 無い。(f) `released-5` も在り、hint は `50` | (a)〜(e) busy で holder は世代 5、link が 0 回、unavailable を返さない。(f) acquired で世代 6、link は `gen-6.json` への 1 回だけ、終了時の hint の中身が `6` (手順書 §2.1、§2.4、I12) |
 
@@ -149,13 +149,13 @@ block A の中で重ならない理由: 分類の規則は K1 (presence) → K2 
 | M42 | 取得のとき自分の queue entry を残す | ・ | ・ | ・ | ・ | ・ | ● | ・ | ・ | ・ | ・ | ・ | ・ | ・ |
 | M43 | unavailable のとき自分の queue entry を残す | ・ | ・ | ・ | ・ | ・ | ● | ・ | ・ | ・ | ・ | ・ | ・ | ・ |
 | M44 | stale の世代を置き換えない | ・ | ・ | ・ | ・ | ・ | ・ | ● | ・ | ・ | ・ | ・ | ・ | ・ |
-| M45 | 取得の中で `gen-*` か `released-*` を消すか rename する (古い世代の整理を足す、link の前に現在の世代を消す、など) | ・ | ・ | ・ | ・ | ・ | ・ | ● | ・ | ・ | ・ | ・ | ・ | ・ |
+| M45 | 取得の中で `gen-*` か `released-*` を消すか rename する (変種: (a) 取得の後に古い世代を消す整理を足す、(b) link の前に現在の世代ファイルを消す。§4.5 の模型は両方の変種を確かめる) | ・ | ・ | ・ | ・ | ・ | ・ | ● | ・ | ・ | ・ | ・ | ・ | ・ |
 | M46 | stale の待っている者の記録を残す | ・ | ・ | ・ | ・ | ・ | ・ | ・ | ● | ・ | ・ | ・ | ・ | ・ |
 | M47 | live の待っている者の記録を消す | ・ | ・ | ・ | ・ | ・ | ・ | ・ | ● | ・ | ・ | ・ | ・ | ・ |
 | M48 | 自分の startToken が得られなくても書く | ・ | ・ | ・ | ・ | ・ | ・ | ・ | ・ | ● | ・ | ・ | ・ | ・ |
 | M49 | 待っている間に何も出さない | ・ | ・ | ・ | ・ | ・ | ・ | ・ | ・ | ・ | ● | ・ | ・ | ・ |
 | M50 | 繰り返しごとに still-waiting を出す | ・ | ・ | ・ | ・ | ・ | ・ | ・ | ・ | ・ | ● | ・ | ・ | ・ |
-| M51 | lock dir を checkout から決める | ・ | ・ | ・ | ・ | ・ | ・ | ・ | ・ | ・ | ・ | ● | ・ | ・ |
+| M51 | lock dir を checkout から決める (`snapshotLockDir(repoRoot)`) | ・ | ・ | ・ | ・ | ・ | ・ | ・ | ・ | ・ | ・ | ● | ・ | ・ |
 | M52 | 現在の世代の読み取りが unavailable のとき、その世代を stale として次の世代を試す | ・ | ・ | ・ | ・ | ・ | ・ | ・ | ・ | ・ | ・ | ・ | ● | ・ |
 | M53 | 既知の番号の `ENOENT` を walk の終わりとみなす | ・ | ・ | ・ | ・ | ・ | ・ | ・ | ・ | ・ | ・ | ・ | ● | ・ |
 | M54 | 待っている者の読み取りが unavailable のとき、その者を数えずに進む | ・ | ・ | ・ | ・ | ・ | ・ | ・ | ・ | ・ | ・ | ・ | ● | ・ |
@@ -177,6 +177,9 @@ block B の中で重ならない理由: 各 oracle は自分の対象の観測�
 - 023 は I/O の失敗を起こさない (M38 / M40 が効かない)。
 - 031 は link を試す前に読み取りで決まるので、link・置き換え・hint の変異が効かない。(d) は 2 回目の walk で既知の `gen-1.json` が消えているので、M53 では世代なしとして `gen-1.json` への link が成功して落ちる。
 - 032 だけが hint を置くので、hint の変異 (M55〜M59) は 032 でだけ効く。他の oracle は hint が無く (`ENOENT`)、M57 / M58 の条件 (`ENOENT` 以外の失敗、解釈できない値) に当たらない。032 は記録を全て読めて (M52〜M54 が効かない)、`EEXIST` を起こさず (M34)、削除を検査しない (M45)。
+- M33 (作成の操作の差し替え) は、作成の失敗の注入を作成の操作に掛けるので (§2)、018 (a) と 019 (c) では失敗が同じように起きて結果を変えない。`EEXIST` で既存を守ることを観測するのは 016 だけである。
+- M51 (lock dir を checkout から決める) は、025 以外は `repoRoot` が `tmpRoot` と同じなので結果を変えない。
+- M55 (hint の次の番号への直接の link) は、025 では 1 回目の後に hint を消すので効かない。
 - 015 以外の oracle は、記録の `acquiredAt` を開始時の now にし、偽の時計で 130,000 ms 以内に終わるので M32 が効かない。014 は取得の手順に入らない。
 
 ### 4.3 block C (入口の関数)
@@ -205,7 +208,9 @@ block C の中で重ならない理由: 026 は取得に届かないので、取
 
 ### 4.5 表の機械的な確認
 
-4.1〜4.4 の表を次の規則で数える: 行頭が `| M` の行を変異の行とし、その行の ● の数がちょうど 1 であること、表の見出しの oracle の列ごとに ● が 1 つ以上あること、変異の番号が `M01` から連続して重複しないこと、表の下の「検出数」の行が数えた値と一致すること。2026-11-16 (r2 の是正の後) に本書へ適用した結果は、変異 69 件・oracle 30 件 (退役した 022 と 030 を除く) で、違反は 0 件だった (結果の全文は PR #1685 の是正コメント)。
+表の ● の数だけでは、oracle の文面が検査すると書いた観測と、§4 の「重ならない理由」との食い違いを検出できない (r3 の指摘: 019 (c) が結果の種類を検査すると書きながら、§4.2 は検査しないとしていた)。そこで、契約の手順を変異の旗つきで模した使い捨ての模型 (PR の外、`.ut-tdd/handover/control-tools/wf-1685-r1/model.mjs`) で、各 oracle の文面どおりの観測を評価し、変異ごとに落ちる oracle の集合を求めて、ちょうど 1 つでありかつ本書の ● と一致すること、正しい実装ではどの oracle も落ちないこと、各 oracle が 1 つ以上の変異で落ちることを確かめた。block B は §2 の stub (resolveMode / interpretRead / classify / decide) を使う。M45 は 2 つの変種の両方を確かめた。2026-11-16 の結果は「MODEL OK」(oracle 30 件、変異 69 件と変種 1 件) だった。
+
+あわせて、4.1〜4.4 の表を次の規則で数える: 行頭が `| M` の行を変異の行とし、その行の ● の数がちょうど 1 であること、表の見出しの oracle の列ごとに ● が 1 つ以上あること、変異の番号が `M01` から連続して重複しないこと、表の下の「検出数」の行が数えた値と一致すること。2026-11-16 (r2 の是正の後) に本書へ適用した結果は、変異 69 件・oracle 30 件 (退役した 022 と 030 を除く) で、違反は 0 件だった (結果の全文は PR #1685 の是正コメント)。
 
 ## 5. 受け入れの実測 (oracle ではない)
 
