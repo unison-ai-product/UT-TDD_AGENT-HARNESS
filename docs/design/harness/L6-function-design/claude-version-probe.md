@@ -10,7 +10,7 @@ next_pair_freeze: L7
 issue: 1561
 ---
 
-> **L6 contract marker**: `probePathClaude(env?: NodeJS.ProcessEnv, platform?: NodeJS.Platform) => PathClaudeProbe`、`checkClaudeVersionFloor(deps?: ClaudeVersionFloorCheckDeps) => LintResult`、`readTranscriptClaudeVersion(transcriptPath: string | undefined) => string | null` の unit-test-granularity contract である。DbC の pre / post / invariant は §2 の表に置き、oracle は `docs/test-design/harness/L7-claude-version-floor-test-design.md` の `CANDIDATE-U-CCVER-009`〜`019` が受け持つ。
+> **L6 contract marker**: `probePathClaude(env?: NodeJS.ProcessEnv, platform?: NodeJS.Platform) => PathClaudeProbe`、`checkClaudeVersionFloor(deps?: ClaudeVersionFloorCheckDeps) => LintResult`、`readTranscriptClaudeVersion(transcriptPath: string | undefined) => string | null` の unit-test-granularity contract である。DbC の pre / post / invariant は §2 の表に置き、oracle は `docs/test-design/harness/L7-claude-version-floor-test-design.md` の `CANDIDATE-U-CCVER-009`〜`021` が受け持つ。
 
 # Claude Code の版の取得 (PATH の claude の probe と transcript の末尾読み、Issue #1561)
 
@@ -88,7 +88,7 @@ issue: 1561
 `readTranscriptClaudeVersion` は file 全体を読まず、末尾の 4 MiB (4,194,304 bytes) だけを読む。
 
 1. file を開いて大きさを得る。読み始めの位置は `max(0, 大きさ − 4 MiB)` とし、そこから末尾までを 1 回の確保で読む (`openSync` / `fstatSync` / `readSync`、`closeSync` は `finally`)。上限の定数は module の中だけに置き、export しない (test は値を literal で持つ)。
-2. 読み始めが 0 より後なら、最初の `\n` までを捨てる (途中から始まる行を JSON として読まない)。`\n` が無ければ `null` を返す。
+2. 読み始めが 0 より後なら、読み始めから最初の `\n` までを捨てる (途中から始まる行を JSON として読まない)。読み始めがちょうど行の先頭に当たったときも、その行を捨てる (読み始めの直前の byte が改行かどうかを見ない)。したがって、ある行が読まれるのは、その行の先頭から file の末尾までが 4 MiB − 1 bytes 以下のときだけである。`\n` が無ければ `null` を返す。
 3. 残りを今と同じ規則で読む。行に分けて末尾から見て、空行を飛ばし、`type` が `user` / `assistant` でない行を飛ばし、最初の message 行の `version` が `x.y.z` ならそれを、そうでなければ `null` を返す。JSON として読めない行に当たったら `null` を返す (今と同じ)。
 4. 4 MiB の中に message 行が無ければ `null` を返す。警告の側は今と同じく「Claude Code の版を確かめられない」を出す (`U-CCVER-002` の経路)。file が無い・読めないときも `null` である。
 
@@ -121,7 +121,7 @@ issue: 1561
 
 - I1: 版の probe は current directory、相対の PATH 要素、素の名前を実行しない。実行するのは §3 で決めた絶対 path 1 つだけで、1 回の check で 1 回だけである。
 - I2: doctor の `claude-version-floor` は、版を読めて下限以上のときだけ OK と表示する。どの状態でも `ok: true` である。
-- I3: transcript から版を読むとき、file の大きさにかかわらず読む量は 4 MiB 以下である。
+- I3: transcript から版を読むとき、file の大きさにかかわらず読む量は 4 MiB 以下であり、file 全体を読む API (`readFileSync`、`readFile`、`createReadStream`) を使わない。L7 の `CANDIDATE-U-CCVER-021` が読んだ bytes を数えて確かめる。
 - I4: test の実行で本物の claude は起動しない。production の code にテスト専用の切り替えは無い。
 
 ## 9. 実装の範囲
@@ -132,4 +132,4 @@ issue: 1561
 
 ## 10. V-pair
 
-対のテスト設計は `docs/test-design/harness/L7-claude-version-floor-test-design.md` で、本書の oracle は `CANDIDATE-U-CCVER-009`〜`019`、反例と oracle の対応はその §5 と §6 にある。
+対のテスト設計は `docs/test-design/harness/L7-claude-version-floor-test-design.md` で、本書の oracle は `CANDIDATE-U-CCVER-009`〜`021`、反例と oracle の対応はその §5 と §6 にある。
