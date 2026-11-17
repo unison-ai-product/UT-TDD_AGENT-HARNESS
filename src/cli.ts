@@ -103,6 +103,7 @@ import { materializeSkillAssets } from "./shared/embedded-skills.ts";
 
 export { collectFinalRetirementFindings };
 
+import { SystemGitCommandPort } from "./github/git-diff.ts";
 import {
   PROJECT_IDENTITY_COMMIT_RECOVERY_COMMANDS,
   PROJECT_IDENTITY_ORIGIN_RECOVERY_COMMANDS,
@@ -135,7 +136,6 @@ import {
   writeMemory,
 } from "./memory/service.ts";
 import { lintPlanWithGate } from "./plan/lint.ts";
-import { SystemGitCommandPort } from "./plan-admission/git-diff-adapter.ts";
 import { createNodePlanDraftRunner } from "./plan-admission/node-plan-draft-runner.ts";
 import { createNodePlanRevisionRunner } from "./plan-admission/node-plan-revision-runner.ts";
 import { type AdapterProvider, buildProviderInvocation } from "./runtime/adapter.ts";

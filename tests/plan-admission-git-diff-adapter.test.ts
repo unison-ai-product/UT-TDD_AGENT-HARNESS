@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import {
-  type GitCommandPort,
-  type GitDiffAdapterError,
-  type GitDiffAdapterErrorCode,
-  readAdmissionGitDiff,
-} from "../src/plan-admission/git-diff-adapter.ts";
+import type {
+  GitCommandPort,
+  GitDiffAdapterError,
+  GitDiffAdapterErrorCode,
+} from "../src/github/git-diff.ts";
+import { readAdmissionGitDiff } from "../src/plan-admission/git-diff-adapter.ts";
 
 const BASE = "a".repeat(40);
 const HEAD = "b".repeat(40);
