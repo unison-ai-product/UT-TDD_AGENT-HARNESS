@@ -314,6 +314,8 @@ export function resolveControlSeverity(input: { stage: Stage; inBaseline: boolea
 export function requiresPoApproval(kind: string): boolean;
 ```
 
+関数の署名を `name(...) =>` の形で再掲する (判定の oracle は I1〜I13 がテスト設計の `CANDIDATE-U-OPSCTL-001`〜`029` へ対応する)。`validateControlRecord(record) => Finding[]`、`checkControlSet(records) => Finding[]`、`validateToolEntry(tool, today) => Finding[]`、`isToolAdoptable(tool) => boolean`、`isToolDistributable(tool) => boolean`、`checkToolStaleness(tool, today, maxAgeDays) => Finding[]`、`checkPresetMapping(controls, preset) => Finding[]`、`checkLogProfile(profile) => Finding[]`、`checkLogRecord(record, profile) => Finding[]`、`lintMigration(file) => MigrationFinding[]`、`resolveControlSeverity(input) => "advisory" | "error"`、`requiresPoApproval(kind) => boolean`。
+
 | 不変条件 | 内容 |
 |---|---|
 | I1 | 全ての関数は純粋である (file・環境変数・時刻・network を自分では読まず、引数だけから決まる。`today` も引数)。戻りの配列は入力の順 |
