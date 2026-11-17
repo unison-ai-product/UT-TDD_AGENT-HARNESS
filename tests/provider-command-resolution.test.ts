@@ -94,7 +94,7 @@ const RELATIVE_CASES = [
   { id: "002 dot element", first: ".", decoyDir: [] as string[] },
   { id: "003 relative element", first: "rel", decoyDir: ["rel"] },
 ];
-describe("U-PCMDRES-001..003 PATH の空・相対の要素", () => {
+describe("CANDIDATE-U-PCMDRES-001..003 PATH の空・相対の要素", () => {
   for (const c of RELATIVE_CASES) {
     for (const s of [WIN, POSIX]) {
       it.fails(`CANDIDATE-U-PCMDRES-${c.id} (${s.platform})`, () => {
@@ -109,7 +109,7 @@ describe("U-PCMDRES-001..003 PATH の空・相対の要素", () => {
   }
 });
 
-describe("U-PCMDRES-004..008 走査の規則", () => {
+describe("CANDIDATE-U-PCMDRES-004..008 走査の規則", () => {
   it.fails("CANDIDATE-U-PCMDRES-004 PATHEXT の順 (win32)", () => {
     const f = fakeFs("win32", ["C:\\real\\claude.bat", "C:\\real\\claude.cmd"]);
     const withExt = { PATH: "C:\\real", PATHEXT: ".COM;.EXE;.CMD;.BAT" };
@@ -157,7 +157,7 @@ describe("U-PCMDRES-004..008 走査の規則", () => {
   });
 });
 
-describe("U-PCMDRES-009..010 解決の順序と配線", () => {
+describe("CANDIDATE-U-PCMDRES-009..010 解決の順序と配線", () => {
   it.fails("CANDIDATE-U-PCMDRES-009 明示 → native → PATH (win32)", () => {
     const home = emptyDir();
     const explicit = join(home, "explicit", "claude.exe");
@@ -203,7 +203,7 @@ describe("U-PCMDRES-009..010 解決の順序と配線", () => {
   });
 });
 
-describe("U-PCMDRES-011..012 probe", () => {
+describe("CANDIDATE-U-PCMDRES-011..012 probe", () => {
   for (const s of [WIN, POSIX]) {
     for (const provider of ["claude", "codex"] as const) {
       it.fails(`CANDIDATE-U-PCMDRES-011 解決できない ${provider} は probe しない (${s.platform})`, () => {
@@ -257,39 +257,42 @@ describe("U-PCMDRES-011..012 probe", () => {
   });
 });
 
-describe.skipIf(process.platform !== "win32")("U-PCMDRES-013 実 process (win32 のみ)", () => {
-  it.fails("CANDIDATE-U-PCMDRES-013 cwd の decoy を起動しない", () => {
-    const root = emptyDir();
-    const decoyDir = join(root, "decoy");
-    const realDir = join(root, "real");
-    const emptyHome = join(root, "home");
-    for (const dir of [decoyDir, realDir, emptyHome]) mkdirSync(dir, { recursive: true });
-    const script = '@echo off\r\ntype nul > "%~dp0ran.txt"\r\nexit /b 0\r\n';
-    for (const dir of [decoyDir, realDir]) writeFileSync(join(dir, "claude.cmd"), script);
-    const systemRoot = process.env.SystemRoot ?? "C:\\Windows";
-    const childEnv = {
-      PATH: `${realDir};${join(systemRoot, "System32")}`,
-      PATHEXT: ".COM;.EXE;.BAT;.CMD",
-      APPDATA: emptyHome,
-      USERPROFILE: emptyHome,
-      SystemRoot: systemRoot,
-      ComSpec: process.env.ComSpec ?? join(systemRoot, "System32", "cmd.exe"),
-    };
-    const adapterUrl = pathToFileURL(join(process.cwd(), "src", "runtime", "adapter.ts")).href;
-    const code = `import(${JSON.stringify(adapterUrl)}).then((m) => { process.stdout.write(JSON.stringify(m.isProviderCommandSpawnable("claude", { env: JSON.parse(process.env.PCR_ENV) }))); });`;
-    const child = spawnSync(process.execPath, ["-e", code], {
-      cwd: decoyDir,
-      env: { ...process.env, PCR_ENV: JSON.stringify(childEnv) },
-      encoding: "utf8",
-      windowsHide: true,
+describe.skipIf(process.platform !== "win32")(
+  "CANDIDATE-U-PCMDRES-013 実 process (win32 のみ)",
+  () => {
+    it.fails("CANDIDATE-U-PCMDRES-013 cwd の decoy を起動しない", () => {
+      const root = emptyDir();
+      const decoyDir = join(root, "decoy");
+      const realDir = join(root, "real");
+      const emptyHome = join(root, "home");
+      for (const dir of [decoyDir, realDir, emptyHome]) mkdirSync(dir, { recursive: true });
+      const script = '@echo off\r\ntype nul > "%~dp0ran.txt"\r\nexit /b 0\r\n';
+      for (const dir of [decoyDir, realDir]) writeFileSync(join(dir, "claude.cmd"), script);
+      const systemRoot = process.env.SystemRoot ?? "C:\\Windows";
+      const childEnv = {
+        PATH: `${realDir};${join(systemRoot, "System32")}`,
+        PATHEXT: ".COM;.EXE;.BAT;.CMD",
+        APPDATA: emptyHome,
+        USERPROFILE: emptyHome,
+        SystemRoot: systemRoot,
+        ComSpec: process.env.ComSpec ?? join(systemRoot, "System32", "cmd.exe"),
+      };
+      const adapterUrl = pathToFileURL(join(process.cwd(), "src", "runtime", "adapter.ts")).href;
+      const code = `import(${JSON.stringify(adapterUrl)}).then((m) => { process.stdout.write(JSON.stringify(m.isProviderCommandSpawnable("claude", { env: JSON.parse(process.env.PCR_ENV) }))); });`;
+      const child = spawnSync(process.execPath, ["-e", code], {
+        cwd: decoyDir,
+        env: { ...process.env, PCR_ENV: JSON.stringify(childEnv) },
+        encoding: "utf8",
+        windowsHide: true,
+      });
+      expect(JSON.parse(child.stdout)).toBe(true);
+      expect(existsSync(join(realDir, "ran.txt"))).toBe(true);
+      expect(existsSync(join(decoyDir, "ran.txt"))).toBe(false);
     });
-    expect(JSON.parse(child.stdout)).toBe(true);
-    expect(existsSync(join(realDir, "ran.txt"))).toBe(true);
-    expect(existsSync(join(decoyDir, "ran.txt"))).toBe(false);
-  });
-});
+  },
+);
 
-describe("U-PCMDRES-014 全起動経路で素の名前を spawn しない", () => {
+describe("CANDIDATE-U-PCMDRES-014 全起動経路で素の名前を spawn しない", () => {
   const WIN_OPTS = (home: string, pathFs: PathFs) => ({
     platform: "win32" as const,
     env: {
