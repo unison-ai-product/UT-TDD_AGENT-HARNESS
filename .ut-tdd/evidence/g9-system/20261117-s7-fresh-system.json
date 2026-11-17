@@ -520,7 +520,6 @@
       "evidence_paths": [
         "docs/design/harness/L4-basic-design/external-if.md",
         "docs/test-design/harness/L9-system-test-design.md",
-        "package.json",
         "src/lint/dependency-drift.ts",
         "tests/dependency-drift.test.ts"
       ],
