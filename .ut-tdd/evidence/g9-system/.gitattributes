@@ -1,1 +1,4 @@
 20261116-st-data07-func11-output.bin binary
+20261117-s7-fresh-core-output.bin -text -diff -merge
+20261117-s7-fresh-assets-output.bin -text -diff -merge
+20261117-s7-fresh-cli-output.bin -text -diff -merge

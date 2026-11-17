@@ -1,0 +1,166 @@
+snapshot source: git commit 8426500405d1d8bb3503ee21b3b82fa5be9e673a
+Cloning into 'C:\Users\micro\AppData\Local\Temp\ut-tdd-vitest-21660-1794879869516'...
+HEAD is now at 84265004 test(s7): prepare fresh G9 evidence subject
+Cloning into 'C:\Users\micro\AppData\Local\Temp\ut-tdd-vitest-head-21660-1794879869516'...
+HEAD is now at 84265004 test(s7): prepare fresh G9 evidence subject
+
+added 76 packages in 20s
+npm warn install-scripts 1 package has install scripts not yet covered by allowScripts:
+npm warn install-scripts   esbuild@0.28.2 (postinstall: node install.js)
+npm warn install-scripts
+npm warn install-scripts Run `npm install-scripts ls` to review, or `npm install-scripts approve <pkg>` to allow.
+db rebuild: projection ok, rows 48244 (C:\Users\micro\AppData\Local\Temp\ut-tdd-vitest-21660-1794879869516\.ut-tdd\harness.db)
+  note: plans / roadmap rollups / review evidence / optional Phase3 outputs を projection
+  token telemetry (repo-scoped, issue #82): claude files matched 0/0 (project dir resolved=false, foreign repo 0, unknown cwd 0), codex files matched 0/4885 (foreign repo 4883, unknown cwd 2)
+2579 �̃t�@�C��������ɏ�������܂����B0 �̃t�@�C���������ł��܂���ł���
+
+ RUN  v4.1.12 C:/Users/micro/AppData/Local/Temp/ut-tdd-vitest-21660-1794879869516
+
+ ✓ tests/agent-guard-delegation-boundary.test.ts > issue #1002 agent-guard と委譲の境界 > U-AGBOUND-005: 旧 allowlist 20 名は閉じた許可集合の外として BLOCK される 14ms
+ ✓ tests/agent-guard-delegation-boundary.test.ts > issue #1002 agent-guard と委譲の境界 > U-AGBOUND-006: 型の比較は完全一致 (大小文字を畳まず、未知・実環境の型を通さず、trim だけする) 2ms
+ ✓ tests/agent-guard-delegation-boundary.test.ts > issue #1002 agent-guard と委譲の境界 > U-AGBOUND-009: Agent tool では型によらず fable を使えない 2ms
+ ↓ tests/agent-guard-delegation-boundary.test.ts > issue #1002 agent-guard と委譲の境界 > U-AGBOUND-011: 判定の根拠は G3→G4→G5→G6 の順で 1 つに決まる
+ ↓ tests/agent-guard-delegation-boundary.test.ts > issue #1002 agent-guard と委譲の境界 > U-AGBOUND-012: bypass は G3〜G6 の全てに効き、通常の通過には印を付けない
+ ↓ tests/agent-guard-delegation-boundary.test.ts > issue #1002 agent-guard と委譲の境界 > U-AGBOUND-013: agent-guard は定義ファイルを読まず floor の残骸も持たない
+ ✓ tests/agent-guard-delegation-boundary.test.ts > issue #1002 agent-guard と委譲の境界 > U-AGBOUND-014: GENERIC_SUBAGENT_TYPES はちょうど汎用の型 4 種 1ms
+ ↓ tests/agent-guard-delegation-boundary.test.ts > issue #1002 agent-guard と委譲の境界 > U-AGBOUND-015: .claude/CLAUDE.md の型の一覧は GENERIC_SUBAGENT_TYPES と機械照合される
+ ✓ tests/agent-guard-delegation-boundary.test.ts > issue #1002 agent-guard と委譲の境界 > hook shim は定義ファイルの有無に依存しない > U-AGBOUND-016: 定義ファイルが無い repo でも汎用の型は通り、旧 allowlist の型は定義があっても BLOCK 3342ms
+ ↓ tests/agent-guard-delegation-boundary.test.ts > issue #1002 agent-guard と委譲の境界 > U-AGBOUND-018: DELEGATION_ROLE_ALLOWLIST は SUBAGENT_ALLOWLIST に依存しない和集合と等しい
+ ↓ tests/agent-guard-delegation-boundary.test.ts > issue #1002 agent-guard と委譲の境界 > U-AGBOUND-019: 外す 12 名は fail-close、残る 8 名は通る
+ ↓ tests/agent-guard-delegation-boundary.test.ts > issue #1002 agent-guard と委譲の境界 > U-AGBOUND-021: 層の語彙は混ざらず、許可集合は GENERIC_SUBAGENT_TYPES と交わらない
+ ↓ tests/agent-guard-delegation-boundary.test.ts > issue #1002 agent-guard と委譲の境界 > U-AGBOUND-022: 外した role は read-only 契約の対象に残らない
+ ↓ tests/agent-guard-delegation-boundary.test.ts > issue #1002 agent-guard と委譲の境界 > U-AGBOUND-023: sandbox 権限の role は 6 つに固定され、判断ゲートには与えない
+ ↓ tests/agent-guard-delegation-boundary.test.ts > issue #1002 agent-guard と委譲の境界 > U-AGBOUND-024: floor の正本は 1 か所で、allowlist への依存は残らない
+ ↓ tests/agent-guard-delegation-boundary.test.ts > issue #1002 agent-guard と委譲の境界 > U-AGBOUND-025: asset-drift は agent 定義を照合せず、残すべき検査は残る
+stdout | tests/agent-guard-delegation-boundary.test.ts > issue #1002 agent-guard と委譲の境界 > U-AGBOUND-026: roster CLI と registry は撤廃される
+[hook-timing] agent-guard-delegation-boundary.test.ts:458 db 8754ms
+
+ ✓ tests/agent-guard-delegation-boundary.test.ts > issue #1002 agent-guard と委譲の境界 > U-AGBOUND-026: roster CLI と registry は撤廃される 8757ms
+ ↓ tests/agent-guard-delegation-boundary.test.ts > issue #1002 agent-guard と委譲の境界 > U-AGBOUND-027: setup と同梱 template は agent 定義を生成せず、文言に allowlist を残さない
+ ↓ tests/agent-guard-delegation-boundary.test.ts > issue #1002 agent-guard と委譲の境界 > U-AGBOUND-028: Pack 配布物にも開発 repo にも agent 定義が残らない
+ ↓ tests/agent-guard-delegation-boundary.test.ts > issue #1002 agent-guard と委譲の境界 > U-AGBOUND-029: 分類の出力は recommended_lanes で、レーンの role は委譲 role の語彙
+ ↓ tests/agent-guard-delegation-boundary.test.ts > issue #1002 agent-guard と委譲の境界 > U-AGBOUND-030: skills は撤廃済みの role を --role で案内しない
+ ↓ tests/agent-guard-delegation-boundary.test.ts > issue #1002 agent-guard と委譲の境界 > U-AGBOUND-031: SUBAGENT_ALLOWLIST は src/ から消え、実 repo の asset-drift は通る
+ ↓ tests/agent-guard-delegation-boundary.test.ts > issue #1002 agent-guard と委譲の境界 > U-AGBOUND-034: isReviewFloorModel は下限未満と未知を通さない
+ ↓ tests/agent-guard-delegation-boundary.test.ts > issue #1002 agent-guard と委譲の境界 > U-AGBOUND-035: 判断ゲート role の明示 --model は下限未満なら fail-close
+ ↓ tests/agent-guard-delegation-boundary.test.ts > issue #1002 agent-guard と委譲の境界 > U-AGBOUND-036 review custody の入口 > U-AGBOUND-036: (e) agent-guard の返り値を verdict.txt に書いても projectReviewVerdict は verdict_identity_mismatch で拒否し、receipt を作らない
+ ↓ tests/agent-guard-delegation-boundary.test.ts > issue #1002 agent-guard と委譲の境界 > U-AGBOUND-036 review custody の入口 > U-AGBOUND-036: 非著者 family でも下限未満の model は受理されず、receipt を作らない
+ ↓ tests/agent-guard-delegation-boundary.test.ts > issue #1002 現行 main で既に成立する境界 (回帰 oracle) > U-AGBOUND-001: G1 は tool_name 無し・空を code 2 にし bypass しない
+ ↓ tests/agent-guard-delegation-boundary.test.ts > issue #1002 現行 main で既に成立する境界 (回帰 oracle) > U-AGBOUND-002: G2 は Agent 系以外の tool を検査しない
+ ↓ tests/agent-guard-delegation-boundary.test.ts > issue #1002 現行 main で既に成立する境界 (回帰 oracle) > U-AGBOUND-003: 4 tool x 汎用の型 4 種 + sonnet の 16 通りは通る
+ ↓ tests/agent-guard-delegation-boundary.test.ts > issue #1002 現行 main で既に成立する境界 (回帰 oracle) > U-AGBOUND-004: 型の解決は最初の非空 field、空は general-purpose 扱い
+ ↓ tests/agent-guard-delegation-boundary.test.ts > issue #1002 現行 main で既に成立する境界 (回帰 oracle) > U-AGBOUND-007: G4 は全ての汎用の型で model 必須
+ ↓ tests/agent-guard-delegation-boundary.test.ts > issue #1002 現行 main で既に成立する境界 (回帰 oracle) > U-AGBOUND-008: G5 は正規化不能・曖昧な model を拒否し正規 ID を通す
+ ↓ tests/agent-guard-delegation-boundary.test.ts > issue #1002 現行 main で既に成立する境界 (回帰 oracle) > U-AGBOUND-010: 汎用の型は haiku/sonnet/opus を全て通す (floor 無し)
+ ↓ tests/agent-guard-delegation-boundary.test.ts > issue #1002 現行 main で既に成立する境界 (回帰 oracle) > U-AGBOUND-017 発火記録 > U-AGBOUND-017: 記録は code 0 かつ型が空でないときだけで、記録の失敗は判定を変えない
+ ↓ tests/agent-guard-delegation-boundary.test.ts > issue #1002 現行 main で既に成立する境界 (回帰 oracle) > U-AGBOUND-020: 判断ゲート role は族内 frontier tier の review-lane、worker は policy
+ ✓ tests/agent-guard-delegation-boundary.test.ts > issue #1002 現行 main で既に成立する境界 (回帰 oracle) > U-AGBOUND-032: evaluateAgentGuard の返り値は code/message/bypassed だけ 1ms
+ ✓ tests/agent-guard-delegation-boundary.test.ts > issue #1002 現行 main で既に成立する境界 (回帰 oracle) > U-AGBOUND-033: rule-drift と §Hooks 一覧 ↔ settings.json の機械照合が通る 81ms
+ ✓ tests/codex-hook-adapter.test.ts > codex-hook-adapter — Codex hooks.json parity (PLAN-L7-139, PLAN-L7-668) > U-CXHOOK-001: 実 repo の .codex/hooks.json は Claude ガードと parity (real-repo 回帰ガード) 12ms
+ ↓ tests/codex-hook-adapter.test.ts > codex-hook-adapter — Codex hooks.json parity (PLAN-L7-139, PLAN-L7-668) > U-CXHOOKCMD-001: 実 repo の .codex/hooks.json と setup 生成 consumer hooks.json は現行 Codex command schema を満たす
+ ↓ tests/codex-hook-adapter.test.ts > codex-hook-adapter — Codex hooks.json parity (PLAN-L7-139, PLAN-L7-668) > U-CXHOOK-002: 有効な adapter fixture は ok
+ ↓ tests/codex-hook-adapter.test.ts > codex-hook-adapter — Codex hooks.json parity (PLAN-L7-139, PLAN-L7-668) > U-CXHOOK-002d: Claude/Codex の wrapper 配線は定義上同一 (entrypoint 分岐防止)
+ ↓ tests/codex-hook-adapter.test.ts > codex-hook-adapter — Codex hooks.json parity (PLAN-L7-139, PLAN-L7-668) > U-CXHOOK-002f: Claude/Codex の invocation は git-root 前置を除けば同一 semantics を持つ
+ ↓ tests/codex-hook-adapter.test.ts > codex-hook-adapter — Codex hooks.json parity (PLAN-L7-139, PLAN-L7-668) > U-CXHOOK-002b: policy prose is mojibake-free
+ ↓ tests/codex-hook-adapter.test.ts > codex-hook-adapter — Codex hooks.json parity (PLAN-L7-139, PLAN-L7-668) > U-CXHOOK-003: hooks.json 不在は fail-close (missing_hooks_json)
+ ↓ tests/codex-hook-adapter.test.ts > codex-hook-adapter — Codex hooks.json parity (PLAN-L7-139, PLAN-L7-668) > U-CXHOOK-004: 壊れた JSON は fail-close (malformed_json)
+ ↓ tests/codex-hook-adapter.test.ts > codex-hook-adapter — Codex hooks.json parity (PLAN-L7-139, PLAN-L7-668) > U-CXHOOK-005: work-guard ガードを欠くと fail-close (missing_hook)
+ ↓ tests/codex-hook-adapter.test.ts > codex-hook-adapter — Codex hooks.json parity (PLAN-L7-139, PLAN-L7-668) > U-CXHOOK-006: Codex の編集 matcher が Claude 字面のままだと発火しない = fail-close
+ ↓ tests/codex-hook-adapter.test.ts > codex-hook-adapter — Codex hooks.json parity (PLAN-L7-139, PLAN-L7-668) > U-CXHOOK-008: Codex command が $CLAUDE_PROJECT_DIR 依存だと fail-close (repo-relative 原則)
+ ↓ tests/codex-hook-adapter.test.ts > codex-hook-adapter — Codex hooks.json parity (PLAN-L7-139, PLAN-L7-668) > U-CXHOOK-009: global ~/.codex/ 参照は fail-close (no global writes)
+ ↓ tests/codex-hook-adapter.test.ts > codex-hook-adapter — Codex hooks.json parity (PLAN-L7-139, PLAN-L7-668) > U-CXHOOK-010: Codex の各 entrypoint は Claude REQUIRED にも存在する (双方向、no silent fork)
+ ✓ tests/codex-hook-adapter.test.ts > codex-hook-adapter — Codex hooks.json parity (PLAN-L7-139, PLAN-L7-668) > U-CXHOOK-011: subagent-stop stays N/A while Codex spawn_agent is guarded 6ms
+ ↓ tests/codex-hook-adapter.test.ts > codex-hook-adapter — Codex hooks.json parity (PLAN-L7-139, PLAN-L7-668) > U-CXHOOK-012: 共有 guard ロジックは runtime 非依存 — Codex 発火時も同じ判定になる
+ ↓ tests/codex-hook-adapter.test.ts > codex-hook-adapter — Codex hooks.json parity (PLAN-L7-139, PLAN-L7-668) > U-CXHOOK-013: 非 command type の hook では guard 充足とみなさない (type==='command' 必須)
+ ↓ tests/codex-hook-adapter.test.ts > codex-hook-adapter — Codex hooks.json parity (PLAN-L7-139, PLAN-L7-668) > U-CXHOOK-014: script path が別 token の部分文字列に紛れるだけでは guard 充足にしない (token 厳格化)
+ ↓ tests/codex-hook-adapter.test.ts > codex-hook-adapter — Codex hooks.json parity (PLAN-L7-139, PLAN-L7-668) > U-CXHOOKCMD-002: command 形式の変異は typed finding で fail-close > (a) 旧形式 command+args (2026-09-18 以前の実 fixture 形) は fail-close
+ ↓ tests/codex-hook-adapter.test.ts > codex-hook-adapter — Codex hooks.json parity (PLAN-L7-139, PLAN-L7-668) > U-CXHOOKCMD-002: command 形式の変異は typed finding で fail-close > (b) blockOnFailure の付加は fail-close (schema に存在しない field)
+ ↓ tests/codex-hook-adapter.test.ts > codex-hook-adapter — Codex hooks.json parity (PLAN-L7-139, PLAN-L7-668) > U-CXHOOKCMD-002: command 形式の変異は typed finding で fail-close > (c) schema 外の任意 field は fail-close
+ ↓ tests/codex-hook-adapter.test.ts > codex-hook-adapter — Codex hooks.json parity (PLAN-L7-139, PLAN-L7-668) > U-CXHOOKCMD-002: command 形式の変異は typed finding で fail-close > (d) command が interpreter 単体 (`node`) は fail-close
+ ↓ tests/codex-hook-adapter.test.ts > codex-hook-adapter — Codex hooks.json parity (PLAN-L7-139, PLAN-L7-668) > U-CXHOOKCMD-002: command 形式の変異は typed finding で fail-close > (e) 固定前置部分の外の script path に空白を含めると fail-close
+ ↓ tests/codex-hook-adapter.test.ts > codex-hook-adapter — Codex hooks.json parity (PLAN-L7-139, PLAN-L7-668) > U-CXHOOKCMD-002: command 形式の変異は typed finding で fail-close > (e2) 危険クラス別 shell 展開文字を script path 内に埋め込むと全て fail-close (allowlist 化、denylist 列挙漏れの回帰防止)
+ ↓ tests/codex-hook-adapter.test.ts > codex-hook-adapter — Codex hooks.json parity (PLAN-L7-139, PLAN-L7-668) > U-CXHOOKCMD-002: command 形式の変異は typed finding で fail-close > (e3) 実 .codex/hooks.json と setup テンプレの正当な command は allowlist を満たし ok のまま
+ ↓ tests/codex-hook-adapter.test.ts > codex-hook-adapter — Codex hooks.json parity (PLAN-L7-139, PLAN-L7-668) > U-CXHOOKCMD-002: command 形式の変異は typed finding で fail-close > (f) git root 解決を外した repo 相対 command は fail-close
+ ↓ tests/codex-hook-adapter.test.ts > codex-hook-adapter — Codex hooks.json parity (PLAN-L7-139, PLAN-L7-668) > U-CXHOOKCMD-002: command 形式の変異は typed finding で fail-close > (g) commandWindows の付加は fail-close (Windows 専用の別経路を作らない)
+ ↓ tests/codex-hook-adapter.test.ts > codex-hook-adapter — Codex hooks.json parity (PLAN-L7-139, PLAN-L7-668) > U-CXHOOKCMD-003/004/005: hooks.json の command 文字列を Codex と同じ shell 起動形で実行 > U-CXHOOKCMD-003: SessionStart/PostToolUse/Stop は repo root / subdirectory の両方の cwd で exit 0、session log に 1 行ずつ増える
+ ↓ tests/codex-hook-adapter.test.ts > codex-hook-adapter — Codex hooks.json parity (PLAN-L7-139, PLAN-L7-668) > U-CXHOOKCMD-003/004/005: hooks.json の command 文字列を Codex と同じ shell 起動形で実行 > U-CXHOOKCMD-004: work-guard/agent-guard は foreign 編集を block し、自 session のファイルと汎用の型の spawn は pass する
+ ↓ tests/codex-hook-adapter.test.ts > codex-hook-adapter — Codex hooks.json parity (PLAN-L7-139, PLAN-L7-668) > U-CXHOOKCMD-003/004/005: hooks.json の command 文字列を Codex と同じ shell 起動形で実行 > U-CXHOOKCMD-005: consumer launcher は active runtime 不在時、session hook は exit 0 で案内する
+ ↓ tests/forward/fsm.test.ts > Forward FSM > U-FSM-001: derives every allowed edge from the single policy table and rejects closed-world gaps
+ ↓ tests/forward/fsm.test.ts > Forward FSM > U-FSM-001: evaluates the complete 17 state by 17 event closed world [ST-FUNC-11 support]
+ ↓ tests/forward/fsm.test.ts > Forward FSM > U-FSM-002: refuses skip, reverse, and terminal commands without changing state [ST-FUNC-11 support]
+ ✓ tests/forward/fsm.test.ts > Forward FSM > U-FSM-003: specialized implementation admission fails closed and emits no write [ST-FUNC-11] 44ms
+ ↓ tests/forward/fsm.test.ts > Forward FSM > U-FSM-004: trace-freeze evidence is required before review
+ ↓ tests/forward/fsm.test.ts > Forward FSM > U-FSM-005: accept requires independent review and gate evidence
+ ↓ tests/forward/fsm.test.ts > Forward FSM > U-FSM-006: exception context is mandatory and no intent is emitted
+ ↓ tests/forward/fsm.test.ts > Forward FSM > U-FSM-006: missing exception context wins over an illegal from-state
+ ↓ tests/forward/fsm.test.ts > Forward FSM > U-FSM-007: replay is deterministic and projection is exactly once
+ ↓ tests/forward/fsm.test.ts > Forward FSM > U-FSM-007: replay repairs a missing derived projection without appending a second event
+ ↓ tests/forward/fsm.test.ts > Forward FSM > U-FSM-008: missing ledger/projection is unavailable and never falls back to frontmatter
+ ↓ tests/forward/fsm.test.ts > Forward FSM > U-FSM-008: a projection that disagrees with the append-only ledger is unavailable
+ ↓ tests/forward/fsm.test.ts > Forward FSM > U-FSM-008: explain rejects a projection mismatch without mutating either store
+ ↓ tests/forward/fsm.test.ts > Forward FSM > U-FSM-008: a valid explain query returns exit 0 even when policy denies the transition
+ ↓ tests/forward/fsm.test.ts > Forward FSM > U-FSM-009: generic evidence uses one typed rule and expired evidence is not eligible
+ ↓ tests/forward/fsm.test.ts > Forward FSM > U-FSM-009: every normal lifecycle event maps missing evidence to its frozen rule
+ ↓ tests/forward/fsm.test.ts > Forward FSM > U-FSM-009: targeted test evidence has at-least-one rather than exactly-one cardinality
+ ↓ tests/forward/fsm.test.ts > Forward FSM > U-FSM-008: public CLI emits the shared JSON envelope when the ledger is unavailable
+ ↓ tests/forward/fsm.test.ts > Forward FSM > P-FSM-001: generated sequences never reach an undeclared state and sequence faults fail closed
+ ↓ tests/vmodel-pair.test.ts > vmodel pair-freeze lint (U-VPAIR) > U-VPAIR-001: parsePairDoc / stripInlineComment — frontmatter 抽出 + inline コメント除去
+ ✓ tests/vmodel-pair.test.ts > vmodel pair-freeze lint (U-VPAIR) > U-VPAIR-002: pair-missing / ref-unresolved を検出 [ST-DATA-07] 6ms
+ ✓ tests/vmodel-pair.test.ts > vmodel pair-freeze lint (U-VPAIR) > U-VPAIR-003: trace-bidir — test-design の dir 集合参照が design dir を含めば成立、無ければ孤児 [ST-DATA-07] 4ms
+ ↓ tests/vmodel-pair.test.ts > vmodel pair-freeze lint (U-VPAIR) > U-VPAIR-004: self / design→design 参照は非対応 — L2 は test-design 直接参照でのみ成立 (RECOVERY-09)
+ ↓ tests/vmodel-pair.test.ts > vmodel pair-freeze lint (U-VPAIR) > U-VPAIR-004b: README / roadmap は対象外 (pair 欠落でも孤児にしない)
+ ↓ tests/vmodel-pair.test.ts > vmodel pair-freeze lint (U-VPAIR) > U-VPAIR-005: 実 repo 完全性回帰ガード — 全 V-pair 双方向、孤児0
+ ↓ tests/vmodel-pair.test.ts > vmodel pair-freeze lint (U-VPAIR) > U-VPAIR-006: pairFreezeMessages — 孤児なし OK / 孤児あり reason 別文言
+ ↓ tests/vmodel-pair.test.ts > verification trigger (U-VTRIG、層群 freeze の機械発火、IMP-068) > U-VTRIG-001: analyzeVerificationGroups — 層群ごとに confirmed/draft を集計
+ ↓ tests/vmodel-pair.test.ts > verification trigger (U-VTRIG、層群 freeze の機械発火、IMP-068) > U-VTRIG-002: frozen 判定 — draft があれば未完了、placeholder(park) は発火を妨げない
+ ↓ tests/vmodel-pair.test.ts > verification trigger (U-VTRIG、層群 freeze の機械発火、IMP-068) > U-VTRIG-002A: additive draft revision is surfaced without unfreezing the confirmed base
+ ↓ tests/vmodel-pair.test.ts > verification trigger (U-VTRIG、層群 freeze の機械発火、IMP-068) > reports an invalid additive revision at its canonicalized source path
+ ↓ tests/vmodel-pair.test.ts > verification trigger (U-VTRIG、層群 freeze の機械発火、IMP-068) > U-VTRIG-003: 層群に pair 孤児があれば freeze 未完了
+ ↓ tests/vmodel-pair.test.ts > verification trigger (U-VTRIG、層群 freeze の機械発火、IMP-068) > U-VTRIG-006: L0-L7はconfirmedのpair-doc状態だけでfreezeする
+ ↓ tests/vmodel-pair.test.ts > verification trigger (U-VTRIG、層群 freeze の機械発火、IMP-068) > U-VTRIG-006: draftまたはpair孤児が1件あればL0-L7はfreezeしない
+ ↓ tests/vmodel-pair.test.ts > verification trigger (U-VTRIG、層群 freeze の機械発火、IMP-068) > U-VTRIG-004: verificationGroupMessages — freeze 完了(park 表示) / Forward 進行中
+ ↓ tests/vmodel-pair.test.ts > verification trigger (U-VTRIG、層群 freeze の機械発火、IMP-068) > U-VTRIG-005: 実 repo ガード — L0-L3 と L4-L6 は freeze 完了
+ ↓ tests/vmodel-pair.test.ts > verification trigger (U-VTRIG、層群 freeze の機械発火、IMP-068) > U-VTRIG-005-L7: 実 repo の L0-L7 はpair-doc状態だけでfreezeする
+ ✓ tests/asset-catalog.test.ts > IT-ASSET-DB-01: automation asset catalog > exposes asset catalog as a JSON command surface 3843ms
+ ↓ tests/asset-catalog.test.ts > IT-ASSET-DB-01: automation asset catalog > catalogs metadata, updates search_index, and never stores prompt bodies
+ ↓ tests/asset-catalog.test.ts > IT-ASSET-DB-01: automation asset catalog > records drift and empty catalog as findings
+ ↓ tests/asset-catalog.test.ts > IT-ASSET-04: in-memory skill catalog scan > scans docs/skills markdown into an in-memory catalog without persistent .ut-tdd state
+ ↓ tests/asset-catalog.test.ts > IT-ASSET-04: in-memory skill catalog scan > scans root skills markdown for distribution packages
+ ↓ tests/asset-catalog.test.ts > IT-ASSET-04: in-memory skill catalog scan > fails closed on malformed metadata and duplicate skill IDs
+ ↓ tests/asset-catalog.test.ts > IT-ASSET-04: in-memory skill catalog scan > real repo has a non-empty skill markdown catalog and no optional-root blocker
+ ↓ tests/agent-guard.test.ts > normalizeModelFamily > uses the approved Claude model IDs in the guard catalog
+ ↓ tests/agent-guard.test.ts > normalizeModelFamily > normalizes family names and Anthropic model ids
+ ↓ tests/agent-guard.test.ts > normalizeModelFamily > returns null for empty / non-Claude models
+ ↓ tests/agent-guard.test.ts > normalizeModelFamily > returns null for ambiguous strings containing multiple families
+ ✓ tests/agent-guard.test.ts > evaluateAgentGuard > loads guard policy from the externalized policy module 7ms
+ ✓ tests/agent-guard.test.ts > evaluateAgentGuard > passes non-Agent tools untouched 1ms
+ ✓ tests/agent-guard.test.ts > evaluateAgentGuard > blocks an envelope without tool_name (empty stdin parses to {}), even with allowRaw 1ms
+ ✓ tests/agent-guard.test.ts > evaluateAgentGuard > blocks the default route (no subagent_type) when the model is missing 1ms
+ ✓ tests/agent-guard.test.ts > evaluateAgentGuard > treats Task as a Claude subagent tool alias 1ms
+ ✓ tests/agent-guard.test.ts > evaluateAgentGuard > treats Codex spawn_agent as a guarded subagent spawn surface 1ms
+ ✓ tests/agent-guard.test.ts > evaluateAgentGuard > blocks null / omitted tool_input (fail-close) 0ms
+ ✓ tests/agent-guard.test.ts > evaluateAgentGuard > passes a generic subagent with an explicit model (#1002) 2ms
+ ✓ tests/agent-guard.test.ts > evaluateAgentGuard > blocks a generic subagent without a model, with an unnormalizable model, or with fable 1ms
+ ✓ tests/agent-guard.test.ts > evaluateAgentGuard > blocks a retired definition-based type even with a valid model 1ms
+ ✓ tests/agent-guard.test.ts > evaluateAgentGuard > bypasses block when allowRaw is set 0ms
+ ↓ tests/runtime.test.ts > detectMode (requirements_v1.2 §7.1) > returns one of the 4 valid modes
+ ↓ tests/runtime.test.ts > detectMode (requirements_v1.2 §7.1) > hybrid iff both runtimes available
+ ↓ tests/runtime.test.ts > detectMode (requirements_v1.2 §7.1) > uses provider spawnability rather than command-name presence
+ ↓ tests/runtime.test.ts > detectMode (requirements_v1.2 §7.1) > keeps current runtime env signals separate from provider availability
+ ✓ tests/runtime.test.ts > detectMode (requirements_v1.2 §7.1) > detects hybrid from the exact spawnable provider set 5ms
+ ✓ tests/runtime.test.ts > detectMode (requirements_v1.2 §7.1) > detects claude-only from the exact spawnable provider set 1ms
+ ✓ tests/runtime.test.ts > detectMode (requirements_v1.2 §7.1) > detects codex-only from the exact spawnable provider set 1ms
+ ✓ tests/runtime.test.ts > detectMode (requirements_v1.2 §7.1) > detects standalone from the exact spawnable provider set 1ms
+ ↓ tests/runtime.test.ts > nextActionForMode (PLAN-L7-84 / A-138 ITEM-1, requirements §6) > U-DETECT-001: maps every mode to a defined judgment-gate guidance
+ ↓ tests/runtime.test.ts > nextActionForMode (PLAN-L7-84 / A-138 ITEM-1, requirements §6) > U-DETECT-002: standalone requires human review (judgment gates cannot auto-pass)
+ ↓ tests/runtime.test.ts > nextActionForMode (PLAN-L7-84 / A-138 ITEM-1, requirements §6) > U-DETECT-003: single-runtime modes ask for intra_runtime_subagent evidence
+ ↓ tests/runtime.test.ts > nextActionForMode (PLAN-L7-84 / A-138 ITEM-1, requirements §6) > U-DETECT-004: hybrid routes judgment gates to a cross-runtime reviewer
+ ↓ tests/runtime.test.ts > nextActionForMode (PLAN-L7-84 / A-138 ITEM-1, requirements §6) > U-DETECT-005: every value is a machine-switchable token + human guidance (ASCII)
+
+ Test Files  7 passed (7)
+      Tests  29 passed | 108 skipped (137)
+   Start at  10:47:56
+   Duration  93.43s (transform 6.73s, setup 487ms, import 10.70s, tests 30.63s, environment 2ms)
+
+[vitest-pool]: Timeout terminating forks worker for test files C:/Users/micro/AppData/Local/Temp/ut-tdd-vitest-21660-1794879869516/tests/runtime.test.ts.
+2579 �̃t�@�C��������ɏ�������܂����B0 �̃t�@�C���������ł��܂���ł���

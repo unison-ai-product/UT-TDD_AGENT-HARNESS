@@ -1,0 +1,138 @@
+snapshot source: git commit 8426500405d1d8bb3503ee21b3b82fa5be9e673a
+Cloning into 'C:\Users\micro\AppData\Local\Temp\ut-tdd-vitest-18324-1794880865552'...
+HEAD is now at 84265004 test(s7): prepare fresh G9 evidence subject
+From C:\dev\ut-1379-s7-35-retire-20261116
+ * branch              8eb915ba6359088e5b9cf25854f3699d1f264623 -> FETCH_HEAD
+Cloning into 'C:\Users\micro\AppData\Local\Temp\ut-tdd-vitest-head-18324-1794880865552'...
+HEAD is now at 84265004 test(s7): prepare fresh G9 evidence subject
+From C:\Users\micro\AppData\Local\Temp\ut-tdd-vitest-18324-1794880865552
+ * branch              8eb915ba6359088e5b9cf25854f3699d1f264623 -> FETCH_HEAD
+
+added 76 packages in 15s
+npm warn install-scripts 1 package has install scripts not yet covered by allowScripts:
+npm warn install-scripts   esbuild@0.28.2 (postinstall: node install.js)
+npm warn install-scripts
+npm warn install-scripts Run `npm install-scripts ls` to review, or `npm install-scripts approve <pkg>` to allow.
+db rebuild: projection ok, rows 48244 (C:\Users\micro\AppData\Local\Temp\ut-tdd-vitest-18324-1794880865552\.ut-tdd\harness.db)
+  note: plans / roadmap rollups / review evidence / optional Phase3 outputs ã‚’ projection
+  token telemetry (repo-scoped, issue #82): claude files matched 0/0 (project dir resolved=false, foreign repo 0, unknown cwd 0), codex files matched 0/4885 (foreign repo 4883, unknown cwd 2)
+2644 ŒÂ‚Ìƒtƒ@ƒCƒ‹‚ª³í‚Éˆ—‚³‚ê‚Ü‚µ‚½B0 ŒÂ‚Ìƒtƒ@ƒCƒ‹‚ğˆ—‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½
+
+ RUN  v4.1.12 C:/Users/micro/AppData/Local/Temp/ut-tdd-vitest-18324-1794880865552
+
+ â†“ tests/cli-surface.test.ts > utTddCliProbe (PLAN-L7-462 step 2 .cmd shim probe) > U-DIST-CLI-PROBE: resolves a PATH-provided ut-tdd shim (win32 ã¯ ComSpec çµŒç”± â€” bare node spawn ã ã¨ ENOENT)
+ â†“ tests/cli-surface.test.ts > L7 CLI surface closure > U-GATE-007 persists gate run evidence without changing gate verdict semantics
+ â†“ tests/cli-surface.test.ts > L7 CLI surface closure > U-GATE-008 keeps the gate verdict when evidence persistence fails
+ âœ“ tests/cli-surface.test.ts > L7 CLI surface closure > exposes plan complete as the completed handover lifecycle entrypoint 5625ms
+ â†“ tests/cli-surface.test.ts > L7 CLI surface closure > exposes skill suggest as a JSON command surface
+ â†“ tests/cli-surface.test.ts > L7 CLI surface closure > exposes strict telemetry provenance as a doctor verification flag
+ â†“ tests/cli-surface.test.ts > L7 CLI surface closure > lists doctor profiles as a machine-readable public surface
+ âœ“ tests/cli-surface.test.ts > L7 CLI surface closure > runs a named consumer-safe doctor profile without relying on setup-smoke alias 5153ms
+ â†“ tests/cli-surface.test.ts > L7 CLI surface closure > fail-closes unsupported doctor profile as machine-readable JSON
+ â†“ tests/cli-surface.test.ts > L7 CLI surface closure > fail-closes unsupported doctor scope as machine-readable JSON
+ â†“ tests/cli-surface.test.ts > L7 CLI surface closure > emits machine-readable doctor JSON while preserving failing exit codes
+ â†“ tests/cli-surface.test.ts > L7 CLI surface closure > U-DOCTORENV-016: binds a real setup-smoke CLI result file to the executed surface
+ â†“ tests/cli-surface.test.ts > L7 CLI surface closure > U-DOCLOCK-009: blocks a competing doctor CLI before it starts verification
+ â†“ tests/cli-surface.test.ts > L7 CLI surface closure > U-DOCLOCK-012: blocks a competing review --staged before its internal doctor starts
+ â†“ tests/cli-surface.test.ts > L7 CLI surface closure > U-DOCLOCK-013: blocks a competing review --uncommitted before its internal doctor starts
+ â†“ tests/cli-surface.test.ts > L7 CLI surface closure > documents guard blocked exit code in hook and manual preflight help
+ â†“ tests/cli-surface.test.ts > L7 CLI surface closure > exposes Pack sync commands as first-class distribution surfaces
+ â†“ tests/cli-surface.test.ts > L7 CLI surface closure > exposes ID-based trace impact traversal as a CLI surface
+ â†“ tests/cli-surface.test.ts > L7 CLI surface closure > exposes typed spec closure RAG as a CLI surface
+ â†“ tests/cli-surface.test.ts > L7 CLI surface closure > exposes DB scope-preview as a CLI surface
+ â†“ tests/cli-surface.test.ts > L7 CLI surface closure > renders DB scope-preview JSON without mutating profile sources
+ â†“ tests/cli-surface.test.ts > L7 CLI surface closure > exposes feedback commands through the extracted registrar
+ â†“ tests/cli-surface.test.ts > L7 CLI surface closure > exposes skill injection as a provider-neutral JSON manifest
+ â†“ tests/cli-surface.test.ts > L7 CLI surface closure > injects per-call model/effort overrides into adapter plans (PLAN-L7-255)
+ â†“ tests/cli-surface.test.ts > L7 CLI surface closure > keeps claude runtime command dry-run registered through delegation helper
+ â†“ tests/cli-surface.test.ts > L7 CLI surface closure > passes plan skill injection through task route adapter plans
+ â†“ tests/cli-surface.test.ts > L7 CLI surface closure > keeps proposal advisory lanes aligned with executable task routing
+ â†“ tests/cli-surface.test.ts > L7 CLI surface closure > exposes upper-model advisor dry-runs for lower orchestrator models
+ â†“ tests/cli-surface.test.ts > L7 CLI surface closure > executes advisor through the selected upper Codex adapter
+ â†“ tests/cli-surface.test.ts > L7 CLI surface closure > exposes builder catalog as a JSON command surface
+ â†“ tests/cli-surface.test.ts > L7 CLI surface closure > fails review command closed unless the current uncommitted scope is explicit
+ â†“ tests/cli-surface.test.ts > L7 CLI surface closure > emits a non-destructive cutover dry-run plan
+ â†“ tests/cli-surface.test.ts > L7 CLI surface closure > refuses cutover apply without a human-approved runbook
+ â†“ tests/cli-surface.test.ts > L7 CLI surface closure > exposes clean distribution planning with preflight, rollback, and contract metadata
+ â†“ tests/cli-surface.test.ts > L7 CLI surface closure > fails closed when the distribution source tag is unavailable
+ â†“ tests/cli-surface.test.ts > L7 CLI surface closure > does not start Git when a non-distribution command only needs the CLI version
+ â†“ tests/cli-surface.test.ts > L7 CLI surface closure > resolves the distribution tag only when omitted, without probing Git for an explicit tag
+ â†“ tests/cli-surface.test.ts > L7 CLI surface closure > exposes a non-destructive Pack repository sync plan
+ â†“ tests/cli-surface.test.ts > L7 CLI surface closure > U-DOCSECRET-006: materializes clean Pack artifacts into a local staging directory without publishing
+ â†“ tests/cli-surface.test.ts > L7 CLI surface closure > U-DOCSECRET-006: updates a local Pack checkout and prunes non-Pack files only when requested
+ â†“ tests/cli-surface.test.ts > L7 CLI surface closure > exposes non-destructive release publication planning
+ â†“ tests/cli-surface.test.ts > L7 CLI surface closure > exposes GitHub branch-type guard as a JSON command surface
+ â†“ tests/cli-surface.test.ts > L7 CLI surface closure > rejects team setup when CODEOWNERS team slugs are omitted
+ â†“ tests/cli-surface.test.ts > L7 CLI surface closure > requires setup ingress to carry an aggregate admission envelope
+ â†“ tests/cli-surface.test.ts > L7 CLI surface closure > accepts a production aggregate envelope through CLI setup admission
+ â†“ tests/cli-surface.test.ts > L7 CLI surface closure > exposes telemetry scan as a JSON command surface without provider CLI execution
+ â†“ tests/cli-surface.test.ts > L7 CLI surface closure > exposes quality audit as a JSON command surface
+ â†“ tests/cli-surface.test.ts > L7 CLI surface closure > exposes route eval --json as an alias for --format json
+ â†“ tests/cli-surface.test.ts > L7 CLI surface closure > exposes branch audit as a read-only JSON command surface
+ â†“ tests/cli-surface.test.ts > L7 CLI surface closure > exposes team run as a shared Claude/Codex dry-run launch plan
+ â†“ tests/cli-surface.test.ts > L7 CLI surface closure > exposes team suggest as a deterministic launch policy surface
+ â†“ tests/cli-surface.test.ts > L7 CLI surface closure > exposes proposal document coverage lanes as a parallel team suggestion
+ â†“ tests/cli-surface.test.ts > L7 CLI surface closure > executes team run through fake Claude/Codex adapters while keeping JSON machine-readable
+ â†“ tests/cli-surface.test.ts > L7 CLI surface closure > executes codex adapter under --execute --json and reports dry_run:false honestly
+stdout | tests/release-consumer-vmodel-template.test.ts > PR-2c release consumer V-model template writer
+[hook-timing] release-consumer-vmodel-template.test.ts:259 pack 9291ms
+
+ âœ“ tests/release-consumer-vmodel-template.test.ts > PR-2c release consumer V-model template writer > U-RCDEV-014: writes all required slot templates to catalog paths from port-index bytes 1419ms
+stdout | tests/release-consumer-vmodel-template.test.ts > PR-2c release consumer V-model template writer
+[hook-timing] release-consumer-vmodel-template.test.ts:270 teardown 26ms
+
+ â†“ tests/release-consumer-vmodel-template.test.ts > PR-2c release consumer V-model template writer > U-RCDEV-015: preserves existing bytes and reports skip (exists)
+ â†“ tests/release-consumer-vmodel-template.test.ts > PR-2c release consumer V-model template writer > U-RCDEV-015: rejects a mixed known and unknown slot request before writing
+ â†“ tests/release-consumer-vmodel-template.test.ts > PR-2c release consumer V-model template writer > U-RCDEV-015: dry-run reports the write without creating a file
+ â†“ tests/release-consumer-vmodel-template.test.ts > PR-2c release consumer V-model template writer > U-RCDEV-015: requires at least one template selector without writing
+ â†“ tests/release-consumer-vmodel-template.test.ts > PR-2c release consumer V-model template writer > U-RCDEV-015: --json returns written and skipped path arrays
+ â†“ tests/release-consumer-vmodel-template.test.ts > PR-2c release consumer V-model template writer > U-RCDEV-038: writes only the requested optional template to the optional root
+ â†“ tests/release-consumer-vmodel-template.test.ts > PR-2c release consumer V-model template writer > U-RCDEV-014/038: accepts multiple slots and required-plus-optional selection
+ â†“ tests/release-consumer-vmodel-template.test.ts > PR-2c release consumer V-model template writer > U-RCDEV-038: rejects a slot source ID in the optional namespace
+ â†“ tests/release-consumer-vmodel-template.test.ts > PR-2c release consumer V-model template writer > U-RCDEV-039: validates every required destination before the first write
+ â†“ tests/release-consumer-vmodel-template.test.ts > PR-2c release consumer V-model template writer > U-RCDEV-039: allows an ancestor junction that resolves inside the consumer root
+ â†“ tests/release-consumer-vmodel-template.test.ts > PR-2c release consumer V-model template writer > U-RCDEV-039: denies an outside ancestor during required dry-run without writes
+ â†“ tests/release-consumer-vmodel-template.test.ts > PR-2c release consumer V-model template writer > U-RCDEV-039: denies a dangling final symlink without creating its target
+ â†“ tests/release-consumer-vmodel-template.test.ts > PR-2c release consumer V-model template writer > U-RCDEV-039: denies a final 'outside' 'file' link before skip (exists)
+ â†“ tests/release-consumer-vmodel-template.test.ts > PR-2c release consumer V-model template writer > U-RCDEV-039: denies a final 'outside' 'directory' link before skip (exists)
+ â†“ tests/release-consumer-vmodel-template.test.ts > PR-2c release consumer V-model template writer > U-RCDEV-039: denies a final 'inside' 'file' link before skip (exists)
+ â†“ tests/release-consumer-vmodel-template.test.ts > PR-2c release consumer V-model template writer > U-RCDEV-039: denies a final 'inside' 'directory' link before skip (exists)
+ â†“ tests/update-check.test.ts > update-check semver primitives > U-UPDCHK-001: parseSemver accepts v-prefixed and bare release tags only
+ â†“ tests/update-check.test.ts > update-check semver primitives > U-UPDCHK-002: latestReleaseTag picks numeric max and ignores non-semver
+ â†“ tests/update-check.test.ts > update-check semver primitives > U-RELVER-002 / U-RELVER-003: package parser keeps prerelease identity and strict input
+ â†“ tests/update-check.test.ts > update-check semver primitives > U-UPDCHK-017: normalizeRepositoryUrl accepts string / object forms and strips git+
+ â†“ tests/update-check.test.ts > checkForUpdate > U-UPDCHK-003: newer remote tag surfaces updateAvailable and writes the cache
+ â†“ tests/update-check.test.ts > checkForUpdate > U-UPDCHK-004: local at latest or ahead is not an update
+ â†“ tests/update-check.test.ts > checkForUpdate > U-UPDCHK-005: fresh cache short-circuits the remote
+ â†“ tests/update-check.test.ts > checkForUpdate > U-UPDCHK-006: stale cache falls through to the remote
+ â†“ tests/update-check.test.ts > checkForUpdate > U-UPDCHK-007: unreachable remote fails open without caching
+ â†“ tests/update-check.test.ts > checkForUpdate > U-UPDCHK-008: missing or malformed harness package.json fails open
+ â†“ tests/update-check.test.ts > checkForUpdate > U-UPDCHK-009: cache write failure stays fail-open
+ â†“ tests/update-check.test.ts > checkForUpdate > U-UPDCHK-010: remote with no release tags is checked but silent
+ â†“ tests/update-check.test.ts > checkForUpdate > U-RELVER-009: canary tags do not become stable update advisories
+ â†“ tests/update-check.test.ts > checkForUpdate > U-UPDCHK-012: package.json repository.url is preferred over the origin fallback
+ â†“ tests/update-check.test.ts > checkForUpdate > U-UPDCHK-013: vendored install with no canonical remote never reads consumer origin
+ â†“ tests/update-check.test.ts > checkForUpdate > U-UPDCHK-014: corrupt cache JSON and remote-mismatch cache are stale
+ â†“ tests/update-check.test.ts > checkForUpdate > U-CMDINPUT-012: rejects an option-like remote override before git or cache write
+ â†“ tests/update-check.test.ts > checkForUpdate > U-CMDINPUT-013: rejects a package repository remote after git+ normalization
+ â†“ tests/update-check.test.ts > checkForUpdate > U-CMDINPUT-014: rejects before reading a fresh cache for the same remote
+ â†“ tests/update-check.test.ts > checkForUpdate > U-CMDINPUT-015: preserves remotes with an internal hyphen and the origin fallback
+ â†“ tests/update-check.test.ts > checkForUpdate > U-CMDINPUT-016: does not trim the resolved remote before checking or dispatch
+ â†“ tests/update-check.test.ts > checkForUpdate > U-UPDCHK-018: explicit remote override supports forks and mirrors
+ â†“ tests/update-check.test.ts > renderUpdateLine > U-UPDCHK-011: one advisory line per outcome without raw git checkout commands
+ â†“ tests/update-check.test.ts > gitLsRemoteInvocation (PLAN-L7-462 step 2 .cmd shim å¯¾å¿œ) > U-UPDCHK-021: passes through on posix without wrapping
+ â†“ tests/update-check.test.ts > gitLsRemoteInvocation (PLAN-L7-462 step 2 .cmd shim å¯¾å¿œ) > U-UPDCHK-022: wraps a PATH-resolved git.cmd via ComSpec without over-quoting plain tokens
+ â†“ tests/update-check.test.ts > gitLsRemoteInvocation (PLAN-L7-462 step 2 .cmd shim å¯¾å¿œ) > U-UPDCHK-023: prefers git.exe over git.cmd and never wraps executables
+ â†“ tests/update-check.test.ts > gitLsRemoteInvocation (PLAN-L7-462 step 2 .cmd shim å¯¾å¿œ) > U-UPDCHK-024: falls back to bare git when the remote contains % (cmd å±•é–‹ç ´å£Šã®å›é¿)
+ âœ“ tests/update-check.test.ts > status CLI wiring > U-UPDCHK-015: status --json keeps existing fields and adds update additively 3603ms
+ â†“ tests/update-check.test.ts > status CLI wiring > U-UPDCHK-016: status text emits exactly one update advisory line
+ â†“ tests/update-check.test.ts > status CLI wiring > U-UPDCHK-019: CI skips remote checks by default for deterministic runs
+ â†“ tests/update-check.test.ts > status CLI wiring > U-UPDCHK-020: status from a consumer cwd uses configured Pack remote, never consumer origin
+
+ Test Files  3 passed (3)
+      Tests  4 passed | 98 skipped (102)
+   Start at  11:03:57
+   Duration  64.67s (transform 3.63s, setup 226ms, import 5.36s, tests 25.14s, environment 1ms)
+
+[vitest-pool]: Timeout terminating forks worker for test files C:/Users/micro/AppData/Local/Temp/ut-tdd-vitest-18324-1794880865552/tests/update-check.test.ts.
+2644 ŒÂ‚Ìƒtƒ@ƒCƒ‹‚ª³í‚Éˆ—‚³‚ê‚Ü‚µ‚½B0 ŒÂ‚Ìƒtƒ@ƒCƒ‹‚ğˆ—‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½

@@ -1,0 +1,29 @@
+{
+  "subjectHead": "8426500405d1d8bb3503ee21b3b82fa5be9e673a",
+  "expectedHead": "8426500405d1d8bb3503ee21b3b82fa5be9e673a",
+  "command": "C:\\Program Files\\nodejs\\node.exe",
+  "argv": [
+    "scripts/run-vitest-snapshot.ts",
+    "tests/vmodel-pair.test.ts",
+    "tests/forward/fsm.test.ts",
+    "tests/runtime.test.ts",
+    "tests/asset-catalog.test.ts",
+    "tests/agent-guard-delegation-boundary.test.ts",
+    "tests/agent-guard.test.ts",
+    "tests/codex-hook-adapter.test.ts",
+    "-t",
+    "U-VPAIR-002|U-VPAIR-003|U-FSM-003|detects .* from the exact spawnable provider set|exposes asset catalog as a JSON command surface|evaluateAgentGuard|U-AGBOUND-(005|006|009|014|016|026|033)|U-CXHOOK-(001|011)",
+    "--maxWorkers",
+    "1",
+    "--reporter=verbose"
+  ],
+  "cwd": "C:/dev/ut-1379-s7-35-retire-20261116",
+  "startedAt": "2026-11-17T01:44:29.106Z",
+  "endedAt": "2026-11-17T01:51:54.800Z",
+  "exitCode": 0,
+  "signal": null,
+  "launchError": null,
+  "outputPath": "C:\\dev\\codex-g9-b-fresh-core-842650040-20261117.bin",
+  "rawSha256": "sha256:dae6c497dcb7b5ae49a1525e0b5101d0e8e87dd85a976247143be37485dac17e",
+  "digestDefinition": "Raw stdout/stderr bytes merged in observed event-arrival order; identical bytes are written to outputPath"
+}

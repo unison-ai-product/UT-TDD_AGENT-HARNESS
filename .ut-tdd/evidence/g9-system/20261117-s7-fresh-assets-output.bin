@@ -1,0 +1,99 @@
+snapshot source: git commit 8426500405d1d8bb3503ee21b3b82fa5be9e673a
+Cloning into 'C:\Users\micro\AppData\Local\Temp\ut-tdd-vitest-22544-1794880452899'...
+HEAD is now at 84265004 test(s7): prepare fresh G9 evidence subject
+Cloning into 'C:\Users\micro\AppData\Local\Temp\ut-tdd-vitest-head-22544-1794880452899'...
+HEAD is now at 84265004 test(s7): prepare fresh G9 evidence subject
+
+added 76 packages in 19s
+npm warn install-scripts 1 package has install scripts not yet covered by allowScripts:
+npm warn install-scripts   esbuild@0.28.2 (postinstall: node install.js)
+npm warn install-scripts
+npm warn install-scripts Run `npm install-scripts ls` to review, or `npm install-scripts approve <pkg>` to allow.
+db rebuild: projection ok, rows 48244 (C:\Users\micro\AppData\Local\Temp\ut-tdd-vitest-22544-1794880452899\.ut-tdd\harness.db)
+  note: plans / roadmap rollups / review evidence / optional Phase3 outputs ã‚’ projection
+  token telemetry (repo-scoped, issue #82): claude files matched 0/0 (project dir resolved=false, foreign repo 0, unknown cwd 0), codex files matched 0/4885 (foreign repo 4883, unknown cwd 2)
+2579 ŒÂ‚Ìƒtƒ@ƒCƒ‹‚ª³í‚Éˆ—‚³‚ê‚Ü‚µ‚½B0 ŒÂ‚Ìƒtƒ@ƒCƒ‹‚ğˆ—‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½
+
+ RUN  v4.1.12 C:/Users/micro/AppData/Local/Temp/ut-tdd-vitest-22544-1794880452899
+
+ â†“ tests/projection-writer.test.ts > review evidence projection selection > U-SCHEDULE-LIVE-002: compares reviewed_at as instants and resolves ties by declaration
+ â†“ tests/projection-writer.test.ts > PLAN-L7-450 W1 remediation routing > U-L7-450-W1-001: draft ownership candidate requires confirm and declaration together
+ â†“ tests/projection-writer.test.ts > PLAN-L7-450 W1 remediation routing > U-L7-450-W1-002: confirmed ownership candidate directs generates declaration
+ â†“ tests/projection-writer.test.ts > PLAN-L7-450 W1 remediation routing > U-L7-450-W1-003: no candidate preserves the legacy remediation
+ â†“ tests/projection-writer.test.ts > SECRET_PATTERN word-boundary anchoring > does not match 'sk' inside a word but matches a boundary-delimited token
+ âœ“ tests/projection-writer.test.ts > IT-DB-01/02: harness.db projection writer > rebuilds a clean pack repo with root skills and no docs/plans 17608ms
+ â†“ tests/projection-writer.test.ts > IT-DB-01/02: harness.db projection writer > CANDIDATE-U-PLANRET-022: projects design-quality coverage rows from the real repo rebuild
+ â†“ tests/projection-writer.test.ts > IT-DB-01/02: harness.db projection writer > projects pair-freeze orphan findings as DB-detectable design findings
+ â†“ tests/projection-writer.test.ts > IT-DB-01/02: harness.db projection writer > detects typed refactor candidates for split, extraction, dedupe, and externalization
+ â†“ tests/projection-writer.test.ts > IT-DB-01/02: harness.db projection writer > projects refactor candidates into quality signals and feedback events
+ â†“ tests/projection-writer.test.ts > IT-DB-01/02: harness.db projection writer > projects refactor candidate signals through the externalized feedback projection module
+ â†“ tests/projection-writer.test.ts > IT-DB-01/02: harness.db projection writer > keeps refactor candidate lifecycle decisions across rebuilds
+ â†“ tests/projection-writer.test.ts > IT-DB-01/02: harness.db projection writer > routes verification defect findings into refactor candidate lifecycle rows
+ â†“ tests/projection-writer.test.ts > IT-DB-01/02: harness.db projection writer > derives artifact progress colors from dependency checks and linked tests
+ â†“ tests/projection-writer.test.ts > IT-DB-01/02: harness.db projection writer > records normalized projection events idempotently and keeps rows joinable by plan_id
+ â†“ tests/projection-writer.test.ts > IT-DB-01/02: harness.db projection writer > U-DBPROJ-GATE-01 projects each persisted gate run without treating repeated routine gates as retries
+ â†“ tests/projection-writer.test.ts > IT-DB-01/02: harness.db projection writer > U-DBPROJ-GATE-01 projects planless gate runs to workflow rows and excludes retry groups
+ â†“ tests/projection-writer.test.ts > IT-DB-01/02: harness.db projection writer > U-DBPROJ-GATE-01 keeps retry grouping for repeated non-routine workflows
+ â†“ tests/projection-writer.test.ts > IT-DB-01/02: harness.db projection writer > U-DBPROJ-GATE-01 keeps A-132 seeds historical and ownerless with PLAN present=false
+ â†“ tests/projection-writer.test.ts > IT-DB-01/02: harness.db projection writer > U-DBPROJ-GATE-01 keeps A-132 seeds historical and ownerless with PLAN present=true
+ â†“ tests/projection-writer.test.ts > IT-DB-01/02: harness.db projection writer > U-DBPROJ-GATE-02 (PLAN-RECOVERY-14): gate-run-derived workflow_runs joins the plan's documented drive_runs row (no false workflow_orphans)
+ â†“ tests/projection-writer.test.ts > IT-DB-01/02: harness.db projection writer > U-DBPROJ-GATE-03 (PLAN-RECOVERY-14): gate-run evidence resolves legacy short plan_id aliases like other DB-linked projections
+ â†“ tests/projection-writer.test.ts > IT-DB-01/02: harness.db projection writer > projects runtime test_runs from session-log verification events with session provenance
+ â†“ tests/projection-writer.test.ts > IT-DB-01/02: harness.db projection writer > keeps extracted runtime projection helpers behind injected dependencies
+ â†“ tests/projection-writer.test.ts > IT-DB-01/02: harness.db projection writer > keeps extracted skill metric helpers behind injected dependencies
+ â†“ tests/projection-writer.test.ts > IT-DB-01/02: harness.db projection writer > projects runtime guardrail_decisions from forced-stop session events only
+ â†“ tests/projection-writer.test.ts > IT-DB-01/02: harness.db projection writer > projects runtime skill_invocations from skill suggest session events only
+ â†“ tests/projection-writer.test.ts > IT-DB-01/02: harness.db projection writer > exempts structured-id columns from the secret check but still rejects free-form payload secrets
+ â†“ tests/projection-writer.test.ts > IT-DB-01/02: harness.db projection writer > projects detector route candidates into feedback, dry-run issue queue, and approval guardrail
+ â†“ tests/projection-writer.test.ts > IT-DB-01/02: harness.db projection writer > does not project closed detector route candidates into feedback or issue queue
+ â†“ tests/projection-writer.test.ts > IT-DB-01/02: harness.db projection writer > turns unresolved cross-drive/model joins into findings instead of silently skipping them
+ â†“ tests/projection-writer.test.ts > IT-DB-01/02: harness.db projection writer > does NOT flag work-context plan_id labels (audit-cycle id / compound) as unresolved joins (PLAN-L7-144)
+ â†“ tests/projection-writer.test.ts > IT-DB-01/02: harness.db projection writer > resolves unique short PLAN labels before creating unresolved join findings
+ â†“ tests/projection-writer.test.ts > IT-DB-01/02: harness.db projection writer > separates stale bare numeric runtime PLAN context from true unresolved joins
+ â†“ tests/projection-writer.test.ts > IT-DB-01/02: harness.db projection writer > does not turn feedback_events queue rows into unresolved join findings
+ â†“ tests/projection-writer.test.ts > IT-DB-01/02: harness.db projection writer > rebuildHarnessDb is atomic: a mid-rebuild failure rolls back, leaving the prior projection intact
+ â†“ tests/projection-writer.test.ts > IT-DB-01/02: harness.db projection writer > CANDIDATE-U-PLANRET-021: auto-populates relation, profile, document export, and test catalog projections on rebuild
+ â†“ tests/projection-writer.test.ts > IT-DB-01/02: harness.db projection writer > projects artifact progress rows as yellow until linked tests have passing runs
+ â†“ tests/projection-writer.test.ts > IT-DB-01/02: harness.db projection writer > closes working-tree relation impacts when the owning PLAN has review and green evidence
+ â†“ tests/projection-writer.test.ts > IT-DB-01/02: harness.db projection writer > IMP-140: projects 15 screens and FR/BRâ†’screen trace from doc source on rebuild
+ â†“ tests/projection-writer.test.ts > IT-DB-01/02: harness.db projection writer > CANDIDATE-U-PLANRET-023: rebuildHarnessDb deterministically projects Phase3 outputs without source mutation
+ â†“ tests/projection-writer.test.ts > rebuildHarnessDb: repo-scoped runtime token telemetry ingest (issue #82, PLAN-L7-454) > (a)(b)(c) ingests only repo-owned session usage into model_runs; foreign-repo usage is excluded
+ â†“ tests/projection-writer.test.ts > rebuildHarnessDb: repo-scoped runtime token telemetry ingest (issue #82, PLAN-L7-454) > cold-start: no matching session logs => rebuild succeeds with 0 measured model_runs rows, no throw
+ âœ“ tests/skill-recommend.test.ts > skill recommendation telemetry > recommends skills from plan layer/drive context and records accepted invocations 67ms
+ âœ“ tests/skill-recommend.test.ts > skill recommendation telemetry > selects different top skills for different workflow layers 49ms
+ âœ“ tests/skill-recommend.test.ts > skill recommendation telemetry > selects drive-model specific skills when layer is the same 38ms
+ â†“ tests/skill-recommend.test.ts > skill recommendation telemetry > de-saturates equal layer/drive skills via graduated metadata overlap
+ â†“ tests/skill-recommend.test.ts > skill recommendation telemetry > excludes all-layer/all-drive review checklist assets from scoring candidates
+ â†“ tests/skill-recommend.test.ts > skill recommendation telemetry > excludes wildcard review checklist assets at the shared scorer boundary
+ â†“ tests/skill-recommend.test.ts > skill recommendation telemetry > applies learning only from runtime-provenance skill evaluations
+ âœ“ tests/skill-recommend.test.ts > skill recommendation telemetry > keeps CLI recommendation and DB projection ranking on the same scorer 38ms
+ â†“ tests/skill-recommend.test.ts > skill recommendation telemetry > surfaces a domain skill (no layers/drive) when the task matches its metadata
+ âœ“ tests/skill-recommend.test.ts > skill recommendation telemetry > recommendSkillsForText: è‡ªç”±æ–‡ã‚’ classify ã—ã¦ flat ranked list ã‚’è¿”ã™ (PLAN æœªç™»éŒ²ä¸è¦) 52ms
+ âœ“ tests/skill-recommend.test.ts > skill recommendation telemetry > recommendSkillsForText: risk èªã‚’å«ã‚€è‡ªç”±æ–‡ã¯ reason ã« risk ãƒ•ãƒ©ã‚°ã‚’è¼‰ã›ã‚‹ 47ms
+ â†“ tests/skill-recommend.test.ts > skill recommendation telemetry > bucketRecommendations: score band ã§ required/recommended/optional ã«åˆ†é¡
+ â†“ tests/skill-recommend.test.ts > skill recommendation telemetry > buildSkillInjectionSet: provider context manifest returns scoped skill paths
+ â†“ tests/skill-recommend.test.ts > skill recommendation telemetry > records recommendations but does not auto-register invocations before review evidence exists
+ â†“ tests/asset-catalog.test.ts > IT-ASSET-DB-01: automation asset catalog > exposes asset catalog as a JSON command surface
+ âœ“ tests/asset-catalog.test.ts > IT-ASSET-DB-01: automation asset catalog > catalogs metadata, updates search_index, and never stores prompt bodies 249ms
+ â†“ tests/asset-catalog.test.ts > IT-ASSET-DB-01: automation asset catalog > records drift and empty catalog as findings
+ â†“ tests/asset-catalog.test.ts > IT-ASSET-04: in-memory skill catalog scan > scans docs/skills markdown into an in-memory catalog without persistent .ut-tdd state
+ â†“ tests/asset-catalog.test.ts > IT-ASSET-04: in-memory skill catalog scan > scans root skills markdown for distribution packages
+ â†“ tests/asset-catalog.test.ts > IT-ASSET-04: in-memory skill catalog scan > fails closed on malformed metadata and duplicate skill IDs
+ â†“ tests/asset-catalog.test.ts > IT-ASSET-04: in-memory skill catalog scan > real repo has a non-empty skill markdown catalog and no optional-root blocker
+ âœ“ tests/asset-drift.test.ts > asset-drift lint (U-FR-L1-49) > detects legacy source personal path residue in enrolled assets 6ms
+ âœ“ tests/asset-drift.test.ts > asset-drift lint (U-FR-L1-49) > detects arbitrary personal absolute paths in enrolled assets 3ms
+ âœ“ tests/asset-drift.test.ts > asset-drift lint (U-FR-L1-49) > does not treat URL path segments as personal absolute paths 1ms
+ âœ“ tests/asset-drift.test.ts > asset-drift lint (U-FR-L1-49) > detects legacy runtime command delegation residue 1ms
+ âœ“ tests/asset-drift.test.ts > asset-drift lint (U-FR-L1-49) > detects legacy runtime agent and env-name residue 1ms
+ âœ“ tests/asset-drift.test.ts > asset-drift lint (U-FR-L1-49) > detects empty docs-skills catalog source 0ms
+ âœ“ tests/asset-drift.test.ts > asset-drift lint (U-FR-L1-49) > passes when enrolled assets are UT-TDD local 0ms
+ âœ“ tests/asset-drift.test.ts > asset-drift lint (U-FR-L1-49) > real repo has no active internal asset drift 287ms
+ âœ“ tests/asset-drift.test.ts > asset-drift lint (U-FR-L1-49) > U-ASSETDRIFT-007: loads nested agent memory as an enrolled asset source 65ms
+
+ Test Files  4 passed (4)
+      Tests  17 passed | 56 skipped (73)
+   Start at  10:57:01
+   Duration  59.47s (transform 3.87s, setup 358ms, import 7.39s, tests 18.54s, environment 1ms)
+
+[vitest-pool]: Timeout terminating forks worker for test files C:/Users/micro/AppData/Local/Temp/ut-tdd-vitest-22544-1794880452899/tests/asset-drift.test.ts.
+2579 ŒÂ‚Ìƒtƒ@ƒCƒ‹‚ª³í‚Éˆ—‚³‚ê‚Ü‚µ‚½B0 ŒÂ‚Ìƒtƒ@ƒCƒ‹‚ğˆ—‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½

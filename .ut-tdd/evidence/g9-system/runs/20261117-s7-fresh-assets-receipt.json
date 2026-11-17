@@ -1,0 +1,26 @@
+{
+  "subjectHead": "8426500405d1d8bb3503ee21b3b82fa5be9e673a",
+  "expectedHead": "8426500405d1d8bb3503ee21b3b82fa5be9e673a",
+  "command": "C:\\Program Files\\nodejs\\node.exe",
+  "argv": [
+    "scripts/run-vitest-snapshot.ts",
+    "tests/asset-catalog.test.ts",
+    "tests/skill-recommend.test.ts",
+    "tests/projection-writer.test.ts",
+    "tests/asset-drift.test.ts",
+    "-t",
+    "catalogs metadata, updates search_index, and never stores prompt bodies|recommends skills from plan layer/drive context and records accepted invocations|selects different top skills for different workflow layers|selects drive-model specific skills when layer is the same|keeps CLI recommendation and DB projection ranking on the same scorer|recommendSkillsForText:|rebuilds a clean pack repo with root skills and no docs/plans|asset-drift lint",
+    "--maxWorkers",
+    "1",
+    "--reporter=verbose"
+  ],
+  "cwd": "C:/dev/ut-1379-s7-35-retire-20261116",
+  "startedAt": "2026-11-17T01:54:12.484Z",
+  "endedAt": "2026-11-17T01:59:46.715Z",
+  "exitCode": 0,
+  "signal": null,
+  "launchError": null,
+  "outputPath": "C:\\dev\\codex-g9-b-fresh-assets-842650040-20261117.bin",
+  "rawSha256": "sha256:fc01137c1974bee1fb0e8d040e2557bce6f988d340c5380f5ed34ebd836fc64d",
+  "digestDefinition": "Raw stdout/stderr bytes merged in observed event-arrival order; identical bytes are written to outputPath"
+}
