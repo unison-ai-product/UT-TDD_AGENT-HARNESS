@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { stringify } from "yaml";
+import type { GitChange } from "../github/git-diff.ts";
 import { parseLegacyPlanSource } from "../plan-asset/adapters/legacy-plan-inventory.ts";
 import { type Frontmatter, frontmatterSchema } from "../schema/frontmatter.ts";
 
@@ -8,11 +9,7 @@ export interface PlanBlob {
   content: string;
 }
 
-export type PlanChange =
-  | { kind: "added"; path: string }
-  | { kind: "modified"; path: string }
-  | { kind: "deleted"; path: string }
-  | { kind: "renamed"; from: string; path: string };
+export type PlanChange = GitChange;
 
 export interface AdmissionReceiptProjection {
   commandId: string;

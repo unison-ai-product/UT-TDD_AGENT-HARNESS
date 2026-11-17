@@ -17,20 +17,21 @@ issue: 1391
 本書はその §2 検査の種類と対象、§3 email と除外、§4 denylist、§5 denylist が無いときの扱い、§6 baseline、§7 判定規則と finding、§8 出力の形、§10 関数、§11 配線、§12 不変条件を検証する oracle を定義する。
 共有の `docs/test-design/harness/L7-unit-test-design.md` には索引行を足さない。本書が詳細の正本である。
 
-`U-PRIVSCAN-001`〜`018` は正式 oracle へ昇格済み (issue #1391、設計書保護 gate §10.3 の手順 2)。Red の `it.fails` はそのまま残っており、昇格は実装や Green の結果を意味しない。
+`CANDIDATE-U-PRIVSCAN-019`〜`020` は L6 §3 E5 (issue #1754) の候補で、実装 PR (src を含む) の Red / Green の前に昇格する。`U-PRIVSCAN-001`〜`018` は正式 oracle へ昇格済み (issue #1391、設計書保護 gate §10.3 の手順 2)。Red の `it.fails` はそのまま残っており、昇格は実装や Green の結果を意味しない。
 
 ## 2. fixture
 
 - **テストのソースに当たりを書かない**: 本検査の `tree` は `tests/` も走査する。除外に当たらない email は、テストの中で実行時に連結して作る (例: ローカル部、`"@"`、ドメインを別々の文字列リテラルにして `+` で繋ぐ)。ソースの 1 行が L6 §3 の email の形に一致しないようにする。ドメインは実在しうる形 (`.jp` など) を使うが、実在の人や組織のアドレスを使わない。
 - **denylist は合成の値だけを使う**: `example-private-repo`、`Alice Example` のような実在しない語の正規表現を、temp directory に作った home の `.ut-tdd/privacy-denylist.txt` に書き、`homeDirectory` として関数へ渡す。実行している利用者の本物の home と本物の denylist のファイルを読むテストを書かない。process の環境変数を書き換えない。denylist の合成の語も、配布物に入る source (`tests/` を含む) では実行時に連結して作る (例: `["example","private","repo"].join("-")`)。文字列リテラルのまま書くと、014 の当たりの無い source でテストのファイル自身が `pack` の denylist の当たりになるためである。
 - 純粋関数の行は、`PrivacyUnit` の列・denylist の状態・baseline・比較元を直接渡して作る。実 repo のファイルは読まない (015 と 016 を除く)。
+- 019 と 020 は `PrivacyUnit` を直接渡す純粋関数の行で、`<P>` と同様にテストのソースに当たりの形を 1 行で書かない (`support` と `@github.com` を別のリテラルにして連結する)。
 - 013 と 017 は temp directory に実 git repository を作り、木・commit ごとの追加行 (merge commit を含む)・commit のメタ・比較元の取得・denylist のファイルの読み出しを確かめる。014 と 018 は distribution の command を temp の source・home・出力先で動かす。
 - 1 つの行は規則を 1 本だけ殺すように、入力の書き方を 1 つだけ変える。
 - 015 と 016 は実 repo を読むので、`test-repository-isolation` の登録が要る (L6 §11)。
 
 ## 3. oracle 宣言の一覧
 
-以下で `<P>` は「除外に当たらない email を実行時に連結して作った値」(例: ローカル部 `alice`、ドメイン `mail-provider.jp`)、`<D>` は合成の denylist の語 `example-private-repo` を指す。
+以下で `<P>` は「除外に当たらない email を実行時に連結して作った値」(例: ローカル部 `alice`、ドメイン `mail-provider.jp`)、`<D>` は合成の denylist の語 `example-private-repo` を指す。`<G>` はローカル部 `support`・ドメイン `github.com` のアドレス、`<GU>` はその大文字を含む形 (ローカル部 `Support`・ドメイン `GitHub.com`) を指す (L6 §3 E5 と同じ記号。本書も `tree` の検査の対象なので email の形のまま書かない。テストでは実行時に連結して作る)。
 
 | ID | 入力 | 期待 | 殺す mutation |
 | --- | --- | --- | --- |
@@ -52,6 +53,8 @@ issue: 1391
 | `U-PRIVSCAN-016` | 実 repo の `.github/workflows/` を読む | (a) `harness-check.yml` の `harness-check-linux` に privacy scan の step があり、lane の判定による `if:` を持たない。(b) pull_request で `--mode tree` と `--mode diff` (`pull_request.base.sha` と `pull_request.head.sha`) を `--fail-close` 付きで流し、main への push で `--mode tree --fail-close` を流す。(c) その step は `secrets.` を参照せず、`.github/workflows/` のどのファイルにも `PRIVACY_DENYLIST` と `privacy-denylist` の文字列が無い。(d) `security.yml` には置かない | CI に配線しない / doc lane で skip する / diff を流さない / `--fail-close` を付けない / GitHub の secret に依存する |
 | `U-PRIVSCAN-017` | temp の git repository で、base の branch と作業の branch が同じ行を別々に変えて衝突する状態を作り、作業の branch で base を取り込む merge commit M の衝突の解消で `docs/x.md` の 4 行目に `<P>` を入れて commit し、続く commit B でその行を消す。範囲 (base から B まで) を `loadDiffPrivacyUnits` で読み、`analyzePrivacyScan` (mode `diff`) に渡す。対照として、衝突の解消に `<P>` を入れない同じ形の範囲も渡す | M の行が `docs/x.md@<M の先頭 12 桁>:4:privacy-email-hit` で報告され、`ok=false`。B の head の木 (`tree`) には当たりが無い。対照の範囲は finding 0 件 | merge commit を `--no-merges` で飛ばす / merge commit を second parent との差分で読む / 範囲の最後の木だけを見る / 取り込んだ側の変更を全て当たりにする |
 | `U-PRIVSCAN-018` | temp の home の denylist のファイルに、`<D>`、compile できない entry、`#` で始まるコメント行 (他に現れない一意の文字列を含む) を書く。artifact に `<D>` を含む状態と、compile できない entry だけを直した状態で、`distribution sync-pack` と `distribution package` を `--json` 付きと無しで流す。この 8 回の実行 (denylist の 2 状態 × 2 command × `--json` の有無) は、1 回を 1 つの test に分け、それぞれが自分の timeout を持つ (1 回の遅い実行が残りの実行の時間を奪わないようにする。期待値は各回に同じものを掛ける) | (a) 出力の観点: 標準出力・標準エラー・JSON の出力・出力先に新しく書かれた全てのファイル・新しく作られた evidence のどこにも、denylist の entry の文字列、コメント行の一意の文字列、一致した部分文字列が現れない。(b) source の観点: 入力の artifact にもとからある `<D>` は保持される (検査は source を書き換えない)。temp の source の repo の中 (`.ut-tdd/` を含む) は、実行の前後で取ったファイルの一覧と内容の差分で比べ、追加・変更されたファイルに entry の文字列とコメント行の一意の文字列が現れない (新しい漏えいが無い)。(c) denylist のファイルは home の外へ写されない | 出力や evidence に denylist の中身を出す / 検査が source の repo に denylist の中身を書く / denylist のファイルを repo へ写す / compile の例外のメッセージを出す / 検査が入力の当たりを書き換える |
+| `CANDIDATE-U-PRIVSCAN-019` | `analyzePrivacyScan` (mode `diff`) に commit のメタの `message` の単位を渡す。(a) 末尾の行が `Signed-off-by: dependabot[bot] <<G>>`、(b) 末尾の行が `signed-off-by: dependabot[bot] <<G>>` (key の大文字小文字違い)、(c) 末尾の行が `Signed-off-by: dependabot[bot] <` + `49699333+dependabot` + `[bot]@users.noreply.github.com>` (bot の noreply、実行時に連結)、(d) (a) の行の前後に空行と別の本文の行があり、行末が CRLF | (a)〜(d) finding 0 件で `ok=true` (L6 §3 E5。(c) は E2 で既に当たらず、新しい除外を足していないことの回帰) | trailer の key を大文字小文字で区別する / CRLF の `\r` で一致を落とす / E5 を末尾の行だけに限る / bot の noreply を新たに当てる |
+| `CANDIDATE-U-PRIVSCAN-020` | `analyzePrivacyScan` (mode `diff`) に反例を渡す。いずれも `<P>` ではなく、E5 の形に近い値を実行時に連結して作る。(a) `message` の 3 行目が `see Signed-off-by: dependabot[bot] <<G>>` (行の前に語)、(b) `Signed-off-by: dependabot[bot] <<G>> extra` (`>` の後ろに語)、(c) `Signed-off-by: dependabot[bot] <` + ローカル部 `support`・ドメイン `evil.jp` のアドレス + `>` (予約されていない TLD。`example` の TLD は E1 で当たらない)、(d) `Signed-off-by: dependabot[bot] <<G>.evil.jp>`、(e) `Signed-off-by: renovate[bot] <<G>>` と `Signed-off-by: Alice Example <<G>>`、(f) `Co-authored-by: dependabot[bot] <<G>>`、(g) `Signed-off-by: dependabot[bot] <<GU>>`、(h) `Signed-off-by: dependabot[bot] <<G>>` を `author` / `committer` のメタの値、`diff` の追加行 (`docs/x.md`)、`tree` の内容に置く | (a)〜(g) は `commit:<12 桁>:message:<行>:privacy-email-hit` が出て `ok=false` (他の行が無いので 1 件ずつ)。(h) は `author` / `committer` が `commit:<12 桁>:author:1` / `:committer:1`、`docs/x.md@<12 桁>:<行>`、`tree` の位置で `privacy-email-hit` (E5 は `message` の行にだけ効く) | E5 を部分一致にする / `Signed-off-by` 以外の key を許す / 名前を問わない / アドレスの前方一致で許す / 大文字小文字を区別しない比較にする / `message` 以外の field やファイルの内容に E5 を効かせる |
 
 ## 4. 昇格と引用の方針
 

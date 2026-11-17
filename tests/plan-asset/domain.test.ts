@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
+  createRedactedCommandArgs,
+  EvidenceRecord,
+} from "../../src/forward/domain/evidence-record.ts";
+import {
   adaptLegacyPlan,
   resolveLegacyPlanAlias,
 } from "../../src/plan-asset/adapters/legacy-plan-adapter.ts";
-import {
-  createRedactedCommandArgs,
-  EvidenceRecord,
-} from "../../src/plan-asset/domain/evidence-record.ts";
 import { PlanAsset, PlanRevision } from "../../src/plan-asset/domain/plan-asset.ts";
 import { PlanIdReservation } from "../../src/plan-asset/domain/reservation.ts";
 

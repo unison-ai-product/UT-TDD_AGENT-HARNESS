@@ -1,5 +1,5 @@
 import { performance } from "node:perf_hooks";
-import type { LintResult } from "../plan/lint.ts";
+import type { LintResult } from "../lint/lint-result.ts";
 import { buildFullDoctorCheckDefinitions } from "./check-definitions.ts";
 import {
   type DoctorRunProfileId,

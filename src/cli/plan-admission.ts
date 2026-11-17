@@ -1,13 +1,12 @@
 import type { Command } from "commander";
+import { GitDiffAdapterError, SystemGitCommandPort } from "../github/git-diff.ts";
 import {
   type AdmissionProjectionPort,
   checkPlanAdmission,
 } from "../plan-admission/admission-check.ts";
 import {
   GitAdmissionChangesAdapter,
-  GitDiffAdapterError,
   readUtf8BlobAtRef,
-  SystemGitCommandPort,
 } from "../plan-admission/git-diff-adapter.ts";
 import { parseTrackedReceiptProjection } from "../plan-admission/tracked-receipt-projection.ts";
 

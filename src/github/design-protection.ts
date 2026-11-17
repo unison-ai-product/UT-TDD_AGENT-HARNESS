@@ -1,12 +1,12 @@
-import type { PlanChange } from "../plan-admission/diff-fence.ts";
 import {
+  type GitChange,
   type GitCommandPort,
   GitDiffAdapterError,
   parseNameStatusEntries,
   resolveCommit,
   splitNul,
   validateCommitRef,
-} from "../plan-admission/git-diff-adapter.ts";
+} from "./git-diff.ts";
 
 export const IMPLEMENTATION_PATH_PREFIXES = ["src/", "scripts/"] as const;
 export const PROTECTED_PATH_PREFIXES = ["docs/design/", "docs/test-design/"] as const;
@@ -40,7 +40,7 @@ export function readDesignProtectionChanges(
   git: GitCommandPort,
   baseRef: string,
   headRef: string,
-): PlanChange[] {
+): GitChange[] {
   validateCommitRef(baseRef);
   validateCommitRef(headRef);
   const baseCommit = resolveCommit(git, baseRef);
@@ -51,7 +51,7 @@ export function readDesignProtectionChanges(
 }
 
 export function classifyPullRequestChanges(
-  changes: readonly PlanChange[],
+  changes: readonly GitChange[],
   paths: DesignProtectionPaths = {
     implementation: IMPLEMENTATION_PATH_PREFIXES,
     protected: PROTECTED_PATH_PREFIXES,
@@ -74,7 +74,7 @@ export function checkDesignProtection(input: {
     implementation: IMPLEMENTATION_PATH_PREFIXES,
     protected: PROTECTED_PATH_PREFIXES,
   };
-  let changes: PlanChange[];
+  let changes: GitChange[];
   try {
     changes = readDesignProtectionChanges(input.git, input.baseRef, input.headRef);
   } catch (error) {
@@ -163,7 +163,7 @@ export function runDesignProtectionCommand(
   return result.ok ? 0 : 1;
 }
 
-function pathsForChange(change: PlanChange): string[] {
+function pathsForChange(change: GitChange): string[] {
   return change.kind === "renamed" ? [change.from, change.path] : [change.path];
 }
 

@@ -1,4 +1,4 @@
-import type { LintResult } from "../plan/lint.ts";
+import type { LintResult } from "../lint/lint-result.ts";
 import { evaluateClaudeVersion } from "../runtime/claude-version-check.ts";
 import { CLAUDE_CODE_VERSION_FLOOR } from "../runtime/claude-version-floor.ts";
 import { type PathClaudeProbe, probePathClaude } from "./claude-path-probe.ts";
