@@ -83,77 +83,81 @@ describe("snapshot runner lock: block B acquisition and release", () => {
     },
   );
 
+  // dir は snapshotLockDir(tmpRoot) から導く (L7 §2)。対の通常 it は、同じ実 fs・step hook の準備を、
+  // 実装に依らない明示の dir で通す (stub の snapshotLockDir は空文字を返すため)。
+  const body016 = (dirOf: (root: string) => string): void => {
+    const run = (setup: (dir: string) => void, expectedHolder: number) => {
+      const root = mkdtempSync(join(tmpdir(), "snaplock-016-"));
+      try {
+        const dir = dirOf(root);
+        // stub (空文字) の間に作業ディレクトリへ書かないための assertion。契約の置き場は tmpRoot の下である。
+        expect(dir.startsWith(root)).toBe(true);
+        mkdirSync(dir, { recursive: true });
+        writeFileSync(
+          join(dir, "gen-1.json"),
+          JSON.stringify(makeRecord({ lockId: "G1", generation: 1 })),
+        );
+        writeFileSync(join(dir, "released-1"), "");
+        const links: string[] = [];
+        let armed = true;
+        const base = makeLockHarness({ maxWaitMs: 0, classify: liveSet("H", "H100") });
+        const deps: SnapshotLockDeps = {
+          ...base.deps,
+          io: {
+            mkdir: (p) => void mkdirSync(p, { recursive: true }),
+            writeFile: (p, d) => writeFileSync(p, d),
+            rename: (a, b) => renameSync(a, b),
+            link: (a, b) => {
+              links.push(b);
+              if (armed && /gen-2\.json$/.test(b)) {
+                armed = false;
+                setup(dir);
+              }
+              linkSync(a, b);
+            },
+            readFile: (p) => readFileSync(p, "utf8"),
+            readdir: (p) => readdirSync(p),
+            unlink: (p) => unlinkSync(p),
+          },
+        };
+        const result = acquireSnapshotLock(
+          { ...base.options, tmpRoot: root, repoRoot: root },
+          deps,
+        );
+        expect(links.filter((p) => /gen-2\.json$/.test(p))).toHaveLength(1);
+        expect(links).toHaveLength(1);
+        expect(result.kind).toBe("busy");
+        expect(holderGen(result)).toBe(expectedHolder);
+        expect(JSON.parse(readFileSync(join(dir, "gen-2.json"), "utf8")).lockId).toBe(
+          expectedHolder === 2 ? "H" : "H2",
+        );
+        expect(base.lines.some((l) => lineKind(l) === "acquired")).toBe(false);
+      } finally {
+        removeTestTree(root);
+      }
+    };
+    run((dir) => {
+      writeFileSync(
+        join(dir, "gen-2.json"),
+        JSON.stringify(makeRecord({ lockId: "H", generation: 2 })),
+      );
+    }, 2);
+    run((dir) => {
+      for (let g = 2; g <= 100; g += 1) {
+        const lockId = g === 2 ? "H2" : g === 100 ? "H100" : `H${g}`;
+        writeFileSync(
+          join(dir, `gen-${g}.json`),
+          JSON.stringify(makeRecord({ lockId, generation: g })),
+        );
+        if (g < 100) writeFileSync(join(dir, `released-${g}`), "");
+      }
+    }, 100);
+  };
+
   redWithPreparationPair(
     "CANDIDATE-U-SNAPLOCK-016: a stalled attempt cannot link over a number that other runners advanced past",
-    () => {
-      const run = (setup: (dir: string) => void, expectedHolder: number) => {
-        const root = mkdtempSync(join(tmpdir(), "snaplock-016-"));
-        try {
-          const dir = snapshotLockDir(root);
-          // stub (空文字) の間に作業ディレクトリへ書かないための確認。契約の置き場は tmpRoot の下である。
-          if (dir === "" || !dir.startsWith(root))
-            throw new Error(`lock dir is not under tmpRoot: ${dir}`);
-          mkdirSync(dir, { recursive: true });
-          writeFileSync(
-            join(dir, "gen-1.json"),
-            JSON.stringify(makeRecord({ lockId: "G1", generation: 1 })),
-          );
-          writeFileSync(join(dir, "released-1"), "");
-          const links: string[] = [];
-          let armed = true;
-          const base = makeLockHarness({ maxWaitMs: 0, classify: liveSet("H", "H100") });
-          const deps: SnapshotLockDeps = {
-            ...base.deps,
-            io: {
-              mkdir: (p) => void mkdirSync(p, { recursive: true }),
-              writeFile: (p, d) => writeFileSync(p, d),
-              rename: (a, b) => renameSync(a, b),
-              link: (a, b) => {
-                links.push(b);
-                if (armed && /gen-2\.json$/.test(b)) {
-                  armed = false;
-                  setup(dir);
-                }
-                linkSync(a, b);
-              },
-              readFile: (p) => readFileSync(p, "utf8"),
-              readdir: (p) => readdirSync(p),
-              unlink: (p) => unlinkSync(p),
-            },
-          };
-          const result = acquireSnapshotLock(
-            { ...base.options, tmpRoot: root, repoRoot: root },
-            deps,
-          );
-          expect(links.filter((p) => /gen-2\.json$/.test(p))).toHaveLength(1);
-          expect(links).toHaveLength(1);
-          expect(result.kind).toBe("busy");
-          expect(holderGen(result)).toBe(expectedHolder);
-          expect(JSON.parse(readFileSync(join(dir, "gen-2.json"), "utf8")).lockId).toBe(
-            expectedHolder === 2 ? "H" : "H2",
-          );
-          expect(base.lines.some((l) => lineKind(l) === "acquired")).toBe(false);
-        } finally {
-          removeTestTree(root);
-        }
-      };
-      run((dir) => {
-        writeFileSync(
-          join(dir, "gen-2.json"),
-          JSON.stringify(makeRecord({ lockId: "H", generation: 2 })),
-        );
-      }, 2);
-      run((dir) => {
-        for (let g = 2; g <= 100; g += 1) {
-          const lockId = g === 2 ? "H2" : g === 100 ? "H100" : `H${g}`;
-          writeFileSync(
-            join(dir, `gen-${g}.json`),
-            JSON.stringify(makeRecord({ lockId, generation: g })),
-          );
-          if (g < 100) writeFileSync(join(dir, `released-${g}`), "");
-        }
-      }, 100);
-    },
+    () => body016(snapshotLockDir),
+    () => body016((root) => join(root, "explicit-lock-dir")),
   );
 
   redWithPreparationPair(
