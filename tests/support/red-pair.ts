@@ -1,31 +1,30 @@
 // Red (`it.fails`) と、同じ準備処理を通る対の通常 `it` を登録する (L7 snapshot runner lock test design §1)。
-// 対の `it` は Red と同じ本体を走らせ、assertion の失敗 (stub が期待を満たさないこと) だけを許す。
-// 準備中の例外 (TypeError・fixture の失敗など) は `it.fails` に吸い込まれず、対の `it` が落ちる。
+// 本体は 1 つで、準備 (fixture・hook・対象の呼び出し) は素の文として書き、oracle の assertion は `t.expect`
+// で書く。Red は `t.expect` を本物の expect にして走らせる。対の通常 `it` は同じ本体を `t.expect` を
+// 何もしない形にして最後まで走らせるので、全ケースの準備が実行され、準備の中の失敗 (素の `expect` の
+// AssertionError を含む) はそのまま失敗になる。
 import { expect, it } from "vitest";
 
-const isAssertionFailure = (error: unknown): boolean =>
-  typeof error === "object" &&
-  error !== null &&
-  (error as { name?: string }).name === "AssertionError";
-
-/** 本体を走らせ、assertion の失敗は許し、それ以外の例外は投げ直す。 */
-export function runAllowingAssertionFailure(body: () => void): "passed" | "assertion-failed" {
-  try {
-    body();
-    return "passed";
-  } catch (error) {
-    if (!isAssertionFailure(error)) throw error;
-    return "assertion-failed";
-  }
+export interface RedContext {
+  /** oracle の assertion。Red では本物、対の通常 `it` では何もしない。 */
+  expect: typeof expect;
+  /** 実装に依らない準備を使うかどうか (対の `it` は stub の戻り値に頼らない)。 */
+  mode: "red" | "pair";
 }
 
-export function redWithPreparationPair(
-  name: string,
-  body: () => void,
-  pairBody: () => void = body,
-): void {
-  it.fails(name, body);
+const noop: unknown = new Proxy(() => noop, {
+  get: () => noop,
+  apply: () => noop,
+});
+
+export function redWithPreparationPair(name: string, body: (t: RedContext) => void): void {
+  it.fails(name, () => {
+    body({ expect, mode: "red" });
+  });
   it(`${name} [preparation pair]`, () => {
-    expect(["passed", "assertion-failed"]).toContain(runAllowingAssertionFailure(pairBody));
+    let completed = false;
+    body({ expect: noop as typeof expect, mode: "pair" });
+    completed = true;
+    expect(completed).toBe(true);
   });
 }

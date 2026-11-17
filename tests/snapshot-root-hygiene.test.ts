@@ -14,7 +14,7 @@ describe("snapshot root hygiene", () => {
 
   redWithPreparationPair(
     "CANDIDATE-U-SNAPLOCK-029: only this pid's snapshot roots are returned",
-    () => {
+    (t) => {
       const names = [
         "ut-tdd-vitest-123-1",
         "ut-tdd-vitest-head-123-1",
@@ -25,7 +25,7 @@ describe("snapshot root hygiene", () => {
         "ut-tdd-snapshot-runner-lock",
         "other",
       ];
-      expect(ownSnapshotRootEntries(names, 123)).toEqual(names.slice(0, 3));
+      t.expect(ownSnapshotRootEntries(names, 123)).toEqual(names.slice(0, 3));
     },
   );
 });
