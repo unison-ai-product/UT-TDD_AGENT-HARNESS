@@ -169,7 +169,7 @@ L6 contract marker: `checkForUpdate(deps: UpdateCheckDeps) => UpdateCheckResult`
 不変条件:
 
 - **advisory であって gate ではない**: remote 不達 / release tag 無し / package.json 欠落のいずれでも throw せず、status / doctor の exit code に影響しない。`UT_TDD_SKIP_UPDATE_CHECK=1` または `CI=true` は remote 問い合わせ自体を止める opt-out (CI / テスト決定論用) で、表示は fail-open と同じ沈黙形。
-- **基準は harness checkout であって consumer cwd ではない**: 投影導入では cwd の package.json / origin が利用者自身のプロジェクトを指すため、local version はモジュール位置から解決した harness root の package.json から読む。CLI `--version` も同一ソースから表示する。
+- **基準は harness checkout であって consumer cwd ではない**: 投影導入では cwd の package.json / origin が利用者自身のプロジェクトを指すため、local version はモジュール位置から解決した harness root の package.json から読む。CLI `--version` の表示元は source checkout ではこれと同一だが、sealed consumer では `docs/design/harness/L6-function-design/cli-version-identity.md` (Issue #867) が置き換える。
 - **remote の正は明示 override または harness root package.json の `repository.url`** (TL review 所見1): `UT_TDD_UPDATE_CHECK_REMOTE` は fork / mirror / private Pack channel 用の明示 override で、未設定時は `repository.url` を使う。node_modules 配下へベンダリング導入された harness root は自身の `.git` を持たず、remote 名 `origin` は上位 (consumer 自身) の `.git` から誤って解決される。remote 名 `origin` への fallback は harness root 自身が `.git` を持つ場合に限り、どちらも無ければ advisory 沈黙 (consumer の origin を読まない)。`git ls-remote --tags <remote>` は認証不要・timeout 付き。
 - **TTL 24h キャッシュ**: 結果を harness root 側 `.ut-tdd/state/update-check.json` に remote キー付きで保存し、TTL 内かつ remote 一致のときだけ remote へ問い合わせない。壊れた cache は missing 扱い。remote 失敗時はキャッシュを書かず次回再試行する。
 - **表示面は `ut-tdd status` の additive 行**: text は `update:` の 1 行、`--json` は `update` フィールドを additive 付加する (既存フィールド不変、A-138 ITEM-1 / IMP-139 の前例)。CLI 配線は U-UPDCHK-015/016 が固定する。

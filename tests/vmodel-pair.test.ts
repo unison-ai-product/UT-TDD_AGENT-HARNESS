@@ -49,7 +49,7 @@ describe("vmodel pair-freeze lint (U-VPAIR)", () => {
     expect(d.pairArtifact).toBe("docs/test-design/harness/L10-ux-validation-test-design.md");
   });
 
-  it("U-VPAIR-002: pair-missing / ref-unresolved を検出", () => {
+  it("U-VPAIR-002: pair-missing / ref-unresolved を検出 [ST-DATA-07]", () => {
     const docs = [
       doc("docs/design/harness/L4-basic-design/data.md", "L4", null), // pair 欠落
       doc(
@@ -63,7 +63,7 @@ describe("vmodel pair-freeze lint (U-VPAIR)", () => {
     expect(r.orphans.map((o) => o.reason).sort()).toEqual(["pair-missing", "ref-unresolved"]);
   });
 
-  it("U-VPAIR-003: trace-bidir — test-design の dir 集合参照が design dir を含めば成立、無ければ孤児", () => {
+  it("U-VPAIR-003: trace-bidir — test-design の dir 集合参照が design dir を含めば成立、無ければ孤児 [ST-DATA-07]", () => {
     const ok = analyzePairFreeze([
       doc(
         "docs/design/harness/L4-basic-design/data.md",

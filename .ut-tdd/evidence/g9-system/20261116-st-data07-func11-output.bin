@@ -1,0 +1,62 @@
+snapshot source: git commit 4127c3d1013cb8fb79aa83210e32942a3ff78738
+Cloning into 'C:\Users\micro\AppData\Local\Temp\ut-tdd-vitest-25440-1794829000841'...
+HEAD is now at 4127c3d1 docs(g9): freeze narrow pair and Red-admission bindings
+Cloning into 'C:\Users\micro\AppData\Local\Temp\ut-tdd-vitest-head-25440-1794829000841'...
+HEAD is now at 4127c3d1 docs(g9): freeze narrow pair and Red-admission bindings
+
+added 76 packages in 2m
+npm warn install-scripts 1 package has install scripts not yet covered by allowScripts:
+npm warn install-scripts   esbuild@0.28.2 (postinstall: node install.js)
+npm warn install-scripts
+npm warn install-scripts Run `npm install-scripts ls` to review, or `npm install-scripts approve <pkg>` to allow.
+db rebuild: projection ok, rows 50815 (C:\Users\micro\AppData\Local\Temp\ut-tdd-vitest-25440-1794829000841\.ut-tdd\harness.db)
+  note: plans / roadmap rollups / review evidence / optional Phase3 outputs を projection
+  token telemetry (repo-scoped, issue #82): claude files matched 0/0 (project dir resolved=false, foreign repo 0, unknown cwd 0), codex files matched 0/4875 (foreign repo 4873, unknown cwd 2)
+2606 �̃t�@�C��������ɏ�������܂����B0 �̃t�@�C���������ł��܂���ł���
+
+ RUN  v4.1.12 C:/Users/micro/AppData/Local/Temp/ut-tdd-vitest-25440-1794829000841
+
+ ↓ tests/forward/fsm.test.ts > Forward FSM > U-FSM-001: derives every allowed edge from the single policy table and rejects closed-world gaps
+ ↓ tests/forward/fsm.test.ts > Forward FSM > U-FSM-001: evaluates the complete 17 state by 17 event closed world [ST-FUNC-11 support]
+ ↓ tests/forward/fsm.test.ts > Forward FSM > U-FSM-002: refuses skip, reverse, and terminal commands without changing state [ST-FUNC-11 support]
+ ✓ tests/forward/fsm.test.ts > Forward FSM > U-FSM-003: specialized implementation admission fails closed and emits no write [ST-FUNC-11] 42ms
+ ↓ tests/forward/fsm.test.ts > Forward FSM > U-FSM-004: trace-freeze evidence is required before review
+ ↓ tests/forward/fsm.test.ts > Forward FSM > U-FSM-005: accept requires independent review and gate evidence
+ ↓ tests/forward/fsm.test.ts > Forward FSM > U-FSM-006: exception context is mandatory and no intent is emitted
+ ↓ tests/forward/fsm.test.ts > Forward FSM > U-FSM-006: missing exception context wins over an illegal from-state
+ ↓ tests/forward/fsm.test.ts > Forward FSM > U-FSM-007: replay is deterministic and projection is exactly once
+ ↓ tests/forward/fsm.test.ts > Forward FSM > U-FSM-007: replay repairs a missing derived projection without appending a second event
+ ↓ tests/forward/fsm.test.ts > Forward FSM > U-FSM-008: missing ledger/projection is unavailable and never falls back to frontmatter
+ ↓ tests/forward/fsm.test.ts > Forward FSM > U-FSM-008: a projection that disagrees with the append-only ledger is unavailable
+ ↓ tests/forward/fsm.test.ts > Forward FSM > U-FSM-008: explain rejects a projection mismatch without mutating either store
+ ↓ tests/forward/fsm.test.ts > Forward FSM > U-FSM-008: a valid explain query returns exit 0 even when policy denies the transition
+ ↓ tests/forward/fsm.test.ts > Forward FSM > U-FSM-009: generic evidence uses one typed rule and expired evidence is not eligible
+ ↓ tests/forward/fsm.test.ts > Forward FSM > U-FSM-009: every normal lifecycle event maps missing evidence to its frozen rule
+ ↓ tests/forward/fsm.test.ts > Forward FSM > U-FSM-009: targeted test evidence has at-least-one rather than exactly-one cardinality
+ ↓ tests/forward/fsm.test.ts > Forward FSM > U-FSM-008: public CLI emits the shared JSON envelope when the ledger is unavailable
+ ↓ tests/forward/fsm.test.ts > Forward FSM > P-FSM-001: generated sequences never reach an undeclared state and sequence faults fail closed
+ ↓ tests/vmodel-pair.test.ts > vmodel pair-freeze lint (U-VPAIR) > U-VPAIR-001: parsePairDoc / stripInlineComment — frontmatter 抽出 + inline コメント除去
+ ✓ tests/vmodel-pair.test.ts > vmodel pair-freeze lint (U-VPAIR) > U-VPAIR-002: pair-missing / ref-unresolved を検出 [ST-DATA-07] 7ms
+ ✓ tests/vmodel-pair.test.ts > vmodel pair-freeze lint (U-VPAIR) > U-VPAIR-003: trace-bidir — test-design の dir 集合参照が design dir を含めば成立、無ければ孤児 [ST-DATA-07] 4ms
+ ↓ tests/vmodel-pair.test.ts > vmodel pair-freeze lint (U-VPAIR) > U-VPAIR-004: self / design→design 参照は非対応 — L2 は test-design 直接参照でのみ成立 (RECOVERY-09)
+ ↓ tests/vmodel-pair.test.ts > vmodel pair-freeze lint (U-VPAIR) > U-VPAIR-004b: README / roadmap は対象外 (pair 欠落でも孤児にしない)
+ ↓ tests/vmodel-pair.test.ts > vmodel pair-freeze lint (U-VPAIR) > U-VPAIR-005: 実 repo 完全性回帰ガード — 全 V-pair 双方向、孤児0
+ ↓ tests/vmodel-pair.test.ts > vmodel pair-freeze lint (U-VPAIR) > U-VPAIR-006: pairFreezeMessages — 孤児なし OK / 孤児あり reason 別文言
+ ↓ tests/vmodel-pair.test.ts > verification trigger (U-VTRIG、層群 freeze の機械発火、IMP-068) > U-VTRIG-001: analyzeVerificationGroups — 層群ごとに confirmed/draft を集計
+ ↓ tests/vmodel-pair.test.ts > verification trigger (U-VTRIG、層群 freeze の機械発火、IMP-068) > U-VTRIG-002: frozen 判定 — draft があれば未完了、placeholder(park) は発火を妨げない
+ ↓ tests/vmodel-pair.test.ts > verification trigger (U-VTRIG、層群 freeze の機械発火、IMP-068) > U-VTRIG-002A: additive draft revision is surfaced without unfreezing the confirmed base
+ ↓ tests/vmodel-pair.test.ts > verification trigger (U-VTRIG、層群 freeze の機械発火、IMP-068) > reports an invalid additive revision at its canonicalized source path
+ ↓ tests/vmodel-pair.test.ts > verification trigger (U-VTRIG、層群 freeze の機械発火、IMP-068) > U-VTRIG-003: 層群に pair 孤児があれば freeze 未完了
+ ↓ tests/vmodel-pair.test.ts > verification trigger (U-VTRIG、層群 freeze の機械発火、IMP-068) > U-VTRIG-006: L0-L7はconfirmedのpair-doc状態だけでfreezeする
+ ↓ tests/vmodel-pair.test.ts > verification trigger (U-VTRIG、層群 freeze の機械発火、IMP-068) > U-VTRIG-006: draftまたはpair孤児が1件あればL0-L7はfreezeしない
+ ↓ tests/vmodel-pair.test.ts > verification trigger (U-VTRIG、層群 freeze の機械発火、IMP-068) > U-VTRIG-004: verificationGroupMessages — freeze 完了(park 表示) / Forward 進行中
+ ↓ tests/vmodel-pair.test.ts > verification trigger (U-VTRIG、層群 freeze の機械発火、IMP-068) > U-VTRIG-005: 実 repo ガード — L0-L3 と L4-L6 は freeze 完了
+ ↓ tests/vmodel-pair.test.ts > verification trigger (U-VTRIG、層群 freeze の機械発火、IMP-068) > U-VTRIG-005-L7: 実 repo の L0-L7 はpair-doc状態だけでfreezeする
+
+ Test Files  2 passed (2)
+      Tests  3 passed | 33 skipped (36)
+   Start at  20:48:48
+   Duration  174.93s (transform 2.64s, setup 297ms, import 3.02s, tests 64ms, environment 1ms)
+
+[vitest-pool]: Timeout terminating forks worker for test files C:/Users/micro/AppData/Local/Temp/ut-tdd-vitest-25440-1794829000841/tests/vmodel-pair.test.ts.
+2606 �̃t�@�C��������ɏ�������܂����B0 �̃t�@�C���������ł��܂���ł���
