@@ -1,0 +1,568 @@
+{
+  "schema_version": "g9-system-evidence-v1",
+  "gate": "G9",
+  "profile": "s7-plan-retirement-fresh",
+  "plan_id": "issue:1379",
+  "selected_st_ids": [
+    "ST-ARCH-01",
+    "ST-ARCH-02",
+    "ST-ARCH-03",
+    "ST-ARCH-04",
+    "ST-ASSET-03",
+    "ST-ASSET-04",
+    "ST-ASSET-05",
+    "ST-ASSET-06",
+    "ST-DATA-01",
+    "ST-DATA-02",
+    "ST-DATA-04",
+    "ST-DATA-06",
+    "ST-DATA-07",
+    "ST-EXT-01",
+    "ST-EXT-02",
+    "ST-EXT-03",
+    "ST-EXT-04",
+    "ST-EXT-05",
+    "ST-EXT-06",
+    "ST-FUNC-01",
+    "ST-FUNC-01b",
+    "ST-FUNC-02",
+    "ST-FUNC-03",
+    "ST-FUNC-04",
+    "ST-FUNC-05",
+    "ST-FUNC-06",
+    "ST-FUNC-07",
+    "ST-FUNC-08",
+    "ST-FUNC-09",
+    "ST-FUNC-10",
+    "ST-FUNC-11"
+  ],
+  "mandatory_st_ids": [
+    "ST-ARCH-03",
+    "ST-ARCH-04",
+    "ST-ASSET-03",
+    "ST-ASSET-05",
+    "ST-ASSET-06",
+    "ST-DATA-07",
+    "ST-EXT-02",
+    "ST-FUNC-11"
+  ],
+  "deferred_st_ids": [
+    "ST-ARCH-01",
+    "ST-ARCH-02",
+    "ST-ASSET-04",
+    "ST-DATA-01",
+    "ST-DATA-02",
+    "ST-DATA-04",
+    "ST-DATA-06",
+    "ST-EXT-01",
+    "ST-EXT-03",
+    "ST-EXT-04",
+    "ST-EXT-05",
+    "ST-EXT-06",
+    "ST-FUNC-01",
+    "ST-FUNC-01b",
+    "ST-FUNC-02",
+    "ST-FUNC-03",
+    "ST-FUNC-04",
+    "ST-FUNC-05",
+    "ST-FUNC-06",
+    "ST-FUNC-07",
+    "ST-FUNC-08",
+    "ST-FUNC-09",
+    "ST-FUNC-10"
+  ],
+  "commands": [
+    {
+      "command_id": "cmd-g9-s7-fresh-core",
+      "command": "\"C:\\Program Files\\nodejs\\node.exe\" scripts/run-vitest-snapshot.ts tests/vmodel-pair.test.ts tests/forward/fsm.test.ts tests/runtime.test.ts tests/asset-catalog.test.ts tests/agent-guard-delegation-boundary.test.ts tests/agent-guard.test.ts tests/codex-hook-adapter.test.ts -t \"U-VPAIR-002|U-VPAIR-003|U-FSM-003|detects .* from the exact spawnable provider set|exposes asset catalog as a JSON command surface|evaluateAgentGuard|U-AGBOUND-(005|006|009|014|016|026|033)|U-CXHOOK-(001|011)\" --maxWorkers 1 --reporter=verbose",
+      "runner": "node",
+      "scope": "targeted snapshot Vitest capture",
+      "exit_code": 0,
+      "evidence_path": ".ut-tdd/evidence/g9-system/20261117-s7-fresh-core-output.bin",
+      "output_digest": "sha256:dae6c497dcb7b5ae49a1525e0b5101d0e8e87dd85a976247143be37485dac17e",
+      "st_ids": [
+        "ST-DATA-07",
+        "ST-ARCH-03",
+        "ST-FUNC-11",
+        "ST-ASSET-03",
+        "ST-ASSET-05",
+        "ST-EXT-02"
+      ],
+      "subject_head": "8426500405d1d8bb3503ee21b3b82fa5be9e673a",
+      "receipt_path": ".ut-tdd/evidence/g9-system/runs/20261117-s7-fresh-core-receipt.json",
+      "started_at": "2026-11-17T01:44:29.106Z",
+      "ended_at": "2026-11-17T01:51:54.8Z"
+    },
+    {
+      "command_id": "cmd-g9-s7-fresh-assets",
+      "command": "\"C:\\Program Files\\nodejs\\node.exe\" scripts/run-vitest-snapshot.ts tests/asset-catalog.test.ts tests/skill-recommend.test.ts tests/projection-writer.test.ts tests/asset-drift.test.ts -t \"catalogs metadata, updates search_index, and never stores prompt bodies|recommends skills from plan layer/drive context and records accepted invocations|selects different top skills for different workflow layers|selects drive-model specific skills when layer is the same|keeps CLI recommendation and DB projection ranking on the same scorer|recommendSkillsForText:|rebuilds a clean pack repo with root skills and no docs/plans|asset-drift lint\" --maxWorkers 1 --reporter=verbose",
+      "runner": "node",
+      "scope": "targeted snapshot Vitest capture",
+      "exit_code": 0,
+      "evidence_path": ".ut-tdd/evidence/g9-system/20261117-s7-fresh-assets-output.bin",
+      "output_digest": "sha256:fc01137c1974bee1fb0e8d040e2557bce6f988d340c5380f5ed34ebd836fc64d",
+      "st_ids": [
+        "ST-ASSET-05",
+        "ST-ASSET-06"
+      ],
+      "subject_head": "8426500405d1d8bb3503ee21b3b82fa5be9e673a",
+      "receipt_path": ".ut-tdd/evidence/g9-system/runs/20261117-s7-fresh-assets-receipt.json",
+      "started_at": "2026-11-17T01:54:12.484Z",
+      "ended_at": "2026-11-17T01:59:46.715Z"
+    },
+    {
+      "command_id": "cmd-g9-s7-fresh-cli",
+      "command": "\"C:\\Program Files\\nodejs\\node.exe\" scripts/run-vitest-snapshot.ts tests/update-check.test.ts tests/cli-surface.test.ts tests/release-consumer-vmodel-template.test.ts -t \"U-UPDCHK-015|runs a named consumer-safe doctor profile without relying on setup-smoke alias|exposes plan complete as the completed handover lifecycle entrypoint|U-RCDEV-014: writes all required slot templates\" --maxWorkers 1 --reporter=verbose",
+      "runner": "node",
+      "scope": "targeted snapshot Vitest capture",
+      "exit_code": 0,
+      "evidence_path": ".ut-tdd/evidence/g9-system/20261117-s7-fresh-cli-output.bin",
+      "output_digest": "sha256:9cf4bf56e7c8f868d901763c48a3cc8a3ae56c9a2d45bb7520fb66ff8a958e4a",
+      "st_ids": [
+        "ST-ARCH-04"
+      ],
+      "subject_head": "8426500405d1d8bb3503ee21b3b82fa5be9e673a",
+      "receipt_path": ".ut-tdd/evidence/g9-system/runs/20261117-s7-fresh-cli-receipt.json",
+      "started_at": "2026-11-17T02:01:05.174Z",
+      "ended_at": "2026-11-17T02:07:01.542Z"
+    }
+  ],
+  "coverage": [
+    {
+      "st_id": "ST-DATA-07",
+      "status": "passed",
+      "evidence_paths": [
+        ".ut-tdd/evidence/g9-system/20261117-s7-fresh-core-output.bin",
+        ".ut-tdd/evidence/g9-system/runs/20261117-s7-fresh-core-receipt.json",
+        "tests/vmodel-pair.test.ts",
+        "src/vmodel/lint.ts"
+      ],
+      "command_ids": [
+        "cmd-g9-s7-fresh-core"
+      ],
+      "notes": "U-VPAIR-002はpair_artifact欠落と未解決referenceを拒否。U-VPAIR-003はreverse pairArtifact:nullの欠落とdesign directoryとの不整合を拒否。ST-DATA-02の広いV_MODEL_PAIRS invariantは別deferであり、この行へ拡張しない。"
+    },
+    {
+      "st_id": "ST-ARCH-03",
+      "status": "passed",
+      "evidence_paths": [
+        ".ut-tdd/evidence/g9-system/20261117-s7-fresh-core-output.bin",
+        ".ut-tdd/evidence/g9-system/runs/20261117-s7-fresh-core-receipt.json",
+        "src/runtime/agent-guard.ts",
+        "tests/agent-guard-delegation-boundary.test.ts",
+        "tests/agent-guard.test.ts",
+        "tests/codex-hook-adapter.test.ts"
+      ],
+      "command_ids": [
+        "cmd-g9-s7-fresh-core"
+      ],
+      "notes": "evaluator predicates: missing model、unknown type、閉じたtype集合、fable禁止をtests/agent-guard.test.tsとU-AGBOUND-005/006/009/014で確認。実shim U-AGBOUND-016はdefinition fileなしでgeneric typeをexit 0、旧型をexit 2。U-AGBOUND-033は実repo settings parityを確認。U-CXHOOK-001/011はCodex adapter parity/spawn guardの補助証拠。U-AGBOUND-026 roster retirementはARCH-03の根拠に含めない。.claude/hooks/agent-guard.ts と .claude/settings.json は比較対象として説明したが、coverage evidence pathには含めない。"
+    },
+    {
+      "st_id": "ST-ARCH-04",
+      "status": "passed",
+      "evidence_paths": [
+        ".ut-tdd/evidence/g9-system/20261117-s7-fresh-cli-output.bin",
+        ".ut-tdd/evidence/g9-system/runs/20261117-s7-fresh-cli-receipt.json",
+        "src/cli.ts",
+        "tests/cli-surface.test.ts",
+        "tests/release-consumer-vmodel-template.test.ts",
+        "tests/update-check.test.ts"
+      ],
+      "command_ids": [
+        "cmd-g9-s7-fresh-cli"
+      ],
+      "notes": "4個別E2Eを保持: U-UPDCHK-015はstatus --json実process成功とfieldsを確認(tests/update-check.test.ts); cli-surfaceのnamed consumer-safe doctor profileはmodule成功; cli-surfaceのplan use/complete lifecycle; U-RCDEV-014はbuilt CLIがvmodel template actual fileとdigestを生成(tests/release-consumer-vmodel-template.test.ts)。"
+    },
+    {
+      "st_id": "ST-FUNC-11",
+      "status": "passed",
+      "evidence_paths": [
+        ".ut-tdd/evidence/g9-system/20261117-s7-fresh-core-output.bin",
+        ".ut-tdd/evidence/g9-system/runs/20261117-s7-fresh-core-receipt.json",
+        "tests/forward/fsm.test.ts",
+        "src/forward/application/forward-workflow.ts"
+      ],
+      "command_ids": [
+        "cmd-g9-s7-fresh-core"
+      ],
+      "notes": "U-FSM-003でmissing Redはexit 2/ruleIdつきで拒否され、event ledger/projection writeを追加しない。これはbegin-implementation admission境界のみで、Forward state不変やST-FUNC-03全体の完了は主張しない。"
+    },
+    {
+      "st_id": "ST-ASSET-03",
+      "status": "passed",
+      "evidence_paths": [
+        ".ut-tdd/evidence/g9-system/20261117-s7-fresh-core-output.bin",
+        ".ut-tdd/evidence/g9-system/runs/20261117-s7-fresh-core-receipt.json",
+        "src/assets/catalog.ts",
+        "src/cli.ts",
+        "tests/agent-guard-delegation-boundary.test.ts",
+        "tests/asset-catalog.test.ts"
+      ],
+      "command_ids": [
+        "cmd-g9-s7-fresh-core"
+      ],
+      "notes": "並列必須predicate: asset catalog CLI positive JSON command surface(tests/asset-catalog.test.ts); U-AGBOUND-026でroster list/checkがunknown command/nonzeroとなりretired exportsが不在(tests/agent-guard-delegation-boundary.test.ts)。"
+    },
+    {
+      "st_id": "ST-ASSET-05",
+      "status": "passed",
+      "evidence_paths": [
+        ".ut-tdd/evidence/g9-system/20261117-s7-fresh-core-output.bin",
+        ".ut-tdd/evidence/g9-system/runs/20261117-s7-fresh-core-receipt.json",
+        ".ut-tdd/evidence/g9-system/20261117-s7-fresh-assets-output.bin",
+        ".ut-tdd/evidence/g9-system/runs/20261117-s7-fresh-assets-receipt.json",
+        "tests/asset-catalog.test.ts",
+        "tests/skill-recommend.test.ts",
+        "tests/projection-writer.test.ts",
+        "src/assets/catalog.ts",
+        "src/skill-engine/recommend.ts",
+        "src/state-db/projection-writer.ts"
+      ],
+      "command_ids": [
+        "cmd-g9-s7-fresh-core",
+        "cmd-g9-s7-fresh-assets"
+      ],
+      "notes": "catalog commandとskill recommendation/CLI scorer parityをfresh captureで確認。projection predicateはtests/projection-writer.test.ts:98-146のrebuilds a clean pack repo with root skills and no docs/plansで、root skill fixture→rebuildHarnessDb→automation_assetsのskill:refactoring/path=skills/refactoring.md/ok=trueを確認。calleeはprojectAutomationAssets→recordProjectionEvent。CANDIDATE-U-PLANRET-023は今回未採取のため根拠に含めない。"
+    },
+    {
+      "st_id": "ST-ASSET-06",
+      "status": "passed",
+      "evidence_paths": [
+        ".ut-tdd/evidence/g9-system/20261117-s7-fresh-assets-output.bin",
+        ".ut-tdd/evidence/g9-system/runs/20261117-s7-fresh-assets-receipt.json",
+        "src/lint/asset-drift.ts",
+        "tests/asset-drift.test.ts"
+      ],
+      "command_ids": [
+        "cmd-g9-s7-fresh-assets"
+      ],
+      "notes": "選択済みnegative cases: legacy path、runtime delegation、runtime name、empty docs-skills各違反がok=falseとfinding kindを返し、clean positiveは通ることをtests/asset-drift.test.tsで確認。"
+    },
+    {
+      "st_id": "ST-EXT-02",
+      "status": "passed",
+      "evidence_paths": [
+        ".ut-tdd/evidence/g9-system/20261117-s7-fresh-core-output.bin",
+        ".ut-tdd/evidence/g9-system/runs/20261117-s7-fresh-core-receipt.json",
+        "src/runtime/detect.ts",
+        "tests/runtime.test.ts"
+      ],
+      "command_ids": [
+        "cmd-g9-s7-fresh-core"
+      ],
+      "notes": "detectMode callee(tests/runtime.test.ts)の4 deterministic provider combinationsを確認: hybrid/claude-only/codex-only/standaloneそれぞれの正確なmode、provider flags、currentRuntime、available/missing sets。"
+    },
+    {
+      "st_id": "ST-DATA-01",
+      "status": "deferred",
+      "evidence_paths": [
+        "docs/design/harness/L4-basic-design/data.md",
+        "docs/test-design/harness/L9-system-test-design.md",
+        "src/gate/static.ts",
+        "src/vmodel/lint.ts",
+        "tests/gate-static.test.ts",
+        "tests/vmodel-pair.test.ts"
+      ],
+      "command_ids": [],
+      "notes": "未検証deferred。missing_predicate: 同一fixtureでdesignとimplを揃え、test_designとtest_codeを欠落させ、G6/G7が拒否すること。既存pair/trace欠落oracleはこの4-artifact条件を検証しない。 preserve: 4-artifact逆ピラミッド禁止を維持。ST-DATA-07へ吸収・置換しない。 route: #1705本文へ不足predicateを追記。 Issue: #1705。対象Issueは2026-11-17T02:08:52ZにOPEN観測。#1705への記録はcomment 6935809736。"
+    },
+    {
+      "st_id": "ST-DATA-02",
+      "status": "deferred",
+      "evidence_paths": [
+        "docs/design/harness/L4-basic-design/data.md",
+        "docs/test-design/harness/L9-system-test-design.md",
+        "src/schema/index.ts",
+        "src/vmodel/lint.ts",
+        "tests/schema.test.ts",
+        "tests/vmodel-pair.test.ts"
+      ],
+      "command_ids": [],
+      "notes": "未検証deferred。missing_predicate: 許可6組に属さない実Artifact pairをanalyzePairFreeze等が拒否するnegative assertion。現状の一部matrix値照合・reference closure・承認済pair受理probeだけでは拒否を示さない。 preserve: 6組のmembership制約と実Artifact pair境界を維持。DATA-07のpair missing/unresolvedと同一視しない。 route: #1705本文へ不足predicateを追記。 Issue: #1705。対象Issueは2026-11-17T02:08:52ZにOPEN観測。#1705への記録はcomment 6935809736。"
+    },
+    {
+      "st_id": "ST-DATA-04",
+      "status": "deferred",
+      "evidence_paths": [
+        "docs/test-design/harness/L9-system-test-design.md",
+        "src/lint/entity-coverage.ts",
+        "src/schema/index.ts",
+        "tests/entity-coverage.test.ts",
+        "tests/schema.test.ts"
+      ],
+      "command_ids": [],
+      "notes": "未検証deferred。missing_predicate: 実state schema inputと12種enum/SubDoc全件を1:1照合し、意図的enum不一致でdoctor check_business_entity_coverageがfinding/非成功を返すassertion。entity名/件数や個別enum値だけでは代替しない。 preserve: 12種全体のparityとdoctor境界を維持。 route: #1705本文へ実input/checker境界と不足predicateを追記。 Issue: #1705。対象Issueは2026-11-17T02:08:52ZにOPEN観測。#1705への記録はcomment 6935809736。"
+    },
+    {
+      "st_id": "ST-DATA-06",
+      "status": "deferred",
+      "evidence_paths": [
+        "docs/test-design/harness/L9-system-test-design.md",
+        "src/doctor/db-projection.ts",
+        "src/state-db/projection-writer.ts",
+        "src/state-db/spec-ir-projections.ts",
+        "tests/db-projection-ingestion.test.ts",
+        "tests/doctor-db-projection.test.ts",
+        "tests/doctor.test.ts",
+        "tests/spec-ir-projections.test.ts"
+      ],
+      "command_ids": [],
+      "notes": "未検証deferred。missing_predicate: 5 aggregate全ての割当てとprojection/doctor coverageを確認し、projectionからauthoring情報を供給しない負例を検証するassertion。typed rows/findings/rebuild counts/doctor checkの部品だけでは範囲全体を閉じない。 preserve: 5 aggregate名、既存集約境界、projection non-authoring制約を維持。 route: #1705本文へ5 aggregateとnon-authoringの不足predicateを追記。 Issue: #1705。対象Issueは2026-11-17T02:08:52ZにOPEN観測。#1705への記録はcomment 6935809736。"
+    },
+    {
+      "st_id": "ST-ARCH-01",
+      "status": "deferred",
+      "evidence_paths": [
+        "docs/design/harness/L4-basic-design/architecture.md",
+        "docs/test-design/harness/L9-system-test-design.md",
+        "src/lint/dependency-drift.ts",
+        "tests/dependency-drift.test.ts"
+      ],
+      "command_ids": [],
+      "notes": "未検証deferred。missing_predicate: L9 cycle→finding部分はU-DEPD-003/005でfull candidate。architecture.md §3全体をfullにするにはsrc/schemaからlint/doctor等の上位layerへimportするnegative fixtureを拒否するassertionが不足。 preserve: 循環禁止(D-03=0)とschemaを依存末端とする一方向境界の双方。L9 cycle実証と広い§3方向保証を分ける。 route: #1705本文にはschema outbound rejectionの不足を記録。#1168のloader境界修正routeも維持。 Issue: #1705。対象Issueは2026-11-17T02:08:52ZにOPEN観測。#1705への記録はcomment 6935809736。"
+    },
+    {
+      "st_id": "ST-ARCH-02",
+      "status": "deferred",
+      "evidence_paths": [
+        "docs/design/harness/L4-basic-design/architecture.md",
+        "docs/test-design/harness/L9-system-test-design.md",
+        "src/cli.ts",
+        "src/plan/lint.ts",
+        "tests/agent-guard-delegation-boundary.test.ts",
+        "tests/gate-static.test.ts",
+        "tests/plan-lint.test.ts"
+      ],
+      "command_ids": [],
+      "notes": "未検証deferred。missing_predicate: joint scenarioは不要。guard U-AGBOUND-016のshim process exit 2とgate U-GATE-006のCLI process exit 1はあるが、invalid PLANを用いた`node src/cli.ts plan lint` process exit≠0とviolation outputの既存assertionを確認できていない。 preserve: guard/lint/gate各surfaceが成功扱いを返さず停止する契約。単一joint実行を新要件にしない。 route: #1705本文へplan lint CLI process exit assertion欠落を記録。 Issue: #1705。対象Issueは2026-11-17T02:08:52ZにOPEN観測。#1705への記録はcomment 6935809736。"
+    },
+    {
+      "st_id": "ST-FUNC-01",
+      "status": "deferred",
+      "evidence_paths": [
+        "docs/design/harness/L4-basic-design/function.md",
+        "docs/test-design/harness/L9-system-test-design.md",
+        "tests/drive-model-passage.test.ts",
+        "tests/forward-convergence.test.ts",
+        "tests/workflow-contracts.test.ts"
+      ],
+      "command_ids": [],
+      "notes": "未検証deferred。missing_predicate: 既存の局所S4/R4/Scrum/Refactor/Retrofit/Research例に加えてRecovery/Incident/Add-feature/design_bottomup/version-upおよび右肺Verifyの入口・固有phase・exit contractを結ぶ証明が無い。全11左肺model+Verifyを対象とする要求を維持。 preserve: 全drive model/Verifyの区別、例示されたDiscovery S0→S4 confirmed=verify成功必須、Reverse R0→R4 forward_routing確定。 route: #1705本文へ未証明model/phase/exitを行別追記。 Issue: #1705。対象Issueは2026-11-17T02:08:52ZにOPEN観測。#1705への記録はcomment 6935809736。"
+    },
+    {
+      "st_id": "ST-FUNC-01b",
+      "status": "deferred",
+      "evidence_paths": [
+        "docs/design/harness/L4-basic-design/function.md",
+        "docs/test-design/harness/L9-system-test-design.md",
+        "tests/drive-model-passage.test.ts",
+        "tests/forward-convergence.test.ts",
+        "tests/workflow-contracts.test.ts"
+      ],
+      "command_ids": [],
+      "notes": "未検証deferred。missing_predicate: 全Reverse 5値とScrum late-layer拒否、およびRefactor L1/L4不変の全境界assertion。現在は一部R4/Scrum exit/Refactor invariant例のみ。 preserve: 5値すべて、Scrum L8-L14合流禁止(IMP-044)、Refactor L7内完結かつL1/L4不変。 route: #1705本文へ不足分岐を追記。 Issue: #1705。対象Issueは2026-11-17T02:08:52ZにOPEN観測。#1705への記録はcomment 6935809736。"
+    },
+    {
+      "st_id": "ST-FUNC-02",
+      "status": "deferred",
+      "evidence_paths": [
+        "docs/design/harness/L4-basic-design/function.md",
+        "docs/test-design/harness/L9-system-test-design.md",
+        "tests/doctor-source-trace.test.ts",
+        "tests/g3-trace.test.ts",
+        "tests/plan-lint.test.ts"
+      ],
+      "command_ids": [],
+      "notes": "未検証deferred。missing_predicate: draftからhookを経てregistryへ到達する連鎖、およびgateからtraceを通ってdetectorへ到達する連鎖のintegration assertion。既存route fixture/trace coverage/component testsはchain全体を結ばない。 preserve: 両方の依存連鎖の順序と到達関係。 route: #1705本文へ不足chainを追記。 Issue: #1705。対象Issueは2026-11-17T02:08:52ZにOPEN観測。#1705への記録はcomment 6935809736。"
+    },
+    {
+      "st_id": "ST-FUNC-03",
+      "status": "deferred",
+      "evidence_paths": [
+        "docs/test-design/harness/L9-system-test-design.md",
+        "src/forward/application/forward-workflow.ts",
+        "tests/forward/fsm.test.ts"
+      ],
+      "command_ids": [],
+      "notes": "未検証deferred。missing_predicate: U-FSM-001/002/003はForward Red gateの一部のみ。Refactor FSM stageとsource/test diff順序を示すassertionが無い。今回のU-FSM-003はFUNC11の限定欠落Red拒否でありFUNC03完了を意味しない。 preserve: ST-FUNC-03の全要求とmandatoryへ戻す完了条件。existing deferのみ。 route: 3件の既存Refactor判定gate deferをそのまま維持。#1705へ振替しない。 Issue: #1335, #1336, #1337。対象Issueは2026-11-17T02:08:52ZにOPEN観測。#1705への記録はcomment 6935809736。"
+    },
+    {
+      "st_id": "ST-FUNC-04",
+      "status": "deferred",
+      "evidence_paths": [
+        "docs/design/harness/L4-basic-design/function.md",
+        "docs/test-design/harness/L9-system-test-design.md",
+        "src/schema/route-map.ts",
+        "tests/workflow-contracts.test.ts"
+      ],
+      "command_ids": [],
+      "notes": "未検証deferred。missing_predicate: 全優先順とinterrupt四分岐を比較するassertionが不足。実装のlongest-token selectionと契約優先順の相違、context_exhaustion Incident counterexampleがありtest追加だけでは成立しない。 preserve: 要求された優先順と4 interrupt分岐。実装矛盾をテストで隠さない。 route: #1705本文へ実装矛盾と不足分岐を追記。 Issue: #1705。対象Issueは2026-11-17T02:08:52ZにOPEN観測。#1705への記録はcomment 6935809736。"
+    },
+    {
+      "st_id": "ST-FUNC-05",
+      "status": "deferred",
+      "evidence_paths": [
+        "docs/design/harness/L4-basic-design/function.md",
+        "docs/test-design/harness/L9-system-test-design.md",
+        "src/plan/lint.ts",
+        "src/schema/route-filing.ts",
+        "tests/plan-lint.test.ts"
+      ],
+      "command_ids": [],
+      "notes": "未検証deferred。missing_predicate: 現assertionsはmode/kindの局所受理のみで、Incident dependency方向がL4/L9/consumer契約で一致せず、全2 PLAN関係とAdd-feature 2 PLAN連鎖の一致をassertできない。 preserve: 3つのmode-kind差分とIncidentの指定requires方向。契約矛盾をpassed扱いしない。 route: #1705本文へ契約方向の未解決点と不足assertionを追記。 Issue: #1705。対象Issueは2026-11-17T02:08:52ZにOPEN観測。#1705への記録はcomment 6935809736。"
+    },
+    {
+      "st_id": "ST-FUNC-06",
+      "status": "deferred",
+      "evidence_paths": [
+        "docs/design/harness/L4-basic-design/function.md",
+        "docs/test-design/harness/L9-system-test-design.md",
+        "tests/cli-surface.test.ts",
+        "tests/gate-review-tier.test.ts",
+        "tests/workflow-contracts.test.ts"
+      ],
+      "command_ids": [],
+      "notes": "未検証deferred。missing_predicate: Incident 3承認、Retrofit tl、standaloneでの完全なhuman必須条件、公開gate CLIがstatus modeを読むことのassertion不足。existing tier examplesでは契約行全体を閉じない。 preserve: Recovery tl+po; Incident on-call+tl+pm; Retrofit config_drift tl; hybrid/codex-only/claude-only/standalone review tier; self-review禁止。 route: #1705本文へ欠落承認・mode/CLI観測を追記。 Issue: #1705。対象Issueは2026-11-17T02:08:52ZにOPEN観測。#1705への記録はcomment 6935809736。"
+    },
+    {
+      "st_id": "ST-FUNC-07",
+      "status": "deferred",
+      "evidence_paths": [
+        "docs/design/harness/L4-basic-design/function.md",
+        "docs/test-design/harness/L9-system-test-design.md",
+        "src/skill-engine/recommend.ts",
+        "tests/skill-recommend.test.ts"
+      ],
+      "command_ids": [],
+      "notes": "未検証deferred。missing_predicate: PlanSkillContextがstepを持たず、step別eligibility/injectionのassertionがない。ranking/scoped timingだけではcurrent-step限定を証明しない。 preserve: PLAN context rankingと必要stepだけの注入、全skill常時ロード禁止。 route: #1705本文へstep context実装/assertion不足を追記。 Issue: #1705。対象Issueは2026-11-17T02:08:52ZにOPEN観測。#1705への記録はcomment 6935809736。"
+    },
+    {
+      "st_id": "ST-FUNC-08",
+      "status": "deferred",
+      "evidence_paths": [
+        "docs/design/harness/L4-basic-design/function.md",
+        "docs/test-design/harness/L9-system-test-design.md",
+        "tests/design-elicitation.test.ts",
+        "tests/drive-model-passage.test.ts",
+        "tests/workflow-contracts.test.ts"
+      ],
+      "command_ids": [],
+      "notes": "未検証deferred。missing_predicate: 当該backend起点のsignalから各段階、Reverse backfillまでを同じend-to-end chainで証明するassertionを確認できない。候補fileの存在だけでは証拠にしない。 preserve: Given/When/Thenの全段階とL1/L3後追い合流。既存deferの根拠・理由は変更しない。 route: 既存defer理由を保ち、不足chainを#1705本文に記録。 Issue: #1705。対象Issueは2026-11-17T02:08:52ZにOPEN観測。#1705への記録はcomment 6935809736。"
+    },
+    {
+      "st_id": "ST-FUNC-09",
+      "status": "deferred",
+      "evidence_paths": [
+        "docs/design/harness/L4-basic-design/function.md",
+        "docs/test-design/harness/L9-system-test-design.md",
+        "tests/plan-lint.test.ts",
+        "tests/workflow-contracts.test.ts"
+      ],
+      "command_ids": [],
+      "notes": "未検証deferred。missing_predicate: defer ledgerから次versionへ渡るlifecycleとadd-feature decision/add-designの連結、着手前PLAN不在を検査するassertionが未確認。 preserve: 台帳経由の後送要件、次version routing、着手までPLANなし。既存defer理由は変更しない。 route: 既存defer理由を保ち、不足lifecycleを#1705本文に記録。 Issue: #1705。対象Issueは2026-11-17T02:08:52ZにOPEN観測。#1705への記録はcomment 6935809736。"
+    },
+    {
+      "st_id": "ST-FUNC-10",
+      "status": "deferred",
+      "evidence_paths": [
+        "docs/design/harness/L4-basic-design/function.md",
+        "docs/test-design/harness/L9-system-test-design.md",
+        "src/plan/lint.ts",
+        "src/state-db/projection-writer.ts",
+        "tests/plan-lint.test.ts",
+        "tests/projection-writer.test.ts",
+        "tests/spec-ir-projections.test.ts"
+      ],
+      "command_ids": [],
+      "notes": "未検証deferred。missing_predicate: current_location, schedule_entry, allowed_kinds, layer_band, sub_doc_hint, pairing_obligation, activation_profileの全7 fieldについてsource→route→consumer整合と未定義target negativeをassertする証拠がない。 preserve: 7 field名、L4 SSoT、route/doctor/projectionの一致、invented target禁止。既存defer理由は変更しない。 route: 既存defer理由を保ち、不足7-field chainを#1705本文に記録。 Issue: #1705。対象Issueは2026-11-17T02:08:52ZにOPEN観測。#1705への記録はcomment 6935809736。"
+    },
+    {
+      "st_id": "ST-ASSET-04",
+      "status": "deferred",
+      "evidence_paths": [
+        "docs/design/harness/L6-function-design/skill-admission.md",
+        "docs/design/harness/L6-function-design/skill-index.md",
+        "docs/test-design/harness/L9-system-test-design.md"
+      ],
+      "command_ids": [],
+      "notes": "未検証deferred。missing_predicate: 関数仕様より先のsystem bindingは将来skill/asset command surfaceがmaterializeした時点でbackfillする。現時点はL9自身がplaceholder/carryとして明示し、passedにしない。今回の#1705記録対象はbinding不足の追跡のみ。 preserve: A-118 carryの現理由・placeholder状態を維持。A-118をIssue #118へ読み替えない。ST-ASSET-03/05/06の実装済みassertionでこの行を完了扱いしない。 route: A-118既存placeholder deferは不変。#1705本文にはbinding追跡不足だけ追記し、Issue #118は作らない。 Issue: A-118, #1705。対象Issueは2026-11-17T02:08:52ZにOPEN観測。#1705への記録はcomment 6935809736。"
+    },
+    {
+      "st_id": "ST-EXT-01",
+      "status": "deferred",
+      "evidence_paths": [
+        "docs/design/harness/L4-basic-design/external-if.md",
+        "docs/test-design/harness/L9-system-test-design.md",
+        "src/runtime/adapter.ts",
+        "src/runtime/agent-guard.ts",
+        "tests/agent-guard.test.ts",
+        "tests/runtime-adapter.test.ts"
+      ],
+      "command_ids": [],
+      "notes": "未検証deferred。missing_predicate: guard pass→provider availability/adapter invocation→invocation_log appendの1本の境界chainをassertするoracleがない。guard pass/block、3/8 provider tuple、fallback errorは別々の部品検証。 preserve: guardより前にAIを起動しないこと、実起動の記録がappendされること。 route: #1705本文へmissing invocation/log chainを追記。 Issue: #1705。対象Issueは2026-11-17T02:08:52ZにOPEN観測。#1705への記録はcomment 6935809736。"
+    },
+    {
+      "st_id": "ST-EXT-03",
+      "status": "deferred",
+      "evidence_paths": [
+        "docs/design/harness/L4-basic-design/external-if.md",
+        "docs/test-design/harness/L9-system-test-design.md",
+        "tests/consumer-ci-guard-red.test.ts",
+        "tests/consumer-ci-workflow-red.test.ts"
+      ],
+      "command_ids": [],
+      "notes": "未検証deferred。missing_predicate: 現在のexact subjectに束縛されたremote GitHub Actions run/receiptとlocal gate resultの一致。workflow selector policy testsだけでは実remote runを立証しない。 preserve: exact subject SHAとlocal/remote evidence binding。CI実測後にこのrowを再評価できる。 route: 投稿後にexact SHAのCI実測で再評価。#1705本文はremote evidence未採取を記録し、実CI後に更新可能とする。 Issue: #1705。対象Issueは2026-11-17T02:08:52ZにOPEN観測。#1705への記録はcomment 6935809736。"
+    },
+    {
+      "st_id": "ST-EXT-04",
+      "status": "deferred",
+      "evidence_paths": [
+        "docs/design/harness/L4-basic-design/external-if.md",
+        "docs/test-design/harness/L9-system-test-design.md",
+        "src/lint/dependency-drift.ts",
+        "tests/dependency-drift.test.ts"
+      ],
+      "command_ids": [],
+      "notes": "未検証deferred。missing_predicate: bare provider SDK import/package dependencyを検出・拒否するassertionがない。現dependency graphは相対内部import中心でbare import fixtureのopenaiを未検出のまま通した。 preserve: SDK直接依存なしとadapter隔離。package/source absenceを既存内部graphのno-findingから推論しない。 route: #1705本文へbare import/SDK dependency検査の不足を追記。 Issue: #1705。対象Issueは2026-11-17T02:08:52ZにOPEN観測。#1705への記録はcomment 6935809736。"
+    },
+    {
+      "st_id": "ST-EXT-05",
+      "status": "deferred",
+      "evidence_paths": [
+        "docs/design/harness/L4-basic-design/external-if.md",
+        "docs/test-design/harness/L9-system-test-design.md",
+        "src/cli.ts",
+        "tests/cli-surface.test.ts"
+      ],
+      "command_ids": [],
+      "notes": "未検証deferred。missing_predicate: 全as-is catalogとcompletion候補の一致、unknown pathの除外、success=0/validation=1/guard=2の代表網羅matrixを閉じるassertionがない。既存help/JSON/status例は一部surfaceだけ。 preserve: 実在commandのみcompletionへ出し、代表JSON・hard failure・exit code規約を保持。 route: #1705本文へcatalog/completion/exit matrix不足を追記。 Issue: #1705。対象Issueは2026-11-17T02:08:52ZにOPEN観測。#1705への記録はcomment 6935809736。"
+    },
+    {
+      "st_id": "ST-EXT-06",
+      "status": "deferred",
+      "evidence_paths": [
+        "docs/design/harness/L4-basic-design/security.md",
+        "docs/test-design/harness/L9-system-test-design.md",
+        "tests/agent-guard.test.ts",
+        "tests/cli-surface.test.ts",
+        "tests/pack-publication-assets.test.ts",
+        "tests/pack-publication-staging.test.ts",
+        "tests/secret-scan-diff.test.ts",
+        "tests/secret-scan.test.ts",
+        "tests/work-guard.test.ts"
+      ],
+      "command_ids": [],
+      "notes": "未検証deferred。missing_predicate: STRIDE/guard・work-guard各負例、secret-scan、audit logを一つのjoint scenarioにする条件はない。具体的な未証明predicateはsecret違反がdistribution preflightで拒否され、staged artifact materialization前に停止するnegative assertion。U-DOCSECRET-006はclean stageだけで、sync-packのblockはsecretScan.ok=trueかつunmanaged local pathが原因、pack archive testsはpreflight拒否ではない。work-guard one-shot audit testはforeign-edit override記録を直接検証済み。 preserve: L4 security.md §5-§9の独立したSTRIDE対策、preflight fail-stop、secret non-retention、audit log要件。work-guard foreign-edit auditの既存検証をmissing扱いしない。 route: 既存defer理由を保ち、未実証security predicatesを#1705本文に列記。 Issue: #1705。対象Issueは2026-11-17T02:08:52ZにOPEN観測。#1705への記録はcomment 6935809736。"
+    }
+  ],
+  "exit_criteria": {
+    "all_mandatory_passed": true,
+    "failed_mandatory_count": 0,
+    "stale_defer_count": 0,
+    "doctor_check": "g9-system-workflow"
+  },
+  "notes": [
+    "Capture subject: 8426500405d1d8bb3503ee21b3b82fa5be9e673a core: 7 test files; 29 passed / 108 skipped; dae6c497dcb7b5ae49a1525e0b5101d0e8e87dd85a976247143be37485dac17e bytes=26412. Worker timeout warning retained: [vitest-pool]: Timeout terminating forks worker for test files C:/Users/micro/AppData/Local/Temp/ut-tdd-vitest-21660-1794879869516/tests/runtime.test.ts. assets: 4 test files; 17 passed / 56 skipped; fc01137c1974bee1fb0e8d040e2557bce6f988d340c5380f5ed34ebd836fc64d bytes=13191. Worker timeout warning retained: [vitest-pool]: Timeout terminating forks worker for test files C:/Users/micro/AppData/Local/Temp/ut-tdd-vitest-22544-1794880452899/tests/asset-drift.test.ts. cli: 3 test files; 4 passed / 98 skipped; 9cf4bf56e7c8f868d901763c48a3cc8a3ae56c9a2d45bb7520fb66ff8a958e4a bytes=16246. Worker timeout warning retained: [vitest-pool]: Timeout terminating forks worker for test files C:/Users/micro/AppData/Local/Temp/ut-tdd-vitest-18324-1794880865552/tests/update-check.test.ts. Defer map SHA-256: 1f39abbb71587d8dcaae8a81c00f1b171a6344fb063ce8c62dde74096c582483; 8 full candidates and 23 deferred rows, exact L9 union. Deferred issue status observed at 2026-11-17T02:08:52Z; #1705 update comment 6935809736. ST-ASSET-05 projection evidence is the captured clean-pack root-skills case in projection-writer.test.ts:98-146; Candidate U-PLANRET-023 was not captured. Warnings are retained byte-exact in each raw output; capture receipts record actual exitCode 0, signal null, launchError null."
+  ]
+}

@@ -1,15 +1,60 @@
+import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { catalogAutomationAssets, scanSkillCatalog } from "../src/assets/catalog.ts";
-import { openHarnessDb } from "../src/state-db/index.ts";
+import { defaultHarnessDbPath, openHarnessDb } from "../src/state-db/index.ts";
 import { migrate, rowCounts } from "../src/state-db/migration.ts";
 import { removeTestTree } from "./support/temp-tree.ts";
 
 const legacyRuntimeName = ["he", "lix"].join("");
 
 describe("IT-ASSET-DB-01: automation asset catalog", () => {
+  it("exposes asset catalog as a JSON command surface", () => {
+    const repo = mkdtempSync(join(tmpdir(), "ut-assets-cli-"));
+    const cliPath = join(process.cwd(), "src", "cli.ts");
+    try {
+      mkdirSync(join(repo, "skills"), { recursive: true });
+      writeFileSync(
+        join(repo, "skills", "testing.md"),
+        [
+          "---",
+          "name: testing",
+          "skill_type: testing",
+          "applies_to:",
+          "  layers: [L7]",
+          "  drive_models: [Forward]",
+          "description: test skill",
+          "---",
+          "# Testing",
+        ].join("\n"),
+      );
+      mkdirSync(join(repo, ".ut-tdd"), { recursive: true });
+      const db = openHarnessDb(defaultHarnessDbPath(repo), { repoRoot: repo });
+      try {
+        migrate(db);
+      } finally {
+        db.close();
+      }
+
+      const run = spawnSync(process.execPath, [cliPath, "asset", "catalog", "--json"], {
+        cwd: repo,
+        encoding: "utf8",
+        windowsHide: true,
+      });
+      expect(run.error?.message ?? "", "spawn error").toBe("");
+      expect(run.status, `stderr:\n${run.stderr}\nstdout:\n${run.stdout}`).toBe(0);
+      expect(JSON.parse(run.stdout)).toEqual({
+        ok: true,
+        assets: ["skill:testing"],
+        findings: [],
+      });
+    } finally {
+      removeTestTree(repo);
+    }
+  }, 20_000);
+
   it("catalogs metadata, updates search_index, and never stores prompt bodies", () => {
     const repo = mkdtempSync(join(tmpdir(), "ut-assets-"));
     const db = openHarnessDb(":memory:");
@@ -221,9 +266,10 @@ describe("IT-ASSET-04: in-memory skill catalog scan", () => {
   });
 
   it("real repo has a non-empty skill markdown catalog and no optional-root blocker", () => {
-    const skillRoot = existsSync(join(process.cwd(), "skills")) ? "skills" : "docs/skills";
+    const repoRoot = process.cwd();
+    const skillRoot = existsSync(join(repoRoot, "skills")) ? "skills" : "docs/skills";
     const result = scanSkillCatalog({
-      repoRoot: process.cwd(),
+      repoRoot,
       optionalRoots: [`${skillRoot}/optional`],
     });
 

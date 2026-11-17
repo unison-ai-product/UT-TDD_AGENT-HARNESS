@@ -782,12 +782,12 @@ describe("relation graph real-repo loader (PLAN-L7-142 stale-edge fence)", () =>
     );
     expect(g8EvidenceImpact.findings.map((f) => f.code)).not.toContain("missing-projection");
     const g9EvidenceImpact = analyzeRelationImpact({
-      changedPaths: [".ut-tdd/evidence/g9-system/20260629-st-system-minimum.json"],
+      changedPaths: [".ut-tdd/evidence/g9-system/20261117-s7-fresh-system.json"],
       projection,
     });
     expect(g9EvidenceImpact.ok).toBe(true);
     expect(g9EvidenceImpact.changedNodes.map((n) => n.id)).toContain(
-      "design:.ut-tdd/evidence/g9-system/20260629-st-system-minimum.json",
+      "design:.ut-tdd/evidence/g9-system/20261117-s7-fresh-system.json",
     );
     expect(g9EvidenceImpact.findings.map((f) => f.code)).not.toContain("missing-projection");
     const g10EvidenceDirImpact = analyzeRelationImpact({
