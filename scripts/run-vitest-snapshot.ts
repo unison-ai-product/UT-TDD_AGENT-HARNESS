@@ -17,10 +17,6 @@ import { tmpdir } from "node:os";
 import { performance } from "node:perf_hooks";
 import { dirname, join, relative, win32 } from "node:path";
 import { resolveDefaultBranchRef } from "../src/git/default-branch.ts";
-import type {
-  SnapshotLockAcquisition,
-  SnapshotLockOptions,
-} from "../src/runtime/snapshot-runner-lock.ts";
 import { hashFileChunkedWithDiagnostics } from "../tests/support/chunked-hash.ts";
 
 function run(
@@ -610,25 +606,6 @@ export function runSnapshotTests(
     );
   }
   if (primaryError) throw primaryError;
-}
-
-export interface SnapshotRunnerMainDeps {
-  acquire(options: SnapshotLockOptions): SnapshotLockAcquisition;
-  release(acquisition: SnapshotLockAcquisition): void;
-  run(args: readonly string[], repoRoot: string, stageEnv: NodeJS.ProcessEnv): void;
-  parseWaitMs(raw: string | undefined): { ok: true; ms: number } | { ok: false; message: string };
-  stageEnv(env: NodeJS.ProcessEnv, acquisition: SnapshotLockAcquisition): NodeJS.ProcessEnv;
-  getuid: (() => number) | undefined;
-  write(line: string): void;
-}
-
-// 契約形の stub (issue #1665 の Red)。実装は Green 2 の PR で入れる。
-export function runSnapshotRunnerMain(
-  _argv: readonly string[],
-  _env: NodeJS.ProcessEnv,
-  _deps: SnapshotRunnerMainDeps,
-): number {
-  return 0;
 }
 
 if ((import.meta as ImportMeta & { main?: boolean }).main) runSnapshotTests();

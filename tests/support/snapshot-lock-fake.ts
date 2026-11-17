@@ -15,10 +15,11 @@ import type {
   SnapshotLockStep,
   SnapshotLockStepInput,
 } from "../../src/runtime/snapshot-runner-lock.ts";
+import { snapshotLockDir } from "../../src/runtime/snapshot-runner-lock.ts";
 
 export const LOCK_TMP_ROOT = "/fake-tmp";
-// 期待値は実装の関数ではなく、契約の名前から固定で計算する (stub の間も前提が成り立つように)。
-export const LOCK_DIR = `${LOCK_TMP_ROOT}/ut-tdd-snapshot-runner-lock`;
+// lock dir の期待値は snapshotLockDir(tmpRoot) から導く (L7 §2。置き場の変異を block B に漏らさない)。
+export const LOCK_DIR = snapshotLockDir(LOCK_TMP_ROOT).replace(/\\/g, "/");
 export const T0 = Date.parse("2026-11-16T09:00:00.000Z");
 
 export type FakeOpName =
@@ -34,6 +35,8 @@ export interface FakeOp {
   name: FakeOpName;
   path: string;
   from?: string;
+  /** 操作の時点で path が既に在ったか。 */
+  existed: boolean;
 }
 
 const norm = (p: string): string => p.replace(/\\/g, "/");
@@ -66,7 +69,6 @@ export function makeRecord(o: {
 export class FakeLockFs {
   readonly files = new Map<string, string>();
   readonly ops: FakeOp[] = [];
-  readonly everQueue = new Set<string>();
   private readonly counts = new Map<string, number>();
   private readonly hooks: { name: FakeOpName; match: RegExp; nth: number; fn: () => void }[] = [];
   private readonly failures: { names: FakeOpName[]; match: RegExp; code: string }[] = [];
@@ -105,13 +107,20 @@ export class FakeLockFs {
   writeOpCount(): number {
     return this.opsNamed(...WRITE_OPS).length;
   }
-  /** 世代ファイルか released の印を、消す・rename で動かす操作 (rename は動かす元で数える)。 */
+  /**
+   * 操作の時点で既に在る世代ファイル / released の印への書き込み系の操作 (L7 §3.2 の 020)。
+   * unlink、rename の移動元、rename の移動先 (置き換え)、writeFile の path を数える。
+   * 操作の前に無い path への作成は数えない。
+   */
   historyMutations(): FakeOp[] {
     const hit = (p: string | undefined): boolean =>
       p !== undefined && /\/(gen-\d+\.json|released-\d+)$/.test(p);
-    return this.ops.filter(
-      (op) => (op.name === "unlink" && hit(op.path)) || (op.name === "rename" && hit(op.from)),
-    );
+    return this.ops.filter((op) => {
+      if (op.name === "unlink") return hit(op.path);
+      if (op.name === "rename") return hit(op.from) || (hit(op.path) && op.existed);
+      if (op.name === "writeFile") return hit(op.path) && op.existed;
+      return false;
+    });
   }
   /** 世代ファイルを作る操作 (link のほか writeFile / rename で作る実装も数える)。 */
   generationCreations(): FakeOp[] {
@@ -122,7 +131,12 @@ export class FakeLockFs {
 
   private enter(name: FakeOpName, path: string, from?: string): void {
     const key = norm(path);
-    this.ops.push({ name, path: key, from: from === undefined ? undefined : norm(from) });
+    this.ops.push({
+      name,
+      path: key,
+      from: from === undefined ? undefined : norm(from),
+      existed: this.files.has(key),
+    });
     const countKey = `${name}:${key}`;
     const nth = (this.counts.get(countKey) ?? 0) + 1;
     this.counts.set(countKey, nth);
@@ -139,7 +153,6 @@ export class FakeLockFs {
   }
   private set(path: string, data: string): void {
     this.files.set(path, data);
-    if (path.includes("/queue/")) this.everQueue.add(path);
   }
 
   readonly io: SnapshotLockIo = {
