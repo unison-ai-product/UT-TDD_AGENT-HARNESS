@@ -90,7 +90,7 @@ afterEach(() => {
 
 /** process.cwd() を platform 別の固定値にして返す (実 repo を読まず、decoy の位置を test が決める)。 */
 function mockCwd(s: Scenario): string {
-  const cwd = s.platform === "win32" ? "C:work\repo" : "/work/repo";
+  const cwd = s.platform === "win32" ? "C:\\work\\repo" : "/work/repo";
   cwdSpies.push(vi.spyOn(process, "cwd").mockReturnValue(cwd));
   return cwd;
 }
@@ -180,10 +180,10 @@ describe("CANDIDATE-U-PCMDRES-004..008 走査の規則", () => {
   for (const s of [WIN, POSIX]) {
     it.fails(`CANDIDATE-U-PCMDRES-007 最初の候補 (${s.platform})`, () => {
       // Windows の絶対 path はドライブ付き (claude-version-probe.md §3)。期待値は literal で持つ。
-      const a = s.platform === "win32" ? "C:aclaude.cmd" : "/a/claude";
-      const b = s.platform === "win32" ? "C:\bclaude.cmd" : "/b/claude";
-      const dirA = s.platform === "win32" ? "C:a" : "/a";
-      const dirB = s.platform === "win32" ? "C:\b" : "/b";
+      const a = s.platform === "win32" ? "C:\\a\\claude.cmd" : "/a/claude";
+      const b = s.platform === "win32" ? "C:\\b\\claude.cmd" : "/b/claude";
+      const dirA = s.platform === "win32" ? "C:\\a" : "/a";
+      const dirB = s.platform === "win32" ? "C:\\b" : "/b";
       const f = fakeFs(s.platform, [a, b], [a, b]);
       expect(
         findOnPath({
