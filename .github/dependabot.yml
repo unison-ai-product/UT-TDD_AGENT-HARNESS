@@ -1,0 +1,27 @@
+# 依存の更新 PR を自動で作る (#766 の「依存の更新」、#791、#1247)。
+# 自動 PR も通常の PR と同じ CI・非著者 review・ut-tdd pr merge を通す。
+# PR が積み上がって WIP を詰まらせないよう、件数の上限を小さくする。
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: Asia/Tokyo
+    open-pull-requests-limit: 2
+    groups:
+      npm-minor-patch:
+        update-types: [minor, patch]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: Asia/Tokyo
+    open-pull-requests-limit: 2
+    groups:
+      actions-minor-patch:
+        update-types: [minor, patch]
