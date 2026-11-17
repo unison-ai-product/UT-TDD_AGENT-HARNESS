@@ -197,6 +197,21 @@ Pack の PLAN 運用は Issue 参照に置き換える (PO 判断)。**互換性
 | S7 | PLAN の CLI・台帳・投影コードの退役と registry からの除外 (§3)。`src/plan/`、`src/plan-admission/`、`src/plan-asset/` を消す。PLAN 以外が使う部分 (§2 の 8 行目) は消さずに `src/forward/` と `src/setup/` の側へ移す (共用機能の移し先は下の「S4・S5・S7 の補足」)。PLAN 起点の SQL 読み手 (SessionStart の PLAN schedule、PLAN 推薦、review 由来 invocation 推定、scope-preview の PLAN 枝、`src/elicitation/context.ts` の PLAN 起点 context) と、`github_review_lane_receipts` の書き手・読者 `verifiedReviewLaneDigests`・registry・index・ingestion 登録、`rebuildExecutionReadiness` とその推移依存を退役する (§3)。`src/runtime/session-log.ts` の PLAN 解決・marker 管理 helper API (`resolveActivePlan` / `setActivePlan` / `inferPlanFromCommit` 等)、`src/handover/index.ts` からの PLAN helper 再 export、`onPostToolUse` の commit 文面から PLAN を推定設定する commit 書込 branch、およびこれらを直接呼ぶ unit oracle (U-SLOG-001 等) も退役する。generic event 記録と `onPostToolUse` の generic git HEAD capture (`U-SLOG-006b`) は維持する。S7 前の U-SLOG-001 等の現行保証と `U-HOVER-006` の S7 前 round-trip / 両 clear 経路は S7 着手まで維持する。`src/workflow/readiness.ts` は generic row 更新と routine-gate 実行単位照合を維持し、plan 起点 finding / gate / guardrail 集計を除く。`src/lint/plan-supersession.ts` は PLAN 専用として退役する。`model_evaluations` の成功判定 (`plan_registry.status` との結合、`src/schema/harness-db-tables-evaluation.ts:31`) の退役 (列は残して NULL)、`src/doctor/test-repository-isolation.ts:45` の登録行の削除 | 上記 3 dir、`src/state-db/**`、`src/schema/harness-db*.ts`、`src/cli.ts` | 直列 4 (S1〜S6 の後 (S3 → S7、S4 → S7、S5 → S4、S6 → S7)。S6 が canary から `plan draft` / `plan lint` を外す前に `plan` CLI を消さない) |
 | S8 | 規範文書と rule-drift の marker の掃除 (`CLAUDE.md`、`AGENTS.md`、`.claude/CLAUDE.md`、`skills/`、`docs/governance/`) | 規範文書 (`CLAUDE.md`、`AGENTS.md`、`.claude/CLAUDE.md`、`skills/`、`.claude/commands/`、`docs/governance/` の現行の運用を規定する文書)、`src/lint/rule-drift.ts` と `tests/rule-drift.test.ts` (marker の整理)。対象と対象外の線引きは下の「S6・S8 の補足」のとおり | S7 と S6 の後 |
 
+### Registered4 の別slice処分契約
+
+本項はS7-36 freezeの36 file scopeを変更せず、登録済み4 test fileを別sliceとして処分する契約である。A merge後、Bでは4 fileを全体退役する。ただし、先に存続public gate / doctor入口のG1/G3 required-document欠落fail-close保証を保全し、test・registry・oracleを同じB差分で同期する。
+
+| 対象 | Bで退役するPLAN専用範囲と境界 |
+| --- | --- |
+| `tests/node-plan-revision-runner.test.ts` | PLAN revision runnerのrehydration、admission、replay、publish、receiptを含むcaller保証全体。PLAN内部実装に閉じ、generic runner/APIへ持ち出さない。 |
+| `tests/plan-asset/ledger-schema.test.ts` | PLAN ledgerのversions、migrations、schema/constraintとPLAN path保証全体。generic state-dbのpath containmentとschema constraintは既存testで維持する。 |
+| `tests/plan-lint.test.ts` | PLAN schema、route、policyとwrapperのPLAN固有gate全体。dependency statusとunsupported wrapper gateも退役し、G1/G3欠落fail-closeはpublic gateとdoctorのtestに保持する。 |
+| `tests/plan-revision-digest-query.test.ts` | PLAN canonical digestとread-only queryの成功・失敗・scale保証全体。WAL/SHM/hot-journalはこのPLAN query固有の検査として同testと退役し、generic DB opener契約へ広げない。 |
+
+Aは本L6/L7 pairだけをdocs-onlyでfreezeし、test・registry・oracle・baseline・sourceを変更しない。Bでは既存public gateとdoctorの各対応test入口に必要文書欠落のnegativeを先に保全し、そのうえで4 file・registry・oracleを同期して同じPRで退役する。旧4対象の宣言/citation退役量と保持oracle追加量をBの実差分で別々に計測する。baselineを追加・拡大せず、対応する縮小のみを反映する。
+
+4 testの退役とproduction wrapperの退役は別工程である。後続source工程でwrapperを退役するときにpublic callerを直接再接続し、必要なhelperを移す。その後に共有evidence 9 moduleをForward側へ移す。project identity loader、custody、evidence 9 moduleの存続範囲は4 test処分から独立している。
+
 **S4 の Issue form (#1376)**: Recovery・Reverse・Redesign の各 form で、必須 `origin_plan` を必須 `origin_issue` に置き換える。起点の既存 GitHub Issue を §5.1 の canonical Issue URL で案内し、3 form の label を `Origin Issue URL`、placeholder を `https://github.com/<owner>/<repo>/issues/<number>` とし、description も揃える。起点は由来の参照であり、既存の Parent Issue 欄や GitHub の正式な親子関係とは別である。他の必須項目と blank issue 禁止は維持する。GitHub Issue Forms の `required` は空欄を防ぐだけで、URL の形式や Issue の実在を機械的に保証するとは扱わない。5 form 共通の必須 `reentry_target` は id / required を維持し、label を `Reentry target (Forward 再合流先 Issue / layer)` として Forward 再合流先の Issue URL または layer を案内する。各 form の description も Issue URL または layer を案内し、PLAN への入力案内を含めない。`origin_plan` と `origin_revision` の旧入力欄は、Incident / Recovery の任意欄も含めて5 form から削除する。既存 `U-L7-451-W5-001` の3 form の期待を新しい ID に同期し、他の form と階層規則は維持する。5 form 先頭の旧 PLAN-L7 / PLAN-L6 案内コメントも撤去する。新しい挙動の oracle は L7 の `U-PLANRET-025` とする。
 
 **S1 の前段と同期 (#1373)**: S1 の退役は、次の 2 系統が既存の gate に触れるので、範囲をここで固定する。
