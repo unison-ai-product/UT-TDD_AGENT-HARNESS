@@ -83,7 +83,7 @@ token は**役割の名前**で参照し、値は record に置く。製品の�
 
 | 種別 | 形 | 満たす制約 |
 |---|---|---|
-| 余白 `space` | 数値の配列 (px 相当。添字が step) | 厳密に増加する正の数 |
+| 余白 `space` | 数値の配列 (px 相当。添字が step) | 全ての要素 (先頭を含む) が正の数で、厳密に増加する |
 | 角丸 `radius` | `none` / `sm` / `md` / `lg` / `full` | `none` は 0。残りは `none` 以上で、この順に減らない |
 | 影 `shadow` | `none` / `sm` / `md` / `lg` の文字列 | 4 つとも在る (値の書式は preset の写像に委ねる) |
 
@@ -253,7 +253,7 @@ interface PresetManifest {
 | `hardcoded.motion` | `transition` / `animation` を含む行の、`ms` / `s` の値 |
 
 - コメント (`/* ... */` と、行頭か空白の直後の `//` から行末まで) は検出の対象にしない。
-- `@media` で始まる行は対象にしない (breakpoint は本書の token の範囲外)。
+- `@media` の**条件**の部分 (`@media` から最初の `{` の手前まで。複数行にまたがってもよい) だけを対象にしない (breakpoint は本書の token の範囲外)。`@media` の中の宣言は通常どおり検査する。宣言を 1 行に書いても複数行に書いても、検出の結果 (rule) は同じになる (行と桁は元の file の位置)。
 - `options.tokenFiles` に完全に一致する path の file は検出しない (token を定義する場所は値を持ってよい)。
 - 限界: 色の名前 (`red`)・文字列の中に組み立てた値・stack 固有の記法は検出しない。`hardcoded.font` は値が `var(` で始まらなければ検出するので、JS の token 参照式 (`tokens.font.body` など) も検出されうる (preset ごとの拡張で除く)。検出を足すのは preset ごとの拡張とする (契約の rule は上の 4 つを最小とする)。
 
@@ -342,7 +342,7 @@ export function resolveFindingSeverity(input: { stage: RolloutStage; inBaseline:
 | I2 | contrast の比は丸めずに `min` と比べる。比は `(max(L1, L2) + 0.05) / (min(L1, L2) + 0.05)`、`L` は WCAG 2.x の相対輝度 (sRGB 8 bit を 0〜1 にし、`c <= 0.03928` なら `c / 12.92`、それ以外は `((c + 0.055) / 1.055) ** 2.4`、`L = 0.2126 R + 0.7152 G + 0.0722 B`)。`contrastRatio` は引数の順に依らない |
 | I3 | `parseHexColor` は `#rgb` と `#rrggbb` (大文字・小文字とも) だけを受理し、それ以外 (alpha 付き・`#` なし・関数記法・空文字) は `null` を返す。例外を投げない |
 | I4 | `checkTokenContrast` は、`dark` が `{ na }` か未指定の mode を飛ばす。役割が無い組は `contrast.role_missing`、値を解釈できない組は `contrast.unparseable`、比が `min` 未満は `contrast.below_min` を返し、`subject` は `<mode>:<fg>/<bg>` |
-| I5 | `validateTokenSet` の rule: `token.mode_missing` (`modes.dark` が無い、subject `modes.dark`)、`token.na_reason_missing` (`na` の理由が空白だけ、subject `modes.dark` か `typography.ja`)、`token.role_missing` (subject `<mode>.<役割>`)、`token.space_not_increasing` (subject `space[<添字>]`、添字は直前以下になった要素)、`token.radius_none_nonzero` / `token.radius_not_ordered`、`token.font_no_generic_fallback` (subject `typography.family.body` か `.mono`)、`token.font_size_below_min`、`token.line_height_below_min`、`token.motion_not_ordered`、`token.reduced_motion_missing` |
+| I5 | `validateTokenSet` の rule: `token.mode_missing` (`modes.dark` が無い、subject `modes.dark`)、`token.na_reason_missing` (`na` の理由が空白だけ、subject `modes.dark` か `typography.ja`)、`token.role_missing` (subject `<mode>.<役割>`)、`token.space_not_positive` (subject `space[<添字>]`、先頭を含め 0 以下の要素)、`token.space_not_increasing` (subject `space[<添字>]`、直前の要素以下になった正の要素。0 以下の要素にはこの rule を付けず `token.space_not_positive` だけにする)、`token.radius_none_nonzero` / `token.radius_not_ordered`、`token.font_no_generic_fallback` (subject `typography.family.body` か `.mono`)、`token.font_size_below_min`、`token.line_height_below_min`、`token.motion_not_ordered`、`token.reduced_motion_missing` |
 | I6 | `lintHardcodedValues` は §7.1 の規則どおりに、`line` と `column` の昇順 (同じ位置は rule 名の辞書順) で返す。`options.tokenFiles` に `file.path` が一致すれば空を返す。コメントの中は検出しないが、行番号は数えるので、複数行のコメントの後でも行番号は元の file の行を指す |
 | I7 | `checkCatalog` の rule: `catalog.duplicate_id`、`catalog.required_component_missing` (subject は欠けた id)、`catalog.state_unknown` (subject `<id>.<名前>`)、`catalog.state_missing` (subject `<id>.<状態>`)、`catalog.na_reason_missing` (subject `<id>.<状態>`)、`catalog.keyboard_missing` (subject `<id>`) |
 | I8 | `checkCatalogUsage` の rule: `usage.unknown_component` (カタログに無い id、subject は `<file>:<id>`)、`usage.immature_in_production` (`target` が `production` で、その部品の `maturity` が `stable` でない、subject は `<file>:<id>`)。`target` が `prototype` なら成熟度を見ない |
