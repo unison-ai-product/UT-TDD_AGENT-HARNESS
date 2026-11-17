@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
+import { withPrivateTmpdir } from "./support/private-tmpdir.ts";
 import {
   CandidatePreconditionFailure,
   verifySnapshotCandidate,
@@ -476,55 +477,58 @@ describe("snapshot runner lifecycle L7 candidate Red (issue #1129 / #1415)", () 
       () => {
         if (fixture) removeTestTree(fixture.root);
       },
-      async (assertionsReached) => {
-        try {
-          fixture = createGitSourceFixture();
-        } catch (error) {
-          rejectCandidatePrecondition(`Git fixture creation threw: ${String(error)}`);
-        }
-        if (!fixture) rejectCandidatePrecondition("Git fixture creation returned no fixture");
+      // 専用の一時ルートで fixture と runner の snapshot dir を作る (他ファイルの dir と衝突しない、#1755)。
+      (assertionsReached) =>
+        withPrivateTmpdir(async () => {
+          try {
+            fixture = createGitSourceFixture();
+          } catch (error) {
+            rejectCandidatePrecondition(`Git fixture creation threw: ${String(error)}`);
+          }
+          if (!fixture) rejectCandidatePrecondition("Git fixture creation returned no fixture");
 
-        let setupOkay = true;
-        let setupFailure: string | null = null;
-        try {
-          writeFileSync(join(fixture.root, "staged.txt"), "staged edit\n");
-          setupOkay = gitOk(fixture.root, ["add", "staged.txt"]);
-          writeFileSync(join(fixture.root, "unstaged.txt"), "unstaged edit\n");
-          writeFileSync(join(fixture.root, "untracked.txt"), "untracked edit\n");
-          writeFileSync(join(fixture.root, "ignored.txt"), "ignored edit\n");
-          if (!setupOkay) setupFailure = "git add staged.txt returned nonzero";
-        } catch (error) {
-          setupOkay = false;
-          setupFailure = String(error);
-        }
-        if (!setupOkay) rejectCandidatePrecondition(`dirty fixture setup failed: ${setupFailure}`);
+          let setupOkay = true;
+          let setupFailure: string | null = null;
+          try {
+            writeFileSync(join(fixture.root, "staged.txt"), "staged edit\n");
+            setupOkay = gitOk(fixture.root, ["add", "staged.txt"]);
+            writeFileSync(join(fixture.root, "unstaged.txt"), "unstaged edit\n");
+            writeFileSync(join(fixture.root, "untracked.txt"), "untracked edit\n");
+            writeFileSync(join(fixture.root, "ignored.txt"), "ignored edit\n");
+            if (!setupOkay) setupFailure = "git add staged.txt returned nonzero";
+          } catch (error) {
+            setupOkay = false;
+            setupFailure = String(error);
+          }
+          if (!setupOkay)
+            rejectCandidatePrecondition(`dirty fixture setup failed: ${setupFailure}`);
 
-        let captured: SnapshotRunnerCapture;
-        try {
-          captured = await runSnapshotRunnerWithStageStubs([], fixture.root);
-        } catch (error) {
-          rejectCandidatePrecondition(`runner harness setup threw: ${String(error)}`);
-        }
-        const completionFailure = snapshotRunnerCompletionFailure(captured);
-        if (completionFailure) rejectCandidatePrecondition(completionFailure);
-        const executionSnapshot = captured.snapshotStages[0];
-        if (!executionSnapshot)
-          rejectCandidatePrecondition("npm stage has no snapshot observation");
-        assertionsReached();
-        expect(executionSnapshot.staged).toBe("base staged\n");
-        expect(executionSnapshot.unstaged).toBe("base unstaged\n");
-        expect(executionSnapshot.untracked).toBe(false);
-        expect(executionSnapshot.ignored).toBe(false);
-        expect(captured.stderr).toContain(fixture.head);
-        expect(captured.stderr).toMatch(/(?:作業\s*(?:tree|ツリー)|working tree)/i);
-        expect(captured.stderr).toMatch(
-          /(?:ではなく|でなく|ではない|対象外|not|rather than|instead of)/i,
-        );
-        expect(captured.stderr).toContain("staged.txt");
-        expect(captured.stderr).toContain("unstaged.txt");
-        expect(captured.stderr).toContain("untracked.txt");
-        expect(captured.stderr).not.toContain("ignored.txt");
-      },
+          let captured: SnapshotRunnerCapture;
+          try {
+            captured = await runSnapshotRunnerWithStageStubs([], fixture.root);
+          } catch (error) {
+            rejectCandidatePrecondition(`runner harness setup threw: ${String(error)}`);
+          }
+          const completionFailure = snapshotRunnerCompletionFailure(captured);
+          if (completionFailure) rejectCandidatePrecondition(completionFailure);
+          const executionSnapshot = captured.snapshotStages[0];
+          if (!executionSnapshot)
+            rejectCandidatePrecondition("npm stage has no snapshot observation");
+          assertionsReached();
+          expect(executionSnapshot.staged).toBe("base staged\n");
+          expect(executionSnapshot.unstaged).toBe("base unstaged\n");
+          expect(executionSnapshot.untracked).toBe(false);
+          expect(executionSnapshot.ignored).toBe(false);
+          expect(captured.stderr).toContain(fixture.head);
+          expect(captured.stderr).toMatch(/(?:作業\s*(?:tree|ツリー)|working tree)/i);
+          expect(captured.stderr).toMatch(
+            /(?:ではなく|でなく|ではない|対象外|not|rather than|instead of)/i,
+          );
+          expect(captured.stderr).toContain("staged.txt");
+          expect(captured.stderr).toContain("unstaged.txt");
+          expect(captured.stderr).toContain("untracked.txt");
+          expect(captured.stderr).not.toContain("ignored.txt");
+        }),
     );
   });
 
