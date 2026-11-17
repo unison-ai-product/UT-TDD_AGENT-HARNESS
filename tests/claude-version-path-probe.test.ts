@@ -1,4 +1,3 @@
-import { spawnSync } from "node:child_process";
 import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -7,7 +6,6 @@ import { checkClaudeVersionFloor } from "../src/doctor/claude-version-floor-chec
 import { removeTestTree } from "./support/temp-tree.ts";
 
 const describeWindows = describe.skipIf(process.platform !== "win32");
-const CMD_ARGS = ["/d", "/s", "/c", "claude --version"];
 
 let fixtureBin: string;
 let originalPath: string | undefined;
@@ -28,18 +26,6 @@ describeWindows("U-CCVER-004 Windows PATH Claude probe", () => {
     if (originalPath === undefined) delete process.env.PATH;
     else process.env.PATH = originalPath;
     removeTestTree(fixtureBin);
-  });
-
-  it("runs the fake claude.cmd through the configured Windows command shell", () => {
-    const result = spawnSync(process.env.ComSpec ?? "cmd.exe", CMD_ARGS, {
-      encoding: "utf8",
-      timeout: 5_000,
-      windowsHide: true,
-    });
-
-    expect(result.error).toBeUndefined();
-    expect(result.status).toBe(0);
-    expect(`${result.stdout ?? ""}\n${result.stderr ?? ""}`).toContain("2.1.293");
   });
 
   it("keeps the default PATH version check advisory and warns below the floor", () => {

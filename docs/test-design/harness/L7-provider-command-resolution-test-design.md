@@ -19,6 +19,7 @@ issue: 1694
 
 ## 2. fixture の作り方
 
+- `findOnPath` の呼び出し形は、入力を 1 つのオブジェクトにした `findOnPath({ command, env, platform, fs })` である (L6 §2、決定 D3)。001〜008 の `findOnPath` を呼ぶ oracle はこの形で呼び、変異 M1〜M9 の差分は引数の形に依らない (走査の規則の 1 か所の変更のまま)。oracle の意味と ID は変えない。
 - 001〜008、010〜012、014 は `PathFs` (`isFile` / `canExecute`) を注入する。fake の file の集合を持ち、`isFile` に渡された path を記録する。`platform` を引数で選ぶので、どの OS の CI でも Windows と POSIX の両方を流す。path の連結は、その `platform` の区切り (Windows は `\`、POSIX は `/`) で行う。
 - 「decoy」は、`process.cwd()` の値と名前を `platform` の区切りでつないだ path (相対の要素のときは `<cwd>\rel\<名前>`) に置く fake の file である。実際には作らない。decoy が選ばれる経路を、返り値と `isFile` の記録だけで観測する。
 - 009 は、`UT_TDD_CLAUDE_BIN` と Windows の native の置き場 (`APPDATA\Claude\claude-code\<版>\claude.exe`) だけを一時 dir に実際の file として作り、PATH の側は fake の `PathFs` を使う。`env.APPDATA` と `env.USERPROFILE` は一時 dir を指す (開発機の本物の claude を拾わない)。
