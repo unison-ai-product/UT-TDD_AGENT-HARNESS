@@ -12,8 +12,8 @@
  */
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, relative, sep } from "node:path";
+import type { LintResult } from "../lint/lint-result.ts";
 import { fmValue } from "../lint/shared.ts";
-import type { LintResult } from "../plan/lint.ts";
 import { canonicalizeVModelPath, resolveVModelRoots } from "../shared/design-root.ts";
 
 export interface PairDoc {

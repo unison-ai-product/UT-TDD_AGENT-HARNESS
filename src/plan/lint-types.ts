@@ -1,8 +1,3 @@
-interface LintResult {
-  ok: boolean;
-  messages: string[];
-}
-
 interface PlanScheduleDoc {
   file: string;
   content: string;
@@ -88,7 +83,6 @@ interface PlanReferenceFreshnessResult {
 }
 
 export type {
-  LintResult,
   PlanGovernanceDoc,
   PlanGovernanceResult,
   PlanGovernanceViolation,

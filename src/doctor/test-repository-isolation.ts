@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import ts from "typescript";
-import type { LintResult } from "../plan/lint.ts";
+import type { LintResult } from "../lint/lint-result.ts";
 
 export type RepositoryReadMode = "head_snapshot" | "isolated_fixture";
 export interface RepositoryReadContract {
@@ -104,7 +104,7 @@ repositoryReadContracts["tests/design-root.test.ts"] = {
 
 const HEAD_SNAPSHOT_ROWS = `
 github-pr-trace.test.ts:1 model-id-ssot-drift.test.ts:1 model-id-ssot.test.ts:1 consumer-ci-workflow-red.test.ts:1
-setup-project-identity-bootstrap.test.ts:2 plan-mechanism-retirement.test.ts:1 sub-doc-schema-integrity.test.ts:3 disposition/issue-only-projection.test.ts:1
+doctor-source-preflight-profile.test.ts:2 setup-project-identity-bootstrap.test.ts:2 plan-mechanism-retirement.test.ts:1 sub-doc-schema-integrity.test.ts:3 disposition/issue-only-projection.test.ts:1
 `;
 
 for (const [name, calls] of HEAD_SNAPSHOT_ROWS.trim()

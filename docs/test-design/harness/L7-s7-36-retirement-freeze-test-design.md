@@ -54,7 +54,7 @@ issue: 1379
 | tests/review-evidence.test.ts | 全体退役 | analyzeReviewEvidence/extractReviewEntries: PLAN review_evidence parse/schema/green-command lint/provider/model/timing。custody-v2 receipt parserを呼ばない。 |
 | tests/poc-evaluation.test.ts | 全体退役 | projectPocEvaluations/summarizePocEvaluations: plan_registryのPoC decisionsからsummary/rateを作るPLAN専用集計。 |
 | tests/plan-draft-command-digest.test.ts | 全体退役 | calculatePlanDraftCommandDigests: PLAN-specific command tupleのdeterministic digest、field mutation、caller digest拒否。production callersはretire対象Plan modules。 |
-| tests/plan-mechanism-retirement-s4-db.test.ts | 全体退役 | S4 helperでU-PLANRET-020のPLAN table/DDL保持を検証。custody auditはprovider-judgment-composition.test.ts CANDIDATE-U-D3BCOMP-017がappend/readback・receipt digest一致、020/022(a)がattempt_completed terminalを同じ欠落/変質mutationで検査。support helper自体は36対象外・保持。 |
+| tests/plan-mechanism-retirement-s4-db.test.ts | 全体退役 | S4 helperによるPLAN table/DDL保持の旧検証 (旧宣言は処分済み)。custody auditはprovider-judgment-composition.test.ts CANDIDATE-U-D3BCOMP-017がappend/readback・receipt digest一致、020/022(a)がattempt_completed terminalを同じ欠落/変質mutationで検査。support helper `tests/support/planret-s4-db-oracle.ts` は旧宣言の処分に合わせて削除する。 |
 | tests/frontmatter.test.ts | 全体退役 | frontmatterSchema.safeParse: 全fixtureがPLAN impl/design/reverse/recovery/verify frontmatter。issue bindingもPLAN draft/revise/legacy metadata、現行callerはPLAN path。 |
 | tests/projection-store-contract.test.ts | 全体退役 | projectPocEvaluations: PoC countからsummary rowをwriteし、empty countでwriteしないことのみ。generic ProjectionStore contractではない。 |
 | tests/github-forward-readiness.test.ts | 全体退役 | deriveForwardReadiness: PLAN schedule/predecessor/closure evidenceからreadiness/unlock/blockingを判定するPLAN work graph。 |
