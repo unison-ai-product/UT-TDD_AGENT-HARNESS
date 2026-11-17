@@ -10,7 +10,7 @@ next_pair_freeze: L7
 issue: 1694
 ---
 
-> **L6 contract marker**: `findOnPath(command: string, env: NodeJS.ProcessEnv, platform: NodeJS.Platform, fs?: PathFs) => string | null` (新しい module `src/runtime/path-lookup.ts`) を新設し、`resolveClaudeNativeCommand` / `resolveCodexNativeCommand` の PATH 解決 (`firstOnPath`) をそれへ置き換える。`isProviderCommandSpawnable` は、解決できなかった provider を起動せず `false` を返し、`buildProviderInvocation` は、解決できなかった provider について素の名前を返さず例外 (`provider_command_unresolved`) を投げる。unit-test-granularity contract で、DbC は §6、oracle は `docs/test-design/harness/L7-provider-command-resolution-test-design.md` の `CANDIDATE-U-PCMDRES-001`〜`014` が受け持つ。
+> **L6 contract marker**: `findOnPath(input: { command: string; env: NodeJS.ProcessEnv; platform: NodeJS.Platform; fs?: PathFs }) => string | null` (新しい module `src/runtime/path-lookup.ts`) を新設し、`resolveClaudeNativeCommand` / `resolveCodexNativeCommand` の PATH 解決 (`firstOnPath`) をそれへ置き換える。`isProviderCommandSpawnable` は、解決できなかった provider を起動せず `false` を返し、`buildProviderInvocation` は、解決できなかった provider について素の名前を返さず例外 (`provider_command_unresolved`) を投げる。unit-test-granularity contract で、DbC は §6、oracle は `docs/test-design/harness/L7-provider-command-resolution-test-design.md` の `CANDIDATE-U-PCMDRES-001`〜`014` が受け持つ。
 
 > **契約状態**: 本書は pair-freeze のための契約案で、非著者の closing review 前である。§5 の D1 (走査の共有) と D2 (解決できないときの扱い) は、control が 2026-11-16 に #1708 で決定した (§5)。source 実装・実行証跡を示さない。
 
@@ -39,11 +39,11 @@ PATH の解決は、外部 command (`where.exe` / `which`) に任せず、`findO
 
 | 項目 | 契約 |
 |---|---|
-| 入力 | `command` は素の名前 (`"claude"` / `"codex"`)。PATH は `env.PATH ?? env.Path`。`process.cwd()` と `process.env` は読まない (引数の `env` だけ) |
+| 入力 | 入力は 1 つのオブジェクト `{ command, env, platform, fs? }` で受ける (位置引数にしない。決定 D3)。`command` は素の名前 (`"claude"` / `"codex"`)。PATH は `env.PATH ?? env.Path`。`process.cwd()` と `process.env` は読まない (引数の `env` だけ) |
 | 出力 | 最初の候補の絶対 path、候補が無ければ `null`。例外を投げない |
 | 外部 process | 起動しない。`where.exe` / `which` を使わない |
 | 注入口 | `PathFs = { isFile(path): boolean; canExecute(path): boolean }`。既定は `node:fs` の `statSync` / `accessSync(X_OK)`。`ProviderCommandResolutionOptions` に `pathFs?: PathFs` を足し、`runPathLookup` は廃止する (同名で意味の変わる注入口を残さない) |
-| 共有 | `claude-version-probe.md` の `probePathClaude` も、PATH の解決は `findOnPath("claude", env, platform)` を呼ぶ。module は `src/runtime/path-lookup.ts` に置く (`src/doctor` から `src/runtime` を呼ぶ向きにし、逆向きの依存を作らない) |
+| 共有 | `claude-version-probe.md` の `probePathClaude` も、PATH の解決は `findOnPath({ command: "claude", env, platform })` を呼ぶ。module は `src/runtime/path-lookup.ts` に置く (`src/doctor` から `src/runtime` を呼ぶ向きにし、逆向きの依存を作らない) |
 
 解決の全体の順序は変えない: 明示の環境変数 → Windows の native の置き場 → `findOnPath`。変わるのは最後の段だけである。
 
@@ -78,12 +78,13 @@ POSIX の `which` は、PATH の空要素や相対要素を shell によって c
 | D1 走査を共有するか | `probePathClaude` と provider の解決で同じ `findOnPath` を使う (§2)。規則の正本は 1 か所 (`claude-version-probe.md` §3) | 別々に実装する: 実装が `src/doctor` と `src/runtime` の 2 か所に分かれ、片方だけ規則が変わる drift が起きうる (空要素の扱いが 2 通りになる)。利点は `src/doctor/claude-path-probe.ts` の実装 PR (#1693 の実装) と独立に進められること。共有は、先に入る側が `src/runtime/path-lookup.ts` を作り、後の側が import する順序の制約を持つ |
 | D1' 外部 command を残す | 採らない: `where.exe` を cwd の外で動かす (spawn の `cwd` を System32 などにする) 案は、拡張子なしの file が返る問題 (§1) と PATH の相対要素の扱いが残る。結果を後から current directory で絞る案は、symlink と大小の違いで脆い | |
 | D2 解決できないとき (r1 FLAG 1 で改訂) | **すべての起動経路で、解決できなければ素の名前を spawn しない**。保証は起動の直前の `buildProviderInvocation` が持ち、解決できないとき `provider_command_unresolved` を投げる。`isProviderCommandSpawnable` の `false` は probe の段の追加の防御として残す (§3) | (i) `isProviderCommandSpawnable` の `false` だけに頼る (旧 D2): `team run --mode ... --execute` は probe を省いて `available=true` を作れ (§1、`cli.ts:2979`)、判定後に候補が消えても起動の解決は素の名前へ fallback するので、保証にならない。(ii) 素の名前への fallback を残す: Windows で current directory の `claude.exe` を起動しうる (§1)。(iii) probe 時の解決結果を plan に載せて起動で使う: plan の型と `buildTeamRunPlan` の変更が増え、消えた path をそのまま spawn する別の失敗に変わる。解決は起動の都度行うほうが単純で、分岐が `buildProviderInvocation` の 1 か所で済む |
+| D3 `findOnPath` の入力の形 (#1715 の CI 赤で判明) | 入力を 1 つのオブジェクト `{ command, env, platform, fs? }` で受ける | 位置引数 4 個 (`command, env, platform, fs?`、旧契約): repo の coding rule `max-source-params` (source の関数は 3 引数まで、`docs/governance/coding-rules.md`、`src/lint/coding-rules.ts`) に反し、Green の本実装が規則違反になる。stub が tuple の rest 引数で字面だけ満たす案は、規則を迂回するだけなので採らない。規則を緩めることもしない |
 
 ## 6. 不変条件
 
 | DbC | 契約 |
 |---|---|
-| pre | `findOnPath` の `env` は任意 (PATH が無い・空でもよい)。`fs` を省略すると実 file system を使う |
+| pre | `findOnPath` の入力オブジェクトの `env` は任意の内容 (PATH が無い・空でもよい)。`fs` を省略すると実 file system を使う |
 | post | 候補があれば PATH の前から数えて最初の 1 つの絶対 path、無ければ `null`。`process.cwd()` 配下の file を、PATH に絶対 path として現れない限り返さない。`isProviderCommandSpawnable` は解決できない provider について `runProbe` を 0 回呼び `false` を返す。`buildProviderInvocation` は、その呼び出しの時点で解決できない provider について、素の名前を含む invocation を返さず `provider_command_unresolved` を投げる (probe の結果・mode override・過去の解決の有無に依らない)。解決できたときは、`runProbe` が受ける command と `buildProviderInvocation` の command (`.cmd` / `.bat` は `cmd` の引数の中) が絶対 path である |
 | invariant | 解決の順序 (明示 → native → PATH)、`buildProviderInvocation` の `cmd /d /s /c` の組み立てと `%` の拒否 (解決できたときの形)、`provider_*` の診断、`shell: false` を変えない。外部 process を解決のために起動しない。production の code にテスト専用の切り替えを足さない |
 
@@ -106,3 +107,4 @@ POSIX の `which` は、PATH の空要素や相対要素を shell によって c
 - D1 = 案 A (走査を共有する): 規則の正本を `claude-version-probe.md` §3 の 1 か所に保ち、空要素などの扱いが 2 通りになる drift を防ぐため。先に merge される実装 PR が `src/runtime/path-lookup.ts` を作り、後の PR がそれを使う (順序は control が実装の段で決める)。
 - D2 = 案 A (`isProviderCommandSpawnable` が spawn せず `false`): 既存の fail-close の方針から決まり、素の名前への fallback を残さず、`src/cli.ts` を変えずに済むため。
 - **D2 の改訂 (r1 FLAG 1、author 是正)**: 案 A の根拠は「`plan.available` が probe 由来なので起動時に fallback は使われない」だったが、`team run --mode` は probe を省いて `available=true` を作れ (`cli.ts:2979`)、判定後に候補が消える経路もあるため成り立たない (§1)。決定の趣旨 (素の名前への fallback を残さず fail-close、`src/cli.ts` を変えない) は保ち、保証の置き場所を起動の直前の `buildProviderInvocation` へ移す (§3、§5)。`isProviderCommandSpawnable` の `false` は残す。この改訂は L6 の範囲内で、L5 以上の契約は変えない。control の再確認は PR コメントで求める。
+- **D3 (control、2026-11-17、#1715)**: `findOnPath` の入力を位置引数 4 個から 1 つのオブジェクト `{ command, env, platform, fs? }` に改める。理由: repo の coding rule `max-source-params` は source の関数の引数を 3 個までとし、旧契約の位置引数 4 個では Green の本実装が規則に反する。Red の PR (#1715) の stub を tuple の rest 引数にして規則を字面で満たす案は、規則の迂回なので採らない。この改訂は L6 の範囲内で、戻り値・走査の規則・oracle の意味と ID は変えない。
