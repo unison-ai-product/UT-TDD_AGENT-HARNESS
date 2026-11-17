@@ -121,6 +121,12 @@ describe("vmodel pair-freeze lint (U-VPAIR)", () => {
       "docs/design/harness/L1-requirements/",
       "confirmed",
     );
+    const missingBaseTrace = analyzePairFreeze([baseDesign, { ...baseTest, pairArtifact: null }]);
+    expect(missingBaseTrace.ok).toBe(false);
+    expect(missingBaseTrace.pairs).toBe(0);
+    expect(missingBaseTrace.orphans.map(({ path, reason }) => ({ path, reason }))).toEqual([
+      { path: baseDesign.path, reason: "trace-orphan" },
+    ]);
     const deltaDesign = {
       ...doc(
         "docs/design/harness/L1-requirements/delta.md",
