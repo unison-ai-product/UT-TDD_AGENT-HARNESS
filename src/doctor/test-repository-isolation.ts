@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import ts from "typescript";
-import type { LintResult } from "../plan/lint.ts";
+import type { LintResult } from "../lint/lint-result.ts";
 
 export type RepositoryReadMode = "head_snapshot" | "isolated_fixture";
 export interface RepositoryReadContract {

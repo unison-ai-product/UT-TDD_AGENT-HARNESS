@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join, normalize, resolve } from "node:path";
 import ts from "typescript";
-import type { LintResult } from "../plan/lint.ts";
+import type { LintResult } from "../lint/lint-result.ts";
 
 export type WindowsHideSource = { path: string; content: string };
 export type WindowsHideInput = { sources: WindowsHideSource[]; entries: string[] };

@@ -21,6 +21,8 @@ import {
   frRoadmapCoverageMessages,
   loadFrRoadmapCoverageDocs,
 } from "../lint/fr-roadmap-coverage.ts";
+import { lintG1Trace } from "../lint/g1-trace.ts";
+import { lintG3Trace } from "../lint/g3-trace.ts";
 import { analyzeGateRunCoverage, gateRunCoverageMessages } from "../lint/gate-run-coverage.ts";
 import {
   analyzeL6Completion,
@@ -78,7 +80,6 @@ import {
   loadTelemetryClosureDocs,
   telemetryClosureMessages,
 } from "../lint/telemetry-closure.ts";
-import { lintPlanWithGate } from "../plan/lint.ts";
 import { loadGateRunCoverageStats } from "./gate-run-coverage-reconciliation.ts";
 
 export function checkPlaceholderDeps(repoRoot: string): { messages: string[]; ok: boolean } {
@@ -107,7 +108,7 @@ export function checkPlanTraceGate(
     };
   }
   try {
-    return lintPlanWithGate(undefined, repoRoot, gate);
+    return gate === "G1-trace" ? lintG1Trace(repoRoot) : lintG3Trace(repoRoot);
   } catch {
     return { messages: [`${gate.toLowerCase()} - violation: trace gate could not run`], ok: false };
   }

@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import { resolveAuthoringSourceAbsolutePath } from "../shared/design-root.ts";
+import type { LintResult } from "./lint-result.ts";
 
 export interface G1TraceDocs {
   business: string;
@@ -156,4 +157,16 @@ export function g1TraceMessages(result: G1TraceResult): string[] {
   if (result.orphanScreen.length > 0) parts.push(`orphanScreen=${result.orphanScreen.join(",")}`);
   if (result.orphanP0Fr.length > 0) parts.push(`orphanP0Fr=${result.orphanP0Fr.join(",")}`);
   return [`g1-trace - violation: ${parts.join("; ")}`];
+}
+
+export function lintG1Trace(repoRoot: string): LintResult {
+  try {
+    const result = analyzeG1Trace(loadG1TraceDocs(repoRoot));
+    return { ok: g1TraceOk(result), messages: g1TraceMessages(result) };
+  } catch (e) {
+    return {
+      ok: false,
+      messages: [`g1-trace - violation: required docs could not be read (${String(e)})`],
+    };
+  }
 }
