@@ -90,16 +90,6 @@ describe("scope dry-run preview", () => {
         catalog_layer: "L4",
         catalog_sub_doc: "security",
       });
-      upsertRow(db, {
-        table: "plan_registry",
-        primaryKey: "plan_id",
-        row: {
-          plan_id: "PLAN-L4-16-security-design-slot",
-          kind: "add-design",
-          layer: "L4",
-          status: "draft",
-        },
-      });
 
       const result = buildScopeDryRunPreview(db, {
         profileId: "standard",
@@ -122,7 +112,7 @@ describe("scope dry-run preview", () => {
           expect.objectContaining({
             doc_type_id: "DOC-L4-SECURITY",
             resolved_scope_status: "deferred",
-            required_action: "follow required plan PLAN-L4-16-security-design-slot",
+            required_action: "route defer target before implementation",
           }),
         ]),
       );
@@ -138,7 +128,7 @@ describe("scope dry-run preview", () => {
     }
   });
 
-  it("reports missing profiles and unresolved required plans as dry-run findings", () => {
+  it("reports missing profiles and does not resolve required_plan_id against PLAN projections", () => {
     const db = openHarnessDb(":memory:");
     try {
       migrate(db);
@@ -158,12 +148,7 @@ describe("scope dry-run preview", () => {
       const missing = buildScopeDryRunPreview(db, { profileId: "missing-profile" });
 
       expect(enterprise.ok).toBe(true);
-      expect(enterprise.findings).toEqual([
-        expect.objectContaining({
-          kind: "scope-preview-required-plan-missing",
-          severity: "warn",
-        }),
-      ]);
+      expect(enterprise.findings).toEqual([]);
       expect(missing.ok).toBe(false);
       expect(missing.findings).toEqual([
         expect.objectContaining({
