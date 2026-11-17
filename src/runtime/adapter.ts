@@ -18,7 +18,6 @@ import {
 } from "./adapter-policy.ts";
 import { CODEX_WORKSPACE_WRITE_ROLES } from "./agent-guard-policy.ts";
 import type { ExecutionMode } from "./detect.ts";
-import type { PathFs } from "./path-lookup.ts";
 
 export type AdapterProvider = "claude" | "codex";
 
@@ -95,7 +94,6 @@ export type InvokeResult =
 export interface ProviderCommandResolutionOptions {
   env?: NodeJS.ProcessEnv;
   platform?: NodeJS.Platform;
-  pathFs?: PathFs;
   runPathLookup?: (
     finder: string,
     args: string[],

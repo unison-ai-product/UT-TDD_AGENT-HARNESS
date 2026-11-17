@@ -9,7 +9,9 @@ import {
   buildAdapterPlan,
   buildProviderInvocation,
   isProviderCommandSpawnable,
+  type ProviderCommandResolutionOptions,
   type ProviderProbeInput,
+  type ProviderProbeOptions,
   resolveClaudeNativeCommand,
   resolveCodexNativeCommand,
 } from "../src/runtime/adapter.ts";
@@ -19,6 +21,13 @@ import { removeTestTree } from "./support/temp-tree.ts";
 // issue #1694 (L7 provider-command-resolution-test-design.md CANDIDATE-U-PCMDRES-001〜014)。
 // 登録と Red の PR: src は stub (findOnPath は常に null) だけなので、全 oracle を it.fails で登録する。
 // 期待値の path は literal で書く (production の code から生成しない)。
+
+// Red では adapter.ts を変えない (design-protection-diff-gate §10.3 手順 1')。pathFs は production の型にまだ無いので、
+// test 局所の交差型で受けて既存の型へ渡す。Green が ProviderCommandResolutionOptions に pathFs を足したらこの型を外す。
+type OptionsWithPathFs = ProviderCommandResolutionOptions & { pathFs?: PathFs };
+function withFs<T extends ProviderProbeOptions>(opts: T & OptionsWithPathFs): T {
+  return opts;
+}
 
 type Scenario = {
   platform: NodeJS.Platform;
@@ -170,10 +179,11 @@ describe("CANDIDATE-U-PCMDRES-004..008 走査の規則", () => {
 
   for (const s of [WIN, POSIX]) {
     it.fails(`CANDIDATE-U-PCMDRES-007 最初の候補 (${s.platform})`, () => {
-      const a = `${s.sep}a${s.sep}${s.file}`;
-      const b = `${s.sep}b${s.sep}${s.file}`;
-      const dirA = `${s.sep}a`;
-      const dirB = `${s.sep}b`;
+      // Windows の絶対 path はドライブ付き (claude-version-probe.md §3)。期待値は literal で持つ。
+      const a = s.platform === "win32" ? "C:aclaude.cmd" : "/a/claude";
+      const b = s.platform === "win32" ? "C:\bclaude.cmd" : "/b/claude";
+      const dirA = s.platform === "win32" ? "C:a" : "/a";
+      const dirB = s.platform === "win32" ? "C:\b" : "/b";
       const f = fakeFs(s.platform, [a, b], [a, b]);
       expect(
         findOnPath({
@@ -221,21 +231,27 @@ describe("CANDIDATE-U-PCMDRES-009..010 解決の順序と配線", () => {
     const f = fakeFs("win32", [pathFile]);
     const base = { PATH: "C:\\real", PATHEXT: ".CMD", USERPROFILE: home };
     const noNativeHome = emptyDir();
-    const a = resolveClaudeNativeCommand({
-      platform: "win32",
-      env: { ...base, APPDATA: home, UT_TDD_CLAUDE_BIN: explicit },
-      pathFs: f.fs,
-    });
-    const b = resolveClaudeNativeCommand({
-      platform: "win32",
-      env: { ...base, APPDATA: home },
-      pathFs: f.fs,
-    });
-    const c = resolveClaudeNativeCommand({
-      platform: "win32",
-      env: { ...base, APPDATA: noNativeHome, USERPROFILE: noNativeHome },
-      pathFs: f.fs,
-    });
+    const a = resolveClaudeNativeCommand(
+      withFs({
+        platform: "win32",
+        env: { ...base, APPDATA: home, UT_TDD_CLAUDE_BIN: explicit },
+        pathFs: f.fs,
+      }),
+    );
+    const b = resolveClaudeNativeCommand(
+      withFs({
+        platform: "win32",
+        env: { ...base, APPDATA: home },
+        pathFs: f.fs,
+      }),
+    );
+    const c = resolveClaudeNativeCommand(
+      withFs({
+        platform: "win32",
+        env: { ...base, APPDATA: noNativeHome, USERPROFILE: noNativeHome },
+        pathFs: f.fs,
+      }),
+    );
     expect([a, b, c]).toEqual([explicit, native, pathFile]);
   });
 
@@ -262,12 +278,15 @@ describe("CANDIDATE-U-PCMDRES-011..012 probe", () => {
         const home = emptyDir();
         const probe = vi.fn(() => ({ status: 0 }));
         const f = fakeFs(s.platform, []);
-        const ok = isProviderCommandSpawnable(provider, {
-          platform: s.platform,
-          env: pathEnv(s, [s.real], { APPDATA: home, USERPROFILE: home, HOME: home }),
-          pathFs: f.fs,
-          runProbe: probe,
-        });
+        const ok = isProviderCommandSpawnable(
+          provider,
+          withFs({
+            platform: s.platform,
+            env: pathEnv(s, [s.real], { APPDATA: home, USERPROFILE: home, HOME: home }),
+            pathFs: f.fs,
+            runProbe: probe,
+          }),
+        );
         expect(ok).toBe(false);
         expect(probe).toHaveBeenCalledTimes(0);
       });
@@ -283,25 +302,33 @@ describe("CANDIDATE-U-PCMDRES-011..012 probe", () => {
       USERPROFILE: home,
       ComSpec: "C:\\Windows\\System32\\cmd.exe",
     };
+    // exe 側は PATHEXT に .EXE を含め、cmd 側 (.CMD) とは env を分ける。
+    const exeBase = { ...base, PATHEXT: ".EXE" };
     const exeProbe = vi.fn((_input: ProviderProbeInput) => ({ status: 0 }));
-    isProviderCommandSpawnable("claude", {
-      platform: "win32",
-      env: base,
-      pathFs: fakeFs("win32", ["C:\\real\\claude.exe"]).fs,
-      runProbe: exeProbe,
-    });
+    isProviderCommandSpawnable(
+      "claude",
+      withFs({
+        platform: "win32",
+        env: exeBase,
+        pathFs: fakeFs("win32", ["C:\\real\\claude.exe"]).fs,
+        runProbe: exeProbe,
+      }),
+    );
     expect(exeProbe).toHaveBeenCalledTimes(1);
     expect(exeProbe.mock.calls[0]?.[0]).toMatchObject({
       command: "C:\\real\\claude.exe",
       args: ["--version"],
     });
     const cmdProbe = vi.fn((_input: ProviderProbeInput) => ({ status: 0 }));
-    isProviderCommandSpawnable("claude", {
-      platform: "win32",
-      env: base,
-      pathFs: fakeFs("win32", ["C:\\real\\claude.cmd"]).fs,
-      runProbe: cmdProbe,
-    });
+    isProviderCommandSpawnable(
+      "claude",
+      withFs({
+        platform: "win32",
+        env: base,
+        pathFs: fakeFs("win32", ["C:\\real\\claude.cmd"]).fs,
+        runProbe: cmdProbe,
+      }),
+    );
     expect(cmdProbe).toHaveBeenCalledTimes(1);
     const input = cmdProbe.mock.calls[0]?.[0];
     expect(input?.command).toBe("C:\\Windows\\System32\\cmd.exe");
@@ -379,18 +406,20 @@ describe("CANDIDATE-U-PCMDRES-014 全起動経路で素の名前を spawn しな
   });
 
   it.fails("CANDIDATE-U-PCMDRES-014c available=true でも解決できなければ spawn しない", () => {
+    // 実 filesystem (空の一時 directory) と process.env を使う。変更前に全 env を保存する。
+    // Windows の process.env は大文字小文字を区別しないので、path / pathext の別名 key を別物として扱わない。
     const home = emptyDir();
-    const saved = new Map<string, string | undefined>();
+    const before: NodeJS.ProcessEnv = { ...process.env };
+    const isPathKey = (key: string) => ["path", "pathext"].includes(key.toLowerCase());
     const setEnv = (key: string, value: string | undefined) => {
-      if (!saved.has(key)) saved.set(key, process.env[key]);
       if (value === undefined) delete process.env[key];
       else process.env[key] = value;
     };
     const cwd = vi.spyOn(process, "cwd").mockReturnValue(home);
     const spawn = vi.fn(() => ({ status: 0, signal: null }));
     try {
+      for (const key of Object.keys(process.env)) if (isPathKey(key)) delete process.env[key];
       setEnv("PATH", home);
-      setEnv("Path", undefined);
       setEnv("APPDATA", home);
       setEnv("USERPROFILE", home);
       setEnv("HOME", home);
@@ -421,10 +450,10 @@ describe("CANDIDATE-U-PCMDRES-014 全起動経路で素の名前を spawn しな
       expect((thrown as Error | undefined)?.message).toBe("provider_command_unresolved");
     } finally {
       cwd.mockRestore();
-      for (const [key, value] of saved) {
-        if (value === undefined) delete process.env[key];
-        else process.env[key] = value;
-      }
+      // 現在の key を全て消してから、保存した key をそのまま戻す (別名 key を残さない)。
+      for (const key of Object.keys(process.env)) delete process.env[key];
+      for (const [key, value] of Object.entries(before)) setEnv(key, value);
     }
+    expect({ ...process.env }).toEqual(before);
   });
 });
