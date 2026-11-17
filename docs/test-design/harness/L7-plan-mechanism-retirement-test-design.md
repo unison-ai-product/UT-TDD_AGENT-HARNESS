@@ -83,6 +83,25 @@ PLAN admission / asset ledger・reservation 専用の直接 import test は file
 
 **A/B 境界と mixed test の同期**: A は docs-only の契約 freeze であり、現行 test、citation、L7 宣言、baseline、`src/` は変更しない。A merge 後の B で、`tests/handover.test.ts`、`tests/session-log.test.ts`、`tests/session-start-digest.test.ts`、`tests/setup-project-identity-bootstrap.test.ts`、`tests/design-root.test.ts` の PLAN 専用 case / assertion を退役し、共有機能の assertion は残す。これに伴い `U-HOVER-006`、`U-HOVER-008`、`U-HOVER-009`、`U-HOVER-015`、`U-RCDEV-013`、`U-SCHEDULE-LIVE-001`、`U-SCHEDULE-LIVE-003`、`U-SLOG-001`、`U-SLOG-003`、`U-SLOG-004`、`U-SLOG-008` の宣言を、該当 case の処分と同じ差分で同期する。`U-SCHEDULE-LIVE-002` は `tests/projection-writer.test.ts` の既存 case とともに後続 source step まで維持し、最新 test/gate (blocked を含む)・review snapshot の判定を検証する。`U-SLOG-009` も維持し、120文字を超える file-path target を入力にして truncate 防止と secret mask を検証する。baseline の変更と実測値は B の PR に記録し、この契約には件数を固定しない。
 
+### Registered4 別sliceの処分とnegative保証
+
+本項は既存S7-36 freezeの36 file scopeに追加せず、次の登録済み4 fileを別sliceとして扱う。Aは本L6/L7 pairだけをdocs-onlyでfreezeする。A merge後のBは4 fileを全体退役し、存続保証を保つtest、registry、oracleを同じPRで同期する。
+
+| test file | Bで退役するPLAN専用保証全体 | 別に維持する保証 |
+| --- | --- | --- |
+| `tests/node-plan-revision-runner.test.ts` | PLAN revision runnerのrehydration、admission、replay、publish、receiptを含むPLAN caller保証。 | generic runner/APIは新設・拡張しない。identity loader、custody、evidence 9 moduleの契約は別範囲として維持する。 |
+| `tests/plan-asset/ledger-schema.test.ts` | PLAN ledgerのversions、migrations、schema/constraint、PLAN path保証。 | generic state-dbのpath containmentとschema constraintを既存testで維持する。 |
+| `tests/plan-lint.test.ts` | PLAN schema、route、policy、wrapper gate全体。dependency statusとunsupported wrapper gateを含む。 | G1/G3のrequired-document欠落fail-closeをpublic gate / doctorの既存入口testで維持する。 |
+| `tests/plan-revision-digest-query.test.ts` | PLAN canonical digestとread-only queryの成功・失敗・scale、ならびにPLAN query固有WAL/SHM/hot-journal検査。 | generic DB openerにPLAN query固有の契約を追加しない。 |
+
+**G1/G3の保持negative**: Bでは、既存のpublic `gate G1` / `gate G3` とdoctor対応checkのtest入口で保証する。各入口で必要文書が揃った非空fixtureを正controlとしてpassさせ、次に対象のrequired documentだけを除いたfixtureをnegativeとする。negativeはmissing-path診断とfailed結果（doctorは対応checkの失敗）をassertする。空repoの別理由による失敗を代用しない。既存の各gate / doctor check入口を使い、単一のCLI複合scenarioは要求しない。これは既存fail-closeの保持であり、新しい挙動の追加ではない。
+
+Aでは新formal U-IDを発行しない。保持negativeの意味・fixture条件・期待診断はこの節でfreezeし、Bでは実caseの追加・変更とoracle declaration / citationの同期を同じ差分に含めてIDを昇格する。generic state-db path containmentとschema constraintの既存testは変更せず保持する。PLAN内の共有やquery固有のjournal検査をgeneric契約に昇格させない。
+
+**Bの計測条件**: 旧4対象の宣言/citation退役量と保持oracle追加量をBの実差分で別々に計測する。baselineの追加・拡大は禁止し、対応する縮小のみ同期する。仮想projectionのpassを実patch passとみなさない。
+
+**後続工程**: Bの4 test退役とは分け、後続source工程でPLAN wrapperを退役するときにpublic callerを直接再接続し、必要なhelperを移す。その後に共有evidence 9 moduleをForward側へ移す。identity loader、custody、evidence 9 moduleは4 test処分の対象にしない。
+
 ## 4. 昇格と引用の方針
 
 - 025 の Green 実装時に既存 `tests/github-repository-policy.test.ts` の `U-L7-451-W5-001` が要求する3 form の欄名を `origin_issue` に同期し、他の必須欄と blank issue 禁止の既存検査を維持する。
