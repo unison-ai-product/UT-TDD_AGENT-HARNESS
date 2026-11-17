@@ -145,15 +145,15 @@ path は `/` 区切りに正規化する。対象は **実行される面** に�
 
 | Function | Signature | pre | post | invariant | oracle |
 |---|---|---|---|---|---|
-| `classifyScanTarget` | `classifyScanTarget(path: string) => ScanKind \| null` | path は repo 相対 | §2 の種別か `null` | path だけで決まる | `U-ZTDL-001` |
-| `extractCommands` | `extractCommands(source: ScanSource) => CommandLine[]` | `source.path` が対象 | §3 の論理コマンドの列 | 同じ入力から同じ列 | `U-ZTDL-002`〜`005` |
-| `checkInstallCommands` | `checkInstallCommands(file: ScanSource) => Finding[]` | `markdown` 以外 | §4 の finding | 純粋 | `U-ZTDL-006`〜`011` |
-| `checkFetchAndExecute` | `checkFetchAndExecute(file: ScanSource) => Finding[]` | 任意の対象 | §5 の finding | 純粋 | `U-ZTDL-012`〜`016` |
-| `analyzeZeroTrustDownload` | `analyzeZeroTrustDownload(input: ZeroTrustInput) => ZeroTrustResult` | §10 の Pre | `{ ok, findings, summary }` | 入力順に依存しない | `U-ZTDL-017`〜`021` |
-| `parseZeroTrustBaseline` | `parseZeroTrustBaseline(sourceText: string) => ZeroTrustBaseline \| null` | 文字列 | 解釈できなければ `null` | 壊れた入力を空とみなさない | `U-ZTDL-022` |
-| `loadZeroTrustSources` | `loadZeroTrustSources(repoRoot: string) => { sources: ScanSource[]; unreadable: string[] }` | repo root | 対象 file の内容と読めない path | 書き込まない | `U-ZTDL-023` |
-| `loadPreviousZeroTrustBaseline` | `loadPreviousZeroTrustBaseline(repoRoot: string) => { kind: "found"; baseline: ZeroTrustBaseline } \| { kind: "absent" } \| { kind: "unreadable" }` | repo root | §6.1 の比較元 | 読めない比較元を `absent` にしない | `U-ZTDL-023` |
-| `checkZeroTrustDownload` | `checkZeroTrustDownload(repoRoot: string) => { messages: string[]; ok: boolean }` | repo root | adapter を合成し `analyzeZeroTrustDownload` を呼ぶ。`ZERO_TRUST_SEVERITY` を適用 | 例外を握りつぶさない | `U-ZTDL-024`, `U-ZTDL-025` |
+| `classifyScanTarget` | `classifyScanTarget(path: string) => ScanKind \| null` | path は repo 相対 | §2 の種別か `null` | path だけで決まる | `CANDIDATE-U-ZTDL-001` |
+| `extractCommands` | `extractCommands(source: ScanSource) => CommandLine[]` | `source.path` が対象 | §3 の論理コマンドの列 | 同じ入力から同じ列 | `CANDIDATE-U-ZTDL-002`〜`005` |
+| `checkInstallCommands` | `checkInstallCommands(file: ScanSource) => Finding[]` | `markdown` 以外 | §4 の finding | 純粋 | `CANDIDATE-U-ZTDL-006`〜`011` |
+| `checkFetchAndExecute` | `checkFetchAndExecute(file: ScanSource) => Finding[]` | 任意の対象 | §5 の finding | 純粋 | `CANDIDATE-U-ZTDL-012`〜`016` |
+| `analyzeZeroTrustDownload` | `analyzeZeroTrustDownload(input: ZeroTrustInput) => ZeroTrustResult` | §10 の Pre | `{ ok, findings, summary }` | 入力順に依存しない | `CANDIDATE-U-ZTDL-017`〜`021` |
+| `parseZeroTrustBaseline` | `parseZeroTrustBaseline(sourceText: string) => ZeroTrustBaseline \| null` | 文字列 | 解釈できなければ `null` | 壊れた入力を空とみなさない | `CANDIDATE-U-ZTDL-022` |
+| `loadZeroTrustSources` | `loadZeroTrustSources(repoRoot: string) => { sources: ScanSource[]; unreadable: string[] }` | repo root | 対象 file の内容と読めない path | 書き込まない | `CANDIDATE-U-ZTDL-023` |
+| `loadPreviousZeroTrustBaseline` | `loadPreviousZeroTrustBaseline(repoRoot: string) => { kind: "found"; baseline: ZeroTrustBaseline } \| { kind: "absent" } \| { kind: "unreadable" }` | repo root | §6.1 の比較元 | 読めない比較元を `absent` にしない | `CANDIDATE-U-ZTDL-023` |
+| `checkZeroTrustDownload` | `checkZeroTrustDownload(repoRoot: string) => { messages: string[]; ok: boolean }` | repo root | adapter を合成し `analyzeZeroTrustDownload` を呼ぶ。`ZERO_TRUST_SEVERITY` を適用 | 例外を握りつぶさない | `CANDIDATE-U-ZTDL-024`, `CANDIDATE-U-ZTDL-025` |
 
 型: `ScanSource = { path: string; text: string }`、`ScanKind = "workflow" | "shell" | "powershell" | "batch" | "markdown"`、`CommandLine = { path: string; line: number; text: string }`、`Finding = { path: string; rule: string; subject: string; line: number }`、`ZeroTrustBaseline = { entries: { path: string; rule: string; subject: string; count: number }[] }`、`ZeroTrustInput = { sources: readonly ScanSource[]; baseline: ZeroTrustBaseline; previousBaseline: ZeroTrustBaseline | null; severity: "advisory" | "fail-close" }` (`max-source-params` に合わせて 1 つの object)。YAML の構文解析は `yaml` パッケージ (既存依存) を使う。
 
