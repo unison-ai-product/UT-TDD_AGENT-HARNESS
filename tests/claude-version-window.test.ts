@@ -33,7 +33,7 @@ function writeTranscript(name: string, tailBytes: number): string {
 }
 
 describe("Claude Code transcript tail window (Issue #1676)", () => {
-  it.fails("CANDIDATE-U-CCVER-016 drops a line that starts exactly at the window start", () => {
+  it("CANDIDATE-U-CCVER-016 drops a line that starts exactly at the window start", () => {
     expect(readTranscriptClaudeVersion(writeTranscript("t016.jsonl", 4_194_304))).toBeNull();
   });
 

@@ -89,7 +89,7 @@ import {
 import { defaultHarnessDbPath, openHarnessDb } from "../src/state-db/index.ts";
 import { consumeDoctorResultEnvelope } from "./support/doctor-envelope.ts";
 import { removeTestTree } from "./support/temp-tree.ts";
-import { headSnapshotRoot } from "./support/workspace-roots.ts";
+import { headSnapshotRoot, noClaudeProbe } from "./support/workspace-roots.ts";
 
 const NOW = "2026-06-04T00:00:00.000Z";
 const pointerPath = join("/repo", ".ut-tdd", "handover", "CURRENT.json");
@@ -1096,7 +1096,7 @@ function deps(over: Partial<DoctorDeps> & { files?: Map<string, string> } = {}):
     repoRoot: "/repo",
     now: NOW,
     readText: (p) => files.get(p) ?? null,
-    readPathClaudeVersion: () => null,
+    probePathClaude: noClaudeProbe,
     listDir: (dir) =>
       [...files.keys()]
         .filter((k) => k.startsWith(`${dir}/`) || k.startsWith(`${dir}\\`))
@@ -1266,7 +1266,7 @@ describe("runDoctor", () => {
     if (cachedRealRepoDoctor) return cachedRealRepoDoctor;
     cachedRealRepoDoctor =
       consumeDoctorResultEnvelope() ??
-      runDoctor({ ...nodeDoctorDeps(headSnapshotRoot()), readPathClaudeVersion: () => null });
+      runDoctor({ ...nodeDoctorDeps(headSnapshotRoot()), probePathClaude: noClaudeProbe });
     return cachedRealRepoDoctor;
   };
 
@@ -1402,7 +1402,7 @@ describe("runDoctor", () => {
   });
 
   it("runs only the toolchain scope gates when doctor scope is toolchain", () => {
-    const doctorDeps = { ...nodeDoctorDeps(headSnapshotRoot()), readPathClaudeVersion: () => null };
+    const doctorDeps = { ...nodeDoctorDeps(headSnapshotRoot()), probePathClaude: noClaudeProbe };
     const definitions = buildFullDoctorCheckDefinitions(doctorDeps);
     const selected = selectDoctorCheckDefinitions(definitions, "toolchain");
     const run = collectDoctorCheckRun(doctorDeps, {
