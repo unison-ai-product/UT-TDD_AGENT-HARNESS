@@ -1,13 +1,12 @@
 /**
  * U-FR-L1-38: model evaluation projection (FR-L1-38 / PLAN-L7-53-learning-engine)
  *
- * Oracle: projectModelEvaluations computes per-model success_rate by joining
- * model_runs.plan_id -> plan_registry.status IN PLAN_SUCCESS_STATUSES.
+ * Oracle: projectModelEvaluations は model ごとに run_count と token / cost 総量を投影する。
+ * PLAN 由来の success_count / success_rate / tokens_per_success / cost_per_success は NULL のまま (S7 #1379)。
  * Opt-in: runs only when .ut-tdd/config/model-opt-in.yaml exists with enabled:true.
  * Default (no file) = disabled => 0 rows.
  *
- * AC-38-01 (enabled): model-A (2 runs both success) => rate 1.0;
- *                     model-B (2 runs, 1 success) => rate 0.5.
+ * AC-38-01 (enabled): model-A (2 runs) / model-B (2 runs) => run_count 2、PLAN 由来値は NULL。
  * AC-38-02 (disabled): no opt-in file => 0 model_evaluations rows.
  * Cold-start: enabled but 0 model_runs => 0 rows, no throw.
  */
@@ -51,22 +50,6 @@ function seedModelRun(
   });
 }
 
-function seedPlan(db: ReturnType<typeof openHarnessDb>, planId: string, status: string): void {
-  upsertRow(db, {
-    table: "plan_registry",
-    primaryKey: "plan_id",
-    row: {
-      plan_id: planId,
-      kind: "impl",
-      layer: "L7",
-      drive: "db",
-      status,
-      updated_at: "",
-      decision_outcome: "",
-    },
-  });
-}
-
 describe("U-FR-L1-38: projectModelEvaluations", () => {
   it("AC-38-02 disabled: no opt-in file => 0 model_evaluations rows (default disabled)", () => {
     // U-FR-L1-38 AC-38-02 oracle: no config file = 0 rows
@@ -75,7 +58,6 @@ describe("U-FR-L1-38: projectModelEvaluations", () => {
     try {
       migrate(db);
       // Seed some model_runs so we confirm opt-in gate is the blocker
-      seedPlan(db, "PLAN-IMPL-01", "confirmed");
       seedModelRun(db, { runId: "run-01", model: "claude-sonnet", planId: "PLAN-IMPL-01" });
 
       // No opt-in file written — must write 0 rows
@@ -95,7 +77,6 @@ describe("U-FR-L1-38: projectModelEvaluations", () => {
       migrate(db);
       writeOptIn(root, false);
 
-      seedPlan(db, "PLAN-IMPL-02", "confirmed");
       seedModelRun(db, { runId: "run-02", model: "claude-haiku", planId: "PLAN-IMPL-02" });
 
       projectModelEvaluations(db, root);
@@ -123,126 +104,32 @@ describe("U-FR-L1-38: projectModelEvaluations", () => {
     }
   });
 
-  it("AC-38-01: model-A (2 runs both success) => rate 1.0, run_count 2, success_count 2", () => {
-    // U-FR-L1-38 AC-38-01 oracle: enabled, model-A success_rate=1.0
+  it("AC-38-01: per-model run_count is projected and PLAN-derived values stay NULL", () => {
+    // U-FR-L1-38 AC-38-01 oracle: enabled, two models in the same DB
     const root = makeTmpRoot();
     const db = openHarnessDb(":memory:");
     try {
       migrate(db);
       writeOptIn(root, true);
 
-      seedPlan(db, "PLAN-A-01", "confirmed");
-      seedPlan(db, "PLAN-A-02", "completed");
-      seedModelRun(db, { runId: "run-a-01", model: "model-A", planId: "PLAN-A-01" });
-      seedModelRun(db, { runId: "run-a-02", model: "model-A", planId: "PLAN-A-02" });
-
-      projectModelEvaluations(db, root);
-
-      const row = db.prepare("SELECT * FROM model_evaluations WHERE model = ?").get("model-A") as
-        | Record<string, unknown>
-        | undefined;
-
-      expect(row).toBeDefined();
-      expect(Number(row?.run_count)).toBe(2);
-      expect(Number(row?.success_count)).toBe(2);
-      expect(Number(row?.success_rate)).toBeCloseTo(1.0, 4);
-    } finally {
-      db.close();
-      removeTestTree(root);
-    }
-  });
-
-  it("AC-38-01: model-B (2 runs, 1 success) => rate 0.5, run_count 2, success_count 1", () => {
-    // U-FR-L1-38 AC-38-01 oracle: enabled, model-B success_rate=0.5
-    const root = makeTmpRoot();
-    const db = openHarnessDb(":memory:");
-    try {
-      migrate(db);
-      writeOptIn(root, true);
-
-      seedPlan(db, "PLAN-B-01", "confirmed");
-      seedPlan(db, "PLAN-B-02", "draft"); // not a success status
-      seedModelRun(db, { runId: "run-b-01", model: "model-B", planId: "PLAN-B-01" });
-      seedModelRun(db, { runId: "run-b-02", model: "model-B", planId: "PLAN-B-02" });
-
-      projectModelEvaluations(db, root);
-
-      const row = db.prepare("SELECT * FROM model_evaluations WHERE model = ?").get("model-B") as
-        | Record<string, unknown>
-        | undefined;
-
-      expect(row).toBeDefined();
-      expect(Number(row?.run_count)).toBe(2);
-      expect(Number(row?.success_count)).toBe(1);
-      expect(Number(row?.success_rate)).toBeCloseTo(0.5, 4);
-    } finally {
-      db.close();
-      removeTestTree(root);
-    }
-  });
-
-  it("AC-38-01 combined: model-A rate 1.0 and model-B rate 0.5 in same run", () => {
-    // U-FR-L1-38 AC-38-01 oracle: both models in same DB
-    const root = makeTmpRoot();
-    const db = openHarnessDb(":memory:");
-    try {
-      migrate(db);
-      writeOptIn(root, true);
-
-      seedPlan(db, "PLAN-A-01", "confirmed");
-      seedPlan(db, "PLAN-A-02", "completed");
-      seedPlan(db, "PLAN-B-01", "confirmed");
-      seedPlan(db, "PLAN-B-02", "draft");
-
-      seedModelRun(db, { runId: "run-a-01", model: "model-A", planId: "PLAN-A-01" });
-      seedModelRun(db, { runId: "run-a-02", model: "model-A", planId: "PLAN-A-02" });
-      seedModelRun(db, { runId: "run-b-01", model: "model-B", planId: "PLAN-B-01" });
-      seedModelRun(db, { runId: "run-b-02", model: "model-B", planId: "PLAN-B-02" });
+      seedModelRun(db, { runId: "run-a-01", model: "model-A", planId: "" });
+      seedModelRun(db, { runId: "run-a-02", model: "model-A", planId: "" });
+      seedModelRun(db, { runId: "run-b-01", model: "model-B", planId: "" });
+      seedModelRun(db, { runId: "run-b-02", model: "model-B", planId: "" });
 
       projectModelEvaluations(db, root);
 
       expect(rowCounts(db).model_evaluations).toBe(2);
-
-      const rowA = db.prepare("SELECT * FROM model_evaluations WHERE model = ?").get("model-A") as
-        | Record<string, unknown>
-        | undefined;
-      const rowB = db.prepare("SELECT * FROM model_evaluations WHERE model = ?").get("model-B") as
-        | Record<string, unknown>
-        | undefined;
-
-      expect(rowA).toBeDefined();
-      expect(Number(rowA?.success_rate)).toBeCloseTo(1.0, 4);
-
-      expect(rowB).toBeDefined();
-      expect(Number(rowB?.success_rate)).toBeCloseTo(0.5, 4);
-    } finally {
-      db.close();
-      removeTestTree(root);
-    }
-  });
-
-  it("model with no plan_registry match counts as 0 success", () => {
-    // U-FR-L1-38: model_run without a matching plan => success_count = 0
-    const root = makeTmpRoot();
-    const db = openHarnessDb(":memory:");
-    try {
-      migrate(db);
-      writeOptIn(root, true);
-
-      // model_run references a plan that has no plan_registry entry
-      // upsertRow won't fail on FK-less SQLite, but the JOIN returns no rows
-      seedModelRun(db, { runId: "run-orphan-01", model: "orphan-model", planId: "PLAN-ORPHAN-01" });
-
-      projectModelEvaluations(db, root);
-
-      const row = db
-        .prepare("SELECT * FROM model_evaluations WHERE model = ?")
-        .get("orphan-model") as Record<string, unknown> | undefined;
-
-      expect(row).toBeDefined();
-      expect(Number(row?.run_count)).toBe(1);
-      expect(Number(row?.success_count)).toBe(0);
-      expect(Number(row?.success_rate)).toBeCloseTo(0.0, 4);
+      for (const model of ["model-A", "model-B"]) {
+        const row = db.prepare("SELECT * FROM model_evaluations WHERE model = ?").get(model) as
+          | Record<string, unknown>
+          | undefined;
+        expect(Number(row?.run_count)).toBe(2);
+        expect(row?.success_count).toBeNull();
+        expect(row?.success_rate).toBeNull();
+        expect(row?.tokens_per_success).toBeNull();
+        expect(row?.cost_per_success).toBeNull();
+      }
     } finally {
       db.close();
       removeTestTree(root);
@@ -257,7 +144,6 @@ describe("U-FR-L1-38: projectModelEvaluations", () => {
       migrate(db);
       writeOptIn(root, true);
 
-      seedPlan(db, "PLAN-TS-01", "confirmed");
       seedModelRun(db, { runId: "run-ts-01", model: "ts-model", planId: "PLAN-TS-01" });
 
       projectModelEvaluations(db, root);
