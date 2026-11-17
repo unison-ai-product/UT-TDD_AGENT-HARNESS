@@ -1,0 +1,47 @@
+name: code-health
+
+# 重複コード (jscpd) を計測するだけの補助検査 (advisory)。
+# 不要コードの計測ツールは、入れ方を #1753 で決めるまで入れない。
+# required ではなく、結果は job summary に出すだけで job は失敗させない。
+# baseline を計測したあと、ratchet (悪化させない) や enforce (必須化) にするかは control が決める (#782 と同じ進め方)。
+# 関連: #1084 #1733
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "0 4 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  measure:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .node-version
+      - run: npm ci --ignore-scripts
+      - name: jscpd (重複コード、advisory)
+        run: |
+          set -o pipefail
+          # 終了コードを rc に受ける。失敗しても job は落とさず、summary に計測失敗を明示する (advisory)。
+          rc=0
+          npx jscpd > "$RUNNER_TEMP/jscpd.out" 2> "$RUNNER_TEMP/jscpd.err" || rc=$?
+          {
+            echo "## jscpd (advisory)"
+            if [ "$rc" -ne 0 ]; then
+              echo "**計測失敗 (exit=$rc)**"
+            fi
+            echo "### stdout"
+            echo '```'
+            cat "$RUNNER_TEMP/jscpd.out"
+            echo '```'
+            echo "### stderr"
+            echo '```'
+            cat "$RUNNER_TEMP/jscpd.err"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

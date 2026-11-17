@@ -31,6 +31,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "biome check src tests",
     "format": "biome check --write src tests",
+    "lint:dup": "jscpd",
     "test": "npm run test:vitest-snapshot",
     "test:vitest-snapshot": "node scripts/run-vitest-snapshot.ts",
     "test:pack": "node scripts/run-vitest-snapshot.ts tests/setup.test.ts tests/distribution-acceptance.test.ts tests/skill-recommend.test.ts tests/skill-scaffold.test.ts tests/dependency-drift.test.ts tests/readability.test.ts tests/toolchain-pin.test.ts --reporter=dot",
@@ -55,6 +56,7 @@
     "@types/semver": "^7.8.0",
     "@vitest/coverage-v8": "4.1.12",
     "esbuild": "0.28.2",
+    "jscpd": "5.4.2",
     "typescript": "^5.6.3",
     "vitest": "4.1.12"
   }

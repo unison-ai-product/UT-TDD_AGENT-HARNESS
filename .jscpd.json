@@ -1,0 +1,8 @@
+{
+  "path": ["src"],
+  "minTokens": 70,
+  "reporters": ["console", "json"],
+  "output": ".ut-tdd/logs/jscpd",
+  "ignore": ["**/node_modules/**"],
+  "gitignore": true
+}
