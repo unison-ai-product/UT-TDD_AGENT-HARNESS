@@ -33,7 +33,7 @@ import {
   unsealReference,
   windowsSealCommands,
 } from "../scripts/run-vitest-snapshot.ts";
-import { withPrivateTmpdir } from "./support/private-tmpdir.ts";
+import { usePrivateTmpdir } from "./support/private-tmpdir.ts";
 import { removeTestTree } from "./support/temp-tree.ts";
 
 describe("vitest snapshot runner", () => {
@@ -413,29 +413,24 @@ describe("vitest snapshot runner", () => {
     expect(() => assertNotRoot(undefined)).not.toThrow();
   });
 
-  it("U-TESTHYGIENE-050: runSnapshotTests entrypoint fails closed before any snapshot side effect when uid=0 is injected", async () => {
-    // 専用の一時ルートで観測する (他テストファイルの ut-tdd-vitest-* が混ざらない、#1755)。
-    await withPrivateTmpdir((root) => {
-      expect(() => runSnapshotTests(["--reporter=dot"], process.cwd(), () => 0)).toThrow(
-        "vitest snapshot runner refuses to run as root (uid=0)",
-      );
-      expect(readdirSync(root)).toEqual([]);
-    });
+  it("U-TESTHYGIENE-050: runSnapshotTests entrypoint fails closed before any snapshot side effect when uid=0 is injected", () => {
+    const root = usePrivateTmpdir(); // 他ファイルの ut-tdd-vitest-* を観測しない (#1755)
+    expect(() => runSnapshotTests(["--reporter=dot"], process.cwd(), () => 0)).toThrow(
+      "vitest snapshot runner refuses to run as root (uid=0)",
+    );
+    expect(readdirSync(root)).toEqual([]);
   });
 
-  it("U-TESTHYGIENE-051: runSnapshotTests entrypoint reaches past the root guard for a non-root injected uid", async () => {
-    // 専用の一時ルートで観測する。後始末も専用ルートごと消えるので他ファイルの dir に触れない (#1755)。
-    await withPrivateTmpdir((root) => {
-      const missingRepoRoot = join(root, "ut-tdd-missing-repo");
-      let thrown: unknown;
-      try {
-        runSnapshotTests(["--reporter=dot"], missingRepoRoot, () => 1000);
-      } catch (error) {
-        thrown = error;
-      }
-      expect(thrown).toBeDefined();
-      expect(String(thrown)).not.toMatch(/refuses to run as root/);
-    });
+  it("U-TESTHYGIENE-051: runSnapshotTests entrypoint reaches past the root guard for a non-root injected uid", () => {
+    const root = usePrivateTmpdir();
+    let thrown: unknown;
+    try {
+      runSnapshotTests(["--reporter=dot"], join(root, "missing-repo"), () => 1000);
+    } catch (error) {
+      thrown = error;
+    }
+    expect(thrown).toBeDefined();
+    expect(String(thrown)).not.toMatch(/refuses to run as root/);
   });
 
   it("U-TESTHYGIENE-052: Windows seal contract denies inherited write-data and add-file rights", () => {
