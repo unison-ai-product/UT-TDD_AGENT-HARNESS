@@ -204,7 +204,7 @@ preset は、統制を**ツールの rule ID に写像した record** である�
 
 `nfrItem` の具体の値は、実装の PR が `nfr-grade.md` の識別子で埋める (本書は IPA の文面も識別子も複製しない)。
 
-**8.2 preset A: AWS + CDK**
+**8.2 preset A (AWS と CDK の組み合わせ)**
 
 | 統制 | tool | ruleId | scope |
 |---|---|---|---|
@@ -215,7 +215,7 @@ preset は、統制を**ツールの rule ID に写像した record** である�
 | `OPS-LOG-002` | `iac-assert` (CDK の assertions) | `log-group.retention-set` (consumer のテスト ID。`RetentionInDays` が設定されていること) | ci |
 | `OPS-LOG-002` | `observer` (例: CloudWatch Logs) | `log-delivery.observed` | runtime |
 
-**8.3 preset B: VPS + docker compose + pino + Fluent Bit**
+**8.3 preset B (VPS、docker compose、pino、Fluent Bit の組み合わせ)**
 
 | 統制 | tool | ruleId | scope |
 |---|---|---|---|
