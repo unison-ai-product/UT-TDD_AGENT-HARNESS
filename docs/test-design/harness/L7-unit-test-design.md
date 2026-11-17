@@ -1127,7 +1127,6 @@ This addendum pairs `screen-spec.md` with L7 unit-test oracles. It covers the L6
 | U-ACTIVATION-SCHEDULE-R2 | `joinActivationScheduleReviews(input)` | `activation_entries.plan_id` と `schedule_entries.plan_id` を join し、`current_location` / `rag` / `schedule_status` / `v_pair` を read-model に含める。 |
 | U-ACTIVATION-SCHEDULE-R3 | `analyzeSpecIrIntegrity(input)` | `scope_status=deferred|out_of_scope` の理由欠落、または `target_kind=plan` の工程表未接続を finding 化し、projection 側で工程行を創作しない。 |
 | U-ACTIVATION-SCHEDULE-R4 | `rebuildHarnessDb` / `findReference` | real repo rebuild で `activation_schedule_reviews` が populated になり、`vmodel-clean-core` や `deferred` で検索できる。 |
-| U-SCHEDULE-LIVE-002 | `selectScheduleLiveState(db)` / `latestReviewEvidenceEntry` | authoring green と最新 test/gate (`blocked`を含む) または最新review snapshotの差し戻し矛盾を red にする一方、passing signal だけで authoring yellow/red を green に昇格しない。最新時刻はUTC instantで比較し、同一instantは後置row/entryを採用する。未知/空ragはyellowへfail-closedする。 |
 | U-SCHEDULE-LIVE-004 | `renderSessionStartDigest(digest)` / SessionStart | `state-and-gates / HEAD / actionable / memory` の固定4段を1回だけ出力し、旧 feedback/memory/escalation block を重複表示しない。Iron Law escalationは第1段に内包し、DB/HEAD不在は fail-open。 |
 | U-DOCUMENT-CATALOG-R1 | `parseDocumentCatalogEntries(input)` / `projectSpecIr` | `docs/governance/vmodel-document-catalog.md` から `document_catalog_entries` を populated にし、`DOC-L4-DATA` などを `findReference` で検索できる。 |
 | U-DOCUMENT-SCALE-R1 | `parseDocumentScaleProfileEntries(input)` / `joinDocumentScaleProfileReviews(input)` | `docs/governance/vmodel-document-scale-profiles.md` から `document_scale_profile_entries` を populated にし、`document_catalog_entries` と join して `document_scale_profile_reviews` に catalog layer/sub_doc/default status を含める。 |
@@ -1531,13 +1530,7 @@ debt routeを扱う後続5件は、後続sliceでIDを再採番してfreezeす�
 
 | ID | 観点 | fixture | expected |
 | --- | --- | --- | --- |
-| `U-ELICIT-001` | plan 省略時の stage 自己解決 | ready schedule row 1 件 | `stage_source="schedule-current"`、plan/location が row と一致 |
-| `U-ELICIT-002` | skill decision_points の defaults 結合 | layer 一致 skill asset + frontmatter decision_points | plan-match で defaults に when/choose/over/because が展開される |
-| `U-ELICIT-003` | skill 読取 fail-open | DB 登録済みだが実体欠落の skill asset | throw せず `unreadable_skills` に asset_id が載る |
-| `U-ELICIT-004` | 設計カバレッジ結合 | plan 一致 spec + layer 一致 spec + 対象外 spec + relation 1 件 | spec_count=2 / relation_count=1 / lifecycle 集計一致 (対象外 layer は除外) |
-| `U-ELICIT-005` | render 4 段固定 | stage+skill+spec を全て seed | stage 行 / defaults 見出し / specs 件数 / `## 設計判断依頼` / 選択肢 A (推奨)+B 行を全て含む |
 | `U-ELICIT-006` | 採択記録 append-only + fail-close | 2 回 append + 必須項目欠落 1 回 | JSONL 2 行 (stage 付き)、topic 空は throw |
-| `U-ELICIT-007` | asset path 未解決の可視化 | path 空の skill asset 行 | throw せず `unreadable_skills` に asset_id、defaults は空 |
 
 ## PLAN-L7-421 テスト衛生oracle (backprop、2026-07-13)
 

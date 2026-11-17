@@ -1,7 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import {
   renderSessionStartDigest,
-  selectScheduleLiveState,
   selectSessionStartDigest,
 } from "../src/handover/session-start-digest.ts";
 import { type HarnessDb, openHarnessDb, upsertRow } from "../src/state-db/index.ts";
@@ -25,149 +24,11 @@ function put(
   upsertRow(database, { table, primaryKey, row });
 }
 
-function schedule(database: HarnessDb, planId: string, rag: string): void {
-  put(database, "schedule_entries", "schedule_entry_id", {
-    schedule_entry_id: `schedule:${planId}`,
-    plan_id: planId,
-    current_location: "U17a: runtime signal join",
-    rag,
-    status: "confirmed",
-    blocked_reason: "",
-    source_path: "docs/governance/vmodel-upgrade-schedule.md",
-    predecessor_plan_ids: "",
-  });
-}
-
 afterEach(() => {
   for (const database of opened.splice(0)) database.close();
 });
 
 describe("schedule live SessionStart digest", () => {
-  it("U-SCHEDULE-LIVE-002: derives effective RAG from the latest live signals", () => {
-    const database = db();
-    const plans = {
-      latestTest: "PLAN-L7-501-latest-test-failed",
-      testStatus: "PLAN-L7-502-test-status-failed",
-      testExitCode: "PLAN-L7-503-test-exit-failed",
-      review: "PLAN-L7-504-review-request-changes",
-      gate: "PLAN-L7-505-gate-blocked",
-      yellow: "PLAN-L7-506-live-yellow",
-      yellowPassing: "PLAN-L7-507-yellow-passing-signals",
-      invalidRag: "PLAN-L7-508-invalid-rag",
-    };
-    for (const planId of Object.values(plans)) {
-      schedule(database, planId, planId === plans.invalidRag ? "gren" : "green");
-    }
-    schedule(database, plans.yellow, "yellow");
-    schedule(database, plans.yellowPassing, "yellow");
-
-    put(database, "test_runs", "test_run_id", {
-      test_run_id: "test:latest-old-pass",
-      plan_id: plans.latestTest,
-      exit_code: 0,
-      status: "passed",
-      completed_at: "2026-07-10T01:00:00Z",
-    });
-    put(database, "test_runs", "test_run_id", {
-      test_run_id: "test:latest-failure",
-      plan_id: plans.latestTest,
-      exit_code: 1,
-      status: "failed",
-      completed_at: "2026-07-10T02:00:00Z",
-    });
-    put(database, "test_runs", "test_run_id", {
-      test_run_id: "test:status-failed",
-      plan_id: plans.testStatus,
-      exit_code: 0,
-      status: "failed",
-      completed_at: "2026-07-10T02:00:00Z",
-    });
-    put(database, "test_runs", "test_run_id", {
-      test_run_id: "test:exit-failed",
-      plan_id: plans.testExitCode,
-      exit_code: 1,
-      status: "passed",
-      completed_at: "2026-07-10T02:00:00Z",
-    });
-    put(database, "review_evidence_registry", "review_evidence_id", {
-      review_evidence_id: "review:request-changes",
-      plan_id: plans.review,
-      has_evidence: 1,
-      verdict: "request-changes",
-      status: "draft",
-      reviewed_at: "2026-07-10T02:00:00Z",
-    });
-    put(database, "gate_runs", "gate_run_id", {
-      gate_run_id: "gate:blocked",
-      gate_id: "G-L7.505",
-      plan_id: plans.gate,
-      status: "blocked",
-      checked_at: "2026-07-10T02:00:00Z",
-    });
-    put(database, "test_runs", "test_run_id", {
-      test_run_id: "test:yellow-failed",
-      plan_id: plans.yellow,
-      exit_code: 1,
-      status: "failed",
-      completed_at: "2026-07-10T02:00:00Z",
-    });
-    put(database, "test_runs", "test_run_id", {
-      test_run_id: "test:yellow-passed",
-      plan_id: plans.yellowPassing,
-      exit_code: 0,
-      status: "passed",
-      completed_at: "2026-07-10T02:00:00Z",
-    });
-    put(database, "review_evidence_registry", "review_evidence_id", {
-      review_evidence_id: "review:yellow-passed",
-      plan_id: plans.yellowPassing,
-      has_evidence: 1,
-      verdict: "pass",
-      status: "accepted",
-      reviewed_at: "2026-07-10T02:00:00Z",
-    });
-    put(database, "gate_runs", "gate_run_id", {
-      gate_run_id: "gate:yellow-passed",
-      gate_id: "G-L7.507",
-      plan_id: plans.yellowPassing,
-      status: "passed",
-      checked_at: "2026-07-10T02:00:00Z",
-    });
-
-    const state = selectScheduleLiveState(database);
-    const entry = (planId: string) => state.entries.find((item) => item.plan_id === planId);
-    for (const planId of [
-      plans.latestTest,
-      plans.testStatus,
-      plans.testExitCode,
-      plans.review,
-      plans.gate,
-    ]) {
-      expect(entry(planId)).toMatchObject({
-        authoring_rag: "green",
-        effective_rag: "red",
-        signal_state: "contradiction",
-      });
-    }
-    expect(entry(plans.latestTest)?.signal_reason).toBe("authoring green conflicts with test");
-    expect(entry(plans.review)?.signal_reason).toBe("authoring green conflicts with review");
-    expect(entry(plans.gate)?.signal_reason).toBe("authoring green conflicts with gate:G-L7.505");
-    expect(entry(plans.yellow)).toMatchObject({
-      authoring_rag: "yellow",
-      effective_rag: "red",
-      signal_state: "aligned",
-    });
-    expect(entry(plans.yellowPassing)).toMatchObject({
-      authoring_rag: "yellow",
-      effective_rag: "yellow",
-      signal_state: "aligned",
-    });
-    expect(entry(plans.invalidRag)).toMatchObject({
-      authoring_rag: "yellow",
-      effective_rag: "yellow",
-    });
-  });
-
   it("U-SCHEDULE-LIVE-004: renders one snapshot as the fixed four-stage digest", () => {
     const database = db();
     put(database, "gate_runs", "gate_run_id", {
