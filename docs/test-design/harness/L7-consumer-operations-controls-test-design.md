@@ -14,7 +14,7 @@ issue: 1725
 
 ## 1. 位置付け
 
-対になる設計文書は `docs/design/harness/L6-function-design/consumer-operations-controls.md` (未実装の目標契約)。本書は §3 統制 record、§4 ツール record、§5 preset の対応表、§6 検証の順序、§7 高影響境界、§9 ログと migration の規則、§10 の DbC を検証する oracle を、候補 ID `CANDIDATE-U-OPSCTL-001`〜`029` で宣言する。共有の `docs/test-design/harness/L7-unit-test-design.md` には、この PR では索引の行を足さない (実装 PR の後続で足す)。検証 (e) の実行時の観測は純関数にならないので oracle の対象にしない (設計 §6)。
+対になる設計文書は `docs/design/harness/L6-function-design/consumer-operations-controls.md` (未実装の目標契約)。本書は §3 統制 record、§4 ツール record、§5 preset の対応表、§6 検証の順序、§7 高影響境界、§9 ログと migration の規則、§10 の DbC を検証する oracle を、候補 ID `CANDIDATE-U-OPSCTL-001`〜`032` で宣言する。共有の `docs/test-design/harness/L7-unit-test-design.md` には、この PR では索引の行を足さない (実装 PR の後続で足す)。検証 (e) の実行時の観測は純関数にならないので oracle の対象にしない (設計 §6)。
 
 進め方は設計保護 gate の三段階に従う。
 
@@ -102,21 +102,24 @@ issue: 1725
 |---|---|---|---|---|
 | `CANDIDATE-U-OPSCTL-028` | `resolveControlSeverity` | `stage` × `inBaseline` の 8 通り | `baseline` と `advisory` は `inBaseline` に依らず `advisory`。`ratchet` は `inBaseline: true` が `advisory`、`false` が `error`。`enforce` は `inBaseline` に依らず `error` | 段の表の取り違え (`enforce` で baseline を許す、`ratchet` で baseline 外を許す) |
 | `CANDIDATE-U-OPSCTL-029` | `requiresPoApproval` と、2 本の preset の同時の机上検証 | (a) `kind` が `consumer-infra-apply`、`cloud-region-iac-choice`、`org-account-control`、`pack-third-party-distribution`、`paid-external-api` の 5 つ (b) `docs-edit`、`preset-record-update`、`""`、`"Org-Account-Control"` (c) `checkControlSet(CONTROLS_4)` と、`PRESET_A` と `PRESET_B` の `checkPresetMapping` を同じ `CONTROLS_4` で続けて実行する | (a) 全て真 (b) 全て偽 (c) 3 つとも空 (統制 record は 1 組で、構造の違う 2 本が同じ統制の集合を矛盾なく写せる) | 高影響境界の欠落や、未知・大文字違いの `kind` の誤判定。契約が片方の preset の構造に寄る (2 本目で初めて通らなくなる) |
+| `CANDIDATE-U-OPSCTL-030` | `validateControlRecord` | `CTRL_SEC` の `proof` を (a) `"Runtime"` (b) `"runtime "` (c) `""` (d) 欠落 (e) `"dynamic"` に、(f) `CTRL_LOG2` の `proof` を欠落かつ `bindsTo: ["head"]` に、(g) `CTRL_LOG2` の `proof` を `"static"` に | (a)〜(e) は `[{ rule: "control.proof_invalid", subject: "proof" }]` (f) `control.proof_invalid` の 1 件だけ (`control.runtime_unbound` は出さない) (g) 空 | `proof` の欠落・未知の値・大文字違いで `runtime_unbound` を避けられる |
+| `CANDIDATE-U-OPSCTL-031` | `checkPresetMapping` | `PRESET_A` から (a) `ID_SEC` の 1 つ目のエントリの `scope` を `"Runtime"` に (b) `scope` を欠落に (c) `scope` を `"cron"` に (d) `ID_DB` の写像を `[]` に (e) `ID_DB` を `{ na: "別の方法で満たす" }` に | (a)(b)(c) `[{ rule: "preset.scope_invalid", subject: "ID_SEC:secret-scanner" }]` (d) `[{ rule: "preset.mapping_empty", subject: "ID_DB" }]` (e) 空 | 未知の `scope` の素通り、空の配列で統制を落とす |
+| `CANDIDATE-U-OPSCTL-032` | `lintMigration` | (a) `"DROP TABLE old;\n-- ut-tdd:allow-destructive: ok"` (b) `"-- ut-tdd:allow-destructive: ok\nDROP TABLE old;"` (c) `"DROP TABLE old;\n\n-- ut-tdd:allow-destructive: ok"` | (a) `migration.destructive` (line 1、column 1) (b) 空 (c) `migration.destructive` (line 1、column 1)。SQL の後ろにだけある印は抑えない | 許可の印の向きの逆転 (印の前の SQL を抑える) |
 
 ## 4. 規則と oracle の対応 (網羅の確認)
 
 | 設計の規則 | oracle |
 |---|---|
 | I1 (純粋・戻りの順) | 全 oracle が引数だけで呼ぶ。順序は 010、025 (g)、026 (g)、027 |
-| I2 (統制 record の rule) | 001〜009 |
+| I2 (統制 record の rule) | 001〜009、030 |
 | I3 (重複 id) | 010 |
 | I4 (ツール record の rule) | 011〜015 |
 | I5 (採用・配布の判定) | 016、017 |
 | I6 (鮮度) | 018 |
-| I7 (preset の対応表) | 019〜023 |
+| I7 (preset の対応表) | 019〜023、031 |
 | I8 (ログ profile) | 024 |
 | I9 (ログ record) | 025、026。入力を変更しないことは 026 の実行の前後で同値を確かめる |
-| I10 (migration) | 027 |
+| I10 (migration) | 027、032 |
 | I11 (導入の順序) | 028 |
 | I12 (高影響境界) | 029 |
 | I13 (doctor に置かない) | oracle にしない。実装 PR で `src/doctor/` に変更が無いことを review で確かめる |
@@ -139,6 +142,9 @@ Green の PR は、次の変異を 1 つずつ実装に入れて、対応する 
 | `checkLogRecord` が入れ子を走査しない | 026 |
 | `lintMigration` がコメントの中も検出する | 027 |
 | `lintMigration` が理由なしの許可の印でも抑える | 027 |
+| `proof` の欠落で `runtime_unbound` を避けられる | 030 |
+| `scope` の未知の値と空の写像の配列を通す | 031 |
+| 許可の印が前の SQL を抑える | 032 |
 | `resolveControlSeverity` の `ratchet` が baseline 外を `advisory` にする | 028 |
 | `requiresPoApproval` が `org-account-control` を欠く | 029 |
 

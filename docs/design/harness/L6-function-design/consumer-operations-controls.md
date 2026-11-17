@@ -11,7 +11,7 @@ created: 2026-11-17
 issue: 1725
 ---
 
-> **L6 contract marker**: 本書は consumer (UT-TDD を導入した製品) が本番を運用するときの**統制 (control) の契約**である (未実装の目標契約)。契約は stack に依存しない。統制 record の schema (§3)、ツール record (§4)、preset の対応表 (§5)、検証の順序と場所 (§6)、PO 承認の置き場 (§7)、机上で埋めた例 (§8) を定める。判定は純関数 (`validateControlRecord` / `checkControlSet` / `validateToolEntry` / `isToolAdoptable` / `isToolDistributable` / `checkToolStaleness` / `checkPresetMapping` / `checkLogRecord` / `checkLogProfile` / `lintMigration` / `resolveControlSeverity` / `requiresPoApproval`) が持つ。型と DbC は §10 にまとめる。oracle は `docs/test-design/harness/L7-consumer-operations-controls-test-design.md` の候補 ID `CANDIDATE-U-OPSCTL-001`〜`029` が固定する。実装の置き場 (`src/ops-controls/` 以下) は仮置きで、配布の設計で確定する。
+> **L6 contract marker**: 本書は consumer (UT-TDD を導入した製品) が本番を運用するときの**統制 (control) の契約**である (未実装の目標契約)。契約は stack に依存しない。統制 record の schema (§3)、ツール record (§4)、preset の対応表 (§5)、検証の順序と場所 (§6)、PO 承認の置き場 (§7)、机上で埋めた例 (§8) を定める。判定は純関数 (`validateControlRecord` / `checkControlSet` / `validateToolEntry` / `isToolAdoptable` / `isToolDistributable` / `checkToolStaleness` / `checkPresetMapping` / `checkLogRecord` / `checkLogProfile` / `lintMigration` / `resolveControlSeverity` / `requiresPoApproval`) が持つ。型と DbC は §10 にまとめる。oracle は `docs/test-design/harness/L7-consumer-operations-controls-test-design.md` の候補 ID `CANDIDATE-U-OPSCTL-001`〜`032` が固定する。実装の置き場 (`src/ops-controls/` 以下) は仮置きで、配布の設計で確定する。
 
 # consumer 向け本番運用の統制 — 関数設計 (issue #1725、親 #1724)
 
@@ -74,6 +74,7 @@ consumer の製品は、本番に出すときの運用の約束 (ログ、IaC、
 - `format`: `json-result` / `sarif` / `junit-xml`。機械が読める形だけを認める。自由文の「確認した」は証跡にならない。
 - `schemaRef`: 空でない文字列。
 - `bindsTo`: 空でない配列で、`head` (exact HEAD) と `deploy-receipt` (#797 のデプロイ receipt) の 1 つ以上。
+- **`proof` は必須で、値は `static` か `runtime` の 2 つだけ**。欠落、未知の値、大文字小文字違い (`Runtime`) は `control.proof_invalid` (subject `proof`) である。`runtime_unbound` の判定は、`proof` が正しい値のときだけ行う。
 - **`proof` が `runtime` の統制は、`bindsTo` に `deploy-receipt` を含める**。含まない record は不備である。静的な検査の結果は実行時の証明にならない。実行時の観測は #797 / #798 の receipt に束縛されて初めて証跡になる。
 
 ## 4. ツール record
@@ -122,7 +123,8 @@ preset は、統制を**ツールの rule ID に写像した record** である�
 2. `controlMap` に統制の集合に無い id があれば不備 (`preset.control_unknown`)。
 3. 各エントリは `tool` と `ruleId` が空でなく、`tool` が `tools` の中にある。`{ na }` の理由は空白だけでない。
 4. **採用してよくないツール** (§4 の 1) を指すエントリは `preset.tool_not_adoptable` の finding にする。候補を表に載せることはできるが、採用済みの顔はさせない。
-5. `proof: runtime` の統制は、少なくとも 1 つのエントリの `scope` が `runtime` でなければならない (`preset.runtime_scope_missing`)。
+5. `scope` は `ci` / `runtime` / `manual-review` の 3 値だけで、欠落・未知の値は `preset.scope_invalid` (subject `<統制 id>:<tool>`)。写像の配列が空 (`[]`) の統制は、黙って落とした扱いなので `preset.mapping_empty` (subject は統制 id)。空の配列を `{ na }` の代わりにしない。
+6. `proof: runtime` の統制は、少なくとも 1 つのエントリの `scope` が `runtime` でなければならない (`preset.runtime_scope_missing`)。
 
 **5.3 候補を載せる位置**
 
@@ -224,12 +226,13 @@ preset は、統制を**ツールの rule ID に写像した record** である�
 | `OPS-DB-001` | `migration-lint` (例: squawk) | `ban-drop-column`、`ban-drop-table` | ci |
 | `OPS-LOG-001` | `logger` (pino の `redact` 設定) と `test-runner` | `logger-output.required-fields`、`logger-output.pii-masked` | ci |
 | `OPS-LOG-002` | `shipper-config-check` (例: Fluent Bit の設定の dry-run) | `fluent-bit.config-valid` | ci |
+| `OPS-LOG-002` | `test-runner` | `log-retention.configured` (consumer のテスト ID。compose のログ driver の保持の設定と保管先の保持期間が設定されていること) | ci |
 | `OPS-LOG-002` | `observer` (例: 保管先への到着の確認) | `log-delivery.observed` | runtime |
 
 **8.4 2 本を並べて分かること**
 
 - 統制の列 (outcome・tier・layers・proof・evidence) は 2 本で同一である。違うのは `tools` と `controlMap` の中身だけである。契約がどちらかのクラウドの語彙に寄っていない。
-- A は IaC の検査と合成テストで静的な検査が厚い。B は設定ファイルとロガーの設定が検査の対象になる。いずれも `OPS-LOG-002` の `runtime` のエントリを必ず持ち、証跡はデプロイ receipt に束縛される (§3.3)。VPS でも receipt の形は #797 が定めるものを使う。
+- A は IaC の検査と合成テストで静的な検査が厚い。B は設定ファイルとロガーの設定が検査の対象になる。全ての統制の outcome に、少なくとも 1 つの対応がある (`OPS-LOG-002` は「届く」を `log-delivery.observed`、「保持期間」を A は `log-group.retention-set`、B は `log-retention.configured` が受ける)。いずれも `OPS-LOG-002` の `runtime` のエントリを必ず持ち、証跡はデプロイ receipt に束縛される (§3.3)。VPS でも receipt の形は #797 が定めるものを使う。
 - B は IaC のツールを持たないので `infra-iac` の統制を写すときは `{ na }` か、compose の検査で結果を満たす記録が要る。これは 2 本目を通して初めて見えた差であり、契約は `{ na }` の理由を機械で必須にして落とさせない (§5.2 の 3)。
 
 ## 9. ログ・migration の純関数の規則
@@ -269,7 +272,7 @@ SQL の migration (`file.text`) を検査する。行・桁は 1 始まり。
 | `migration.allow_reason_missing` | 許可の印 `-- ut-tdd:allow-destructive:` の後の理由が空白だけ |
 
 - コメント (`-- ...` の行末まで、`/* ... */`) の**中身は検出の対象にしない**。ただし許可の印は例外で、印として読む。
-- 許可の印は、**同じ行か、直前の空白でない行**の `migration.destructive` と `migration.delete_without_where` を抑える。ただし理由が空白だけの印は抑えず、`migration.allow_reason_missing` を足す。
+- 許可の印が抑えるのは、**印と同じ行にある SQL、または印の次の空白でない行から始まる SQL** の `migration.destructive` と `migration.delete_without_where` である。印は SQL の前か同じ行に置く。**SQL の次の行にだけ印がある (印が SQL の後ろにある) 場合は抑えない**。ただし理由が空白だけの印は抑えず、`migration.allow_reason_missing` を足す。
 - 限界: 動的 SQL・ORM が生成する migration・文字列の中の SQL は検出しない。consumer が選んだ migration のツールの lint を重ねる。
 
 ## 10. 型と DbC
@@ -314,17 +317,17 @@ export function resolveControlSeverity(input: { stage: Stage; inBaseline: boolea
 export function requiresPoApproval(kind: string): boolean;
 ```
 
-関数の署名を `name(...) =>` の形で再掲する (判定の oracle は I1〜I13 がテスト設計の `CANDIDATE-U-OPSCTL-001`〜`029` へ対応する)。`validateControlRecord(record) => Finding[]`、`checkControlSet(records) => Finding[]`、`validateToolEntry(tool, today) => Finding[]`、`isToolAdoptable(tool) => boolean`、`isToolDistributable(tool) => boolean`、`checkToolStaleness(tool, today, maxAgeDays) => Finding[]`、`checkPresetMapping(controls, preset) => Finding[]`、`checkLogProfile(profile) => Finding[]`、`checkLogRecord(record, profile) => Finding[]`、`lintMigration(file) => MigrationFinding[]`、`resolveControlSeverity(input) => "advisory" | "error"`、`requiresPoApproval(kind) => boolean`。
+関数の署名を `name(...) =>` の形で再掲する (判定の oracle は I1〜I13 がテスト設計の `CANDIDATE-U-OPSCTL-001`〜`032` へ対応する)。`validateControlRecord(record) => Finding[]`、`checkControlSet(records) => Finding[]`、`validateToolEntry(tool, today) => Finding[]`、`isToolAdoptable(tool) => boolean`、`isToolDistributable(tool) => boolean`、`checkToolStaleness(tool, today, maxAgeDays) => Finding[]`、`checkPresetMapping(controls, preset) => Finding[]`、`checkLogProfile(profile) => Finding[]`、`checkLogRecord(record, profile) => Finding[]`、`lintMigration(file) => MigrationFinding[]`、`resolveControlSeverity(input) => "advisory" | "error"`、`requiresPoApproval(kind) => boolean`。
 
 | 不変条件 | 内容 |
 |---|---|
 | I1 | 全ての関数は純粋である (file・環境変数・時刻・network を自分では読まず、引数だけから決まる。`today` も引数)。戻りの配列は入力の順 |
-| I2 | `validateControlRecord` の rule: `control.id_invalid`、`control.domain_unknown`、`control.outcome_blank`、`control.tier_invalid` (`nfrItem` が空白、または `minLevel` が 0〜5 の整数でない。subject は `tier`)、`control.layers_empty`、`control.layer_invalid` (subject は層の値)、`control.layer_duplicate`、`control.applies_to_invalid`、`control.stage_invalid`、`control.evidence_invalid` (`format` が未知か `schemaRef` が空白か `bindsTo` が空、subject は `evidence`)、`control.runtime_unbound` (`proof` が `runtime` で `bindsTo` に `deploy-receipt` が無い、subject は `evidence.bindsTo`)。subject は他は field 名。入力が object でなければ `control.not_object` を 1 件返し、例外を投げない |
+| I2 | `validateControlRecord` の rule: `control.id_invalid`、`control.domain_unknown`、`control.outcome_blank`、`control.tier_invalid` (`nfrItem` が空白、または `minLevel` が 0〜5 の整数でない。subject は `tier`)、`control.layers_empty`、`control.layer_invalid` (subject は層の値)、`control.layer_duplicate`、`control.applies_to_invalid`、`control.stage_invalid`、`control.proof_invalid` (`proof` が欠落か `static` / `runtime` 以外、subject `proof`)、`control.evidence_invalid` (`format` が未知か `schemaRef` が空白か `bindsTo` が空、subject は `evidence`)、`control.runtime_unbound` (`proof` が `runtime` で `bindsTo` に `deploy-receipt` が無い、subject は `evidence.bindsTo`)。subject は他は field 名。入力が object でなければ `control.not_object` を 1 件返し、例外を投げない |
 | I3 | `checkControlSet` は `control.duplicate_id` (subject は id、2 件目以降の出現ごと) だけを返す |
 | I4 | `validateToolEntry` の rule: `tool.checked_at_invalid` (形式違反か実在しない日付、または `today` より後)、`tool.lifecycle_unknown`、`tool.verification_unknown`、`tool.source_missing` (`confirmed` で `sourceUrl` が `null`)、`tool.source_not_https` (`sourceUrl` が `https://` で始まらない。`null` は対象外)、`tool.license_unrecorded` (`approval` が `approved` で `recordRef` が空白)。`pending-primary` は finding にしない (採用の可否は `isToolAdoptable` が決める) |
 | I5 | `isToolAdoptable` は §4 の 1 の 3 条件だけで決める。`isToolDistributable` は §4 の 2 だけで決め、他の field を見ない |
 | I6 | `checkToolStaleness` は、`today` と `checkedAt` の日数差が `maxAgeDays` を**超える**とき (等しいときは通す) `tool.stale` を返す。`checkedAt` を解釈できなければ `tool.checked_at_invalid` を返す |
-| I7 | `checkPresetMapping` の rule: `preset.control_unmapped`、`preset.control_unknown`、`preset.rule_id_missing`、`preset.tool_unknown`、`preset.na_reason_missing`、`preset.tool_not_adoptable`、`preset.runtime_scope_missing`。subject は統制の id (`preset.tool_unknown` と `preset.rule_id_missing` と `preset.tool_not_adoptable` は `<統制 id>:<tool>`)。対象の統制は `appliesTo` に `preset.target` を含むものだけ。出力は統制の入力の順、その後に `control_unknown` が `controlMap` のキーの順 |
+| I7 | `checkPresetMapping` の rule: `preset.control_unmapped`、`preset.control_unknown`、`preset.rule_id_missing`、`preset.tool_unknown`、`preset.na_reason_missing`、`preset.tool_not_adoptable`、`preset.runtime_scope_missing`、`preset.scope_invalid`、`preset.mapping_empty`。subject は統制の id (`preset.tool_unknown` と `preset.rule_id_missing` と `preset.tool_not_adoptable` は `<統制 id>:<tool>`)。対象の統制は `appliesTo` に `preset.target` を含むものだけ。出力は統制の入力の順、その後に `control_unknown` が `controlMap` のキーの順 |
 | I8 | `checkLogProfile` の rule: `logprofile.semconv_version_unpinned`、`logprofile.field_map_incomplete` (subject は論理名)、`logprofile.mask_blank` |
 | I9 | `checkLogRecord` は §9.2 の規則どおり。`record` を変更しない |
 | I10 | `lintMigration` は §9.3 の規則どおり、`line` と `column` の昇順 (同じ位置は rule 名の辞書順) |
