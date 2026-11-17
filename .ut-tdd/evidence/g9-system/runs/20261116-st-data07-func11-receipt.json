@@ -1,0 +1,24 @@
+{
+  "subjectHead": "4127c3d1013cb8fb79aa83210e32942a3ff78738",
+  "expectedHead": "4127c3d1013cb8fb79aa83210e32942a3ff78738",
+  "command": "C:\\Program Files\\nodejs\\node.exe",
+  "argv": [
+    "scripts/run-vitest-snapshot.ts",
+    "tests/vmodel-pair.test.ts",
+    "tests/forward/fsm.test.ts",
+    "-t",
+    "U-VPAIR-002|U-VPAIR-003|U-FSM-003",
+    "--maxWorkers",
+    "1",
+    "--reporter=verbose"
+  ],
+  "cwd": "C:/dev/ut-1379-s7-g9-narrow-freeze-20261116",
+  "startedAt": "2026-11-16T11:36:39.975Z",
+  "endedAt": "2026-11-16T11:56:38.241Z",
+  "exitCode": 0,
+  "signal": null,
+  "launchError": null,
+  "outputPath": "C:/dev/codex-g9-narrow-vpair-fsm-20261116.bin",
+  "rawSha256": "sha256:8a798912ac7db35d0e104940e75c95d2917c6b6e291382bb9b634597c5bf0d05",
+  "digestDefinition": "Raw stdout/stderr bytes merged in observed event-arrival order; identical bytes are written to outputPath"
+}

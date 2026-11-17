@@ -1,0 +1,70 @@
+{
+  "schema_version": "g9-system-evidence-v1",
+  "gate": "G9",
+  "profile": "st-data07-func11-narrow",
+  "plan_id": "issue:1379",
+  "selected_st_ids": [
+    "ST-DATA-07",
+    "ST-FUNC-11"
+  ],
+  "mandatory_st_ids": [
+    "ST-DATA-07",
+    "ST-FUNC-11"
+  ],
+  "deferred_st_ids": [],
+  "commands": [
+    {
+      "command_id": "cmd-g9-st-data07-func11",
+      "command": "\"C:\\Program Files\\nodejs\\node.exe\" scripts/run-vitest-snapshot.ts tests/vmodel-pair.test.ts tests/forward/fsm.test.ts -t \"U-VPAIR-002|U-VPAIR-003|U-FSM-003\" --maxWorkers 1 --reporter=verbose",
+      "runner": "node",
+      "scope": "targeted",
+      "exit_code": 0,
+      "evidence_path": ".ut-tdd/evidence/g9-system/20261116-st-data07-func11-output.bin",
+      "output_digest": "sha256:8a798912ac7db35d0e104940e75c95d2917c6b6e291382bb9b634597c5bf0d05",
+      "st_ids": [
+        "ST-DATA-07",
+        "ST-FUNC-11"
+      ],
+      "subject_head": "4127c3d1013cb8fb79aa83210e32942a3ff78738"
+    }
+  ],
+  "coverage": [
+    {
+      "st_id": "ST-DATA-07",
+      "status": "passed",
+      "evidence_paths": [
+        ".ut-tdd/evidence/g9-system/20261116-st-data07-func11-output.bin",
+        ".ut-tdd/evidence/g9-system/runs/20261116-st-data07-func11-receipt.json",
+        "tests/vmodel-pair.test.ts",
+        "src/vmodel/lint.ts"
+      ],
+      "command_ids": [
+        "cmd-g9-st-data07-func11"
+      ],
+      "notes": "U-VPAIR-002 covers pair-missing and unresolved references; U-VPAIR-003 covers the test-design-to-design-directory reverse trace. This does not claim the broader ST-DATA-02 V_MODEL_PAIRS invariant."
+    },
+    {
+      "st_id": "ST-FUNC-11",
+      "status": "passed",
+      "evidence_paths": [
+        ".ut-tdd/evidence/g9-system/20261116-st-data07-func11-output.bin",
+        ".ut-tdd/evidence/g9-system/runs/20261116-st-data07-func11-receipt.json",
+        "tests/forward/fsm.test.ts",
+        "src/forward/application/forward-workflow.ts"
+      ],
+      "command_ids": [
+        "cmd-g9-st-data07-func11"
+      ],
+      "notes": "U-FSM-003 covers missing-Red rejection with exit 2 and ruleId, plus no added event-ledger or projection writes. It does not assert Forward-state invariance or complete ST-FUNC-03 Red-to-Green-to-refactor behavior."
+    }
+  ],
+  "exit_criteria": {
+    "all_mandatory_passed": true,
+    "failed_mandatory_count": 0,
+    "stale_defer_count": 0,
+    "doctor_check": "g9-system-workflow"
+  },
+  "notes": [
+    "Captured summary: 3 passed / 33 skipped; canonical CLI receipt records actual exitCode 0. [vitest-pool] Timeout termination warning for the vmodel-pair worker was observed after the summary."
+  ]
+}
