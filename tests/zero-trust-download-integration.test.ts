@@ -11,7 +11,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it, onTestFinished } from "vitest";
 import { buildFullDoctorCheckDefinitions } from "../src/doctor/check-registry.ts";
 import { nodeDoctorDeps } from "../src/doctor/runtime-state.ts";
 import { analyzeLintWiring, DEFERRED_LINTS, loadLintWiringInput } from "../src/lint/lint-wiring.ts";
@@ -115,6 +115,8 @@ describe("zero-trust-download adapter と実 repo (L6 §6.1, §7, §8)", () => {
     put(loaded, "node_modules/p/a.sh", "npm ci\n");
     put(loaded, "scripts/denied.sh", "echo denied\n");
     chmodSync(join(loaded, "scripts/denied.sh"), 0o000);
+    // 後始末 (rm) が通るよう、失敗しても権限を戻す。
+    onTestFinished(() => chmodSync(join(loaded, "scripts/denied.sh"), 0o600));
     const result = loadZeroTrustSources(loaded);
     expect(result.sources.map((s) => s.path)).not.toContain("tests/fixtures/w.yml");
     expect(result.sources.map((s) => s.path)).not.toContain("node_modules/p/a.sh");
