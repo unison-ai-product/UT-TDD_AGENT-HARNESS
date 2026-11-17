@@ -4,7 +4,7 @@ import {
   readPullRequestChanges,
 } from "../src/feedback/refactor-judgement-gate.ts";
 import type { ReviewDispatchEntry } from "../src/feedback/review-dispatch.ts";
-import type { PlanChange } from "../src/plan-admission/diff-fence.ts";
+import type { GitChange } from "../src/github/git-diff.ts";
 
 function gateEntry(overrides: Record<string, unknown> = {}): ReviewDispatchEntry {
   return {
@@ -69,7 +69,7 @@ describe("refactor judgement gate candidates", () => {
       { kind: "deleted", path: "src/b.ts" },
       { kind: "renamed", from: "src/c.ts", path: "lib/c.ts" },
       { kind: "modified", path: "src/d.ts" },
-    ] satisfies PlanChange[]);
+    ] satisfies GitChange[]);
     expect(observed[0]).toBe("gh");
     expect(observed[1]).toContain("api");
     expect(observed[1]).toContain("repos/{owner}/{repo}/pulls/465/files");

@@ -8,7 +8,7 @@ import {
   type GitCommandPort,
   GitDiffAdapterError,
   type GitDiffAdapterErrorCode,
-} from "../src/plan-admission/git-diff-adapter.ts";
+} from "../src/github/git-diff.ts";
 import { gitTextRaw as git } from "./support/git.ts";
 import { removeTestTree } from "./support/temp-tree.ts";
 
