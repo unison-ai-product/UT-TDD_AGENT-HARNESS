@@ -97,9 +97,6 @@ PLAN-L7-722 の「retry しない」を、待機時間に依らず試行回数�
 
 | 正式 U | 実装済みケースと検査 | 対応する候補範囲 |
 |---|---|---|
-| U-PRDQ-008 | O7/O1 成功 fixture で既存 API の exact DTO と CLI JSON を比較し、成功 key set、exit 0、filesystem/sidecar 不変を確認 | CANDIDATE-U-PRDQ-001C、CANDIDATE-U-PRDQ-006 O7/O1、CANDIDATE-U-PRDQ-007C の成功枝 |
-| U-PRDQ-009 | O7/O2 WAL fixture で `ledger_unavailable` の exact API DTO と CLI JSON、失敗 key set、exit 1、digest 不在、filesystem 不変を確認 | CANDIDATE-U-PRDQ-006 O7/O2、CANDIDATE-U-PRDQ-007C の失敗枝 |
-| U-PRDQ-010 | CLI revision 0 を既存 API に委譲し、`invalid_input` の exact DTO、exit 1、digest 不在を確認 | CANDIDATE-U-PRDQ-007C の不正値枝 |
 
 この対応は上記3ケースの範囲に限り、候補の他の selector、破損状態、CLI 入力枝を実装済みとは主張しない。
 

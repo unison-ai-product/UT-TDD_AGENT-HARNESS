@@ -34,7 +34,7 @@ afterEach(() => {
 });
 
 describe("NodePlanRevisionRunner", () => {
-  it("U-PA-REV-039: 空ledgerをtracked terminal rev Nから再水和しasset不変でN+1を発行する", () => {
+  it(": 空ledgerをtracked terminal rev Nから再水和しasset不変でN+1を発行する", () => {
     const f = rehydrationFixture();
     const baseSource = readFileSync(join(f.root, f.manifest.source.path), "utf8");
 
@@ -71,7 +71,7 @@ describe("NodePlanRevisionRunner", () => {
     });
   });
 
-  it("U-PA-REV-040: tracked terminalのcontent digest不一致は再水和せずwrite 0", () => {
+  it(": tracked terminalのcontent digest不一致は再水和せずwrite 0", () => {
     const f = rehydrationFixture(sha("forged-content"));
 
     expect(() => f.runner.run(f.input)).toThrow(
@@ -80,7 +80,7 @@ describe("NodePlanRevisionRunner", () => {
     expect(writeSet(f.db)).toEqual(f.before);
   });
 
-  it("U-PA-REV-041: stale ledgerは中間revisionを捏造せずterminalだけ再水和する", () => {
+  it(": stale ledgerは中間revisionを捏造せずterminalだけ再水和する", () => {
     const f = rehydrationFixture();
     seedAdopted(f.db, f.manifest.base.asset_id, f.manifest.plan_id, '{"revision":1}', false);
 
@@ -124,7 +124,7 @@ describe("NodePlanRevisionRunner", () => {
       false,
       "plan-revision-projection-invalid:record[1]:path-revision-duplicate",
     ],
-  ])("U-PA-REV-042: projection %sはwrite 0", (_name, bindings, preserveReceiptIdentity, ruleId) => {
+  ])(": projection %sはwrite 0", (_name, bindings, preserveReceiptIdentity, ruleId) => {
     const f = rehydrationFixture();
     rewriteProjection(f, bindings, preserveReceiptIdentity);
 
@@ -132,7 +132,7 @@ describe("NodePlanRevisionRunner", () => {
     expect(writeSet(f.db)).toEqual(f.before);
   });
 
-  it("U-PA-REV-043: canonical payload digest不一致はwrite 0", () => {
+  it(": canonical payload digest不一致はwrite 0", () => {
     const f = rehydrationFixture();
     f.manifest.base.revision_digest = sha("forged-canonical-payload");
 
@@ -142,7 +142,7 @@ describe("NodePlanRevisionRunner", () => {
     expect(writeSet(f.db)).toEqual(f.before);
   });
 
-  it("U-PA-REV-044: superseded asset history does not shadow the selected terminal asset", () => {
+  it(": superseded asset history does not shadow the selected terminal asset", () => {
     const f = rehydrationFixture();
     rewriteProjection(
       f,
@@ -156,7 +156,7 @@ describe("NodePlanRevisionRunner", () => {
     });
   });
 
-  it("U-PA-REV-045: plan:legacy:プレフィクス資産もHEAD embedded receiptとの完全一致からlegacy bootstrap/sealへ落ちず決定的に再水和される", () => {
+  it(": plan:legacy:プレフィクス資産もHEAD embedded receiptとの完全一致からlegacy bootstrap/sealへ落ちず決定的に再水和される", () => {
     const f = rehydrationFixture(undefined, { legacyPrefixed: true });
     expect(f.manifest.base.asset_id.startsWith("plan:legacy:")).toBe(true);
 
@@ -188,7 +188,7 @@ describe("NodePlanRevisionRunner", () => {
     );
   });
 
-  it("U-PA-REV-046: plan:<sha> (非legacy prefix) 資産もHEAD embedded receiptとの完全一致から決定的に再水和される", () => {
+  it(": plan:<sha> (非legacy prefix) 資産もHEAD embedded receiptとの完全一致から決定的に再水和される", () => {
     const shaAssetId = `plan:${rawSha("non-legacy-sha-asset")}`;
     const f = rehydrationFixture(undefined, { forcedAssetId: shaAssetId });
     expect(f.manifest.base.asset_id.startsWith("plan:legacy:")).toBe(false);
@@ -218,7 +218,7 @@ describe("NodePlanRevisionRunner", () => {
     expect(rows(f.db, "plan_lineage_migration_certificates")).toBe(0);
   });
 
-  it("U-PA-REV-047: 再水和append後、新tail recordはtracked terminal recordへprevious_record_digestで連続する", () => {
+  it(": 再水和append後、新tail recordはtracked terminal recordへprevious_record_digestで連続する", () => {
     const f = rehydrationFixture(undefined, { legacyPrefixed: true });
     const priorTerminal = JSON.parse(
       readFileSync(join(f.root, f.manifest.projection.path), "utf8"),
@@ -232,7 +232,7 @@ describe("NodePlanRevisionRunner", () => {
     expect(appended.previous_record_digest).toBe(priorTerminal.record_digest);
   });
 
-  it("U-PA-REV-048: terminal content digest不一致はwrite 0でfail-closeしlegacy bootstrap/sealへ迂回しない", () => {
+  it(": terminal content digest不一致はwrite 0でfail-closeしlegacy bootstrap/sealへ迂回しない", () => {
     const f = rehydrationFixture(sha("forged-content"), { legacyPrefixed: true });
 
     expect(() => f.runner.run(f.input)).toThrow(
@@ -241,7 +241,7 @@ describe("NodePlanRevisionRunner", () => {
     expect(writeSet(f.db)).toEqual(f.before);
   });
 
-  it("U-PA-REV-050: canonical payload digest不一致はwrite 0でfail-closeする", () => {
+  it(": canonical payload digest不一致はwrite 0でfail-closeする", () => {
     const f = rehydrationFixture(undefined, { legacyPrefixed: true });
     f.manifest.base.revision_digest = sha("forged-canonical-payload-rehydration");
 
@@ -251,7 +251,7 @@ describe("NodePlanRevisionRunner", () => {
     expect(writeSet(f.db)).toEqual(f.before);
   });
 
-  it("U-PA-REV-051: embedded receipt項目 (receipt_digest) 改変はprojection recordとの完全一致に失敗しwrite 0でfail-closeする", () => {
+  it(": embedded receipt項目 (receipt_digest) 改変はprojection recordとの完全一致に失敗しwrite 0でfail-closeする", () => {
     const f = rehydrationFixture(undefined, { legacyPrefixed: true });
     const tamperedSource = f.baseSource.replace(
       `receipt_digest: ${sha("rehydration-terminal-receipt")}`,
@@ -266,7 +266,7 @@ describe("NodePlanRevisionRunner", () => {
     expect(writeSet(f.db)).toEqual(f.before);
   });
 
-  it("U-PA-REV-052: 同一plan_id/pathへより新しいsequenceのrecordが存在するlineageはambiguousとしてwrite 0でfail-closeする", () => {
+  it(": 同一plan_id/pathへより新しいsequenceのrecordが存在するlineageはambiguousとしてwrite 0でfail-closeする", () => {
     const f = rehydrationFixture(undefined, { legacyPrefixed: true });
     appendNewerLineageRecord(f);
 
@@ -274,7 +274,7 @@ describe("NodePlanRevisionRunner", () => {
     expect(writeSet(f.db)).toEqual(f.before);
   });
 
-  it("U-PA-REV-053: HEAD sourceにadmission_receiptが埋め込まれていない資産は再水和されず従来のlegacy bootstrapへ進む (fallback回帰防止)", () => {
+  it(": HEAD sourceにadmission_receiptが埋め込まれていない資産は再水和されず従来のlegacy bootstrapへ進む (fallback回帰防止)", () => {
     const f = fixture("legacy");
     expect(f.manifest.base.asset_id.startsWith("plan:legacy:")).toBe(true);
 
@@ -285,7 +285,7 @@ describe("NodePlanRevisionRunner", () => {
     expect(rows(f.db, "plan_assets")).toBe(1);
   });
 
-  it("U-PA-REV-054: embedded receiptのreceipt_idに対応するprojection recordが存在しない資産は再水和されず従来のlegacy bootstrapへ進む (fallback回帰防止)", () => {
+  it(": embedded receiptのreceipt_idに対応するprojection recordが存在しない資産は再水和されず従来のlegacy bootstrapへ進む (fallback回帰防止)", () => {
     const drift: Drift = {};
     const f = fixture("legacy", drift);
     const baseSource = readFileSync(join(f.root, f.manifest.source.path), "utf8");
@@ -305,7 +305,7 @@ describe("NodePlanRevisionRunner", () => {
     );
   });
 
-  it("U-PA-REV-055: admission_receiptが存在するのにreceipt_idが欠落していればfallbackせずwrite 0でfail-closeする", () => {
+  it(": admission_receiptが存在するのにreceipt_idが欠落していればfallbackせずwrite 0でfail-closeする", () => {
     const drift: Drift = {};
     const f = fixture("legacy", drift);
     const baseSource = readFileSync(join(f.root, f.manifest.source.path), "utf8");
@@ -324,7 +324,7 @@ describe("NodePlanRevisionRunner", () => {
     expect(rows(f.db, "legacy_plan_bootstrap_provenance")).toBe(0);
   });
 
-  it("U-PA-REV-056: admission_receiptがobjectでなければfallbackせずwrite 0でfail-closeする", () => {
+  it(": admission_receiptがobjectでなければfallbackせずwrite 0でfail-closeする", () => {
     const drift: Drift = {};
     const f = fixture("legacy", drift);
     const baseSource = readFileSync(join(f.root, f.manifest.source.path), "utf8");
@@ -343,7 +343,7 @@ describe("NodePlanRevisionRunner", () => {
     expect(rows(f.db, "legacy_plan_bootstrap_provenance")).toBe(0);
   });
 
-  it("U-PA-REV-049: 実データ regression — PLAN-L6-93のtracked terminal rev27からrev28を決定的に再水和する", () => {
+  it(": 実データ regression — PLAN-L6-93のtracked terminal rev27からrev28を決定的に再水和する", () => {
     const f = realPlanL693RehydrationFixture();
 
     expect(f.runner.run(f.input)).toMatchObject({
@@ -370,7 +370,7 @@ describe("NodePlanRevisionRunner", () => {
     ).toBeUndefined();
   });
 
-  it("U-PA-REV-057: 実データを正規 plan revise --manifest CLIへ接続しrev27からrev28を発行する", async () => {
+  it(": 実データを正規 plan revise --manifest CLIへ接続しrev27からrev28を発行する", async () => {
     const f = realPlanL693RehydrationFixture();
     const manifestPath = join(f.root, "issue541-revise-manifest.json");
     writeFileSync(manifestPath, `${JSON.stringify(f.manifest)}\n`, "utf8");
@@ -421,7 +421,7 @@ describe("NodePlanRevisionRunner", () => {
     ).toBeUndefined();
   });
 
-  it("U-PA-REV-016: adopt済みNをN+1へ発行しpublisherへsource/projection CASを渡す", () => {
+  it(": adopt済みNをN+1へ発行しpublisherへsource/projection CASを渡す", () => {
     const f = fixture("adopted");
     const stage = vi.spyOn(f.publisher, "stage");
     const result = f.runner.run(f.input);
@@ -441,7 +441,7 @@ describe("NodePlanRevisionRunner", () => {
     expect(f.close).toHaveBeenCalledOnce();
   });
 
-  it("U-PA-REV-017: ledger未採用legacy PLANをrev1 bootstrapとrev2で同時発行する", () => {
+  it(": ledger未採用legacy PLANをrev1 bootstrapとrev2で同時発行する", () => {
     const f = fixture("legacy");
     expect(f.runner.run(f.input)).toMatchObject({ status: "created", receipt: { revision: 2 } });
     expect(rows(f.db, "plan_assets")).toBe(1);
@@ -495,7 +495,7 @@ describe("NodePlanRevisionRunner", () => {
   it.each([
     "adopted",
     "legacy",
-  ] as const)("U-PA-REV-027: success後の%s same-commandは公開済みworking source/projectionを再変更せずreplayする", (mode) => {
+  ] as const)(": success後の%s same-commandは公開済みworking source/projectionを再変更せずreplayする", (mode) => {
     const f = fixture(mode);
     const created = f.runner.run(f.input);
     const publishedSource = readFileSync(join(f.root, f.manifest.source.path), "utf8");
@@ -508,14 +508,14 @@ describe("NodePlanRevisionRunner", () => {
     );
   });
 
-  it("U-PA-REV-038: authoring actorはmanifestに束縛され環境actor再導出なしで正当replayできる", () => {
+  it(": authoring actorはmanifestに束縛され環境actor再導出なしで正当replayできる", () => {
     const f = fixture("adopted");
     f.runner.run(f.input);
 
     expect(f.runner.run(f.input)).toMatchObject({ status: "replayed" });
   });
 
-  it("U-PA-REV-030: committed replay時のworking projection欠落を拒否する", () => {
+  it(": committed replay時のworking projection欠落を拒否する", () => {
     const f = fixture("adopted");
     f.runner.run(f.input);
     rmSync(join(f.root, f.manifest.projection.path));
@@ -523,7 +523,7 @@ describe("NodePlanRevisionRunner", () => {
     expect(() => f.runner.run(f.input)).toThrow("plan-revision-replay-artifact-binding-invalid");
   });
 
-  it("U-PA-REV-028: commit後にHEADがadvanceしてもdurable request/receipt/postimageからreplayを再証明する", () => {
+  it(": commit後にHEADがadvanceしてもdurable request/receipt/postimageからreplayを再証明する", () => {
     const drift: Drift = {};
     const f = fixture("adopted", drift);
     const created = f.runner.run(f.input);
@@ -534,7 +534,7 @@ describe("NodePlanRevisionRunner", () => {
     expect(f.runner.run(f.input)).toEqual({ status: "replayed", receipt: created.receipt });
   });
 
-  it("U-PA-REV-031: committed replay前にrevision canonical digest改変をledger検証で拒否する", () => {
+  it(": committed replay前にrevision canonical digest改変をledger検証で拒否する", () => {
     const f = fixture("adopted");
     f.runner.run(f.input);
     tamperAppendOnly(f.db, "plan_revisions", () => {
@@ -548,7 +548,7 @@ describe("NodePlanRevisionRunner", () => {
     expect(() => f.runner.run(f.input)).toThrow("plan-ledger-unavailable");
   });
 
-  it("U-PA-REV-032: committed replay前にadmission content digest改変をledger検証で拒否する", () => {
+  it(": committed replay前にadmission content digest改変をledger検証で拒否する", () => {
     const f = fixture("adopted");
     f.runner.run(f.input);
     tamperAppendOnly(f.db, ["plan_admission_events", "plan_admission_receipts"], () => {
@@ -560,7 +560,7 @@ describe("NodePlanRevisionRunner", () => {
     expect(() => f.runner.run(f.input)).toThrow("plan-ledger-unavailable");
   });
 
-  it("U-PA-REV-033: committed replayは再digest済みcertificate改変も全binding再証明で拒否する", () => {
+  it(": committed replayは再digest済みcertificate改変も全binding再証明で拒否する", () => {
     const f = fixture("adopted");
     f.runner.run(f.input);
     tamperAppendOnly(f.db, ["plan_admission_events", "plan_admission_receipts"], () => {
@@ -585,7 +585,7 @@ describe("NodePlanRevisionRunner", () => {
     expect(() => f.runner.run(f.input)).toThrow("plan-revision-replay-certificate-conflict");
   });
 
-  it("U-PA-REV-034: committed replayは再digest済みappend receipt改変も全binding再証明で拒否する", () => {
+  it(": committed replayは再digest済みappend receipt改変も全binding再証明で拒否する", () => {
     const f = fixture("adopted");
     f.runner.run(f.input);
     tamperAppendOnly(f.db, "append_command_receipts", () => {
@@ -607,7 +607,7 @@ describe("NodePlanRevisionRunner", () => {
     expect(() => f.runner.run(f.input)).toThrow("plan-revision-replay-ledger-conflict");
   });
 
-  it("U-PA-REV-035: committed replayは再digest済みadmission改変も全binding再証明で拒否する", () => {
+  it(": committed replayは再digest済みadmission改変も全binding再証明で拒否する", () => {
     const f = fixture("adopted");
     f.runner.run(f.input);
     tamperAppendOnly(f.db, ["plan_admission_events", "plan_admission_receipts"], () => {
@@ -632,7 +632,7 @@ describe("NodePlanRevisionRunner", () => {
     expect(() => f.runner.run(f.input)).toThrow("plan-revision-replay-ledger-conflict");
   });
 
-  it("U-PA-REV-036: committed replayは保存済みactorを期待値に流用せずauthoring actor改変を拒否する", () => {
+  it(": committed replayは保存済みactorを期待値に流用せずauthoring actor改変を拒否する", () => {
     const f = fixture("adopted");
     f.runner.run(f.input);
     tamperAppendOnly(f.db, "plan_revisions", () => {
@@ -647,7 +647,7 @@ describe("NodePlanRevisionRunner", () => {
   it.each([
     "source",
     "projection",
-  ] as const)("U-PA-REV-029: committed replay時のworking %s改変をdurable postimage CASで拒否する", (artifact) => {
+  ] as const)(": committed replay時のworking %s改変をdurable postimage CASで拒否する", (artifact) => {
     const f = fixture("adopted");
     f.runner.run(f.input);
     const path = artifact === "source" ? f.manifest.source.path : f.manifest.projection.path;
@@ -656,13 +656,13 @@ describe("NodePlanRevisionRunner", () => {
     expect(() => f.runner.run(f.input)).toThrow("plan-revision-replay-artifact-binding-invalid");
   });
 
-  it("U-PA-REV-025: legacy manifestのasset IDがrepository identity由来でなければwrite 0", () => {
+  it(": legacy manifestのasset IDがrepository identity由来でなければwrite 0", () => {
     const f = fixture("legacy", { forgedLegacyAssetId: "plan:legacy:forged" });
     expect(() => f.runner.run(f.input)).toThrow("plan-revision-legacy-asset-id-mismatch");
     expect(writeSet(f.db)).toEqual(f.before);
   });
 
-  it("U-PA-REV-026: source frontmatterのplan_idがmanifestと異なればwrite 0", () => {
+  it(": source frontmatterのplan_idがmanifestと異なればwrite 0", () => {
     const f = fixture("adopted", { revisedPlanId: "PLAN-L4-32" });
     expect(() => f.runner.run(f.input)).toThrow("plan-revision-source-plan-id-mismatch");
     expect(writeSet(f.db)).toEqual(f.before);
@@ -678,7 +678,7 @@ describe("NodePlanRevisionRunner", () => {
       { projectionText: projectionWithDifferentValidTail() },
       "plan-revision-projection-tail-drift",
     ],
-  ])("U-PA-REV-018: %s driftはwrite 0でfail-closeする", (_name, drift, ruleId) => {
+  ])(": %s driftはwrite 0でfail-closeする", (_name, drift, ruleId) => {
     const f = fixture("adopted", drift);
     const before = writeSet(f.db);
     expect(() => f.runner.run(f.input)).toThrow(ruleId);
@@ -686,21 +686,21 @@ describe("NodePlanRevisionRunner", () => {
     expect(f.close).toHaveBeenCalledOnce();
   });
 
-  it("U-PA-REV-021: invalid projectionはtail fallbackせずwrite 0で拒否する", () => {
+  it(": invalid projectionはtail fallbackせずwrite 0で拒否する", () => {
     const f = fixture("adopted", { projectionText: "not-json" });
     const before = writeSet(f.db);
     expect(() => f.runner.run(f.input)).toThrow("plan-revision-projection-invalid");
     expect(writeSet(f.db)).toEqual(before);
   });
 
-  it("U-PA-REV-022: caller decisionと再評価結果の不一致はwrite 0で拒否する", () => {
+  it(": caller decisionと再評価結果の不一致はwrite 0で拒否する", () => {
     const f = fixture("adopted");
     const forged = { ...f.input, decision: { ...f.input.decision, issueRequired: false } };
     expect(() => f.runner.run(forged)).toThrow("plan-revision-admission-decision-mismatch");
     expect(writeSet(f.db)).toEqual(f.before);
   });
 
-  it("U-PA-REV-023: manifestとcaller admissionの不一致はwrite 0で拒否する", () => {
+  it(": manifestとcaller admissionの不一致はwrite 0で拒否する", () => {
     const f = fixture("adopted");
     const admission = { ...f.input.admission, escapeReason: "forged" };
     expect(() => f.runner.run({ ...f.input, admission })).toThrow(
@@ -709,13 +709,13 @@ describe("NodePlanRevisionRunner", () => {
     expect(writeSet(f.db)).toEqual(f.before);
   });
 
-  it("U-PA-REV-024: repository identity未注入はpath由来へfallbackしない", () => {
+  it(": repository identity未注入はpath由来へfallbackしない", () => {
     const f = fixture("legacy", { omitRepositoryIdentity: true });
     expect(() => f.runner.run(f.input)).toThrow("plan-revision-repository-identity-required");
     expect(writeSet(f.db)).toEqual(f.before);
   });
 
-  it("U-PA-REV-019: active aliasの別asset束縛はwrite 0で拒否する", () => {
+  it(": active aliasの別asset束縛はwrite 0で拒否する", () => {
     const f = fixture("alias-mismatch");
     const before = writeSet(f.db);
     expect(() => f.runner.run(f.input)).toThrow("plan-revision-alias-binding-invalid");
@@ -723,7 +723,7 @@ describe("NodePlanRevisionRunner", () => {
     expect(f.close).toHaveBeenCalledOnce();
   });
 
-  it("U-PA-REV-020: publish失敗でもrollbackしてDBをcloseする", () => {
+  it(": publish失敗でもrollbackしてDBをcloseする", () => {
     const f = fixture("adopted");
     vi.spyOn(f.publisher, "publish").mockImplementation(() => {
       throw new Error("publish-failed");

@@ -21,9 +21,36 @@ import {
   checkSubDocSectionStructure,
   checkTelemetryClosure,
 } from "../src/doctor/process-quality.ts";
+import { createTraceGateFixture, G1_G3_REQUIRED_DOC_CASES } from "./support/g1-g3-trace-fixture.ts";
 import { removeTestTree } from "./support/temp-tree.ts";
 
 describe("doctor process quality checks", () => {
+  it.each(
+    G1_G3_REQUIRED_DOC_CASES,
+  )("U-PLANRET-028: $doctorGate passes control and rejects one missing trace doc", ({
+    doctorGate,
+    gate,
+    missingPath,
+    traceMessage,
+  }) => {
+    for (const omitted of [undefined, missingPath]) {
+      const root = createTraceGateFixture(gate, omitted);
+      try {
+        const result = checkPlanTraceGate(root, doctorGate);
+        if (omitted === undefined) {
+          expect(result.ok).toBe(true);
+          expect(result.messages.join("\n")).toContain(doctorGate.toLowerCase() + " - OK");
+          expect(result.messages).toContain(traceMessage);
+        } else {
+          expect(result.ok).toBe(false);
+          expect(result.messages.join("\n")).toContain("required doc not created: " + missingPath);
+        }
+      } finally {
+        removeTestTree(root);
+      }
+    }
+  });
+
   it("fails closed when process quality inputs cannot read the repo root", () => {
     const missingRoot = join(tmpdir(), `ut-tdd-doctor-process-quality-${Date.now()}-missing`);
 
