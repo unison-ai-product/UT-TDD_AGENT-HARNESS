@@ -53,7 +53,6 @@ export class SqliteProjectionStore
     const table = tableDef(event.table);
     const row = normalizeRow(table, event);
     upsertRow(this.#db, { table: table.name, primaryKey: primaryKeyOf(table), row });
-    checkResolvablePlanJoin(this, table.name, row);
   }
 
   private recordFindingInSession(input: ProjectionFindingInput): void {
@@ -72,13 +71,6 @@ export class SqliteProjectionStore
         next_action: input.nextAction ?? "",
       },
     });
-  }
-
-  planExists(planId: string): boolean {
-    return (
-      this.#db.prepare("SELECT plan_id FROM plan_registry WHERE plan_id = ?").get(planId) !==
-      undefined
-    );
   }
 
   readPocDecisionCounts(): readonly PocDecisionCount[] {
@@ -163,14 +155,6 @@ export class SqliteProjectionStore
       },
     };
   }
-
-  uniqueShortPlanExists(planId: string): boolean {
-    if (!isBareNumericPlanContext(planId)) return false;
-    const row = this.#db
-      .prepare("SELECT COUNT(*) AS count FROM plan_registry WHERE plan_id LIKE ?")
-      .get(`${planId}-%`) as { count: number } | undefined;
-    return (row?.count ?? 0) === 1;
-  }
 }
 
 function modelEvaluationFacts(row: Record<string, unknown>): ModelEvaluationFacts {
@@ -226,41 +210,4 @@ function assertNoSecretLikeString(value: unknown, scope: string, field: string):
   if (typeof value === "string" && SECRET_PATTERN.test(value)) {
     throw new Error(`secret-like value is not allowed in harness.db ${scope}: ${field}`);
   }
-}
-
-function checkResolvablePlanJoin(
-  store: SqliteProjectionStore,
-  table: string,
-  row: Record<string, unknown>,
-): void {
-  if (table === "plan_registry" || table === "feedback_events") return;
-  const planId = asString(row.plan_id);
-  if (!planId || store.planExists(planId) || store.uniqueShortPlanExists(planId)) return;
-  if (/^A-\d/.test(planId) || planId.includes("+")) return;
-  const subjectId = `${table}:${String(row[primaryKeyOf(tableDef(table))] ?? "")}`;
-  const staleRuntime =
-    isBareNumericPlanContext(planId) &&
-    (isRuntimeStateEvidencePath(asString(row.evidence_path)) || isRuntimeContextTable(table));
-  store.recordFinding({
-    kind: staleRuntime ? "stale-runtime-plan-context" : "unresolved-join",
-    subjectId,
-    source: "projection-writer",
-    ...(asString(row.evidence_path) ? { evidencePath: asString(row.evidence_path) as string } : {}),
-  });
-}
-
-function asString(value: unknown): string | undefined {
-  return typeof value === "string" && value.length > 0 ? value : undefined;
-}
-
-function isBareNumericPlanContext(planId: string): boolean {
-  return /^PLAN-L\d+-\d+$/.test(planId);
-}
-
-function isRuntimeStateEvidencePath(path: string | undefined): boolean {
-  return Boolean(path?.startsWith(".ut-tdd/logs/") || path?.startsWith(".ut-tdd/handover/"));
-}
-
-function isRuntimeContextTable(table: string): boolean {
-  return ["hook_events", "test_runs", "trouble_events", "guardrail_decisions"].includes(table);
 }
