@@ -723,9 +723,10 @@ Task-kind ベースの割当 (PO rule 2026-07-14、旧 tier 記述を supersede)
    PR 本文に書く。新しい依存の追加はサプライチェーンの高影響境界であり、PO 承認を取る。
 6. **権限を渡さない**: 取得物を動かす CI の job には、必要最小の `permissions` だけを与え、secret を渡さない。
 
-いまある仕組みは、`package.json` の `npmIntegrity` authority policy と exact pin
-(`docs/governance/repository-structure.md` F0a)、Action の SHA 固定 (#791)、`security.yml` の
-`npm ci --ignore-scripts` である。機械で確かめていない項目は #1741 で仕組みにする。
+いまある仕組みは一部だけである。Node と npm の版と hash の固定 (`src/lint/toolchain-pin.ts` の `NODE_TOOLCHAIN_POLICY`
+と `packageManager` の検査。npm の exact version と hash は `package.json` の `packageManager` に持つ)、Biome と
+esbuild の版の固定 (同じ file)、`.github/workflows/security.yml` の Action の SHA 固定と `npm ci --ignore-scripts` である。
+依存全体の exact pin、全 workflow の Action の SHA 固定、`harness-check.yml` の `npm ci` への `--ignore-scripts` はまだ無い。機械で確かめていない項目は #1741 で仕組みにする。
 
 ## UT-TDD Workflow
 
