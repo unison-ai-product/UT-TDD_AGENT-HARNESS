@@ -246,10 +246,10 @@ export function snapshotStageEnv(env: NodeJS.ProcessEnv, acquisition: SnapshotLo
 ## 14. 実装の順序と後続
 
 1. **契約 PR (本 PR)**: 本書と L7 のテスト設計。`src/` と `scripts/` を変えない。
-2. **Red (`src/` を含まない)**: `CANDIDATE-U-SNAPLOCK-*` を引用した `it.fails` を `tests/snapshot-runner-lock.test.ts` に入れる。029 の helper の Red も同じ PR に入れてよい。
-3. **昇格 (`src/` を含まない)**: 引用のそろった候補を正式 ID `U-SNAPLOCK-*` に改め、テスト名の引用を書き換える。共有の索引の行はこのときに足す。
+2. **Red 1 (新規 module の stub だけ)**: 新規 module `src/runtime/snapshot-runner-lock.ts` が対象の `CANDIDATE-U-SNAPLOCK-*` (入口の 026〜028 を除く全件) を引用した `it.fails` を `tests/snapshot-runner-lock.test.ts` に入れる。029 の helper の Red も同じ PR に入れてよい。この PR が足してよい `src/` は、設計保護 gate (`docs/design/harness/L6-function-design/design-protection-diff-gate.md` §10.3 手順 1') の例外の範囲、すなわち新規 module の契約形の stub と必要な登録だけで、既存 module (`scripts/run-vitest-snapshot.ts` を含む) には触れない。stub は oracle の期待を満たさない fail-close の値を返す。
+3. **昇格 (`src/` を含まない)**: 引用のそろった候補 (Red 1 の分。026〜028 は Red 2 の後に同じ手順で) を正式 ID `U-SNAPLOCK-*` に改め、テスト名の引用を書き換える。共有の索引の行はこのときに足す。
 4. **Green 1**: `src/runtime/snapshot-runner-lock.ts` (純関数と `acquireSnapshotLock` / 解放) と、単一の pid の identity の観測 (`src/runtime/process-identity.ts`。Windows は CIM の `CreationDate`、Linux は `/proc/<pid>/stat` の starttime、その他は `LC_ALL=C ps -o lstart=`。timeout 5 秒・再試行なし)。寿命の契約の port が後から入るときは、この観測を共有する。寿命の契約の `src/runtime/snapshot-run-lease.ts` は作らない (同書の候補 Red を予定外に通してしまうため)。
-5. **Green 2**: `scripts/run-vitest-snapshot.ts` の entrypoint (`runSnapshotRunnerMain`)、stage の環境の受け渡し、終了コード 2 / 3。
+5. **Red 2 → Green 2**: 入口の oracle (026〜028) は、既存の `scripts/run-vitest-snapshot.ts` の `runSnapshotRunnerMain` を対象にするので、Red 1 に含めない (既存 module へ stub を足す順序は、設計保護 gate の例外の外である)。Green 2 の直前に、テストだけの PR (Red 2。`src/` も `scripts/` も変えず、stub を足さない) で 026〜028 の `it.fails` を入れる。`runSnapshotRunnerMain` が無い間は、動的 import した module の属性参照の失敗で通る。昇格 (3 と同じ手順) の後、**Green 2** で `scripts/run-vitest-snapshot.ts` の entrypoint (`runSnapshotRunnerMain`)、stage の環境の受け渡し、終了コード 2 / 3 を入れる。Red 2 と Green 2 の順序は、`docs/test-design/harness/L7-snapshot-runner-lock-test-design.md` §1 が持つ。
 6. **テストの衛生 (§10、テストだけ)**: `ownSnapshotRootEntries` と 050 / 051 の観測の範囲。他の段と独立で、先に入れてよい。
 7. **規範文書 (別の作業の範囲)**: `CLAUDE.md` / `AGENTS.md` / worker への指示から手での空き判定を外し、exit 2 / 3 の扱い、`UT_TDD_SNAPSHOT_LOCK_WAIT_MS`、ローカルで `CI=true` を設定しないことを書く。
 
