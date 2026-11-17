@@ -19,7 +19,7 @@ codex-hook-adapter:5 codex-hook-failure:1 coding-rules:1 context-doc-router:2 cy
 dependency-drift:4 descent-obligation:3 distribution-acceptance:1 distribution-scratch-ignore:1 doctor-runtime-surface:2 doctor:25
 drive-model-passage:1 fr-roadmap-coverage:4 frontend-design-coverage:1 g10-ux-workflow:5 g8-integration-workflow:6 g9-system-workflow:7
 erasable-syntax:1 gate-static:10 import-specifier:2 l6-completion:2 l6-fr-coverage:2 mode-catalog:2 model-id-ssot:1 model-id-ssot-drift:1 module-drift:2 oracle-test-trace:13
-plan-lint:8 projection-writer:9 proposal-document-coverage:2 readability:5 relation-graph-loader:1 support/plan-mechanism-retirement-s3-migration.ts:1
+projection-writer:9 proposal-document-coverage:2 readability:5 relation-graph-loader:1 support/plan-mechanism-retirement-s3-migration.ts:1
 release-artifact-resolver:1 release-consumer-skills:4
 right-lung-doc-governance:1 rule-drift:4 runtime-hook-entrypoints:1
 review-live-cli:4
@@ -36,12 +36,12 @@ secret-scan-diff:1
 feedback-log:2
 github-repository-policy:3 consumer-ci-guard-red:1 consumer-ci-push-merge-control:1
 gate-run-publish-candidate:3 gate-run-stderr-candidate:1 github-ci-policy:1
-node-self-host-bootstrap:1 node-slice-admission:3 node-plan-revision-runner:3
+node-self-host-bootstrap:1 node-slice-admission:3
 global-setup.ts:1 support/workspace-roots.ts:3
 global-setup-fence:1 vitest-snapshot-runner:3 snapshot-runner-argv-candidates:2
 hook-native-launcher:1 claude-memory-terminal-gc:1 release-version-identity:2 windows-ci-single-snapshot:2 windows-ci-shard-red:1 pack-authoring-template-scope:3
 profile/tracked-loader:2
-plan-asset/ledger-schema:4 plan-asset/project-identity-loader:1
+plan-asset/project-identity-loader:1
 disposition/git-authoring-provenance:3 disposition/projection:6 disposition/tracked-target-registry:2
   forward-escape-issue-contract:2
   pack-consumer-runtime-release:3 release-consumer-vmodel-template:1
@@ -195,13 +195,6 @@ repositoryReadContracts["tests/release-consumer-vmodel-template.test.ts"] = {
   reason:
     "consumer template bundle oracle compares emitted bytes to the source template assets while the CLI writes only into a temporary consumer root",
 };
-repositoryReadContracts["tests/plan-revision-digest-query.test.ts"] = {
-  mode: "isolated_fixture",
-  calls: 1,
-  reason:
-    "CLI subprocess loads the source under test from the writable execution snapshot and reads ledger data only from a temporary fixture root",
-};
-
 repositoryReadContracts["tests/design-protection.test.ts"] = {
   mode: "isolated_fixture",
   calls: 1,

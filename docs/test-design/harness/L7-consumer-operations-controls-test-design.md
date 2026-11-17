@@ -14,7 +14,7 @@ issue: 1725
 
 ## 1. 位置付け
 
-対になる設計文書は `docs/design/harness/L6-function-design/consumer-operations-controls.md` (未実装の目標契約)。本書は §3 統制 record、§4 ツール record、§5 preset の対応表、§6 検証の順序、§7 高影響境界、§9 ログと migration の規則、§10 の DbC を検証する oracle を、候補 ID `CANDIDATE-U-OPSCTL-001`〜`032` で宣言する。共有の `docs/test-design/harness/L7-unit-test-design.md` には、この PR では索引の行を足さない (実装 PR の後続で足す)。検証 (e) の実行時の観測は純関数にならないので oracle の対象にしない (設計 §6)。
+対になる設計文書は `docs/design/harness/L6-function-design/consumer-operations-controls.md` (未実装の目標契約)。本書は §3 統制 record、§4 ツール record、§5 preset の対応表、§6 検証の順序、§7 高影響境界、§9 ログと migration の規則、§10 の DbC を検証する oracle を、候補 ID `CANDIDATE-U-OPSCTL-001`〜`037` で宣言する。共有の `docs/test-design/harness/L7-unit-test-design.md` には、この PR では索引の行を足さない (実装 PR の後続で足す)。検証 (e) の実行時の観測は純関数にならないので oracle の対象にしない (設計 §6)。
 
 進め方は設計保護 gate の三段階に従う。
 
@@ -30,7 +30,7 @@ issue: 1725
 
 全 oracle は file・環境変数・時刻・network・実 process を使わない (設計 I1)。`today` は常に `"2026-11-17"` を引数で渡す。小さい完備な入力を作り、1 点だけ変えて使う。
 
-- **`CTRL_SEC`**: `{ id: "OPS-SEC-001", domain: "security", outcome: "secret が commit されない", tier: { nfrItem: "X-1", minLevel: 3 }, layers: ["L4","L7"], appliesTo: ["server","client"], proof: "static", evidence: { format: "sarif", schemaRef: "s/sarif", bindsTo: ["head"] }, stage: "advisory" }`。
+- **`CTRL_SEC`**: `{ id: "OPS-SEC-001", domain: "security", outcome: "secret が commit されない", tier: { nfrItem: "E.5.1.1", minLevel: 3 }, layers: ["L4","L7"], appliesTo: ["server","client"], proof: "static", evidence: { format: "sarif", schemaRef: "s/sarif", bindsTo: ["head"] }, stage: "advisory" }`。
 - **`CTRL_DB`**: `OPS-DB-001`、`database`、`appliesTo: ["server"]`、`proof: "static"`、`format: "json-result"`、`layers: ["L5","L7"]`、`minLevel: 3`、`stage: "advisory"`。
 - **`CTRL_LOG1`**: `OPS-LOG-001`、`log-observability`、`appliesTo: ["server"]`、`proof: "static"`、`format: "junit-xml"`、`layers: ["L4","L7"]`、`minLevel: 2`、`stage: "advisory"`。
 - **`CTRL_LOG2`**: `OPS-LOG-002`、`log-observability`、`appliesTo: ["server"]`、`proof: "runtime"`、`format: "json-result"`、`bindsTo: ["head","deploy-receipt"]`、`layers: ["L13","L14"]`、`minLevel: 2`、`stage: "baseline"`。
@@ -55,7 +55,7 @@ issue: 1725
 | `CANDIDATE-U-OPSCTL-002` | `validateControlRecord` | `CTRL_SEC` の `id` を、次の (a)〜(g) に替える。(a) 接頭辞 `OPS` が無い (領域部と番号だけ) (b) 領域部が 1 文字 (c) 番号が 2 桁 (d) 全て小文字 (e) 領域部が 6 文字 (f) 領域部が `LOG`、番号が `999` (g) 領域部が 5 文字 (全て大文字)、番号が `000` | (a)〜(e) は `[{ rule: "control.id_invalid", subject: "id" }]` (f)(g) は空 | パターンの正規表現が緩い・厳しい (桁数・大文字・領域の長さ 2〜5) |
 | `CANDIDATE-U-OPSCTL-003` | `validateControlRecord` | `domain` を 11 値それぞれに、また (b) `"security "` (c) `"Security"` (d) `""` に替える | 11 値は空。(b)(c)(d) は `[{ rule: "control.domain_unknown", subject: "domain" }]` | 領域の enum の欠落・大文字小文字の許容・前後の空白の許容 |
 | `CANDIDATE-U-OPSCTL-004` | `validateControlRecord` | `outcome` を (a) `""` (b) `"   "` (c) `"\t\n"` (d) `"x"` | (a)(b)(c) は `[{ rule: "control.outcome_blank", subject: "outcome" }]` (d) 空 | 空白だけの outcome の素通り |
-| `CANDIDATE-U-OPSCTL-005` | `validateControlRecord` | `tier` を (a) `{ nfrItem: "X-1", minLevel: 0 }` (b) `{ nfrItem: "X-1", minLevel: 5 }` (c) `minLevel: 6` (d) `minLevel: -1` (e) `minLevel: 2.5` (f) `{ nfrItem: "  ", minLevel: 2 }` (g) `tier` が無い | (a)(b) は空。(c)〜(g) は `[{ rule: "control.tier_invalid", subject: "tier" }]` | 範囲 0〜5 の境界、整数の検査、空の IPA 項目、欠落の素通り |
+| `CANDIDATE-U-OPSCTL-005` | `validateControlRecord` | `tier` を (a) `{ nfrItem: "A.1.1.1", minLevel: 0 }` (b) `{ nfrItem: "A.1.1.1", minLevel: 5 }` (c) `minLevel: 6` (d) `minLevel: -1` (e) `minLevel: 2.5` (f) `{ nfrItem: "  ", minLevel: 2 }` (g) `tier` が無い | (a)(b) は空。(c)〜(g) は `[{ rule: "control.tier_invalid", subject: "tier" }]` | 範囲 0〜5 の境界、整数の検査、空の IPA 項目、欠落の素通り |
 | `CANDIDATE-U-OPSCTL-006` | `validateControlRecord` | `layers` を (a) `[]` (b) `["L3"]` (c) `["L15"]` (d) `["L7","L7"]` (e) `["L4","L14"]` (f) `["l7"]` | (a) `control.layers_empty` (subject `layers`) (b)(c)(f) は `control.layer_invalid` (subject は層の値) (d) `control.layer_duplicate` (subject `L7`) (e) 空 | 層の範囲 L4〜L14 の端、重複の許容、空配列の素通り |
 | `CANDIDATE-U-OPSCTL-007` | `validateControlRecord` | `stage` を (a) `"enforce"` (b) `"warn"` (c) `"Enforce"` に、`appliesTo` を (d) `[]` (e) `["server","edge"]` に替える | (a) 空 (b)(c) `control.stage_invalid` (subject `stage`) (d)(e) `control.applies_to_invalid` (subject `appliesTo`) | 段の enum への未知の値の素通り、`appliesTo` の空の許容 |
 | `CANDIDATE-U-OPSCTL-008` | `validateControlRecord` | `evidence` を (a) `format: "text"` (b) `schemaRef: " "` (c) `bindsTo: []` (d) `bindsTo: ["head","x"]` (e) `evidence` が無い (f) `format: "junit-xml"` | (a)〜(e) は `[{ rule: "control.evidence_invalid", subject: "evidence" }]` (f) 空 | 自由文の証跡の素通り、証跡の束縛先の欠落、未知の束縛先の許容 |
@@ -106,12 +106,24 @@ issue: 1725
 | `CANDIDATE-U-OPSCTL-031` | `checkPresetMapping` | `PRESET_A` から (a) `ID_SEC` の 1 つ目のエントリの `scope` を `"Runtime"` に (b) `scope` を欠落に (c) `scope` を `"cron"` に (d) `ID_DB` の写像を `[]` に (e) `ID_DB` を `{ na: "別の方法で満たす" }` に | (a)(b)(c) `[{ rule: "preset.scope_invalid", subject: "ID_SEC:secret-scanner" }]` (d) `[{ rule: "preset.mapping_empty", subject: "ID_DB" }]` (e) 空 | 未知の `scope` の素通り、空の配列で統制を落とす |
 | `CANDIDATE-U-OPSCTL-032` | `lintMigration` | (a) `"DROP TABLE old;\n-- ut-tdd:allow-destructive: ok"` (b) `"-- ut-tdd:allow-destructive: ok\nDROP TABLE old;"` (c) `"DROP TABLE old;\n\n-- ut-tdd:allow-destructive: ok"` | (a) `migration.destructive` (line 1、column 1) (b) 空 (c) `migration.destructive` (line 1、column 1)。SQL の後ろにだけある印は抑えない | 許可の印の向きの逆転 (印の前の SQL を抑える) |
 
+### 3.6 `tier` の形と対応なし (設計 §3.4、I2)
+
+形の正規表現は設計 §3.4 のとおりである。fixture は `CTRL_SEC` を基準にし、1 点だけ変える。
+
+| ID | 対象 | 入力 | 期待 | 殺す変異 |
+|---|---|---|---|---|
+| `CANDIDATE-U-OPSCTL-033` | `validateControlRecord` | `nfrItem` を (a) `"A.1.1.1"` (b) `"C.1.3.1"` (c) `"F.2.10.12"` (d) `"E.5.1.1"` | 全て空 | 実在する形の項番を弾く過剰な検査、複数桁の番号の拒否 |
+| `CANDIDATE-U-OPSCTL-034` | `validateControlRecord` | `nfrItem` を (a) `"X-1"` (b) `"G.1.1.1"` (c) `"a.1.1.1"` (d) `"A.1.1"` (e) `"A.1.1.1.1"` (f) `"A.0.1.1"` (g) `" A.1.1.1"` (h) `"A.1.1.1 "` (i) `"NFR-UNMAPPED"` (j) `""` | 全て `[{ rule: "control.tier_invalid", subject: "tier" }]` | 正規表現が緩い (大項目の範囲 A〜F、桁数 3、0 始まり、前後の空白、小文字の許容) |
+| `CANDIDATE-U-OPSCTL-035` | `validateControlRecord` | `CTRL_SEC` の `tier` を `null`、`tierReason: "対応する IPA 項目が無い"` にし、`stage` を (a) `"advisory"` (b) `"baseline"` (c) `"ratchet"` に | 全て空 | `tier: null` を一律に不備とする過剰な検査、`enforce` 以外の段の誤拒否 |
+| `CANDIDATE-U-OPSCTL-036` | `validateControlRecord` | `tier: null` で `tierReason` を (a) 欠落 (b) `""` (c) `"  "` (d) `"\t\n"` に。また (e) `tier` が正しい object のまま `tierReason: "x"` を足す | (a)〜(e) は `[{ rule: "control.tier_reason_missing", subject: "tierReason" }]` | 理由なしの `null` の素通り (対応づけの先送りが黙って通る)、object の `tier` と理由の併存の許容 |
+| `CANDIDATE-U-OPSCTL-037` | `validateControlRecord` | (a) `tier: null`、`tierReason: "対応する IPA 項目が無い"`、`stage: "enforce"` (b) (a) の `tierReason` を欠落にする (c) `tier` が正しい object で `stage: "enforce"` | (a) `[{ rule: "control.tier_unmapped_enforce", subject: "stage" }]` (b) `control.tier_reason_missing` (subject `tierReason`) と `control.tier_unmapped_enforce` (subject `stage`) の 2 件、この順 (c) 空 | 対応のない統制が強制へ上がる、`enforce` の検査が理由の検査に隠れる、正しい `tier` の `enforce` の誤拒否 |
+
 ## 4. 規則と oracle の対応 (網羅の確認)
 
 | 設計の規則 | oracle |
 |---|---|
 | I1 (純粋・戻りの順) | 全 oracle が引数だけで呼ぶ。順序は 010、025 (g)、026 (g)、027 |
-| I2 (統制 record の rule) | 001〜009、030 |
+| I2 (統制 record の rule) | 001〜009、030、033〜037 |
 | I3 (重複 id) | 010 |
 | I4 (ツール record の rule) | 011〜015 |
 | I5 (採用・配布の判定) | 016、017 |
@@ -145,6 +157,9 @@ Green の PR は、次の変異を 1 つずつ実装に入れて、対応する 
 | `proof` の欠落で `runtime_unbound` を避けられる | 030 |
 | `scope` の未知の値と空の写像の配列を通す | 031 |
 | 許可の印が前の SQL を抑える | 032 |
+| `nfrItem` の形の検査が緩い・厳しい | 033、034 |
+| `tier: null` が理由なしで通る | 036 |
+| `tier: null` の `enforce` が通る | 037 |
 | `resolveControlSeverity` の `ratchet` が baseline 外を `advisory` にする | 028 |
 | `requiresPoApproval` が `org-account-control` を欠く | 029 |
 

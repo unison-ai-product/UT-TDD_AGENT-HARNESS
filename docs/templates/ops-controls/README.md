@@ -9,9 +9,13 @@ consumer 向け本番運用の統制 record を置く場所。形は `docs/desig
 | `log-observability.json` | ログ・観測 (#1726) | `OPS-LOG-001`〜`004` |
 | `security.json` | セキュリティ (#1731) | `OPS-SEC-001`〜`006` |
 
-## nfrItem の扱い
+## tier の扱い
 
-`nfrItem` は `docs/design/harness/L3-functional/nfr-grade.md` の識別子を指す。セキュリティは `NFR-17` (統合セキュリティ)、ログの PII は `NFR-18` (§7.3 の新規候補) を使う。ログの配信・相関 ID・形式に合う項目は nfr-grade に無いため、`NFR-UNMAPPED` を入れた。これは識別子ではなく「該当なし」の印で、nfr-grade に項目が足された時点で置き換える。
+`tier` は契約 §3.4 のとおり、IPA 非機能要求グレード 2018 の項目番号 (`nfrItem`、4 階層の形) を指す。IPA の文面と項目一覧は repo に置かず、番号だけを持つ。harness 自身の `nfr-grade.md` は参照先ではない。
+
+対応づけた record は 4 件である。`OPS-SEC-002` は E.4.3.1、`OPS-SEC-003` は E.10.1.1、`OPS-SEC-006` は E.6.1.3、`OPS-LOG-002` は E.7.1.2 を指す。番号と名前は、IPA の活用シートの項番表を写した二次資料 2 点と、IPA 公表 PDF の項番の並びとで照合した。`minLevel` は、元の値を保ち、根拠を足していない。
+
+残る 6 件 (`OPS-SEC-001`・`004`・`005`、`OPS-LOG-001`・`003`・`004`) は、意味が一致する項目を確認できなかったため `tier: null` と `tierReason` にした。一致の未検証を理由にしており、該当項目が無いと断定してはいない。`tier: null` の record は `enforce` に上げられない (契約 §3.4)。
 
 ## stage
 

@@ -11,7 +11,7 @@ created: 2026-11-17
 issue: 1725
 ---
 
-> **L6 contract marker**: 本書は consumer (UT-TDD を導入した製品) が本番を運用するときの**統制 (control) の契約**である (未実装の目標契約)。契約は stack に依存しない。統制 record の schema (§3)、ツール record (§4)、preset の対応表 (§5)、検証の順序と場所 (§6)、PO 承認の置き場 (§7)、机上で埋めた例 (§8) を定める。判定は純関数 (`validateControlRecord` / `checkControlSet` / `validateToolEntry` / `isToolAdoptable` / `isToolDistributable` / `checkToolStaleness` / `checkPresetMapping` / `checkLogRecord` / `checkLogProfile` / `lintMigration` / `resolveControlSeverity` / `requiresPoApproval`) が持つ。型と DbC は §10 にまとめる。oracle は `docs/test-design/harness/L7-consumer-operations-controls-test-design.md` の候補 ID `CANDIDATE-U-OPSCTL-001`〜`032` が固定する。実装の置き場 (`src/ops-controls/` 以下) は仮置きで、配布の設計で確定する。
+> **L6 contract marker**: 本書は consumer (UT-TDD を導入した製品) が本番を運用するときの**統制 (control) の契約**である (未実装の目標契約)。契約は stack に依存しない。統制 record の schema (§3)、ツール record (§4)、preset の対応表 (§5)、検証の順序と場所 (§6)、PO 承認の置き場 (§7)、机上で埋めた例 (§8) を定める。判定は純関数 (`validateControlRecord` / `checkControlSet` / `validateToolEntry` / `isToolAdoptable` / `isToolDistributable` / `checkToolStaleness` / `checkPresetMapping` / `checkLogRecord` / `checkLogProfile` / `lintMigration` / `resolveControlSeverity` / `requiresPoApproval`) が持つ。型と DbC は §10 にまとめる。oracle は `docs/test-design/harness/L7-consumer-operations-controls-test-design.md` の候補 ID `CANDIDATE-U-OPSCTL-001`〜`037` が固定する。実装の置き場 (`src/ops-controls/` 以下) は仮置きで、配布の設計で確定する。
 
 # consumer 向け本番運用の統制 — 関数設計 (issue #1725、親 #1724)
 
@@ -36,7 +36,7 @@ consumer の製品は、本番に出すときの運用の約束 (ログ、IaC、
 
 | 正本 | 本書との関係 |
 |---|---|
-| `docs/design/harness/L3-functional/nfr-grade.md` (#767) | IPA 非機能要求グレードの段 (Lv) の値の置き場。統制は `tier` でその項目 ID と下限の段を**参照する**。IPA の文面は写さない |
+| `docs/design/harness/L3-functional/nfr-grade.md` (#767) | harness 自身の NFR (NFR-01〜17) とその段 (Lv) の文書。IPA の項目番号は持たない。統制の `tier` はこの文書を参照しない (§3.4) |
 | `docs/templates/vmodel/L13-production-observation.md` / `L14-operational-test-design.md` / `L4-security.md` | 統制 record が `layers` で指す層の文書。章の内容は複製せず、record の `outcome` から指す |
 | #797 (環境 record・デプロイ receipt) | 実行時の証跡 (`proof: runtime`) の束縛先。本書は「receipt に束縛すること」だけを定める |
 | #798 (G13 のスモークと SLO の観測) | 実行時の証跡が G13 を通る経路。本書は経路を足さない |
@@ -54,7 +54,8 @@ consumer の製品は、本番に出すときの運用の約束 (ログ、IaC、
 | `id` | string | `OPS-<領域の短縮>-<3 桁>`。例: `OPS-SEC-001`。パターンは `^OPS-[A-Z]{2,5}-[0-9]{3}$` |
 | `domain` | enum | 領域。§3.2 の 11 値 |
 | `outcome` | string | 満たすべき結果を 1 文で書く (空白だけは不備)。手段 (ツール名) は書かない |
-| `tier` | object | `{ nfrItem: string, minLevel: 0〜5 の整数 }`。`nfrItem` は `nfr-grade.md` が使う IPA 項目の識別子 (空でない文字列)、`minLevel` はその統制を課す下限の段 |
+| `tier` | object または null | `{ nfrItem: string, minLevel: 0〜5 の整数 }`、または対応する IPA 項目が無いときの `null`。形と規則は §3.4 |
+| `tierReason` | string | `tier` が `null` のときだけ必須の理由 (空白だけは不備)。`tier` が object のときは書かない |
 | `layers` | array | V-model の層。`L4`〜`L14` の文字列。1 つ以上、重複なし |
 | `appliesTo` | array | `server` / `client` の 1 つ以上。preset の `target` (§5.4) と突き合わせる |
 | `proof` | enum | `static` (静的な検査) / `runtime` (実行時の観測) |
@@ -76,6 +77,15 @@ consumer の製品は、本番に出すときの運用の約束 (ログ、IaC、
 - `bindsTo`: 空でない配列で、`head` (exact HEAD) と `deploy-receipt` (#797 のデプロイ receipt) の 1 つ以上。
 - **`proof` は必須で、値は `static` か `runtime` の 2 つだけ**。欠落、未知の値、大文字小文字違い (`Runtime`) は `control.proof_invalid` (subject `proof`) である。`runtime_unbound` の判定は、`proof` が正しい値のときだけ行う。
 - **`proof` が `runtime` の統制は、`bindsTo` に `deploy-receipt` を含める**。含まない record は不備である。静的な検査の結果は実行時の証明にならない。実行時の観測は #797 / #798 の receipt に束縛されて初めて証跡になる。
+
+**3.4 `tier` (IPA 非機能要求グレード 2018 の項目への参照)**
+
+- `nfrItem` は、IPA 非機能要求グレード 2018 の項目番号を指す。版は 2018 に固定する。項目の一覧も IPA の文面も repo に置かない (外部仕様は取り込まない)。
+- **検査は形だけ**である。受け入れる形は、大項目の文字 `A`〜`F`、続けて 3 つの正の整数を `.` でつないだ `^[A-F]\.[1-9][0-9]*\.[1-9][0-9]*\.[1-9][0-9]*$` (例: `A.1.1.1`)。項目が実在するかは検査しない。前後の空白と小文字は不備である。
+- `minLevel` は、その項目の中での段である。段の幅は項目ごとに違う。契約が受け入れる整数の範囲は 0〜5 のままにする。
+- 対応する IPA 項目が無い統制は `tier: null` と、空白でない `tierReason` で明示する。`tier` の欠落は `tier: null` ではなく不備である。
+- `tier` が `null` の統制は、`stage` を `enforce` にできない (`control.tier_unmapped_enforce`)。`baseline` / `advisory` / `ratchet` は許す。項目に対応づくまで強制へ上げない。
+- **`minLevel` を読む者**: 今は誰も読まない。`src/` に `minLevel` を比較する処理は無く、本書の規則も形の検査だけである。段の比較 (consumer の段が下限に届くか) は、読む者が決まるまで契約に入れない。
 
 ## 4. ツール record
 
@@ -199,12 +209,12 @@ preset は、統制を**ツールの rule ID に写像した record** である�
 
 | id | domain | outcome | tier | layers | appliesTo | proof | evidence | stage |
 |---|---|---|---|---|---|---|---|---|
-| `OPS-SEC-001` | security | secret が commit されない | `nfrItem` は nfr-grade の §5 の項目、`minLevel` 3 | L4, L7 | server, client | static | `sarif`、`head` | advisory (最初の baseline の後に `enforce` を検討) |
-| `OPS-DB-001` | database | migration がデータを黙って消さない | `nfrItem` は nfr-grade の §3 の項目、`minLevel` 3 | L5, L7 | server | static | `json-result`、`head` | advisory |
-| `OPS-LOG-001` | log-observability | ログが必須の field を持ち、PII がマスクされる | `nfrItem` は nfr-grade の §3 の項目、`minLevel` 2 | L4, L7 | server | static | `junit-xml`、`head` | advisory |
-| `OPS-LOG-002` | log-observability | 本番のログが保管先に届き、保持期間が設定されている | `nfrItem` は nfr-grade の §3 の項目、`minLevel` 2 | L13, L14 | server | runtime | `json-result`、`head` と `deploy-receipt` | baseline |
+| `OPS-SEC-001` | security | secret が commit されない | `nfrItem` は IPA 2018 の項目番号 (§3.4)、`minLevel` 3 | L4, L7 | server, client | static | `sarif`、`head` | advisory (最初の baseline の後に `enforce` を検討) |
+| `OPS-DB-001` | database | migration がデータを黙って消さない | `nfrItem` は IPA 2018 の項目番号 (§3.4)、`minLevel` 3 | L5, L7 | server | static | `json-result`、`head` | advisory |
+| `OPS-LOG-001` | log-observability | ログが必須の field を持ち、PII がマスクされる | `nfrItem` は IPA 2018 の項目番号 (§3.4)、`minLevel` 2 | L4, L7 | server | static | `junit-xml`、`head` | advisory |
+| `OPS-LOG-002` | log-observability | 本番のログが保管先に届き、保持期間が設定されている | `nfrItem` は IPA 2018 の項目番号 (§3.4)、`minLevel` 2 | L13, L14 | server | runtime | `json-result`、`head` と `deploy-receipt` | baseline |
 
-`nfrItem` の具体の値は、実装の PR が `nfr-grade.md` の識別子で埋める (本書は IPA の文面も識別子も複製しない)。
+`nfrItem` の具体の値は、実装の PR が IPA 非機能要求グレード 2018 の一次情報から選んで §3.4 の形で埋める。対応が見つからない統制は `tier: null` と `tierReason` にする (本書は IPA の文面も項目の一覧も複製しない)。
 
 **8.2 preset A (AWS と CDK の組み合わせ)**
 
@@ -287,7 +297,8 @@ export type Lifecycle = "available" | "new-signups-stopped" | "end-of-support-sc
 export interface Finding { rule: string; subject: string; message: string }
 export interface ControlRecord {
   id: string; domain: Domain; outcome: string;
-  tier: { nfrItem: string; minLevel: number };
+  tier: { nfrItem: string; minLevel: number } | null;
+  tierReason?: string;
   layers: Layer[]; appliesTo: ("server" | "client")[];
   proof: "static" | "runtime";
   evidence: { format: "json-result" | "sarif" | "junit-xml"; schemaRef: string; bindsTo: ("head" | "deploy-receipt")[] };
@@ -317,12 +328,12 @@ export function resolveControlSeverity(input: { stage: Stage; inBaseline: boolea
 export function requiresPoApproval(kind: string): boolean;
 ```
 
-関数の署名を `name(...) =>` の形で再掲する (判定の oracle は I1〜I13 がテスト設計の `CANDIDATE-U-OPSCTL-001`〜`032` へ対応する)。`validateControlRecord(record) => Finding[]`、`checkControlSet(records) => Finding[]`、`validateToolEntry(tool, today) => Finding[]`、`isToolAdoptable(tool) => boolean`、`isToolDistributable(tool) => boolean`、`checkToolStaleness(tool, today, maxAgeDays) => Finding[]`、`checkPresetMapping(controls, preset) => Finding[]`、`checkLogProfile(profile) => Finding[]`、`checkLogRecord(record, profile) => Finding[]`、`lintMigration(file) => MigrationFinding[]`、`resolveControlSeverity(input) => "advisory" | "error"`、`requiresPoApproval(kind) => boolean`。
+関数の署名を `name(...) =>` の形で再掲する (判定の oracle は I1〜I13 がテスト設計の `CANDIDATE-U-OPSCTL-001`〜`037` へ対応する)。`validateControlRecord(record) => Finding[]`、`checkControlSet(records) => Finding[]`、`validateToolEntry(tool, today) => Finding[]`、`isToolAdoptable(tool) => boolean`、`isToolDistributable(tool) => boolean`、`checkToolStaleness(tool, today, maxAgeDays) => Finding[]`、`checkPresetMapping(controls, preset) => Finding[]`、`checkLogProfile(profile) => Finding[]`、`checkLogRecord(record, profile) => Finding[]`、`lintMigration(file) => MigrationFinding[]`、`resolveControlSeverity(input) => "advisory" | "error"`、`requiresPoApproval(kind) => boolean`。
 
 | 不変条件 | 内容 |
 |---|---|
 | I1 | 全ての関数は純粋である (file・環境変数・時刻・network を自分では読まず、引数だけから決まる。`today` も引数)。戻りの配列は入力の順 |
-| I2 | `validateControlRecord` の rule: `control.id_invalid`、`control.domain_unknown`、`control.outcome_blank`、`control.tier_invalid` (`nfrItem` が空白、または `minLevel` が 0〜5 の整数でない。subject は `tier`)、`control.layers_empty`、`control.layer_invalid` (subject は層の値)、`control.layer_duplicate` (subject は層の値)、`control.applies_to_invalid`、`control.stage_invalid`、`control.proof_invalid` (`proof` が欠落か `static` / `runtime` 以外、subject `proof`)、`control.evidence_invalid` (`format` が未知か `schemaRef` が空白か `bindsTo` が空、subject は `evidence`)、`control.runtime_unbound` (`proof` が `runtime` で `bindsTo` に `deploy-receipt` が無い、subject は `evidence.bindsTo`)。subject は、ここに書いたもの以外は field 名。入力が object でなければ `control.not_object` を 1 件返し、例外を投げない |
+| I2 | `validateControlRecord` の rule: `control.id_invalid`、`control.domain_unknown`、`control.outcome_blank`、`control.tier_invalid` (`tier` が欠落、または `nfrItem` が §3.4 の形に合わない、`minLevel` が 0〜5 の整数でない。subject は `tier`)、`control.tier_reason_missing` (`tier` が `null` で `tierReason` が欠落か空白、または `tier` が object で `tierReason` がある。subject は `tierReason`)、`control.tier_unmapped_enforce` (`tier` が `null` で `stage` が `enforce`。subject は `stage`)、`control.layers_empty`、`control.layer_invalid` (subject は層の値)、`control.layer_duplicate` (subject は層の値)、`control.applies_to_invalid`、`control.stage_invalid`、`control.proof_invalid` (`proof` が欠落か `static` / `runtime` 以外、subject `proof`)、`control.evidence_invalid` (`format` が未知か `schemaRef` が空白か `bindsTo` が空、subject は `evidence`)、`control.runtime_unbound` (`proof` が `runtime` で `bindsTo` に `deploy-receipt` が無い、subject は `evidence.bindsTo`)。subject は、ここに書いたもの以外は field 名。入力が object でなければ `control.not_object` を 1 件返し、例外を投げない |
 | I3 | `checkControlSet` は `control.duplicate_id` (subject は id、2 件目以降の出現ごと) だけを返す |
 | I4 | `validateToolEntry` の rule: `tool.checked_at_invalid` (形式違反か実在しない日付、または `today` より後)、`tool.lifecycle_unknown`、`tool.verification_unknown`、`tool.source_missing` (`confirmed` で `sourceUrl` が `null`)、`tool.source_not_https` (`sourceUrl` が `https://` で始まらない。`null` は対象外)、`tool.license_unrecorded` (`approval` が `approved` で `recordRef` が空白)。subject は field 名 (`tool.license_unrecorded` は `license.recordRef`)。`pending-primary` は finding にしない (採用の可否は `isToolAdoptable` が決める) |
 | I5 | `isToolAdoptable` は §4 の 1 の 3 条件だけで決める。`isToolDistributable` は §4 の 2 だけで決め、他の field を見ない |
@@ -359,7 +370,6 @@ export function requiresPoApproval(kind: string): boolean;
 | #871 の登録簿 schema との統合 | #871 が確定したら、ツール record の審査欄を正本に合わせて改訂する |
 | クライアント (スマホ・Windows) の統制と preset の中身 | 後続 Issue。本書は `target` の分け方だけ |
 | 11 領域のうちログ・セキュリティ以外の統制の record | 後続 Issue (置き場は §15。ログ・セキュリティの first record は `docs/templates/ops-controls/` に入った) |
-| `nfrItem` の該当なし | ログの配信・相関 ID・形式に合う項目が nfr-grade に無い。仮の印 `NFR-UNMAPPED` を使い、項目が足されたら置き換える |
 
 ## 14. ツールの状態の初期記録 (PO のまとめの 13 章)
 
