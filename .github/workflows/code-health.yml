@@ -27,9 +27,21 @@ jobs:
       - run: npm ci --ignore-scripts
       - name: jscpd (重複コード、advisory)
         run: |
+          set -o pipefail
+          # 終了コードを rc に受ける。失敗しても job は落とさず、summary に計測失敗を明示する (advisory)。
+          rc=0
+          npx jscpd > "$RUNNER_TEMP/jscpd.out" 2> "$RUNNER_TEMP/jscpd.err" || rc=$?
           {
             echo "## jscpd (advisory)"
+            if [ "$rc" -ne 0 ]; then
+              echo "**計測失敗 (exit=$rc)**"
+            fi
+            echo "### stdout"
             echo '```'
-            npx jscpd || true
+            cat "$RUNNER_TEMP/jscpd.out"
+            echo '```'
+            echo "### stderr"
+            echo '```'
+            cat "$RUNNER_TEMP/jscpd.err"
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
