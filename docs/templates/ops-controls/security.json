@@ -1,0 +1,156 @@
+[
+  {
+    "id": "OPS-SEC-001",
+    "domain": "security",
+    "outcome": "secret が commit されない",
+    "tier": {
+      "nfrItem": "NFR-17",
+      "minLevel": 3
+    },
+    "layers": [
+      "L4",
+      "L7"
+    ],
+    "appliesTo": [
+      "server",
+      "client"
+    ],
+    "proof": "static",
+    "evidence": {
+      "format": "sarif",
+      "schemaRef": "ops-controls/evidence/secret-scan.sarif",
+      "bindsTo": [
+        "head"
+      ]
+    },
+    "stage": "advisory"
+  },
+  {
+    "id": "OPS-SEC-002",
+    "domain": "security",
+    "outcome": "既知の脆弱性を持つ依存が、重大度の閾値以上で残らない",
+    "tier": {
+      "nfrItem": "NFR-17",
+      "minLevel": 3
+    },
+    "layers": [
+      "L7"
+    ],
+    "appliesTo": [
+      "server",
+      "client"
+    ],
+    "proof": "static",
+    "evidence": {
+      "format": "sarif",
+      "schemaRef": "ops-controls/evidence/dependency-scan.sarif",
+      "bindsTo": [
+        "head"
+      ]
+    },
+    "stage": "advisory"
+  },
+  {
+    "id": "OPS-SEC-003",
+    "domain": "security",
+    "outcome": "自作コードの静的解析で、重大度の閾値以上の指摘が残らない",
+    "tier": {
+      "nfrItem": "NFR-17",
+      "minLevel": 3
+    },
+    "layers": [
+      "L7"
+    ],
+    "appliesTo": [
+      "server",
+      "client"
+    ],
+    "proof": "static",
+    "evidence": {
+      "format": "sarif",
+      "schemaRef": "ops-controls/evidence/sast.sarif",
+      "bindsTo": [
+        "head"
+      ]
+    },
+    "stage": "advisory"
+  },
+  {
+    "id": "OPS-SEC-004",
+    "domain": "security",
+    "outcome": "IaC と設定ファイルの誤設定の検査で、重大度の閾値以上の指摘が残らない",
+    "tier": {
+      "nfrItem": "NFR-17",
+      "minLevel": 3
+    },
+    "layers": [
+      "L4",
+      "L7"
+    ],
+    "appliesTo": [
+      "server"
+    ],
+    "proof": "static",
+    "evidence": {
+      "format": "sarif",
+      "schemaRef": "ops-controls/evidence/iac-misconfig.sarif",
+      "bindsTo": [
+        "head"
+      ]
+    },
+    "stage": "advisory"
+  },
+  {
+    "id": "OPS-SEC-005",
+    "domain": "security",
+    "outcome": "デプロイ済みのクラウド設定の評価で、重大な指摘が 0 件である",
+    "tier": {
+      "nfrItem": "NFR-17",
+      "minLevel": 3
+    },
+    "layers": [
+      "L10",
+      "L11",
+      "L12"
+    ],
+    "appliesTo": [
+      "server"
+    ],
+    "proof": "runtime",
+    "evidence": {
+      "format": "json-result",
+      "schemaRef": "ops-controls/evidence/cloud-config-eval.result",
+      "bindsTo": [
+        "head",
+        "deploy-receipt"
+      ]
+    },
+    "stage": "advisory"
+  },
+  {
+    "id": "OPS-SEC-006",
+    "domain": "security",
+    "outcome": "secret が secret manager に置かれ、ローテーションの設定と実行が観測される",
+    "tier": {
+      "nfrItem": "NFR-17",
+      "minLevel": 3
+    },
+    "layers": [
+      "L4",
+      "L13"
+    ],
+    "appliesTo": [
+      "server"
+    ],
+    "proof": "runtime",
+    "evidence": {
+      "format": "json-result",
+      "schemaRef": "ops-controls/evidence/secret-rotation.result",
+      "bindsTo": [
+        "head",
+        "deploy-receipt"
+      ]
+    },
+    "stage": "advisory"
+  }
+]

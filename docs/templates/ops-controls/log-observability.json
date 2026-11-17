@@ -1,0 +1,103 @@
+[
+  {
+    "id": "OPS-LOG-001",
+    "domain": "log-observability",
+    "outcome": "ログが必須の field を持ち、PII がマスクされる",
+    "tier": {
+      "nfrItem": "NFR-18",
+      "minLevel": 2
+    },
+    "layers": [
+      "L4",
+      "L7"
+    ],
+    "appliesTo": [
+      "server"
+    ],
+    "proof": "static",
+    "evidence": {
+      "format": "junit-xml",
+      "schemaRef": "ops-controls/evidence/logger-output.junit",
+      "bindsTo": [
+        "head"
+      ]
+    },
+    "stage": "advisory"
+  },
+  {
+    "id": "OPS-LOG-002",
+    "domain": "log-observability",
+    "outcome": "本番のログが保管先に届き、保持期間が設定されている",
+    "tier": {
+      "nfrItem": "NFR-UNMAPPED",
+      "minLevel": 2
+    },
+    "layers": [
+      "L13",
+      "L14"
+    ],
+    "appliesTo": [
+      "server"
+    ],
+    "proof": "runtime",
+    "evidence": {
+      "format": "json-result",
+      "schemaRef": "ops-controls/evidence/log-delivery.result",
+      "bindsTo": [
+        "head",
+        "deploy-receipt"
+      ]
+    },
+    "stage": "baseline"
+  },
+  {
+    "id": "OPS-LOG-003",
+    "domain": "log-observability",
+    "outcome": "1 つのリクエストのログが、サービスをまたいで同じ相関 ID で辿れる",
+    "tier": {
+      "nfrItem": "NFR-UNMAPPED",
+      "minLevel": 2
+    },
+    "layers": [
+      "L4",
+      "L7"
+    ],
+    "appliesTo": [
+      "server"
+    ],
+    "proof": "static",
+    "evidence": {
+      "format": "junit-xml",
+      "schemaRef": "ops-controls/evidence/correlation-id.junit",
+      "bindsTo": [
+        "head"
+      ]
+    },
+    "stage": "advisory"
+  },
+  {
+    "id": "OPS-LOG-004",
+    "domain": "log-observability",
+    "outcome": "ログが機械可読な構造化形式で、レベルと時刻の表現が統一されている",
+    "tier": {
+      "nfrItem": "NFR-UNMAPPED",
+      "minLevel": 2
+    },
+    "layers": [
+      "L4",
+      "L7"
+    ],
+    "appliesTo": [
+      "server"
+    ],
+    "proof": "static",
+    "evidence": {
+      "format": "junit-xml",
+      "schemaRef": "ops-controls/evidence/logger-format.junit",
+      "bindsTo": [
+        "head"
+      ]
+    },
+    "stage": "advisory"
+  }
+]
