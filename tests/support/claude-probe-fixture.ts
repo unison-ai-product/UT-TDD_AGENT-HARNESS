@@ -49,7 +49,7 @@ export function writeFakeClaude(dir: string, options: FakeClaudeOptions): string
   const file = join(dir, name);
   writeFileSync(
     file,
-    `#!/bin/sh\nprintf '%s\n' "$0" >> "$(dirname "$0")/invocations.log"\necho ${options.version}\nexit ${exitCode}\n`,
+    `#!/bin/sh\nprintf '%s\n' "$0" >> "\${0%/*}/invocations.log"\necho ${options.version}\nexit ${exitCode}\n`,
     "utf8",
   );
   chmodSync(file, options.mode ?? 0o755);
