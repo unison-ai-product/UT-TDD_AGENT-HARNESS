@@ -116,7 +116,7 @@ path は `/` 区切りに正規化する。対象は **実行される面** に�
 ```
 
 - **初期値**: 本文に件数を固定しない。実装 PR (Green) の base commit で §4・§5 により実測し、同じ Green PR で記録する (実測の目安は §1)。既存の違反を直す PR は、同じ PR で該当 entry を減らす。
-- **縮小のみの比較元**: `git merge-base HEAD origin/main` の commit にある baseline を比較元 (`previousBaseline`) とし、比較元より `count` が増える・比較元に無い entry を足すことを `zero-trust-baseline-grown` で止める。ファイルが無ければ初回とみなして比較を省く。merge-base を解決できない・読めない・解釈できないときは `zero-trust-baseline-base-unreadable` で fail-close する (`code-size-gate.md` §5 と同じ)。
+- **縮小のみの比較元**: `git merge-base HEAD origin/main` の commit にある baseline を比較元 (`previousBaseline`) とし、比較元より `count` が増える・比較元に無い entry を足すことを `zero-trust-baseline-grown` で止める。ファイルが無ければ初回 (`previousBaseline = null`) とみなし、**比較を省かず**、merge-base の source を §4・§5 の同じ規則で測った実測 (`mergeBaseMeasures`) と照合する (`code-size-gate.md` §5 の「初回記録の照合」と同じ強さ)。初回の baseline の entry が `mergeBaseMeasures` に無い `(path, rule, subject)` なら `zero-trust-initial-baseline-new-entry`、`count` が `mergeBaseMeasures` より大きければ `zero-trust-initial-baseline-grown` で止める (Green 自身が足した新しい違反を、実測と同数の初回 baseline に入れて通せない)。merge-base を解決できない・読めない・解釈できない、または初回で `mergeBaseMeasures` を得られないときは `zero-trust-baseline-base-unreadable` で fail-close する。
 - **移動を許さない**: code-size の関数超過量のような合計での移動は設けない。entry は `(path, rule, subject)` で一意なので、直したものを消すだけで足りる。
 
 ### 6.2 判定規則
@@ -125,7 +125,7 @@ path は `/` 区切りに正規化する。対象は **実行される面** に�
 
 1. **`zero-trust-violation`** (扱いは §7 の severity)。baseline の `count` を超えた finding (baseline に無い `(path, rule, subject)` は `count` 0 とみなす)。rule 名 (`zero-trust-install-scripts-missing` など) を `reason` に持つ。
 2. **`zero-trust-stale-baseline`** (fail-close)。baseline の `count` が実測より大きい (`shrunk`)、entry の path が走査対象に無い (`missing-file`)、実測が 0 (`fixed`)。同じ PR で entry を減らす・消す。
-3. **`zero-trust-baseline-grown`**・**`zero-trust-baseline-base-unreadable`** (fail-close)。§6.1。
+3. **`zero-trust-baseline-grown`**・**`zero-trust-initial-baseline-new-entry`**・**`zero-trust-initial-baseline-grown`**・**`zero-trust-baseline-base-unreadable`** (fail-close)。§6.1。
 4. **`zero-trust-input-unreadable`** (fail-close)。走査対象が 1 本も無い、adapter が対象を読めなかった、YAML を構文解析できなかった (構文解析できない workflow を「違反なし」とみなさない)。
 
 `ok` は fail-close の finding が 0 件のときだけ true。finding は `path` / `rule` / `subject` の順で一意に並べ、入力の順序に依存しない。出力の末尾に `checked=<走査した file 数> violations=<件数> stale=<件数> baseline=<entry 数>` を出す。メッセージは修正の指示を含む (`npm ci` なら `--ignore-scripts` を足す、`npx jscpd` なら `jscpd@<exact>` へ固定する、取得即実行ならファイルへ保存して checksum を検証してから実行する)。
@@ -153,9 +153,10 @@ path は `/` 区切りに正規化する。対象は **実行される面** に�
 | `parseZeroTrustBaseline` | `parseZeroTrustBaseline(sourceText: string) => ZeroTrustBaseline \| null` | 文字列 | 解釈できなければ `null` | 壊れた入力を空とみなさない | `CANDIDATE-U-ZTDL-022` |
 | `loadZeroTrustSources` | `loadZeroTrustSources(repoRoot: string) => { sources: ScanSource[]; unreadable: string[] }` | repo root | 対象 file の内容と読めない path | 書き込まない | `CANDIDATE-U-ZTDL-023` |
 | `loadPreviousZeroTrustBaseline` | `loadPreviousZeroTrustBaseline(repoRoot: string) => { kind: "found"; baseline: ZeroTrustBaseline } \| { kind: "absent" } \| { kind: "unreadable" }` | repo root | §6.1 の比較元 | 読めない比較元を `absent` にしない | `CANDIDATE-U-ZTDL-023` |
+| `loadZeroTrustMergeBaseMeasures` | `loadZeroTrustMergeBaseMeasures(repoRoot: string) => { kind: "found"; measures: ZeroTrustBaseline } \| { kind: "unreadable" }` | repo root | merge-base の commit の source を §4・§5 で測った記録形 | 作業木を読まない。読めないとき `found` にしない | `CANDIDATE-U-ZTDL-026` |
 | `checkZeroTrustDownload` | `checkZeroTrustDownload(repoRoot: string) => { messages: string[]; ok: boolean }` | repo root | adapter を合成し `analyzeZeroTrustDownload` を呼ぶ。`ZERO_TRUST_SEVERITY` を適用 | 例外を握りつぶさない | `CANDIDATE-U-ZTDL-024`, `CANDIDATE-U-ZTDL-025` |
 
-型: `ScanSource = { path: string; text: string }`、`ScanKind = "workflow" | "shell" | "powershell" | "batch" | "markdown"`、`CommandLine = { path: string; line: number; text: string }`、`Finding = { path: string; rule: string; subject: string; line: number }`、`ZeroTrustBaseline = { entries: { path: string; rule: string; subject: string; count: number }[] }`、`ZeroTrustInput = { sources: readonly ScanSource[]; baseline: ZeroTrustBaseline; previousBaseline: ZeroTrustBaseline | null; severity: "advisory" | "fail-close" }` (`max-source-params` に合わせて 1 つの object)。YAML の構文解析は `yaml` パッケージ (既存依存) を使う。
+型: `ScanSource = { path: string; text: string }`、`ScanKind = "workflow" | "shell" | "powershell" | "batch" | "markdown"`、`CommandLine = { path: string; line: number; text: string }`、`Finding = { path: string; rule: string; subject: string; line: number }`、`ZeroTrustBaseline = { entries: { path: string; rule: string; subject: string; count: number }[] }`、`ZeroTrustInput = { sources: readonly ScanSource[]; baseline: ZeroTrustBaseline; previousBaseline: ZeroTrustBaseline | null; mergeBaseMeasures: ZeroTrustBaseline | null; severity: "advisory" | "fail-close" }` (`max-source-params` に合わせて 1 つの object)。YAML の構文解析は `yaml` パッケージ (既存依存) を使う。
 
 ## 9. 失敗モードと保守側の倒し方
 
@@ -165,9 +166,9 @@ path は `/` 区切りに正規化する。対象は **実行される面** に�
 
 ## 10. 不変条件 (DbC)
 
-- Pre: 入力は走査対象の path と内容の列、baseline、比較元 (`previousBaseline`、無ければ `null`)、severity。読み取りだけを行い、ファイルを書かない。
+- Pre: 入力は走査対象の path と内容の列、baseline、比較元 (`previousBaseline`、無ければ `null`)、初回記録のときの merge-base の実測 (`mergeBaseMeasures`、それ以外は `null`)、severity。読み取りだけを行い、ファイルを書かない。
 - Post: `ok` は §6.2 の fail-close の finding が 0 件のときだけ true。finding は入力の順序に依存せず一意に並ぶ。同じ入力から同じ出力を返す。
-- Invariant: ネットワークを使わない。baseline の追記では新しい violation を通せない (`zero-trust-baseline-grown`)。path の移動・rename で同一性 `(path, rule, subject)` が変わると、旧 path の entry は `missing-file` で stale になり、新 path の finding は violation になる (rename で違反を隠せない。entry の引き継ぎは行わず、違反を直すのが正規の道)。
+- Invariant: ネットワークを使わない。baseline の追記では新しい violation を通せない (`zero-trust-baseline-grown`。初回記録でも `zero-trust-initial-baseline-new-entry` / `-grown`)。path の移動・rename で同一性 `(path, rule, subject)` が変わると、旧 path の entry は `missing-file` で stale になり、新 path の finding は violation になる (rename で違反を隠せない。entry の引き継ぎは行わず、違反を直すのが正規の道)。
 
 ## 11. 後続 slice (この PR では設計しない)
 
