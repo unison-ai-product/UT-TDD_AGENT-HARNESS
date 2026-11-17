@@ -24,6 +24,7 @@ UT-TDD-agent-harness/
 ├── .node-version                 # reviewed Node runtime exact pin
 ├── tsconfig.json                 # TypeScript strict
 ├── vitest.config.ts              # Vitest coverage reporter config (G7 coverage-summary evidence)
+├── .jscpd.json                   # 重複コードの advisory 計測 (jscpd) の設定。結果は code-health workflow の summary だけ
 ├── ut-tdd.project.json           # PLAN asset用の追跡済みrepository identity正本
 ├── .gitattributes                # 改行正規化 (eol=lf、*.ps1 は crlf)
 ├── .editorconfig                 # editor/agent shared whitespace and newline defaults

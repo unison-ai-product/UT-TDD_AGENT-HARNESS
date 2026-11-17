@@ -1,6 +1,7 @@
 name: code-health
 
-# 不要コード (knip) と重複コード (jscpd) を計測するだけの補助検査 (advisory)。
+# 重複コード (jscpd) を計測するだけの補助検査 (advisory)。
+# knip は Bun 用の実行ファイル (knip-bun) を宣言していて、Bun の永久禁止 (#134) の検査に当たるので入れていない (#1753)。
 # required ではなく、結果は job summary に出すだけで job は失敗させない。
 # baseline を計測したあと、ratchet (悪化させない) や enforce (必須化) にするかは control が決める (#782 と同じ進め方)。
 # 関連: #1084 #1733
@@ -24,14 +25,6 @@ jobs:
         with:
           node-version-file: .node-version
       - run: npm ci --ignore-scripts
-      - name: knip (不要コード、advisory)
-        run: |
-          {
-            echo "## knip (advisory)"
-            echo '```'
-            npx knip --reporter compact || true
-            echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
       - name: jscpd (重複コード、advisory)
         run: |
           {

@@ -31,7 +31,6 @@
     "typecheck": "tsc --noEmit",
     "lint": "biome check src tests",
     "format": "biome check --write src tests",
-    "lint:knip": "knip --reporter compact",
     "lint:dup": "jscpd",
     "test": "npm run test:vitest-snapshot",
     "test:vitest-snapshot": "node scripts/run-vitest-snapshot.ts",
@@ -58,7 +57,6 @@
     "@vitest/coverage-v8": "4.1.12",
     "esbuild": "0.28.2",
     "jscpd": "5.4.2",
-    "knip": "6.44.1",
     "typescript": "^5.6.3",
     "vitest": "4.1.12"
   }
