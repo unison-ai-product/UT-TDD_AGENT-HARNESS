@@ -114,7 +114,9 @@ describe("CANDIDATE-U-PCMDRES-001..003 PATH の空・相対の要素", () => {
         ];
         const f = fakeFs(s.platform, [...decoys, real], [...decoys, real]);
         const env = pathEnv(s, [c.first, s.real]);
-        expect(findOnPath("claude", env, s.platform, f.fs)).toBe(real);
+        expect(findOnPath({ command: "claude", env: env, platform: s.platform, fs: f.fs })).toBe(
+          real,
+        );
         expect(touchesCwd(f.checked, cwd)).toBe(false);
       });
     }
@@ -126,26 +128,44 @@ describe("CANDIDATE-U-PCMDRES-004..008 走査の規則", () => {
     const f = fakeFs("win32", ["C:\\real\\claude.bat", "C:\\real\\claude.cmd"]);
     const withExt = { PATH: "C:\\real", PATHEXT: ".COM;.EXE;.CMD;.BAT" };
     const noExt = { PATH: "C:\\real" };
-    expect(findOnPath("claude", withExt, "win32", f.fs)).toBe("C:\\real\\claude.cmd");
-    expect(findOnPath("claude", noExt, "win32", f.fs)).toBe("C:\\real\\claude.bat");
+    expect(findOnPath({ command: "claude", env: withExt, platform: "win32", fs: f.fs })).toBe(
+      "C:\\real\\claude.cmd",
+    );
+    expect(findOnPath({ command: "claude", env: noExt, platform: "win32", fs: f.fs })).toBe(
+      "C:\\real\\claude.bat",
+    );
   });
 
   it.fails("CANDIDATE-U-PCMDRES-005 拡張子の限定 (win32)", () => {
     const a = fakeFs("win32", ["C:\\a\\claude.ps1", "C:\\a\\claude.js"]);
-    expect(findOnPath("claude", { PATH: "C:\\a", PATHEXT: ".PS1;.JS;.EXE" }, "win32", a.fs)).toBe(
-      null,
-    );
+    expect(
+      findOnPath({
+        command: "claude",
+        env: { PATH: "C:\\a", PATHEXT: ".PS1;.JS;.EXE" },
+        platform: "win32",
+        fs: a.fs,
+      }),
+    ).toBe(null);
     const b = fakeFs("win32", ["C:\\a\\claude", "C:\\a\\claude.ps1", "C:\\b\\claude.cmd"]);
-    expect(findOnPath("claude", { PATH: "C:\\a;C:\\b", PATHEXT: ".PS1;.CMD" }, "win32", b.fs)).toBe(
-      "C:\\b\\claude.cmd",
-    );
+    expect(
+      findOnPath({
+        command: "claude",
+        env: { PATH: "C:\\a;C:\\b", PATHEXT: ".PS1;.CMD" },
+        platform: "win32",
+        fs: b.fs,
+      }),
+    ).toBe("C:\\b\\claude.cmd");
   });
 
   it.fails("CANDIDATE-U-PCMDRES-006 実行権限 (linux)", () => {
     const a = fakeFs("linux", ["/a/claude", "/b/claude"], ["/b/claude"]);
-    expect(findOnPath("claude", { PATH: "/a:/b" }, "linux", a.fs)).toBe("/b/claude");
+    expect(
+      findOnPath({ command: "claude", env: { PATH: "/a:/b" }, platform: "linux", fs: a.fs }),
+    ).toBe("/b/claude");
     const b = fakeFs("linux", ["/a/claude"], []);
-    expect(findOnPath("claude", { PATH: "/a" }, "linux", b.fs)).toBe(null);
+    expect(
+      findOnPath({ command: "claude", env: { PATH: "/a" }, platform: "linux", fs: b.fs }),
+    ).toBe(null);
   });
 
   for (const s of [WIN, POSIX]) {
@@ -155,17 +175,36 @@ describe("CANDIDATE-U-PCMDRES-004..008 走査の規則", () => {
       const dirA = `${s.sep}a`;
       const dirB = `${s.sep}b`;
       const f = fakeFs(s.platform, [a, b], [a, b]);
-      expect(findOnPath("claude", pathEnv(s, [dirA, dirB]), s.platform, f.fs)).toBe(a);
+      expect(
+        findOnPath({
+          command: "claude",
+          env: pathEnv(s, [dirA, dirB]),
+          platform: s.platform,
+          fs: f.fs,
+        }),
+      ).toBe(a);
       const none = fakeFs(s.platform, [], []);
-      expect(findOnPath("claude", pathEnv(s, [dirA, dirB]), s.platform, none.fs)).toBe(null);
+      expect(
+        findOnPath({
+          command: "claude",
+          env: pathEnv(s, [dirA, dirB]),
+          platform: s.platform,
+          fs: none.fs,
+        }),
+      ).toBe(null);
     });
   }
 
   it.fails("CANDIDATE-U-PCMDRES-008 PATH の変数名 Path (win32)", () => {
     const f = fakeFs("win32", ["C:\\real\\claude.cmd"]);
-    expect(findOnPath("claude", { Path: "C:\\real", PATHEXT: ".CMD" }, "win32", f.fs)).toBe(
-      "C:\\real\\claude.cmd",
-    );
+    expect(
+      findOnPath({
+        command: "claude",
+        env: { Path: "C:\\real", PATHEXT: ".CMD" },
+        platform: "win32",
+        fs: f.fs,
+      }),
+    ).toBe("C:\\real\\claude.cmd");
   });
 });
 
