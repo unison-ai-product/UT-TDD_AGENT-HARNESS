@@ -123,27 +123,17 @@ function resolveDocumentScope(
   return "conditional";
 }
 
-function requiredAction(
-  row: DocumentScaleProfileReviewDbRow,
-  resolved: ScopePreviewDocumentRow["resolved_scope_status"],
-): string {
+function requiredAction(resolved: ScopePreviewDocumentRow["resolved_scope_status"]): string {
   if (resolved === "in_scope") return "include in detection scope";
   if (resolved === "skipped") return "keep explicit skip reason visible";
   if (resolved === "deferred") {
-    return row.required_plan_id
-      ? `follow required plan ${row.required_plan_id}`
-      : "route defer target before implementation";
+    return "route defer target before implementation";
   }
   return "set matching capability flag or keep explicit conditional reason";
 }
 
 function uniqueSorted(values: string[]): string[] {
   return [...new Set(values.filter(Boolean))].sort();
-}
-
-function planExists(db: HarnessDb, planId: string): boolean {
-  const row = db.prepare("SELECT plan_id FROM plan_registry WHERE plan_id = ? LIMIT 1").get(planId);
-  return Boolean(row);
 }
 
 const VALID_DOCUMENT_DECISIONS = new Set(["adopt", "conditional", "skip", "defer"]);
@@ -184,7 +174,7 @@ export function buildScopeDryRunPreview(
       catalog_sub_doc: row.catalog_sub_doc,
       requirement_class: row.requirement_class,
       gate_id: gateIdFromLayer(row.catalog_layer),
-      required_action: requiredAction(row, resolved),
+      required_action: requiredAction(resolved),
     } satisfies ScopePreviewDocumentRow;
   });
 
@@ -203,14 +193,6 @@ export function buildScopeDryRunPreview(
         severity: "warn",
         subject_id: `${row.profile_id}:${row.doc_type_id}:${row.decision}`,
         message: `unknown document scale decision: ${row.decision}`,
-      });
-    }
-    if (row.required_plan_id && !planExists(db, row.required_plan_id)) {
-      findings.push({
-        kind: "scope-preview-required-plan-missing",
-        severity: "warn",
-        subject_id: `${row.profile_id}:${row.doc_type_id}:${row.required_plan_id}`,
-        message: `required plan is not projected: ${row.required_plan_id}`,
       });
     }
   }
