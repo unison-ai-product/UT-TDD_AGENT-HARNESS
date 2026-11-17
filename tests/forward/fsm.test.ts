@@ -1,6 +1,7 @@
 import { Command } from "commander";
 import { describe, expect, it, vi } from "vitest";
 import { registerForwardWorkflowCommands } from "../../src/forward/adapters/cli-registrar.ts";
+import { HmacEvidenceAttestationIssuer } from "../../src/forward/adapters/hmac-evidence-attestation-authority.ts";
 import { InMemoryForwardLedger } from "../../src/forward/adapters/in-memory-forward-ledger.ts";
 import { InMemoryForwardProjection } from "../../src/forward/adapters/in-memory-forward-projection.ts";
 import { ForwardEvidencePolicy } from "../../src/forward/application/forward-evidence-policy.ts";
@@ -8,6 +9,10 @@ import {
   type ForwardTransitionRequest,
   ForwardWorkflowApplication,
 } from "../../src/forward/application/forward-workflow.ts";
+import {
+  createRedactedCommandArgs,
+  EvidenceRecord,
+} from "../../src/forward/domain/evidence-record.ts";
 import { eventDigest, reduceForward } from "../../src/forward/domain/reducer.ts";
 import {
   edgeFor,
@@ -19,13 +24,8 @@ import {
 } from "../../src/forward/domain/transition-policy.ts";
 import type { ForwardEvent, ForwardReduction } from "../../src/forward/domain/types.ts";
 import { ForwardWorkflow } from "../../src/forward/domain/workflow.ts";
+import { HmacEvidenceAttestationVerifier } from "../../src/forward/kernel/hmac-evidence-attestation-verifier.ts";
 import type { ForwardProjectionPort } from "../../src/forward/ports/forward-projection.ts";
-import { HmacEvidenceAttestationIssuer } from "../../src/plan-asset/adapters/hmac-evidence-attestation-authority.ts";
-import {
-  createRedactedCommandArgs,
-  EvidenceRecord,
-} from "../../src/plan-asset/domain/evidence-record.ts";
-import { HmacEvidenceAttestationVerifier } from "../../src/plan-asset/kernel/hmac-evidence-attestation-verifier.ts";
 
 const subject = {
   subjectId: "asset:344",
