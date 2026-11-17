@@ -1,7 +1,7 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { executeAdapterPlanForCli } from "../src/cli/delegation.ts";
@@ -73,19 +73,27 @@ function emptyDir(): string {
   temps.push(dir);
   return dir;
 }
+const cwdSpies: Array<{ mockRestore(): void }> = [];
 afterEach(() => {
+  for (const spy of cwdSpies.splice(0)) spy.mockRestore();
   for (const dir of temps.splice(0)) removeTestTree(dir);
 });
+
+/** process.cwd() を platform 別の固定値にして返す (実 repo を読まず、decoy の位置を test が決める)。 */
+function mockCwd(s: Scenario): string {
+  const cwd = s.platform === "win32" ? "C:work\repo" : "/work/repo";
+  cwdSpies.push(vi.spyOn(process, "cwd").mockReturnValue(cwd));
+  return cwd;
+}
 
 function pathEnv(s: Scenario, dirs: string[], extra: NodeJS.ProcessEnv = {}): NodeJS.ProcessEnv {
   return { PATH: dirs.join(s.delim), ...s.extra, ...extra };
 }
-function cwdFile(s: Scenario, ...parts: string[]): string {
-  return [process.cwd(), ...parts].join(s.sep);
+function cwdFile(s: Scenario, cwd: string, ...parts: string[]): string {
+  return [cwd, ...parts].join(s.sep);
 }
-function touchesCwd(checked: string[]): boolean {
-  const cwd = process.cwd().toLowerCase();
-  return checked.some((p) => p.toLowerCase().startsWith(cwd));
+function touchesCwd(checked: string[], cwd: string): boolean {
+  return checked.some((p) => p.toLowerCase().startsWith(cwd.toLowerCase()));
 }
 
 // 001〜003: 空・`.`・相対の要素を飛ばす。
@@ -98,12 +106,16 @@ describe("CANDIDATE-U-PCMDRES-001..003 PATH の空・相対の要素", () => {
   for (const c of RELATIVE_CASES) {
     for (const s of [WIN, POSIX]) {
       it.fails(`CANDIDATE-U-PCMDRES-${c.id} (${s.platform})`, () => {
+        const cwd = mockCwd(s);
         const real = `${s.real}${s.sep}${s.file}`;
-        const decoys = [cwdFile(s, ...c.decoyDir, s.file), cwdFile(s, ...c.decoyDir, "claude")];
+        const decoys = [
+          cwdFile(s, cwd, ...c.decoyDir, s.file),
+          cwdFile(s, cwd, ...c.decoyDir, "claude"),
+        ];
         const f = fakeFs(s.platform, [...decoys, real], [...decoys, real]);
         const env = pathEnv(s, [c.first, s.real]);
         expect(findOnPath("claude", env, s.platform, f.fs)).toBe(real);
-        expect(touchesCwd(f.checked)).toBe(false);
+        expect(touchesCwd(f.checked, cwd)).toBe(false);
       });
     }
   }
@@ -190,7 +202,8 @@ describe("CANDIDATE-U-PCMDRES-009..010 解決の順序と配線", () => {
 
   it.fails("CANDIDATE-U-PCMDRES-010 claude と codex の配線 (win32)", () => {
     const home = emptyDir();
-    const decoys = [cwdFile(WIN, "claude.cmd"), cwdFile(WIN, "codex.cmd")];
+    const cwd = mockCwd(WIN);
+    const decoys = [cwdFile(WIN, cwd, "claude.cmd"), cwdFile(WIN, cwd, "codex.cmd")];
     const reals = ["C:\\real\\claude.cmd", "C:\\real\\codex.cmd"];
     const f = fakeFs("win32", [...decoys, ...reals]);
     const opts = {
@@ -199,7 +212,7 @@ describe("CANDIDATE-U-PCMDRES-009..010 解決の順序と配線", () => {
       pathFs: f.fs,
     };
     expect([resolveClaudeNativeCommand(opts), resolveCodexNativeCommand(opts)]).toEqual(reals);
-    expect(touchesCwd(f.checked)).toBe(false);
+    expect(touchesCwd(f.checked, cwd)).toBe(false);
   });
 });
 
@@ -277,7 +290,11 @@ describe.skipIf(process.platform !== "win32")(
         SystemRoot: systemRoot,
         ComSpec: process.env.ComSpec ?? join(systemRoot, "System32", "cmd.exe"),
       };
-      const adapterUrl = pathToFileURL(join(process.cwd(), "src", "runtime", "adapter.ts")).href;
+      // 実行中の test file の位置から adapter を辿る (process.cwd() や repo root の関数を使わない)。
+      const testPath = expect.getState().testPath ?? "";
+      const adapterUrl = pathToFileURL(
+        join(dirname(testPath), "..", "src", "runtime", "adapter.ts"),
+      ).href;
       const code = `import(${JSON.stringify(adapterUrl)}).then((m) => { process.stdout.write(JSON.stringify(m.isProviderCommandSpawnable("claude", { env: JSON.parse(process.env.PCR_ENV) }))); });`;
       const child = spawnSync(process.execPath, ["-e", code], {
         cwd: decoyDir,
