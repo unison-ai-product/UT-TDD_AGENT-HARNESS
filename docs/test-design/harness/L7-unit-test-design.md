@@ -560,12 +560,6 @@ SMB/NFS/OneDrive をまたぐ strict lease、heartbeat、clock-skew 耐性は主
 
 | Test ID | 対象 | 期待 |
 |---|---|---|
-| U-PLANSCH-001 | `extractScheduleSection` | §工程表 section を抽出 |
-| U-PLANSCH-002 | `analyzePlanSchedule` | 準拠 PLAN → ok |
-| U-PLANSCH-003 | `analyzePlanSchedule` | [並列]/[直列] 欠落 Step → violation |
-| U-PLANSCH-004 | `analyzePlanSchedule` | [直列] の理由が 3 条件に該当しない → violation |
-| U-PLANSCH-005 | `analyzePlanSchedule` | review Step heading 不在 → violation |
-| U-PLANSCH-006 | `analyzePlanSchedule` | §3.1 実装計画 不在 → violation |
 
 ### §1.19a U-PLANLINT (既定 plan lint governance 合成、Issue #296)
 
@@ -573,10 +567,6 @@ SMB/NFS/OneDrive をまたぐ strict lease、heartbeat、clock-skew 耐性は主
 
 | Test ID | 対象 | 期待 |
 |---|---|---|
-| U-PLANLINT-001 | `lintPlanWithGate` 既定経路 | schedule + frontmatter governance を合成し、schema 違反を fail-close |
-| U-PLANLINT-002 | path-form cross-record lookup | 対象外 PLAN の parent/requires を解決し、対象 PLAN の missing 誤検出を出さない |
-| U-PLANLINT-003 | path-form scope filter | POSIX/Windows の slash 表記差があっても対象 PLAN の governance violation を検出する |
-| U-PLANLINT-004 | path-form canonical identity | corpus 外ディレクトリ・PLAN subdir・小文字 basename・同名 corpus を誤帰属せず、context 外 target は `target_context_missing` へ fail-close |
 
 ### §1.20 U-FRCOV (FR unit coverage substance、PLAN-L7-22 / A-110)
 
@@ -1431,15 +1421,8 @@ spec:
 | `U-PA-006` | legacy PLAN全field + short alias現HEAD全衝突群 | canonical adapter / alias resolver | field loss 0、多義は`plan-migration-collision`で自動選択0、exit 1 |
 | `U-PA-007` | 同ordinal同時予約 | `PlanIdReservation.reserve` | 片方だけ成功、他方`plan-id-reservation-conflict` |
 | `U-PA-008` | HEAD tracked `ut-tdd.project.json`、改竄bytes/receipt、schema/identity不正、remote無し | `loadTrackedProjectIdentity` / `loadProjectIdentityFromHead` | exact HEAD blobだけ成功しreceipt digest安定。index/working tree/remote補完0、異常種別を専用findingでfail-close |
-| `U-PA-009` | active alias/ordinal leaseを同時挿入 | typed partial UNIQUE DDL | active rowは1件だけ成功。terminal/closed intervalは履歴として共存可能 |
-| `U-PA-010` | asset/revision/history rowを作成後にUPDATE/DELETE、存在しないrevisionへalias event | append-only trigger / composite FK | history変更とorphan revisionをSQLiteが拒否し、row/digest不変 |
-| `U-PA-011` | ledger version 0/current/future、repo外path | `openPlanLedger` / `migratePlanLedger` | 専用pathだけversion 1へtransactional作成。future/schema不一致は`plan-ledger-unavailable`、repo外はfail-close |
-| `U-PA-012` | plan/reservation/migration subject別global receipt、架空revision、plan列混入 | `append_command_receipts` typed CHECK/composite FK | plan subjectだけ実在asset+revision必須、他subjectはplan列NULL。違反はSQLiteが拒否 |
-| `U-PA-013` | valid current ledgerのevent/revision/receipt/reduction digestを1列改竄 | `migratePlanLedger` row digest/reduction verifier | DDL形状が同一でも`plan-ledger-unavailable`でfail-closeし、空ledgerとして補完しない |
-| `U-PA-023` | empty state + valid pending observe | `reduceLegacyMigration` / append port | observed event/current/receiptのみatomic append、PlanAsset/revision/alias行0 |
 | `U-PA-045` | 複数kind/producer/subject/revision/commit/expiry/exit/claims outcomeを組合せたevidence全履歴 | `EvidenceRecord` / `EvidencePolicy` | policy定義と評価contextを分離し、typed claimsRuleに適合するactive frontierだけをmin/max cardinalityへ数え、requirement別missing/rejected IDをstable順で返す |
 | `U-PA-046` | raw/split/env/header/URI secret command、未知kind/producer/exit/claims rule、kind不一致claims、自己/orphan/cycle/fork/逆因果supersede、全record field改変 | `EvidenceRecord.create` / policy frontier / digest | branded redacted argv以外は拒否、claimsを自由文から推測しない、supersession不正とrecord digest不一致を拒否、旧record不変 |
-| `U-PA-047` | v2 ledger（reservation 0件／hash-only reservationあり） | schema v3 migration | 空reservationはtransactionalにexact v3へ移行し、非空hash-onlyは明示manifestなしに変更せずfail-close。key version/event/current/reduction/reopen一致 |
 | `U-PA-048` | unsigned/正規署名/別鍵署名/producer変更/claims・digest変更/attestation replay、key rotation、runtime property列挙 | evidence attestation issuer/verifier + policy | trusted authorityの署名とproducer bindingを満たすrecordだけeligible。未署名・偽署名・改変・replayはfail-closeし、秘密鍵/current versionはruntime propertyへ露出しない |
 | `U-FSM-001` | 正規stateごとの許可された次event、および許可表にないstate/event | transition policy / transition table | 正例は許可表どおりのnext state/eventでexit 0、負例はtyped `forward-transition-illegal`でexit 1・event/外部intent 0件 |
 | `U-FSM-002` | proposed→implementingの飛越し、逆行、terminal後追加 | transition application | 不正な飛越し・逆行・terminal後commandを拒否し、stateを変更せず副作用0件 |
@@ -2058,10 +2041,6 @@ Issue #163のadditive deltaは、PLAN IDを共有parserの
 
 | ID | 観点 | fixture / mutation | expected |
 | --- | --- | --- | --- |
-| `U-PADM-020` | ledger v3 schema | 空DBからv3生成 | receipt/current/event journalを制約付き生成 |
-| `U-PADM-021` | v2→v3 migration | 完全なv2 ledger | 全検証後に原子的migration |
-| `U-PADM-022` | migration fail-close | v1/future/partial/corrupt v2 | mutation 0で拒否 |
-| `U-PADM-065` | identity/source/Admission binding | Recovery ID/sourceへForward Admissionを混在 | ledger openとfilesystem writeより前にdeny |
 | `CANDIDATE-PADM-009` | authoring Saga強制終了 | DB commit直前直後の強制終了と補償fault | 未完journalをfail-closeし明示recoveryまで非正本 |
 | `CANDIDATE-PADM-010` | GitHub ingress | signature不正/enum不正/stale delivery | quarantine、PLAN admission 0 |
 
@@ -2907,25 +2886,6 @@ auditor、late CAS、receipt、cleanupを一軸ずつ変異し、typed resultと
 
 | ID | fixture / mutation | expected |
 | --- | --- | --- |
-| `U-PA-REV-039` | worktree-local ledgerが空で、tracked projectionとexact Git blobがterminal revision Nを証明する | terminal Nだけをcacheへ再水和し、asset IDを維持してN+1を発行。中間revision 0 |
-| `U-PA-REV-040` | HEAD本文のcontent digestだけを変異する (embedded receiptとprojection recordは一致のまま) | ledger・PLAN・projectionへのwrite 0でfail-close |
-| `U-PA-REV-041` | local ledgerがprojection terminalより古い | 既存行を維持しterminalだけを追加してN+1を発行。欠落中間revisionを捏造しない |
-| `U-PA-REV-042` | projection recordを同一receipt_idのままasset・path・identityを各単独変異 / 対応receipt_idのrecord欠落 / 重複 | 単独変異は`plan-revision-rehydration-receipt-mismatch`、欠落はauthority不在として再水和せず従来経路、重複は`plan-revision-projection-invalid`、いずれも全write 0 |
-| `U-PA-REV-043` | exact source blobから再計算したcanonical payload digestをmanifest baseと不一致にする | cache挿入前にfail-close、全write 0 |
-| `U-PA-REV-044` | 同一PLAN/pathにsuperseded asset履歴とmanifest-selected assetのterminal receiptが共存する | selected assetだけをauthorityとしてNへ再水和し、旧assetはshadowしない |
-| `U-PA-REV-045` | `plan:legacy:`プレフィクス資産で、HEAD embedded admission_receiptの全項目がtracked projection recordと完全一致する | asset prefixを問わずlegacy bootstrap/sealへ落とさず決定的に再水和しN+1を発行。legacy_plan_bootstrap_provenance・sealed_plan_lineages・plan_lineage_migration_certificatesは0件 |
-| `U-PA-REV-046` | `plan:<sha>` (非legacy prefix) 資産で、HEAD embedded admission_receiptの全項目がtracked projection recordと完全一致する | 045と同じ再水和成立をprefix非依存で確認。legacy_plan_bootstrap_provenance・sealed_plan_lineagesは0件 |
-| `U-PA-REV-047` | 再水和append実行後にtracked projectionを再読込する | 新tail recordのprevious_record_digestが再水和対象terminal recordのrecord_digestと連続する |
-| `U-PA-REV-048` | tracked terminal recordのcontent digestだけを変異する | fail-closeでwrite 0。legacy bootstrap/sealへ迂回しない |
-| `U-PA-REV-050` | manifest.base.revision_digest (canonical payload digest) を改変する | fail-closeでwrite 0 |
-| `U-PA-REV-051` | HEAD embedded admission_receiptのreceipt_digestだけを改変しprojection recordと不一致にする | 全項目一致するrecordが無くなりfail-closeでwrite 0 |
-| `U-PA-REV-052` | 同一plan_id/pathへ、embedded receipt一致recordより新しいsequenceのrecordを (別asset配下に) 追加する | lineage ambiguousとしてfail-closeでwrite 0。より新しい系譜をshadowしない |
-| `U-PA-REV-053` | HEAD sourceにadmission_receiptが埋め込まれていない (fallback回帰防止) | 再水和せず従来のrevision 1 legacy bootstrap経路を選ぶ |
-| `U-PA-REV-054` | admission_receiptは埋め込まれているがreceipt_idに対応するprojection recordが存在しない (fallback回帰防止) | 再水和せず従来のrevision 1 legacy bootstrap経路を選ぶ |
-| `U-PA-REV-055` | admission_receiptは存在するがreceipt_idが欠落している (壊れたauthority、absence詐称) | fallbackせずfail-close。write 0、legacy_plan_bootstrap_provenanceも0件 |
-| `U-PA-REV-056` | admission_receiptがobject以外 (壊れたauthority、absence詐称) | fallbackせずfail-close。write 0、legacy_plan_bootstrap_provenanceも0件 |
-| `U-PA-REV-049` | 実データ regression: `PLAN-L6-93-node-bootstrap-contract`のrevision 27 source (historical commit `d3c0df76`) と、terminal receipt (`plan:legacy:80a50dd9...`) がrevision 27だった時点のtracked projection (commit `85ae4af7`) をGit objectから読み取りfixture化する。作業木の現行projectionは読まない (後続revisionの正規追記でfixtureが壊れないようにする) | 空ledgerからrevision 28を決定的に再水和。legacy_plan_bootstrap_provenance・sealed_plan_lineagesは0件 |
-| `U-PA-REV-057` | U-PA-REV-049の実Git object fixtureを、Commanderの正規 `plan revise --manifest` command surfaceへ接続する | CLI経由でもasset不変でrev27→28を発行し、legacy bootstrap / seal lineage write 0 |
 
 実行対応: `tests/node-plan-revision-runner.test.ts` (`U-PA-REV-039〜057`)。
 

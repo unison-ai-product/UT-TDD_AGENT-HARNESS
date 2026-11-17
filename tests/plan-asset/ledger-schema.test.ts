@@ -11,7 +11,7 @@ import {
 import { openHarnessDb } from "../../src/state-db/index.ts";
 
 describe("PLAN Asset canonical ledger schema", () => {
-  it("U-PA-009: enforces active alias and ordinal partial uniqueness", () => {
+  it(": enforces active alias and ordinal partial uniqueness", () => {
     const db = openHarnessDb(":memory:");
     try {
       migratePlanLedger(db);
@@ -135,7 +135,7 @@ describe("PLAN Asset canonical ledger schema", () => {
     }
   });
 
-  it("U-PA-010: makes canonical history append-only and enforces revision FK", () => {
+  it(": makes canonical history append-only and enforces revision FK", () => {
     const db = openHarnessDb(":memory:");
     try {
       migratePlanLedger(db);
@@ -166,7 +166,7 @@ describe("PLAN Asset canonical ledger schema", () => {
     }
   });
 
-  it("U-PA-011: owns a dedicated versioned ledger and fails closed for stale schema", () => {
+  it(": owns a dedicated versioned ledger and fails closed for stale schema", () => {
     const db = openHarnessDb(":memory:");
     try {
       expect(migratePlanLedger(db)).toMatchObject({ ok: true, version: LEDGER_SCHEMA_VERSION });
@@ -190,7 +190,7 @@ describe("PLAN Asset canonical ledger schema", () => {
     ).toThrow(/\.ut-tdd/);
   });
 
-  it("U-PA-011: rejects partial and current-version corrupted schemas", () => {
+  it(": rejects partial and current-version corrupted schemas", () => {
     const partial = openHarnessDb(":memory:");
     try {
       partial.exec("CREATE TABLE plan_assets (asset_id TEXT PRIMARY KEY)");
@@ -235,7 +235,7 @@ describe("PLAN Asset canonical ledger schema", () => {
     }
   });
 
-  it("U-PADM-020: creates admission and durable draft journal tables in v4", () => {
+  it(": creates admission and durable draft journal tables in v4", () => {
     const db = openHarnessDb(":memory:");
     try {
       expect(migratePlanLedger(db)).toEqual({ ok: true, version: LEDGER_SCHEMA_VERSION });
@@ -261,7 +261,7 @@ describe("PLAN Asset canonical ledger schema", () => {
     }
   });
 
-  it("U-PADM-021: fully validates custody v3 before migrating it atomically to v4", () => {
+  it(": fully validates custody v3 before migrating it atomically to v4", () => {
     const db = openHarnessDb(":memory:");
     try {
       createV3Ledger(db);
@@ -278,7 +278,7 @@ describe("PLAN Asset canonical ledger schema", () => {
     }
   });
 
-  it("U-PA-REV-BOOT-007: custody v4を検証してbootstrap provenance v5へ原子的に拡張する", () => {
+  it(": custody v4を検証してbootstrap provenance v5へ原子的に拡張する", () => {
     const db = openHarnessDb(":memory:");
     try {
       createV4Ledger(db);
@@ -300,7 +300,7 @@ describe("PLAN Asset canonical ledger schema", () => {
     }
   });
 
-  it("U-PADM-022: rejects v1, future, partial v2, and corrupt v3 without mutation", () => {
+  it(": rejects v1, future, partial v2, and corrupt v3 without mutation", () => {
     for (const version of [1, LEDGER_SCHEMA_VERSION + 1]) {
       const db = openHarnessDb(":memory:");
       try {
@@ -345,7 +345,7 @@ describe("PLAN Asset canonical ledger schema", () => {
     }
   });
 
-  it("U-PA-047: atomically upgrades an empty-reservation v2 ledger through v3 to v4", () => {
+  it(": atomically upgrades an empty-reservation v2 ledger through v3 to v4", () => {
     const db = openHarnessDb(":memory:");
     try {
       for (const ddl of legacyV2Ddl()) db.exec(ddl);
@@ -365,7 +365,7 @@ describe("PLAN Asset canonical ledger schema", () => {
     }
   });
 
-  it("U-PADM-065: v5 ledgerへappend-only artifact cleanup operation schemaを原子的に追加する", () => {
+  it(": v5 ledgerへappend-only artifact cleanup operation schemaを原子的に追加する", () => {
     const db = openHarnessDb(":memory:");
     try {
       expect(migratePlanLedger(db)).toEqual({ ok: true, version: 7 });
@@ -391,7 +391,7 @@ describe("PLAN Asset canonical ledger schema", () => {
 
   it.each([
     4, 5,
-  ] as const)("U-PADM-067: committed journalを保持したv%s ledgerへlegacy_unknown証跡をbackfillする", (version) => {
+  ] as const)(": committed journalを保持したv%s ledgerへlegacy_unknown証跡をbackfillする", (version) => {
     const db = openHarnessDb(":memory:");
     try {
       createLegacyCommittedLedger(db, version);
@@ -438,7 +438,7 @@ describe("PLAN Asset canonical ledger schema", () => {
 
   it.each([
     4, 5,
-  ] as const)("U-PADM-068: digest改竄されたv%s committed journalを移行せず原schemaに留める", (version) => {
+  ] as const)(": digest改竄されたv%s committed journalを移行せず原schemaに留める", (version) => {
     const db = openHarnessDb(":memory:");
     try {
       createLegacyCommittedLedger(db, version);
@@ -460,7 +460,7 @@ describe("PLAN Asset canonical ledger schema", () => {
     }
   });
 
-  it("U-PADM-070: digestを再計算したlegacy_unknown provenance差替えもjournal束縛で拒否する", () => {
+  it(": digestを再計算したlegacy_unknown provenance差替えもjournal束縛で拒否する", () => {
     const db = openHarnessDb(":memory:");
     try {
       createLegacyCommittedLedger(db, 5);
@@ -497,7 +497,7 @@ describe("PLAN Asset canonical ledger schema", () => {
     }
   });
 
-  it("U-PA-047: leaves a nonempty hash-only v2 ledger untouched without a custody manifest", () => {
+  it(": leaves a nonempty hash-only v2 ledger untouched without a custody manifest", () => {
     const db = openHarnessDb(":memory:");
     try {
       for (const ddl of legacyV2Ddl()) db.exec(ddl);
@@ -535,7 +535,7 @@ describe("PLAN Asset canonical ledger schema", () => {
     }
   });
 
-  it("U-PA-047: rolls an interrupted v2-to-v3 schema migration back byte-for-byte", () => {
+  it(": rolls an interrupted v2-to-v3 schema migration back byte-for-byte", () => {
     const db = openHarnessDb(":memory:");
     try {
       for (const ddl of legacyV2Ddl()) db.exec(ddl);
@@ -558,7 +558,7 @@ describe("PLAN Asset canonical ledger schema", () => {
     }
   });
 
-  it("U-PA-047: rolls an interrupted admission v4 extension back to the original v2 ledger", () => {
+  it(": rolls an interrupted admission v4 extension back to the original v2 ledger", () => {
     const db = openHarnessDb(":memory:");
     try {
       for (const ddl of legacyV2Ddl()) db.exec(ddl);
@@ -581,7 +581,7 @@ describe("PLAN Asset canonical ledger schema", () => {
     }
   });
 
-  it("U-PA-012: constrains global receipt subjects to real plan revisions", () => {
+  it(": constrains global receipt subjects to real plan revisions", () => {
     const db = openHarnessDb(":memory:");
     try {
       migratePlanLedger(db);
@@ -594,7 +594,7 @@ describe("PLAN Asset canonical ledger schema", () => {
     }
   });
 
-  it("U-PA-013: rejects a digest-tampered current ledger", () => {
+  it(": rejects a digest-tampered current ledger", () => {
     const db = openHarnessDb(":memory:");
     try {
       migratePlanLedger(db);
@@ -619,7 +619,7 @@ describe("PLAN Asset canonical ledger schema", () => {
     }
   });
 
-  it("U-PA-013: rejects event, revision, and reduction projection tampering", () => {
+  it(": rejects event, revision, and reduction projection tampering", () => {
     expect(() =>
       expectTamperRejected(
         (db) => seedAliasReduction(db, "plan:a"),
@@ -648,7 +648,7 @@ describe("PLAN Asset canonical ledger schema", () => {
     ).not.toThrow();
   });
 
-  it("U-PA-023/028/029: separates derived identity from an adopted revision target", () => {
+  it("/028/029: separates derived identity from an adopted revision target", () => {
     const db = openHarnessDb(":memory:");
     try {
       migratePlanLedger(db);

@@ -14,6 +14,8 @@ import {
   readCoverageSummary,
 } from "../src/gate/static.ts";
 import type { PairDoc } from "../src/vmodel/lint.ts";
+import { createTraceGateFixture, G1_G3_REQUIRED_DOC_CASES } from "./support/g1-g3-trace-fixture.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 
 const cliPath = join(process.cwd(), "src", "cli.ts");
 
@@ -255,6 +257,33 @@ describe("static gates", () => {
     expect(result.passed).toBe(true);
     expect(result.messages.join("\n")).toContain("g3-pair");
     expect(result.messages.join("\n")).toContain("g3-trace");
+  });
+
+  it.each(
+    G1_G3_REQUIRED_DOC_CASES,
+  )("U-PLANRET-027: $gate passes control and rejects one missing trace doc", ({
+    gate,
+    missingPath,
+    traceMessage,
+  }) => {
+    for (const omitted of [undefined, missingPath]) {
+      const root = createTraceGateFixture(gate, omitted);
+      try {
+        const result = evaluateStaticGate({ gate, repoRoot: root });
+        const messages = result.messages.join("\n");
+        expect(result.applicable).toBe(true);
+        expect(messages).toContain(gate.toLowerCase() + "-pair - OK");
+        if (omitted === undefined) {
+          expect(result.passed).toBe(true);
+          expect(messages).toContain(traceMessage);
+        } else {
+          expect(result.passed).toBe(false);
+          expect(messages).toContain("required doc not created: " + missingPath);
+        }
+      } finally {
+        removeTestTree(root);
+      }
+    }
   });
 
   it("wires G2/G4/G5/G6 to deterministic layer pair gates", () => {

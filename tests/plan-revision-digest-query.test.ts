@@ -114,7 +114,7 @@ describe("PLAN revision canonical payload digest read-only query", () => {
     );
   });
 
-  it("U-PRDQ-008: CLI O7 rollback query returns the exact API DTO without side effects", () => {
+  it(": CLI O7 rollback query returns the exact API DTO without side effects", () => {
     const fixture = createFixture();
     appendRevision(fixture.db, {
       assetId: fixture.assetA,
@@ -158,7 +158,7 @@ describe("PLAN revision canonical payload digest read-only query", () => {
     expect(readdirSync(directory).some((entry) => /-(journal|wal|shm)$/.test(entry))).toBe(false);
   });
 
-  it("U-PRDQ-009: CLI O7 WAL rejection exits 1 without digest or side effects", () => {
+  it(": CLI O7 WAL rejection exits 1 without digest or side effects", () => {
     const fixture = createFixture();
     appendRevision(fixture.db, {
       assetId: fixture.assetA,
@@ -196,7 +196,7 @@ describe("PLAN revision canonical payload digest read-only query", () => {
     expect(snapshotDirectory(directory)).toEqual(before);
   });
 
-  it("U-PRDQ-010: CLI invalid revision returns the API invalid_input DTO and exits 1", () => {
+  it(": CLI invalid revision returns the API invalid_input DTO and exits 1", () => {
     const fixture = createFixture();
     closeTracked(fixture.db);
     useFixtureCwd(fixture.root);
