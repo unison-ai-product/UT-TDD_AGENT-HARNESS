@@ -134,7 +134,7 @@
   "tests/team-run.test.ts": { "lines": 535, "functionExcess": null },
   "tests/token-tracker.test.ts": { "lines": 897, "functionExcess": null },
   "tests/update-check.test.ts": { "lines": 567, "functionExcess": null },
-  "tests/vitest-snapshot-runner.test.ts": { "lines": 556, "functionExcess": null },
+  "tests/vitest-snapshot-runner.test.ts": { "lines": 540, "functionExcess": null },
   "tests/vmodel-source-assets.test.ts": { "lines": 634, "functionExcess": null },
   "tests/windows-hide-default.test.ts": { "lines": 672, "functionExcess": null },
   "tests/workflow-contracts.test.ts": { "lines": 640, "functionExcess": null },

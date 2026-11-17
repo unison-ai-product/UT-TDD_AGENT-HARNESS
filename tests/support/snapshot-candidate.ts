@@ -1,4 +1,5 @@
 import { writeSync } from "node:fs";
+import { usePrivateTmpdir } from "./private-tmpdir.ts";
 
 export class CandidatePreconditionFailure extends Error {}
 
@@ -16,6 +17,8 @@ export async function verifySnapshotCandidate(
   cleanup: () => void,
   action: (assertionsReached: () => void) => Promise<void>,
 ): Promise<void> {
+  // candidate の fixture と runner の snapshot dir を他テストファイルの一時 dir と分ける (#1755)。
+  usePrivateTmpdir();
   let reachedAssertions = false;
   let actionFailed = false;
   let actionFailure: unknown;

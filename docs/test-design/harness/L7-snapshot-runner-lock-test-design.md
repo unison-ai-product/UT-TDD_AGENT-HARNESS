@@ -230,7 +230,10 @@ block C の中で重ならない理由: 026 は取得に届かないので、取
 ## 6. 注記
 
 - 本書の候補は、昇格前に正式な oracle として扱わない。
-- U-TESTHYGIENE-050 / 051 の oracle の意味は変えない。029 の helper を使うように両テストの観測の範囲を狭めるのは、テストだけの PR (設計 §14 の 6) で行う。
+- U-TESTHYGIENE-050 / 051 の oracle の意味は変えない。観測の範囲を狭める方式は、029 の helper ではなく、`tests/support/private-tmpdir.ts` の `usePrivateTmpdir()` に定める (#1755)。これは `os.tmpdir()` の解決元である `TMPDIR` / `TEMP` / `TMP` を、test ごとの空の一時ルートへ切り替える。旧記述の「029 の helper を使う」は、この方式で置き換える。
+- 方式の理由: 別のテストファイルは別 worker で並行に走り、同じ OS の一時ディレクトリへ `ut-tdd-vitest-*` を作る。`<pid>-<ms>` で決まる runner の snapshot dir も衝突する。専用ルートへ切り替えれば、観測も衝突も自分のテストの中だけで決まる。
+- 050 の観測の境界: `usePrivateTmpdir()` が返す専用ルートだけを見る。`runSnapshotTests` が uid=0 で例外を投げた後、そのルートの `readdirSync` が空であることを確かめる (snapshot の副作用が 0)。共有の `os.tmpdir()` 全体は見ない。期待値 (副作用なし) は変えない。051 も同じ専用ルートの下で動かす (存在しない repo root はその下に置く)。
+- candidate の cleanup と `onTestFinished` の順序: `verifySnapshotCandidate` (`tests/support/snapshot-candidate.ts`) は action の前に `usePrivateTmpdir()` を呼ぶ。candidate の `cleanup()` は `verifySnapshotCandidate` の内側で、action の後に呼ぶ。環境変数の復元と専用ルートの削除は `onTestFinished` で行い、test 本体 (`verifySnapshotCandidate` を含む) が終わった後に走る。そのため、cleanup は専用ルートがまだ在る間に走り、復元と削除はその後になる。失敗時にも `onTestFinished` は走る。
 - 既存の runner の oracle (`tests/vitest-snapshot-runner.test.ts`、`tests/snapshot-runner-argv-candidates.test.ts`、`tests/global-setup-fence.test.ts`、`tests/windows-ci-single-snapshot.test.ts`) の期待値は変えない。CI では `skip_ci`、runner の下では `nested` になり、どちらも子 process を起動しないので、clone より前の spawn の列 (U-SNAPARG の互換の検査) は変わらない。変える必要が出たら設計の改訂へ戻る。
 - 変異の ID (`M01`〜`M70`) は本書の中だけの番号であり、oracle の ID ではない。
 - r1b (#1712 の FLAG への契約改訂、2026-11-17): 019 の観測を「queue entry の公開の有無と終了時の有無」へ広げ (M70 を追加)、020 と 016 の境界 (rename の移動元と移動先の数え方、M33 と M45 の (c)) を定め、Red を Red 1 と Red 2 に分けた (§1、設計 §14)。019 の旧観測は、全件 `it.fails` の Red にならない (stub でも成り立つ) ため置き換えた。
