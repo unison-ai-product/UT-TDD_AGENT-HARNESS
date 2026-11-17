@@ -98,7 +98,6 @@ describe("CLI delegation command registration", () => {
   it("U-PLANRET-014: provider delegation accepts task text without --plan", () => {
     const program = new Command();
     registerDelegationCommands(program, {
-      gitBranch: () => "work/test",
       gitHead: () => "abc1234",
       resolveTaskText: (opts) => opts.task ?? null,
       runSessionStartSideEffects: () => {},
@@ -117,7 +116,6 @@ describe("CLI delegation command registration", () => {
   it("registers codex and claude runtime adapter commands with governed overrides", () => {
     const program = new Command();
     registerDelegationCommands(program, {
-      gitBranch: () => "work/test",
       gitHead: () => "abc1234",
       resolveTaskText: (opts) => opts.task ?? null,
       runSessionStartSideEffects: () => {},
@@ -160,7 +158,6 @@ describe("CLI delegation command registration", () => {
         plan,
         { sessionPrefix, toolName: "codex" },
         {
-          gitBranch: () => "test/issue683",
           gitHead: () => "deadbee",
           runSessionStartSideEffects: () => {},
           writeHandoverWarnings: () => {},
@@ -237,7 +234,6 @@ describe("CLI delegation review-guard untracked-added exemption (issue #721 find
           reviewRole: "blind-reviewer",
         },
         {
-          gitBranch: () => "test/issue721",
           gitHead: () => "deadbee",
           runSessionStartSideEffects: () => {},
           writeHandoverWarnings: () => {},

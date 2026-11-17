@@ -24,8 +24,6 @@ function mockDeps(
     now: () => "2026-06-02T00:00:00.000Z",
     appendLine: (p, l) => files.set(p, `${files.get(p) ?? ""}${l}\n`),
     readText: (p) => files.get(p) ?? null,
-    writeText: (p, c) => files.set(p, c),
-    currentBranch: () => null,
     listDir: (dir) =>
       [...files.keys()]
         .filter((k) => k.startsWith(dir) && k.length > dir.length)

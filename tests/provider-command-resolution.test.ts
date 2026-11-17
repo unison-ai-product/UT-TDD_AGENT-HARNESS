@@ -436,7 +436,6 @@ describe("CANDIDATE-U-PCMDRES-014 全起動経路で素の名前を spawn しな
           plan,
           { sessionPrefix: "issue1694-unresolved", toolName: "claude" },
           {
-            gitBranch: () => "test/issue1694",
             gitHead: () => "deadbee",
             runSessionStartSideEffects: () => {},
             writeHandoverWarnings: () => {},

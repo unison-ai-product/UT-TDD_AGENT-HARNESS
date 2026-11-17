@@ -2,7 +2,6 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   checkHandoverBypass,
-  checkHandoverDiscipline,
   type HandoverDeps,
   type HandoverPointer,
   handoverStale,
@@ -47,7 +46,7 @@ export function handoverDeps(deps: DoctorDeps): HandoverDeps {
 
 export function checkHandoverDisciplineMessages(deps: DoctorDeps): string[] {
   const hd = handoverDeps(deps);
-  return [...checkHandoverDiscipline(hd), ...checkHandoverBypass(hd)];
+  return checkHandoverBypass(hd);
 }
 
 /** `.ut-tdd/handover/` 直下で書き捨てを数えない許可リスト (#1062 L6 §5)。 */
