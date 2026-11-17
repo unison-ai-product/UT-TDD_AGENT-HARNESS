@@ -5,6 +5,7 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   rmSync,
   writeFileSync,
@@ -66,6 +67,16 @@ const EMPTY_BASELINE = JSON.stringify({
   entries: [],
 });
 
+/** 複製は detached HEAD の読み取り専用属性を引き継ぐので、後始末の rm が通るよう再帰で書き込み可にする。 */
+function makeWritable(path: string): void {
+  chmodSync(path, 0o755);
+  for (const entry of readdirSync(path, { withFileTypes: true })) {
+    const child = join(path, entry.name);
+    if (entry.isDirectory()) makeWritable(child);
+    else if (entry.isFile()) chmodSync(child, 0o644);
+  }
+}
+
 /** 実 repo の実行される面と baseline を temp の git repository へ写す。 */
 function copyLiveRepo(label: string): string {
   const live = headSnapshotRoot();
@@ -74,6 +85,7 @@ function copyLiveRepo(label: string): string {
     if (existsSync(join(live, path)))
       cpSync(join(live, path), join(root, path), { recursive: true });
   }
+  makeWritable(root);
   git(root, "init", "-b", "main");
   git(root, "config", "user.email", "test@example.invalid");
   git(root, "config", "user.name", "Zero Trust Test");
