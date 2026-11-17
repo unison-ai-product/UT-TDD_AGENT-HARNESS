@@ -705,6 +705,28 @@ Task-kind ベースの割当 (PO rule 2026-07-14、旧 tier 記述を supersede)
 - Do not track local runtime artifacts except explicitly tracked audit /
   provider-handover evidence.
 
+### ゼロトラストダウンロード原則 (PO ルール 2026-11-17、両ランタイム共通)
+
+外から取ってくるものは、取った時点では信頼しない。対象は npm パッケージ、GitHub Action、バイナリ、
+スクリプト、archive、container image、`curl` などで取ったファイル、`npx` で一時的に動かすツールのすべてである。
+
+1. **版を固定する**: npm は exact version と lockfile の integrity、GitHub Action は commit SHA、
+   container image は digest で指す。範囲指定 (`^` / `~`)・`latest`・タグだけの参照は使わない。
+2. **公開から 14 日以上たった版を使う**: 公開の直後は、乗っ取られた版が見つかる前に入ってしまう。
+   脆弱性の修正で急ぐときだけ、PO 承認で例外にする。
+3. **完全性を確かめる**: lockfile の integrity、配布元が公開する sha256、署名や provenance があればそれを
+   検証する。検証できないものは入れない。
+4. **取得するときに実行しない**: `npm install` / `npm ci` には `--ignore-scripts` を付ける。`curl ... | sh` の
+   ように、取ってすぐ実行しない。取得物は新しい空のディレクトリに置き、そのディレクトリの中でインタプリタや
+   ビルドを動かさない (同じディレクトリにある `json.py` などが読み込まれるため)。Python で読むときは `-I` を付ける。
+5. **入れる前に審査して記録する**: ライセンス、保守の状況、直接の依存の数、install script の有無を確かめ、
+   PR 本文に書く。新しい依存の追加はサプライチェーンの高影響境界であり、PO 承認を取る。
+6. **権限を渡さない**: 取得物を動かす CI の job には、必要最小の `permissions` だけを与え、secret を渡さない。
+
+いまある仕組みは、`package.json` の `npmIntegrity` authority policy と exact pin
+(`docs/governance/repository-structure.md` F0a)、Action の SHA 固定 (#791)、`security.yml` の
+`npm ci --ignore-scripts` である。機械で確かめていない項目は #1741 で仕組みにする。
+
 ## UT-TDD Workflow
 
 - Forward: `plan` -> `pair-freeze` -> `implement` -> `trace-freeze` -> `review` -> `accept`
