@@ -423,12 +423,11 @@ describe("vitest snapshot runner", () => {
     });
   });
 
-  it("U-TESTHYGIENE-051: runSnapshotTests entrypoint reaches past the root guard for a non-root injected uid", () => {
-    const missingRepoRoot = join(tmpdir(), `ut-tdd-missing-repo-${process.pid}-${Date.now()}`);
-    const before = new Set(readdirSync(tmpdir()));
-    let thrown: unknown;
-    let created: string[] = [];
-    try {
+  it("U-TESTHYGIENE-051: runSnapshotTests entrypoint reaches past the root guard for a non-root injected uid", async () => {
+    // 専用の一時ルートで観測する。後始末も専用ルートごと消えるので他ファイルの dir に触れない (#1755)。
+    await withPrivateTmpdir((root) => {
+      const missingRepoRoot = join(root, "ut-tdd-missing-repo");
+      let thrown: unknown;
       try {
         runSnapshotTests(["--reporter=dot"], missingRepoRoot, () => 1000);
       } catch (error) {
@@ -436,12 +435,7 @@ describe("vitest snapshot runner", () => {
       }
       expect(thrown).toBeDefined();
       expect(String(thrown)).not.toMatch(/refuses to run as root/);
-    } finally {
-      created = readdirSync(tmpdir()).filter(
-        (entry) => !before.has(entry) && entry.startsWith("ut-tdd-vitest-"),
-      );
-      for (const entry of created) removeTestTree(join(tmpdir(), entry));
-    }
+    });
   });
 
   it("U-TESTHYGIENE-052: Windows seal contract denies inherited write-data and add-file rights", () => {
