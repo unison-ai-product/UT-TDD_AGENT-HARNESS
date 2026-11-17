@@ -386,7 +386,7 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 | U-DEPD-001 | `analyzeDependencyDrift` allowed graph | allowed source module imports normalize to deterministic module edges and OK messages. |
 | U-DEPD-002 | disallowed dependency | reverse dependency such as runtime -> lint returns `disallowed-module-dependency` finding. |
 | U-DEPD-003 | cycle detection | cyclic module imports return deterministic `module-cycle` finding. |
-| U-DEPD-004 | PlanAsset/state-db real repository graph | `kernel`境界を介し、PlanAssetとstate-dbのcycleが0。 |
+| U-DEPD-004 | state-db real repository graph | `state-db`から`kernel`への依存辺を維持する。全repository cycleはU-DEPD-005で検証する。 |
 | U-DEPD-005 | full real repository module graph | `lint`は`DbIntrospectionPort`を所有しstate-db実装へ逆依存しない。全module cycleが0。 |
 | U-REGEXP-001 | `expandRegressionScope` affected modules | changed source module expands to direct tests and reverse-dependent module tests. |
 | U-REGEXP-002 | missing coverage | changed source module without direct test coverage returns `missing-regression-test` finding instead of silent fallback. |
@@ -398,7 +398,7 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 | U-ID | Target | Oracle |
 |---|---|---|
 | U-DOMAIN-001 | neutral `normalizePath` boundary | Windows/POSIX separatorを同じpathへ正規化し、旧lint importは同一関数の互換re-exportである。 |
-| U-DOMAIN-004 | `SqliteProjectionStore` / `clearRebuildableProjectionTables` | unknown tableをfail-closeし、schema列とPKを正規化し、free-form secretを永続化前に拒否する。未解決PLAN joinとstale runtime contextを区別し、audit/compound contextを誤検出しない。再構築ではrebuildable rowを消去する一方、`refactor_candidates`負債ledgerを保持する。 |
+| U-DOMAIN-004 | `SqliteProjectionStore` / `clearRebuildableProjectionTables` | unknown tableをfail-closeし、schema列とPKを正規化し、free-form secretを永続化前に拒否する。再構築ではrebuildable rowを消去する一方、`refactor_candidates`負債ledgerを保持する。 |
 | U-DOMAIN-005 | model evaluation domain/application/config/SQLite read | S7 前は success rate 4桁、token効率2桁、cost効率6桁をpure計算する。S7 後は success_count / success_rate / tokens_per_success / cost_per_success を NULL とし、token/cost総量、disabled/malformed opt-in の read/store 0、cold-startのstore 0、注入時刻を維持する。generic success-rate計算を残さない。 |
 | U-DOMAIN-006 | operational metrics domain/application/SQLite read | drive成功集合と丸め前0.8境界、hook trouble、workflow blocked/human/retry、0母数、4桁表示をpure policyで固定する。N drive modeからN+4 eventをhost locale非依存のcode-unit順・一意ID・注入時刻で生成する。同一mode factは合算する。SQLite grouped readはretryをplan/workflow/phase単位で数え、NULL/literal unknown modeを同一groupへ正規化してcompletedとsignalを失わず、非0signalを隠さない。 |
 
@@ -1415,7 +1415,7 @@ spec:
 | `U-PA-001` | 空/不正`asset_id` | `PlanAsset.create` | `plan-asset-invalid-id`, exit 1 |
 | `U-PA-002` | revision 1,3 | `PlanAsset.reconstruct` | `plan-revision-gap`, exit 1 |
 | `U-PA-003` | alias/layer変更command | `PlanAsset.revise` | 新revisionでも`asset_id`不変、exit 0 |
-| `U-PA-004` | revision 1+evidence | `PlanAsset.revise` | 旧instance/evidence digest不変、exit 0 |
+| `U-PA-004` | 旧EvidenceRecord snapshot + 新revisionの作成 | `EvidenceRecord.create` | 新snapshot作成後も旧recordのJSONは不変で、旧recordは凍結される。既存 usability 条件はU-PA-005で検証する。 |
 | `U-PA-005` | expired/別revision/policy別exit evidence | `EvidenceRecord.isUsableFor` | `evidence-stale-or-subject-mismatch`、Red expected nonzeroだけusable、exit 1/0 |
 | `U-PA-006` | legacy PLAN全field + short alias現HEAD全衝突群 | canonical adapter / alias resolver | field loss 0、多義は`plan-migration-collision`で自動選択0、exit 1 |
 | `U-PA-007` | 同ordinal同時予約 | `PlanIdReservation.reserve` | 片方だけ成功、他方`plan-id-reservation-conflict` |
@@ -1490,7 +1490,7 @@ DB空集合からのauthoring補完、共有repoのvolatile logをfixed-point証
 | `CANDIDATE-DOMAIN-003` | command/query同時mutation fixture | CQS audit | `command-query-mixed`, exit 1 |
 | `CANDIDATE-DOMAIN-004` | 不完全constructor/public mutable fixture | structure audit | `domain-invalid-state-surface`, exit 1 |
 | `CANDIDATE-DOMAIN-007` | `recordFinding`のkind/subject/source/evidence、event ID、primary key、`*_id`各fieldへsecret-like値を注入 | common projection payload guard + branded `ProjectionIdFactory` | 列名による例外なくwrite row 0。runtime guard負例は`tests/sqlite-projection-store.test.ts`でGreenだが、検査済みcomponentから内部factoryが生成したbranded ID限定と任意文字列cast拒否は未実装のため、全体はRedを維持する。 |
-| `U-DOMAIN-008` | row upsert後、join finding前/clear中にfault injection | re-entrant SQLite transaction + atomic rebuild | event/joinは`tests/sqlite-projection-store.test.ts`、clear後の既存snapshot不変は`tests/projection-writer.test.ts`でGreen。成功時はrowとjoinが同一commit。 |
+| `U-DOMAIN-008` | `rebuildHarnessDb` の mid-rebuild failure | atomic rebuild transaction | `tests/projection-writer.test.ts` でwrite開始後の失敗時にprior `test_cases` snapshotがrollbackで保持される。 |
 | `CANDIDATE-DOMAIN-009` | fixed source bundleを同一contextで2回投入し、`capturedRevision`/`capturedAt`/`sourceDigest`の欠落・空文字・別capture混在fixtureも投入 | pure projectors / rebuild command | 3 capture fieldを直接検証して不正bundleを拒否する。valid bundleは`ProjectionWrite`列、stable order、digest、row countsが完全一致し、projectorのDB/FS/clock import 0。HEAD名だけでworking-tree内容を証明しない。 |
 | `CANDIDATE-DOMAIN-010` | 全consumer import graph、legacy path、`tests/projection-writer.test.ts`を含む旧facade直結test | dependency/architecture audit | source/test双方で`projection-writer.ts` import 0、旧testは新application/adapter境界へ移行、file実体 0、domain/application→adapter逆辺 0。未移行はRed。 |
 | `CANDIDATE-DOMAIN-011` | raw `BEGIN`配下のprojection store呼出し、nested savepointのrollback/release故障注入 | `ProjectionTransactionPort` architecture gate + transaction fault oracle | projection write consumerのouter transactionは共通port以外0。rollback/release失敗時も原errorを保持し、outer rollbackとdepth復元を証明する。現時点はRed。 |
