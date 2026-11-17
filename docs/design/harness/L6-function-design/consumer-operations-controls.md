@@ -369,7 +369,7 @@ export function requiresPoApproval(kind: string): boolean;
 | 段 A0〜A3 を進める件数の閾値 | baseline を測ってから control が決める |
 | #871 の登録簿 schema との統合 | #871 が確定したら、ツール record の審査欄を正本に合わせて改訂する |
 | クライアント (スマホ・Windows) の統制と preset の中身 | 後続 Issue。本書は `target` の分け方だけ |
-| 11 領域のうち §8 以外の統制の record | 後続 Issue |
+| 11 領域のうちログ・セキュリティ以外の統制の record | 後続 Issue (置き場は §15。ログ・セキュリティの first record は `docs/templates/ops-controls/` に入った) |
 
 ## 14. ツールの状態の初期記録 (PO のまとめの 13 章)
 
@@ -395,3 +395,5 @@ PO のまとめ (2026-11-17) の「終了・変更に注意が必要なもの」
 | 第一候補の preset | AWS + CDK。構造の違う VPS + compose + pino + Fluent Bit を同時に机上で通す | 本書で採択。クラウド・IaC の選択自体は consumer の ADR |
 | Control Tower / LZA / AFT | 候補として対応表に載せるが、consumer への導入は PO 承認 | 未承認 (候補) |
 | ツールごとの採否・ライセンス | 個別に PO の承認を記録してから採用する | 未承認。本書の例は全て未承認 |
+| 統制 record の置き場 | `docs/templates/ops-controls/<domain>.json` (1 領域 1 ファイル、record の配列)。record は consumer へ配る**データ**であり、配布経路が持つ `docs/templates/` に 1 か所で置く。理由: (1) 置き場が分かれると配布の配線が領域ごとに増える、(2) `docs/design/` は契約の置き場で、配るデータを混ぜない、(3) 11 領域を 1 か所に揃えると `checkControlSet` が 1 つの集合として読める。現状の配布 (`scripts/build-node.mjs`) は `docs/templates/vmodel/*.md` だけを束ねるため、JSON を運ぶ配線は後続の実装 PR | 本書で採択 (control の判断)。配線は未実装 |
+| 統制の初期 stage | 全て `advisory`。例外は §8.1 の `OPS-LOG-002` (`baseline`)。`OPS-SEC-001` は enforce の候補だが、昇格は承認の記録 (§7) を伴う別の変更で行う | 本書で採択 |
