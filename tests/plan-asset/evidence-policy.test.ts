@@ -1,15 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { HmacEvidenceAttestationIssuer } from "../../src/plan-asset/adapters/hmac-evidence-attestation-authority.ts";
-import { EvidencePolicy } from "../../src/plan-asset/domain/evidence-policy.ts";
+import { HmacEvidenceAttestationIssuer } from "../../src/forward/adapters/hmac-evidence-attestation-authority.ts";
+import { EvidencePolicy } from "../../src/forward/domain/evidence-policy.ts";
 import {
   createRedactedCommandArgs,
   EvidenceRecord,
   type StoredEvidenceRecord,
-} from "../../src/plan-asset/domain/evidence-record.ts";
+} from "../../src/forward/domain/evidence-record.ts";
 import {
   captureEvidenceAttestationVerifier,
   HmacEvidenceAttestationVerifier,
-} from "../../src/plan-asset/kernel/hmac-evidence-attestation-verifier.ts";
+} from "../../src/forward/kernel/hmac-evidence-attestation-verifier.ts";
 
 const digest = "a".repeat(64);
 const commit = "b".repeat(40);

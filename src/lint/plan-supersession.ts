@@ -13,7 +13,7 @@
  *     実在は自明、back-reference も自分の frontmatter の `plan_id` が必ず一致するため。
  *     結果 errata の双方向性 (誤りと判明した先行 PLAN が後継を指す) が担保されないまま gate を
  *     自明通過する。revision lineage の正本は `admission_receipt.origin.{plan_id, revision}` で
- *     あり自己 supersede は冗長。evidence 層 (`plan-asset/domain/evidence-record.ts`) が
+ *     あり自己 supersede は冗長。evidence 層 (`forward/domain/evidence-record.ts`) が
  *     `supersedesEvidenceId === evidenceId` を無効入力として reject しているのと同じ規律。
  *  1. X が実在する plan_id であること (誤記/typo の supersede 先を弾く)。
  *  2. X の本文が P の core-id (`PLAN-<cat>-<n>`) を含むこと (= 原 PLAN に訂正 back-reference がある)。
