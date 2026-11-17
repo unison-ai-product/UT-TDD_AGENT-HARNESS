@@ -1,8 +1,9 @@
 import { existsSync, readdirSync, readFileSync, realpathSync } from "node:fs";
 import { isAbsolute, join, resolve } from "node:path";
 import { parse as parseYaml } from "yaml";
-import { analyzeG1Trace, g1TraceMessages, g1TraceOk, loadG1TraceDocs } from "../lint/g1-trace.ts";
-import { analyzeG3Trace, g3TraceMessages, g3TraceOk, loadDocs } from "../lint/g3-trace.ts";
+import { lintG1Trace } from "../lint/g1-trace.ts";
+import { lintG3Trace } from "../lint/g3-trace.ts";
+import type { LintResult } from "../lint/lint-result.ts";
 import { type Frontmatter, frontmatterSchema } from "../schema/frontmatter.ts";
 import { parsePlanIdIdentity } from "../schema/plan-id.ts";
 import { routeSignalCandidates } from "../schema/route-map.ts";
@@ -33,7 +34,6 @@ import {
   VERSION_UP_PARKING_LEGACY_LANDED_PLAN_IDS,
 } from "./lint-policy.ts";
 import type {
-  LintResult,
   PlanGovernanceDoc,
   PlanGovernanceResult,
   PlanGovernanceViolation,
@@ -46,7 +46,6 @@ import type {
 import { PARENT_DRIVE_MISMATCH_BASELINE } from "./parent-drive-mismatch-baseline.ts";
 
 export type {
-  LintResult,
   PlanGovernanceDoc,
   PlanGovernanceResult,
   PlanGovernanceViolation,
@@ -1194,27 +1193,11 @@ export function lintPlanGate(
   }
 
   if (gate === "G3-trace") {
-    try {
-      const result = analyzeG3Trace(loadDocs(repoRoot));
-      return { ok: g3TraceOk(result), messages: g3TraceMessages(result) };
-    } catch (e) {
-      return {
-        ok: false,
-        messages: [`g3-trace - violation: required docs could not be read (${String(e)})`],
-      };
-    }
+    return lintG3Trace(repoRoot);
   }
 
   if (gate === "G1-trace") {
-    try {
-      const result = analyzeG1Trace(loadG1TraceDocs(repoRoot));
-      return { ok: g1TraceOk(result), messages: g1TraceMessages(result) };
-    } catch (e) {
-      return {
-        ok: false,
-        messages: [`g1-trace - violation: required docs could not be read (${String(e)})`],
-      };
-    }
+    return lintG1Trace(repoRoot);
   }
 
   return { ok: false, messages: [`plan-lint - violation: unsupported gate ${gate}`] };

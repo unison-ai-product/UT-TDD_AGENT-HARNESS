@@ -3,7 +3,7 @@ import { checkCodeSize } from "../lint/code-size-inputs.ts";
 import { checkDocSplit } from "../lint/doc-split-inputs.ts";
 import { checkErasableSyntax } from "../lint/erasable-syntax.ts";
 import { checkImportSpecifiers } from "../lint/import-specifier.ts";
-import type { LintResult } from "../plan/lint.ts";
+import type { LintResult } from "../lint/lint-result.ts";
 import { checkClaudeVersionFloor } from "./claude-version-floor-check.ts";
 import {
   checkAgentContractDetection,
