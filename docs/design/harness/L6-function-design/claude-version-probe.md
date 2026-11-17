@@ -128,7 +128,7 @@ issue: 1561
 
 実装の PR が変えるもの: 新しい `src/doctor/claude-path-probe.ts`、`src/doctor/claude-version-floor-check.ts` (deps と表示)、`src/doctor/runtime-state.ts` と `src/doctor/check-definition-groups.ts` (deps の field の名前)、`src/runtime/claude-version-check.ts` (`readTranscriptClaudeVersion` の読み方)、テスト側の setup と `vitest.config.ts` の setupFiles。段の順序と既存の test の更新は L7 の §4 と §7 に従う。
 
-変えないもの: 下限の値と置き場所、`evaluateClaudeVersion`、PostToolUse の警告の出し方・対象の runtime・marker (`session-log.md` の #1561 節)、`src/runtime/adapter.ts` の provider の解決。`adapter.ts` の `firstOnPath` が `where.exe` を使い current directory から探す点は本書の範囲外で、別の Issue で扱う。
+変えないもの: 下限の値と置き場所、`evaluateClaudeVersion`、PostToolUse の警告の出し方・対象の runtime・marker (`session-log.md` の #1561 節)、`src/runtime/adapter.ts` の provider の解決。`adapter.ts` の `firstOnPath` が `where.exe` を使い current directory から探す点は本書の範囲外で、#1694 の契約 `provider-command-resolution.md` が扱う。そこでは provider の PATH の解決を、本書 §3 の「解決」の規則を正本として共有する関数 (`findOnPath`) に置き換え、`probePathClaude` も同じ関数を呼ぶ案を推奨としている (control の判断前)。本書の §3 の規則と oracle は変えない。
 
 ## 10. V-pair
 
