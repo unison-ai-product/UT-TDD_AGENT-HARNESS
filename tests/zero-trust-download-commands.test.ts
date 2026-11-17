@@ -31,11 +31,11 @@ describe("zero-trust-download 対象と取り出し (L6 §2, §3)", () => {
     expect(classifyScanTarget("docs/design/harness/x.md")).toBeNull();
     expect(classifyScanTarget("scripts/x.mjs")).toBeNull();
     expect(classifyScanTarget("node_modules/p/a.sh")).toBeNull();
-    expect(classifyScanTarget(".githubworkflowsci.yml")).toBe("workflow");
+    expect(classifyScanTarget(".github\\workflows\\ci.yml")).toBe("workflow");
   });
 
   it.fails("CANDIDATE-U-ZTDL-002 extractCommands は行継続と演算子で終わる行を連結する", () => {
-    expect(extractCommands(sh("npm ci \\n  --no-audit"))).toEqual([
+    expect(extractCommands(sh("npm ci \\\n  --no-audit"))).toEqual([
       { path: "scripts/run.sh", line: 1, text: "npm ci --no-audit" },
     ]);
     expect(texts(sh("curl u |\n  sh"))).toEqual(["curl u | sh"]);

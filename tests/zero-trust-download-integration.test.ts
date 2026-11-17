@@ -8,6 +8,8 @@ import {
   readdirSync,
   readFileSync,
   rmSync,
+  statSync,
+  utimesSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -187,9 +189,28 @@ describe("zero-trust-download adapter と実 repo (L6 §6.1, §7, §8)", () => {
     expect(ZERO_TRUST_SEVERITY).toBe("advisory");
 
     const probe = gitRepo("state", EMPTY_BASELINE, true);
-    const before = existsSync(join(probe, ".ut-tdd"));
+    // 隔離した fixture の既存 state (`.ut-tdd/` と隔離した DB ファイル) を古い mtime に固定し、
+    // 実行の前後で更新時刻と内容が変わらないことを確かめる (本物の harness.db には触れない)。
+    const stateFiles = [".ut-tdd/state/marker.json", ".ut-tdd/harness.db"];
+    const past = new Date("2020-01-01T00:00:00Z");
+    for (const file of stateFiles) {
+      put(
+        probe,
+        file,
+        `isolated ${file}
+`,
+      );
+      utimesSync(join(probe, file), past, past);
+    }
+    const snapshot = () =>
+      stateFiles.map((file) => [
+        file,
+        statSync(join(probe, file)).mtimeMs,
+        readFileSync(join(probe, file), "utf8"),
+      ]);
+    const before = snapshot();
     checkZeroTrustDownload(probe);
-    expect(existsSync(join(probe, ".ut-tdd"))).toBe(before);
+    expect(snapshot()).toEqual(before);
   });
 
   it.fails("CANDIDATE-U-ZTDL-026 の adapter: merge-base の実測は作業木を読まず記録形で返す", () => {
