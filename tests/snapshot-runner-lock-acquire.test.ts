@@ -260,6 +260,8 @@ describe("snapshot runner lock: block B acquisition and release", () => {
       const result = acquireSnapshotLock(h.options, h.deps);
       expect(result.kind).toBe("unavailable");
       expect(h.fs.writeOpCount()).toBe(0);
+      // stub は identity を観測せずに unavailable を返す。実装は自分の identity を 1 回観測した上で書かずに終える。
+      expect(h.observed).toHaveLength(1);
     }
   });
 
