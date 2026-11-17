@@ -42,7 +42,7 @@
     "test:node-fallback": "node scripts/run-vitest-snapshot.ts tests/state-db.test.ts tests/runtime-portability.test.ts"
   },
   "dependencies": {
-    "commander": "^12.1.0",
+    "commander": "^15.1.0",
     "entities": "^8.1.0",
     "marked": "^18.2.0",
     "semver": "^7.8.6",
