@@ -199,18 +199,24 @@ Pack の PLAN 運用は Issue 参照に置き換える (PO 判断)。**互換性
 
 ### Registered4 の別slice処分契約
 
-本項はS7-36 freezeの36 file scopeを変更せず、登録済み4 test fileを別sliceとして処分する契約である。A merge後、Bでは4 fileを全体退役する。ただし、先に存続public gate / doctor入口のG1/G3 required-document欠落fail-close保証を保全し、test・registry・oracleを同じB差分で同期する。
+本項はS7-36 freezeの36 file scopeを変更せず、登録済み4 test fileを別sliceとして処分する契約である。A merge後はB1 (src-free同期) を先にmergeし、その直後にB2 (sourceを含む退役) を行う。B1でG1/G3のrequired-document欠落fail-close保証をpublic gate / doctorの既存入口で保全する。B2はB1 merge後に行い、保護文書には触れない。
 
-| 対象 | Bで退役するPLAN専用範囲と境界 |
-| --- | --- |
-| `tests/node-plan-revision-runner.test.ts` | PLAN revision runnerのrehydration、admission、replay、publish、receiptを含むcaller保証全体。PLAN内部実装に閉じ、generic runner/APIへ持ち出さない。 |
-| `tests/plan-asset/ledger-schema.test.ts` | PLAN ledgerのversions、migrations、schema/constraintとPLAN path保証全体。generic state-dbのpath containmentとschema constraintは既存testで維持する。 |
-| `tests/plan-lint.test.ts` | PLAN schema、route、policyとwrapperのPLAN固有gate全体。dependency statusとunsupported wrapper gateも退役し、G1/G3欠落fail-closeはpublic gateとdoctorのtestに保持する。 |
-| `tests/plan-revision-digest-query.test.ts` | PLAN canonical digestとread-only queryの成功・失敗・scale保証全体。WAL/SHM/hot-journalはこのPLAN query固有の検査として同testと退役し、generic DB opener契約へ広げない。 |
+| 対象 | B1で維持する状態 | B2で退役する範囲と境界 |
+| --- | --- | --- |
+| `tests/node-plan-revision-runner.test.ts` | test本体を実行可能なまま保持。旧static oracle ID引用を含むtest名文字列以外は変更しない。 | PLAN revision runnerのrehydration、admission、replay、publish、receiptを含むcaller保証全体。PLAN内部実装に閉じ、generic runner/APIへ持ち出さない。 |
+| `tests/plan-asset/ledger-schema.test.ts` | test本体を実行可能なまま保持。旧static oracle ID引用を含むtest名文字列以外は変更しない。 | PLAN ledgerのversions、migrations、schema/constraintとPLAN path保証全体。generic state-dbのpath containmentとschema constraintは既存testで維持する。 |
+| `tests/plan-lint.test.ts` | test本体を実行可能なまま保持。旧static oracle ID引用を含むtest名文字列以外は変更しない。 | PLAN schema、route、policyとwrapperのPLAN固有gate全体。dependency statusとunsupported wrapper gateも退役し、G1/G3欠落fail-closeはpublic gateとdoctorのtestに保持する。 |
+| `tests/plan-revision-digest-query.test.ts` | test本体を実行可能なまま保持。旧static oracle ID引用を含むtest名文字列以外は変更しない。 | PLAN canonical digestとread-only queryの成功・失敗・scale保証全体。WAL/SHM/hot-journalはこのPLAN query固有の検査として同testと退役し、generic DB opener契約へ広げない。 |
 
-Aは本L6/L7 pairだけをdocs-onlyでfreezeし、test・registry・oracle・baseline・sourceを変更しない。Bでは既存public gateとdoctorの各対応test入口に必要文書欠落のnegativeを先に保全し、そのうえで4 file・registry・oracleを同期して同じPRで退役する。旧4対象の宣言/citation退役量と保持oracle追加量をBの実差分で別々に計測する。baselineを追加・拡大せず、対応する縮小のみを反映する。
+B1の許容pathは次に限る: 上表の4 test fileは各test登録のtitle文字列にある旧static ID引用だけ、`docs/test-design/harness/L7-unit-test-design.md`、`docs/test-design/harness/L7-plan-revision-digest-query-test-design.md`、本L7 test-designの宣言・本節、`docs/governance/oracle-test-trace-baseline.json` の対応する縮小、`tests/gate-static.test.ts`、`tests/doctor-process-quality.test.ts`、およびそのnegative fixtureに必要なtest support file。旧4 test fileではtitle引用を戻す正規化後の全bytesがA時点のblobと一致することを確認する。callback body、imports、fixture、assertions、実行条件、test登録は維持し、skip / `it.fails` / 空testにしない。registry、`src/`、`scripts/`、production sourceはB1で変更しない。今回のA docs-only契約改訂では新formal UIDを発行しない。B1では保持negativeの実case追加と宣言・引用の同期に必要なformal UIDを導入できる。
 
-4 testの退役とproduction wrapperの退役は別工程である。後続source工程でwrapperを退役するときにpublic callerを直接再接続し、必要なhelperを移す。その後に共有evidence 9 moduleをForward側へ移す。project identity loader、custody、evidence 9 moduleの存続範囲は4 test処分から独立している。
+B1の保持negativeはG1/G3ごとに、必要文書を揃えた非空fixtureの正controlがpassし、required document 1件だけを欠落させた負fixtureが正確なmissing-path診断とfailed結果を返すことをpublic `gate G1` / `gate G3` とdoctorの既存入口で検証する。fixtureはinline controlled dataとし、実repo読取callsiteやrepository-read registry追加を作らない。空repoの別理由による失敗や単一CLI複合scenarioで代用しない。
+
+B1では旧4 testの退役宣言・static title引用・citation baselineを同じ差分で同期し、baselineは対応する縮小だけを行う。新規entry追加やbaseline拡大はしない。旧4対象の宣言/citation退役量と保持negativeの宣言・citation量は実patchで別々に計測し、oracle checkerによる実測結果をPR evidenceに記録する。
+
+B2はB1 merge後に直ちに実施する。許容pathは旧4 test fileの削除、`src/doctor/test-repository-isolation.ts` の `tests/plan-revision-digest-query.test.ts` 読取登録の削除、`tests/windows-hide-default.test.ts` のU-WHIDE-014 nested regression rosterから `tests/node-plan-revision-runner.test.ts` を除く同期、および `docs/governance/code-size-baseline.json` の同期に限る。code-size baselineでは旧4 test fileの対応rowを除き、isolation readerとnested rosterの削減に対してcheckerが要求する実測縮小だけを反映する。他rowの変更、追加、拡大はしない。oracle citation baselineは変更しない。B1のtitle文字列変更は行数を変えないものとし、code-size baseline全体の免除とはしない。B2で `docs/design/` / `docs/test-design/`、他baseline、他source/testを変更しない。既存G1/G3 negativeはB2後も有効なままとする。
+
+4 testの退役とproduction wrapperの退役は別工程である。B2完了後、後続source工程でwrapperを退役するときにpublic callerを直接再接続し、必要なhelperを移す。その後に共有evidence 9 moduleをForward側へ移す。project identity loader、custody、evidence 9 moduleの存続範囲は4 test処分から独立している。
 
 **S4 の Issue form (#1376)**: Recovery・Reverse・Redesign の各 form で、必須 `origin_plan` を必須 `origin_issue` に置き換える。起点の既存 GitHub Issue を §5.1 の canonical Issue URL で案内し、3 form の label を `Origin Issue URL`、placeholder を `https://github.com/<owner>/<repo>/issues/<number>` とし、description も揃える。起点は由来の参照であり、既存の Parent Issue 欄や GitHub の正式な親子関係とは別である。他の必須項目と blank issue 禁止は維持する。GitHub Issue Forms の `required` は空欄を防ぐだけで、URL の形式や Issue の実在を機械的に保証するとは扱わない。5 form 共通の必須 `reentry_target` は id / required を維持し、label を `Reentry target (Forward 再合流先 Issue / layer)` として Forward 再合流先の Issue URL または layer を案内する。各 form の description も Issue URL または layer を案内し、PLAN への入力案内を含めない。`origin_plan` と `origin_revision` の旧入力欄は、Incident / Recovery の任意欄も含めて5 form から削除する。既存 `U-L7-451-W5-001` の3 form の期待を新しい ID に同期し、他の form と階層規則は維持する。5 form 先頭の旧 PLAN-L7 / PLAN-L6 案内コメントも撤去する。新しい挙動の oracle は L7 の `U-PLANRET-025` とする。
 
