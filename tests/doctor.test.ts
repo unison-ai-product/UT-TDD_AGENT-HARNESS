@@ -47,10 +47,6 @@ import {
   checkOracleTestTrace,
   checkPairFreeze,
   checkPlaceholderDeps,
-  checkPlanGovernance,
-  checkPlanReferenceFreshnessAdvisory,
-  checkPlanSchedule,
-  checkPlanTraceGate,
   checkProjectHooks,
   checkPropagation,
   checkReadability,
@@ -62,6 +58,7 @@ import {
   checkRuntimeReadability,
   checkSkillAssignment,
   checkTelemetryClosure,
+  checkTraceGate,
   checkTrackedCanonical,
   checkTypedSpecLedgerBodySync,
   checkTypedSpecOwnedArtifactDispersal,
@@ -1877,26 +1874,6 @@ describe("runDoctor", () => {
     }
   });
 
-  it("passes PLAN governance after merged-plan debt is resolved", () => {
-    const governance = checkPlanGovernance(headSnapshotRoot());
-    const r = realRepoDoctor();
-
-    expect(governance.ok).toBe(true);
-    expect(governance.messages).toEqual(expect.arrayContaining([expect.stringContaining("OK")]));
-    expect(r.messages.some((m) => m.includes("doctor: plan-schedule") && m.includes("OK"))).toBe(
-      true,
-    );
-    expect(r.messages.some((m) => m.includes("doctor: plan-governance") && m.includes("OK"))).toBe(
-      true,
-    );
-  });
-
-  it("keeps doctor plan gate re-exports stable after extraction", () => {
-    expect(checkPlanSchedule).toBeTypeOf("function");
-    expect(checkPlanGovernance).toBeTypeOf("function");
-    expect(checkPlanReferenceFreshnessAdvisory).toBeTypeOf("function");
-  });
-
   it("keeps doctor lint gate re-exports stable after extraction", () => {
     expect(checkModuleDrift).toBeTypeOf("function");
     expect(checkAssetDrift).toBeTypeOf("function");
@@ -1913,50 +1890,6 @@ describe("runDoctor", () => {
     expect(checkHandoverDisciplineMessages).toBeTypeOf("function");
     expect(checkAgentSlots).toBeTypeOf("function");
     expect(nodeDoctorDeps).toBeTypeOf("function");
-  });
-
-  it("surfaces draft code-line reference freshness as a leading advisory", () => {
-    const root = mkdtempSync(join(tmpdir(), "ut-tdd-doctor-ref-fresh-"));
-    try {
-      mkdirSync(join(root, "docs", "plans"), { recursive: true });
-      writeFileSync(
-        join(root, "docs", "plans", "PLAN-L7-900-ref-fresh.md"),
-        [
-          "---",
-          "plan_id: PLAN-L7-900-ref-fresh",
-          'title: "PLAN-L7-900 ref fresh fixture"',
-          "kind: refactor",
-          "layer: L7",
-          "drive: be",
-          "status: draft",
-          "created: 2026-06-20",
-          "updated: 2026-06-20",
-          "agent_slots:",
-          "  - role: tl",
-          '    slot_label: "TL - fixture"',
-          "generates: []",
-          "dependencies:",
-          "  parent: null",
-          "  requires: []",
-          "  blocks: []",
-          "  references: []",
-          "---",
-          "",
-          "See src/missing.ts:1 before implementation.",
-          "",
-        ].join("\n"),
-        "utf8",
-      );
-
-      const messages = checkPlanReferenceFreshnessAdvisory(root);
-
-      expect(
-        messages.some((message) => message.includes("plan-reference-freshness - advisory")),
-      ).toBe(true);
-      expect(messages.every((message) => message.startsWith("doctor: "))).toBe(true);
-    } finally {
-      removeTestTree(root);
-    }
   });
 
   it("surfaces dependency-drift and regression expansion instead of scaffold stub", () => {
@@ -2112,8 +2045,8 @@ describe("runDoctor", () => {
       ["gate-confirm", checkGateConfirm(missingRoot)],
       ["gate-id-format", checkGateIdFormat(missingRoot)],
       ["placeholder-deps", checkPlaceholderDeps(missingRoot)],
-      ["g1-trace", checkPlanTraceGate(missingRoot, "G1-trace")],
-      ["g3-trace", checkPlanTraceGate(missingRoot, "G3-trace")],
+      ["g1-trace", checkTraceGate(missingRoot, "G1-trace")],
+      ["g3-trace", checkTraceGate(missingRoot, "G3-trace")],
       ["rule-automation-closure", checkRuleAutomationClosure(missingRoot)],
       ["drive-model-passage", checkDriveModelPassage(missingRoot)],
       ["db-currency", checkDbCurrency(missingRoot)],
@@ -2228,8 +2161,6 @@ describe("runDoctor", () => {
       "model-id-doc-drift",
       "gate-confirm",
       "gate-id-format",
-      "plan-schedule",
-      "plan-governance",
       "placeholder-deps",
       "g1-trace",
       "g3-trace",

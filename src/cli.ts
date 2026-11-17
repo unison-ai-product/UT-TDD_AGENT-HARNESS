@@ -2,7 +2,7 @@
 /**
  * UT-TDD Agent Harness CLI (TypeScript core, ADR-001).
  * 薄い OS 別 entrypoint (scripts/ut-tdd, ut-tdd.ps1) が本 core を呼ぶ。
- * status / doctor / plan lint / vmodel lint / gate / runtime adapter を集約する。
+ * status / doctor / vmodel lint / gate / runtime adapter を集約する。
  */
 import "./runtime/windows-hide.ts";
 import { execFileSync, spawn, spawnSync } from "node:child_process";
@@ -33,10 +33,6 @@ import { registerFeedbackCommands } from "./cli/feedback.ts";
 import { registerGuardrailCommands } from "./cli/guardrail.ts";
 import { registerIssueCommands } from "./cli/issue.ts";
 import { registerLintGateCommands } from "./cli/lint-gates.ts";
-import { registerPlanAdmissionCommands } from "./cli/plan-admission.ts";
-import { registerPlanAssetCommands } from "./cli/plan-asset.ts";
-import { registerPlanDraftCommand } from "./cli/plan-draft.ts";
-import { registerPlanRevisionCommand } from "./cli/plan-revise.ts";
 import { registerPrMergeCommands } from "./cli/pr-merge.ts";
 import { registerLiveReviewCommands } from "./cli/review-live.ts";
 import { contextSuggest } from "./context/doc-router.ts";
@@ -127,9 +123,6 @@ import {
   renderMemoryHealth,
   writeMemory,
 } from "./memory/service.ts";
-import { lintPlanWithGate } from "./plan/lint.ts";
-import { createNodePlanDraftRunner } from "./plan-admission/node-plan-draft-runner.ts";
-import { createNodePlanRevisionRunner } from "./plan-admission/node-plan-revision-runner.ts";
 import { type AdapterProvider, buildProviderInvocation } from "./runtime/adapter.ts";
 import { type AgentGuardInput, evaluateAgentGuard } from "./runtime/agent-guard.ts";
 import {
@@ -1388,45 +1381,6 @@ guard
       process.exitCode = result.decision === "block" ? 2 : 0;
     },
   );
-
-const plan = program.command("plan").description("PLAN 操作");
-registerPlanAssetCommands(plan);
-registerPlanAdmissionCommands(plan);
-registerPlanDraftCommand(plan, { runner: createNodePlanDraftRunner(process.cwd()) });
-registerPlanRevisionCommand(plan, { runner: createNodePlanRevisionRunner(process.cwd()) });
-plan
-  .command("lint [path]")
-  .description("PLAN lint")
-  .option(
-    "--gate <id>",
-    "run a named PLAN gate lint (schedule, governance/frontmatter, G1-trace, G3-trace)",
-  )
-  .action((path?: string, opts?: { gate?: string }) => {
-    const r = lintPlanWithGate(path, process.cwd(), opts?.gate);
-    for (const m of r.messages) process.stdout.write(`${m}\n`);
-    process.exitCode = r.ok ? 0 : 1;
-  });
-
-plan
-  .command("complete [id]")
-  .description("completed handover を記録")
-  .option("--dry-run", "handover を生成するが書き込まない")
-  .action((_id: string | undefined, opts: { dryRun?: boolean }) => {
-    const date = new Date().toISOString().slice(0, 10);
-    const deps = nodeHandoverDeps(process.cwd());
-    const r = runHandover(
-      {
-        date,
-        dryRun: Boolean(opts.dryRun),
-        complete: true,
-      },
-      deps,
-    );
-    process.stdout.write(
-      `plan complete: active=${r.pointer.active_plan ?? "-"} status=${r.pointer.status}${opts.dryRun ? " (dry-run)" : ""}\n`,
-    );
-    for (const w of r.written) process.stdout.write(`  + ${w}\n`);
-  });
 
 const handover = program
   .command("handover")
