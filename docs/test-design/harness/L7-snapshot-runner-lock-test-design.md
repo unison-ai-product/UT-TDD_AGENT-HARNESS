@@ -6,7 +6,7 @@ artifact_type: test_design
 pair_artifact: docs/design/harness/L6-function-design/
 parent_doc: docs/design/harness/L6-function-design/snapshot-runner-lock.md
 status: confirmed
-updated: 2026-11-16
+updated: 2026-11-17
 issue: 1665
 ---
 
@@ -18,11 +18,11 @@ issue: 1665
 
 進め方は設計保護 gate の三段階に従う。
 
-1. **Red**: 候補 ID を引用した `it.fails` を `tests/snapshot-runner-lock.test.ts` に入れる (029 は `tests/snapshot-root-hygiene.test.ts`)。各 Red の前提 (fixture が作れる、stub が呼ばれる、一時 dir が在る) は、同じ準備処理を使う対の通常 `it` で確かめ、準備の失敗が期待どおりの失敗に紛れないようにする (#1452 と同じ流儀)。
-2. **昇格 (src を含まない)**: 接頭辞 `CANDIDATE-` を外した正式 ID `U-SNAPLOCK-*` へ全件改め、テスト名の引用を同時に書き換える。正式 ID を引用より先に作らない (`oracle-test-trace`)。
+1. **Red**: 候補 ID を引用した `it.fails` を `tests/snapshot-runner-lock.test.ts` に入れる (029 は `tests/snapshot-root-hygiene.test.ts`)。Red は 2 段に分ける。**Red 1** は新規 module `src/runtime/snapshot-runner-lock.ts` が対象の oracle (block A・B と、`tests/` の helper を見る block D)。この段が足してよい `src/` は、設計保護 gate (`design-protection-diff-gate.md` §10.3 手順 1') の例外の範囲、すなわち新規 module の契約形の stub (と必要な登録) だけで、既存 module には触れない。**Red 2** は入口 (block C の 026〜028、対象は既存の `scripts/run-vitest-snapshot.ts` の `runSnapshotRunnerMain`) で、設計 §14 の Green 2 の直前に、テストだけの PR として入れる。Red 2 は `src/` も `scripts/` も変えず (stub を足さない)、`runSnapshotRunnerMain` が未実装の間の失敗は、動的 import した module の属性が無いことによる (下の「Red の弱さ」と同じ扱い)。各 Red の前提 (fixture が作れる、stub が呼ばれる、一時 dir が在る) は、同じ準備処理を使う対の通常 `it` で確かめ、準備の失敗が期待どおりの失敗に紛れないようにする (#1452 と同じ流儀)。
+2. **昇格 (src を含まない)**: 接頭辞 `CANDIDATE-` を外した正式 ID `U-SNAPLOCK-*` へ、段ごとに (Red 1 の候補は Red 1 の後、026〜028 は Red 2 の後に) 改め、テスト名の引用を同時に書き換える。正式 ID を引用より先に作らない (`oracle-test-trace`)。
 3. **実装 PR**: `it.fails` を `it` に戻して Green にする。実装 PR は `docs/test-design/` を変えない。
 
-**Red の弱さの明示**: 対象の module (`src/runtime/snapshot-runner-lock.ts`) が無い間、動的 import の失敗で `it.fails` が通る。これは個々の規則が Red である証拠ではない。Green の PR は、§4 の表の変異を 1 つずつ入れて、対応する oracle がちょうど 1 つ落ちることを確かめてから `it` に戻す。
+**Red の弱さの明示**: 対象の module (`src/runtime/snapshot-runner-lock.ts`) が無い間、動的 import の失敗で `it.fails` が通る (stub がある間は、stub が oracle の期待を満たさない fail-close の値を返すことで通る。stub は成功側の値を返さない)。Red 2 では、`runSnapshotRunnerMain` が無い属性参照の失敗で通る。Red に対の通常 `it` が要るのは、これらの失敗が準備の失敗と区別できないためで、通常 `it` が確かめるのは準備 (fixture・stub の deps・一時 dir) であって、まだ無い関数の存在ではない。これは個々の規則が Red である証拠ではない。Green の PR は、§4 の表の変異を 1 つずつ入れて、対応する oracle がちょうど 1 つ落ちることを確かめてから `it` に戻す。
 
 ## 2. テストレベルと fixture
 
@@ -62,8 +62,8 @@ issue: 1665
 | `CANDIDATE-U-SNAPLOCK-016` | 消えない番号への link の排他 (実 fs、r2 の FLAG の interleaving) | 一時 dir の lock dir に `gen-1.json` と `released-1` (世代 1 は free)。自分 A は walk で世代 1 を読み、世代 2 を `attempt` する。maxWait 0。(a) step hook で、A の `gen-2.json` への link の直前に、他者 H の記録の `gen-2.json` を置く (`classify` の stub は H を `live`) (b) 同じ位置の hook で、他者が世代 2〜100 を順に取得した状態を置く: `gen-2`〜`gen-100` と `released-2`〜`released-99`、`gen-100` は H (`live`) | (a)(b) とも、A の link は `gen-2.json` への 1 回だけで `EEXIST` になり、`gen-2.json` の中身は他者の記録のまま。結果は busy で、holder は (a) 世代 2、(b) 世代 100。`snapshot-lock: acquired` の行が無い (手順書 §2.2 手順 4、§2.3 の補題 2、I3) |
 | `CANDIDATE-U-SNAPLOCK-017` | 解放 | (a) 世代 5 の handle で、現在も世代 5 (b) 世代 5 の handle で、世代 6 が在る (c) (a) で `released-5` の作成が `EIO` を投げる | (a)(b) 新しく作られるのは `released-5` だけ。`gen-5.json` と `gen-6.json` は消えず rename もされない。(b) で `released-6` は作られない。(c) `release()` は例外を投げず、`snapshot-lock: release-failed` の行に `reason=EIO` があり、`gen-5.json` は残る (手順書 §2.4、I2、I7) |
 | `CANDIDATE-U-SNAPLOCK-018` | link と解放の印の確かめの失敗 | maxWait 0。(a) lock dir が空で、`gen-1.json` の作成 (link) が `EPERM` を投げる (b) `gen-1.json` (`classify` の stub は `stale`) が在り、`released-1` の readFile が `EACCES` を投げる | 各々 `{ kind: "unavailable" }` で reason が `EPERM` / `EACCES`。世代ファイルを作らず、busy も返さない。(b) は link が 0 回 (手順書 §2.2 手順 4、§3.1、§3.3、I3) |
-| `CANDIDATE-U-SNAPLOCK-019` | 自分の queue entry の後始末 | maxWait 4000 で (a) current が live (stub) のまま上限に届く (b) current が無く取得する (c) current が無く、手順 4 の `gen-1.json` の作成 (link) が `EPERM` を投げる | 3 つとも終了時に `queue/<自分の lockId>.json` が無い。**観測するのは自分の queue entry の有無だけで、結果の種類 (busy / acquired / unavailable) は検査しない** (結果の種類は (a) が 015、(b) が 020、(c) が 018 の観測である) (手順書 §2.2 手順 5、§6) |
-| `CANDIDATE-U-SNAPLOCK-020` | stale の世代の置き換えと、消さないこと | `gen-1`〜`gen-3` と `released-1`・`released-2` が在り、世代 3 は `classify` の stub で `stale`、待っている者なし | acquired で世代 4。取得の全体 (walk から hint の書き込みまで) で、`gen-*` と `released-*` への unlink も rename も 0 回で、`gen-1`〜`gen-3` と `released-1`・`released-2` は残る (手順書 §2.2、§2.4、I2) |
+| `CANDIDATE-U-SNAPLOCK-019` | 自分の queue entry の公開と後始末 | maxWait 4000 で (a) current が live (stub) のまま上限に届く (b) current が無く取得する (c) current が無く、手順 4 の `gen-1.json` の作成 (link) が `EPERM` を投げる | 3 つとも、偽の io の操作の記録に、自分の `queue/<自分の lockId>.json` を作る操作 (rename の移動先、または writeFile の path) が 1 回以上あり、かつ終了時にその path が無い。**観測するのは自分の queue entry の公開の有無と終了時の有無だけで、結果の種類 (busy / acquired / unavailable) は検査しない** (結果の種類は (a) が 015、(b) が 020、(c) が 018 の観測である)。上限が正なので 3 つとも手順 2 で公開する (手順書 §2.2 手順 2・5、§6)。「公開が 1 回以上」を足したのは、queue を作らない stub でも「終了時に無い」が成り立ち、全件 `it.fails` の Red にならないためである (r1b の FLAG) |
+| `CANDIDATE-U-SNAPLOCK-020` | stale の世代の置き換えと、消さないこと | `gen-1`〜`gen-3` と `released-1`・`released-2` が在り、世代 3 は `classify` の stub で `stale`、待っている者なし | acquired で世代 4。取得の全体 (walk から hint の書き込みまで) で、**操作の時点で偽の fs に既に在る** `gen-*` と `released-*` への書き込み系の操作が 0 回で、`gen-1`〜`gen-3` と `released-1`・`released-2` は残り、中身も開始時のままである。数える操作は unlink、rename の移動元、rename の移動先 (置き換え)、writeFile の path の 4 つで、rename は**移動元と移動先の両方**を見る。操作の前に無い path (新しい世代 `gen-4.json` を含む) への作成は数えない。新しい世代の path を link 以外で作ること、競合者の記録を上書きすることは 016 の観測である (手順書 §2.2、§2.4、I2、境界は §4.2) |
 | `CANDIDATE-U-SNAPLOCK-021` | 待っている者の記録 | current は live (stub)。queue に S (`classify` の stub は `stale`) と L (`live`)。maxWait 4000 | 終了時に S の記録は消え、L の記録は残る (§6) |
 | `CANDIDATE-U-SNAPLOCK-023` | 自分の identity | `observeIdentity(自分の pid)` が (a) `"query_failed"` (b) null (c) startToken null の identity | 各々 `{ kind: "unavailable" }` で、書き込み系の操作が 0 回 (手順書 §2.2 手順 1、I4) |
 | `CANDIDATE-U-SNAPLOCK-024` | 待っている間の行 | 時計を注入する。current は世代 1 が live で、130,000 ms 後に `released-1` が現れる。maxWait 600000 | `waiting` 1 行、`still-waiting` 2 行 (60,000 ms と 120,000 ms)、`acquired` 1 行の計 4 行だけ (§9、I10) |
@@ -137,7 +137,7 @@ block A の中で重ならない理由: 分類の規則は K1 (presence) → K2 
 | M30 | nested / skip_ci で lock dir に書くか identity の port を呼ぶ (skip_ci で lock dir を読むことを含む) | ● | ・ | ・ | ・ | ・ | ・ | ・ | ・ | ・ | ・ | ・ | ・ | ・ |
 | M31 | nested / skip_ci の行を出さない | ● | ・ | ・ | ・ | ・ | ・ | ・ | ・ | ・ | ・ | ・ | ・ | ・ |
 | M32 | acquiredAt の経過 (#1460 と同じ 45 分) で live の世代を置き換える | ・ | ● | ・ | ・ | ・ | ・ | ・ | ・ | ・ | ・ | ・ | ・ | ・ |
-| M33 | 既存の世代ファイルを上書きする (link でなく rename / writeFile で作る) | ・ | ・ | ● | ・ | ・ | ・ | ・ | ・ | ・ | ・ | ・ | ・ | ・ |
+| M33 | 新しい世代の path を link でなく rename / writeFile で作り、既に在る他者の記録を上書きする | ・ | ・ | ● | ・ | ・ | ・ | ・ | ・ | ・ | ・ | ・ | ・ | ・ |
 | M34 | link の `EEXIST` の後、その番号を読まずに先の番号への link を試す | ・ | ・ | ● | ・ | ・ | ・ | ・ | ・ | ・ | ・ | ・ | ・ | ・ |
 | M35 | 解放で世代ファイルを消すか rename する | ・ | ・ | ・ | ● | ・ | ・ | ・ | ・ | ・ | ・ | ・ | ・ | ・ |
 | M36 | 解放で自分でなく現在の世代の印を作る | ・ | ・ | ・ | ● | ・ | ・ | ・ | ・ | ・ | ・ | ・ | ・ | ・ |
@@ -149,7 +149,7 @@ block A の中で重ならない理由: 分類の規則は K1 (presence) → K2 
 | M42 | 取得のとき自分の queue entry を残す | ・ | ・ | ・ | ・ | ・ | ● | ・ | ・ | ・ | ・ | ・ | ・ | ・ |
 | M43 | unavailable のとき自分の queue entry を残す | ・ | ・ | ・ | ・ | ・ | ● | ・ | ・ | ・ | ・ | ・ | ・ | ・ |
 | M44 | stale の世代を置き換えない | ・ | ・ | ・ | ・ | ・ | ・ | ● | ・ | ・ | ・ | ・ | ・ | ・ |
-| M45 | 取得の中で `gen-*` か `released-*` を消すか rename する (変種: (a) 取得の後に古い世代を消す整理を足す、(b) link の前に現在の世代ファイルを消す。§4.5 の模型は両方の変種を確かめる) | ・ | ・ | ・ | ・ | ・ | ・ | ● | ・ | ・ | ・ | ・ | ・ | ・ |
+| M45 | 取得の中で `gen-*` か `released-*` を消すか rename する (変種: (a) 取得の後に古い世代を消す整理を足す、(b) link の前に現在の世代ファイルを消す、(c) stale の世代の置き換えで、取得の開始時点で在る `gen-*` か `released-*` を rename の移動先として (または writeFile で) 上書きする。§4.5 の模型は 3 つの変種を確かめる) | ・ | ・ | ・ | ・ | ・ | ・ | ● | ・ | ・ | ・ | ・ | ・ | ・ |
 | M46 | stale の待っている者の記録を残す | ・ | ・ | ・ | ・ | ・ | ・ | ・ | ● | ・ | ・ | ・ | ・ | ・ |
 | M47 | live の待っている者の記録を消す | ・ | ・ | ・ | ・ | ・ | ・ | ・ | ● | ・ | ・ | ・ | ・ | ・ |
 | M48 | 自分の startToken が得られなくても書く | ・ | ・ | ・ | ・ | ・ | ・ | ・ | ・ | ● | ・ | ・ | ・ | ・ |
@@ -164,15 +164,17 @@ block A の中で重ならない理由: 分類の規則は K1 (presence) → K2 
 | M57 | hint の読み取りが `ENOENT` 以外で失敗したとき unavailable で終える | ・ | ・ | ・ | ・ | ・ | ・ | ・ | ・ | ・ | ・ | ・ | ・ | ● |
 | M58 | 数として解釈できない hint で unavailable で終える | ・ | ・ | ・ | ・ | ・ | ・ | ・ | ・ | ・ | ・ | ・ | ・ | ● |
 | M59 | 取得の後に hint を書かない | ・ | ・ | ・ | ・ | ・ | ・ | ・ | ・ | ・ | ・ | ・ | ・ | ● |
-| 検出数 | | 2 | 1 | 2 | 3 | 3 | 3 | 2 | 2 | 1 | 2 | 1 | 3 | 5 |
+| M70 | 待つ場合 (上限が正) でも自分の queue entry を公開しない | ・ | ・ | ・ | ・ | ・ | ● | ・ | ・ | ・ | ・ | ・ | ・ | ・ |
+| 検出数 | | 2 | 1 | 2 | 3 | 3 | 4 | 2 | 2 | 1 | 2 | 1 | 3 | 5 |
 
 block B の中で重ならない理由: 各 oracle は自分の対象の観測だけを検査する。
 
 - 015 と 021 は current が live なので link を試さず (M33 / M34 / M38 / M39 / M44 が効かない)、自分の queue entry を検査しない (M41〜M43 が効かない)。
 - 016 は link が `EEXIST` になる唯一の oracle で、M34 はここでだけ効く (他の oracle では link が成功するか試されない)。016 は取得に届かず、`gen-*` の削除を検査しないので、M45 (取得の中の削除) は結果を変えない (link の前に `gen-1.json` を消しても、`gen-2.json` への link は `EEXIST` のままである)。
 - 018 は (a) lock dir が空で読む記録が無く、(b) 記録が読めるので、読み取りの変異 (M52〜M54) が効かない。maxWait 0 なので queue entry を書かない (M43 が効かない)。M38 と M39 は (a)、M40 は (b) で落ちる。
-- 019 は queue entry の有無だけを検査し、結果の種類を検査しないので、(c) の link の失敗を busy や lock なしに変える M38 / M39 でも entry は消える (落ちない)。
+- 019 は queue entry の公開の有無と終了時の有無だけを検査し、結果の種類を検査しないので、(c) の link の失敗を busy や lock なしに変える M38 / M39 でも entry は消える (落ちない)。M70 (公開しない) は、上限が正の 019 だけが見る (015・020・021・031 は自分の queue entry の公開を検査しない)。
 - 020 は current が stale で `EEXIST` を起こさない (M34 が効かない)。hint を検査しない (M59 が効かない)。
+- **020 と 016 の境界 (M33 と M45 の (c))**: 020 は、操作の時点で既に在る `gen-*` / `released-*` に作用する書き込み系の操作を、rename の移動元と移動先の両方で数える。操作の前に無い path への作成は数えないので、M33 (新しい世代 `gen-4.json` を rename で作る) は 020 では数えられず (移動先が無い)、020 の fixture には競合者が居ないので上書きも起きない。逆に M45 の (c) (既存の `gen-3.json` を rename の移動先にする) は、020 の fixture では既存の履歴への作用として数えられる。016 は書き込み系の操作の回数を検査せず、link の `EEXIST` と、他者が置いた記録の中身が残ることだけを検査するので、stale の置き換えを通らない 016 では M45 の (c) は結果を変えない。移動先が既存の履歴を置き換える場合は 020 が検出し、新しい世代の path を link 以外の操作で作る場合は、競合者の記録の有無に依らず 016 だけが検出する。
 - 017 は解放だけを呼ぶので取得の変異が効かず、020 は取得だけを呼ぶので解放の変異 (M35〜M37) が効かない。
 - 023 は I/O の失敗を起こさない (M38 / M40 が効かない)。
 - 031 は link を試す前に読み取りで決まるので、link・置き換え・hint の変異が効かない。(d) は 2 回目の walk で既知の `gen-1.json` が消えているので、M53 では世代なしとして `gen-1.json` への link が成功して落ちる。
@@ -210,6 +212,8 @@ block C の中で重ならない理由: 026 は取得に届かないので、取
 
 表の ● の数だけでは、oracle の文面が検査すると書いた観測と、§4 の「重ならない理由」との食い違いを検出できない (r3 の指摘: 019 (c) が結果の種類を検査すると書きながら、§4.2 は検査しないとしていた)。そこで、契約の手順を変異の旗つきで模した使い捨ての模型 (PR の外、`.ut-tdd/handover/control-tools/wf-1685-r1/model.mjs`) で、各 oracle の文面どおりの観測を評価し、変異ごとに落ちる oracle の集合を求めて、ちょうど 1 つでありかつ本書の ● と一致すること、正しい実装ではどの oracle も落ちないこと、各 oracle が 1 つ以上の変異で落ちることを確かめた。block B は §2 の stub (resolveMode / interpretRead / classify / decide) を使う。M45 は 2 つの変種の両方を確かめた。2026-11-16 の結果は「MODEL OK」(oracle 30 件、変異 69 件と変種 1 件) だった。
 
+2026-11-17 (r1b の契約改訂) に、019・020・016 の文面どおりの観測 (019 は公開の記録と終了時の有無、020 は既存の履歴に作用する操作の数え方、016 は `EEXIST` と他者の記録の中身) を模した使い捨ての script で確かめた結果は次のとおりである。正しい実装では 3 件とも落ちず、M33 は 016 だけ、M45 の (a) (c) は 020 だけ、M70 と M41 は 019 だけが落ち、queue を作らない stub では 019 の観測が成り立たない (Red になる)。M70 は表の置き場が 4.2 だが番号は最後なので、番号の連続・重複なしは表の順でなく番号の集合で数える。
+
 あわせて、4.1〜4.4 の表を次の規則で数える: 行頭が `| M` の行を変異の行とし、その行の ● の数がちょうど 1 であること、表の見出しの oracle の列ごとに ● が 1 つ以上あること、変異の番号が `M01` から連続して重複しないこと、表の下の「検出数」の行が数えた値と一致すること。2026-11-16 (r2 の是正の後) に本書へ適用した結果は、変異 69 件・oracle 30 件 (退役した 022 と 030 を除く) で、違反は 0 件だった (結果の全文は PR #1685 の是正コメント)。
 
 ## 5. 受け入れの実測 (oracle ではない)
@@ -228,6 +232,7 @@ block C の中で重ならない理由: 026 は取得に届かないので、取
 - 本書の候補は、昇格前に正式な oracle として扱わない。
 - U-TESTHYGIENE-050 / 051 の oracle の意味は変えない。029 の helper を使うように両テストの観測の範囲を狭めるのは、テストだけの PR (設計 §14 の 6) で行う。
 - 既存の runner の oracle (`tests/vitest-snapshot-runner.test.ts`、`tests/snapshot-runner-argv-candidates.test.ts`、`tests/global-setup-fence.test.ts`、`tests/windows-ci-single-snapshot.test.ts`) の期待値は変えない。CI では `skip_ci`、runner の下では `nested` になり、どちらも子 process を起動しないので、clone より前の spawn の列 (U-SNAPARG の互換の検査) は変わらない。変える必要が出たら設計の改訂へ戻る。
-- 変異の ID (`M01`〜`M69`) は本書の中だけの番号であり、oracle の ID ではない。
+- 変異の ID (`M01`〜`M70`) は本書の中だけの番号であり、oracle の ID ではない。
+- r1b (#1712 の FLAG への契約改訂、2026-11-17): 019 の観測を「queue entry の公開の有無と終了時の有無」へ広げ (M70 を追加)、020 と 016 の境界 (rename の移動元と移動先の数え方、M33 と M45 の (c)) を定め、Red を Red 1 と Red 2 に分けた (§1、設計 §14)。019 の旧観測は、全件 `it.fails` の Red にならない (stub でも成り立つ) ため置き換えた。
 - 候補 ID の 030 / 031 は r1 の review の後に、032 は r2 の review の後に足した。番号は block の順でなく追加の順で、029 (block D) の後に続く。
 - r2 で退役した候補: 022 (整理) と 030 (検証の一覧)。設計から性質ごと無くなったので、表の列からも外した。番号は再利用しない。016 は「既存の世代ファイルを上書きしない」という性質を保ったまま、r2 の FLAG の interleaving (止まっていた取得者の link が、消えない後の番号で `EEXIST` になる) を加えた。020 は、取得の全体で何も消さないことを検査するように広げた。

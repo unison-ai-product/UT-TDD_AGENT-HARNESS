@@ -9,9 +9,7 @@ import { readInvocations, samePath } from "./support/claude-probe-fixture.ts";
 const PREFIX = "doctor: claude-version-floor - ";
 
 function check(probePathClaude: () => PathClaudeProbe) {
-  // Red の段では checkClaudeVersionFloor はまだ probePathClaude を受けない型なので、
-  // この 1 か所の型 assertion で渡す。Green の PR で外す (L7 claude-version-floor §4)。
-  return checkClaudeVersionFloor({ probePathClaude } as never);
+  return checkClaudeVersionFloor({ probePathClaude });
 }
 
 const fenceDir = process.env.UT_TDD_CLAUDE_FENCE_DIR;
@@ -21,7 +19,7 @@ const fenceIsFirst =
   samePath((process.env.PATH ?? "").split(delimiter)[0] ?? "", fenceDir);
 
 describe("Claude Code version doctor row and fence (Issue #1675 / #1677)", () => {
-  it.fails("CANDIDATE-U-CCVER-014 shows the four states exactly, all ok", () => {
+  it("CANDIDATE-U-CCVER-014 shows the four states exactly, all ok", () => {
     const cases: { probe: () => PathClaudeProbe; message: string }[] = [
       {
         probe: () => ({ kind: "not_found" }),
@@ -58,8 +56,8 @@ describe("Claude Code version doctor row and fence (Issue #1675 / #1677)", () =>
     expect(readInvocations(dir ?? "").length).toBe(before + 1);
   });
 
-  // 前提 (fence が PATH の先頭) が偽なら skip し、検出に数えない。真の間は Red (it.fails)。
-  (fenceIsFirst ? it.fails : it.skip)(
+  // 前提 (fence が PATH の先頭) が偽なら skip し、検出に数えない。
+  (fenceIsFirst ? it : it.skip)(
     "CANDIDATE-U-CCVER-019 the doctor CLI child process shows the fence version in its row",
     () => {
       const run = spawnSync(

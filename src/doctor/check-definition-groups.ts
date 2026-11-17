@@ -239,7 +239,7 @@ export function buildDoctorCheckDefinitionGroups(
         full("windows-hide", () => checkWindowsHide(deps.repoRoot)),
         fullAndToolchain("toolchain-pin", () => checkToolchainPin(deps.repoRoot)),
         fullAndToolchain("claude-version-floor", () =>
-          checkClaudeVersionFloor({ readPathClaudeVersion: deps.readPathClaudeVersion }),
+          checkClaudeVersionFloor({ probePathClaude: deps.probePathClaude }),
         ),
       ],
     },

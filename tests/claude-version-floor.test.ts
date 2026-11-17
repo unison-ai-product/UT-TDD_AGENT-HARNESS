@@ -147,8 +147,12 @@ describe.sequential("Claude Code version floor warning (Issue #1561)", () => {
       import("../src/doctor/claude-version-floor-check.ts"),
       import("../src/setup/templates.ts"),
     ]);
-    const below = checkClaudeVersionFloor({ readPathClaudeVersion: () => "2.1.293" });
-    const atOrAbove = checkClaudeVersionFloor({ readPathClaudeVersion: () => "2.1.318" });
+    const below = checkClaudeVersionFloor({
+      probePathClaude: () => ({ kind: "found", version: "2.1.293" }),
+    });
+    const atOrAbove = checkClaudeVersionFloor({
+      probePathClaude: () => ({ kind: "found", version: "2.1.318" }),
+    });
     const case004 = {
       floor,
       adapterDoc: readFileSync(
@@ -175,7 +179,7 @@ describe.sequential("Claude Code version floor warning (Issue #1561)", () => {
         import("../src/setup/templates.ts"),
       ]);
       const doctorResult = doctor.checkClaudeVersionFloor({
-        readPathClaudeVersion: () => "2.1.318",
+        probePathClaude: () => ({ kind: "found", version: "2.1.318" }),
       });
       const sourceFiles = sourceTypeScriptFiles(join(REPO_ROOT, "src"));
       const literalLocations = sourceFiles.flatMap((path) => {
