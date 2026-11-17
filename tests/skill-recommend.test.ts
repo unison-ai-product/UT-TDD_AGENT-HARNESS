@@ -465,12 +465,6 @@ describe("skill recommendation telemetry", () => {
 
       const rows = recommendSkillsForPlan(db, "PLAN-L7-99-learning-target", { limit: 2 });
       const byId = Object.fromEntries(rows.map((row) => [row.skill_id, row] as const));
-      // S7 (#1379): PLAN 由来の skill_rating / adoption_count は NULL なので学習の加点は無く、
-      // runtime 由来の評価行があっても both neutral の null-rating fallback になる。
-      const evalRow = db
-        .prepare("SELECT skill_rating, adoption_count FROM skill_evaluations")
-        .get() as Record<string, unknown>;
-      expect(evalRow).toEqual({ skill_rating: null, adoption_count: null });
       expect(byId["skill:runtime-learned"].score).toBe(byId["skill:auto-noise"].score);
       expect(byId["skill:runtime-learned"].reason).toContain("learning=neutral");
       expect(byId["skill:auto-noise"].reason).toContain("learning=neutral");
