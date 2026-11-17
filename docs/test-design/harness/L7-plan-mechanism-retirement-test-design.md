@@ -85,22 +85,26 @@ PLAN admission / asset ledger・reservation 専用の直接 import test は file
 
 ### Registered4 別sliceの処分とnegative保証
 
-本項は既存S7-36 freezeの36 file scopeに追加せず、次の登録済み4 fileを別sliceとして扱う。Aは本L6/L7 pairだけをdocs-onlyでfreezeする。A merge後のBは4 fileを全体退役し、存続保証を保つtest、registry、oracleを同じPRで同期する。
+本項は既存S7-36 freezeの36 file scopeに追加せず、次の登録済み4 fileを別sliceとして扱う。Aは本L6/L7 pairだけをdocs-onlyでfreezeする。A merge後はB1 (src-free同期) をmergeし、その直後にB2 (sourceを含む退役) を行う。B1で保持negativeと宣言を同期し、4 fileは実行可能なまま保つ。B2で4 fileを全体退役し、読取registryとnested regression rosterを同期する。
 
-| test file | Bで退役するPLAN専用保証全体 | 別に維持する保証 |
+| test file | B2で退役するPLAN専用保証全体 | 別に維持する保証 |
 | --- | --- | --- |
 | `tests/node-plan-revision-runner.test.ts` | PLAN revision runnerのrehydration、admission、replay、publish、receiptを含むPLAN caller保証。 | generic runner/APIは新設・拡張しない。identity loader、custody、evidence 9 moduleの契約は別範囲として維持する。 |
 | `tests/plan-asset/ledger-schema.test.ts` | PLAN ledgerのversions、migrations、schema/constraint、PLAN path保証。 | generic state-dbのpath containmentとschema constraintを既存testで維持する。 |
 | `tests/plan-lint.test.ts` | PLAN schema、route、policy、wrapper gate全体。dependency statusとunsupported wrapper gateを含む。 | G1/G3のrequired-document欠落fail-closeをpublic gate / doctorの既存入口testで維持する。 |
 | `tests/plan-revision-digest-query.test.ts` | PLAN canonical digestとread-only queryの成功・失敗・scale、ならびにPLAN query固有WAL/SHM/hot-journal検査。 | generic DB openerにPLAN query固有の契約を追加しない。 |
 
-**G1/G3の保持negative**: Bでは、既存のpublic `gate G1` / `gate G3` とdoctor対応checkのtest入口で保証する。各入口で必要文書が揃った非空fixtureを正controlとしてpassさせ、次に対象のrequired documentだけを除いたfixtureをnegativeとする。negativeはmissing-path診断とfailed結果（doctorは対応checkの失敗）をassertする。空repoの別理由による失敗を代用しない。既存の各gate / doctor check入口を使い、単一のCLI複合scenarioは要求しない。これは既存fail-closeの保持であり、新しい挙動の追加ではない。
+**G1/G3の保持negative (B1)**: 既存のpublic `gate G1` / `gate G3` とdoctor対応checkのtest入口で保証する。各gate/checkで必要文書を揃えた非空fixtureの正controlをpassさせ、次にrequired document 1件だけを除いたfixtureが正確なmissing-path診断とfailed結果（doctorは対応checkの失敗）を返すことをassertする。fixtureはinline controlled dataとし、実repo読取callsiteやregistry追加を作らない。空repoの別理由による失敗を代用しない。既存の各入口を使い、単一のCLI複合scenarioは要求しない。既存fail-closeの保持であり、新しい挙動の追加ではない。
 
-Aでは新formal U-IDを発行しない。保持negativeの意味・fixture条件・期待診断はこの節でfreezeし、Bでは実caseの追加・変更とoracle declaration / citationの同期を同じ差分に含めてIDを昇格する。generic state-db path containmentとschema constraintの既存testは変更せず保持する。PLAN内の共有やquery固有のjournal検査をgeneric契約に昇格させない。
+**B1の許容pathとID同期**: 旧4 test fileはactiveなtest登録を維持し、各test名のtitleから旧static oracle ID文字列だけを除く。title内のそれ以外の文字は不変とし、除いたID文字範囲だけをA時点の値へ復元した全bytesがA時点のblobと一致することを確認する。title全体をmaskして一致を作る比較は認めない。callback body、imports、fixture、assertions、実行条件、登録を変えず、skip / `it.fails` / 空testにしない。旧4 testの退役宣言とcitation baselineを同期し、baselineは対応する縮小だけとする。今回のA docs-only契約改訂では新formal UIDを発行しない。B1では保持negativeの実case追加と宣言・引用の同期に必要なformal UIDを導入できる。
 
-**Bの計測条件**: 旧4対象の宣言/citation退役量と保持oracle追加量をBの実差分で別々に計測する。baselineの追加・拡大は禁止し、対応する縮小のみ同期する。仮想projectionのpassを実patch passとみなさない。
+B1で変更できるのは旧4 testのtitle文字列、`docs/test-design/harness/L7-unit-test-design.md`、`docs/test-design/harness/L7-plan-revision-digest-query-test-design.md`、本書の保持negative宣言と本節、対応するoracle-test-trace citation baseline、`docs/governance/doc-split-baseline.json` の `docs/test-design/harness/L7-unit-test-design.md` 行に対する実測縮小、`tests/gate-static.test.ts`、`tests/doctor-process-quality.test.ts`、およびinline fixture用の必要なtest supportだけである。`src/`、`scripts/`、registry、production filesは含めない。旧4 testの退役宣言/citation量と保持negativeの宣言/citation量を実patchで別計測し、checkerのactual resultとともにPR evidenceへ記録する。
 
-**後続工程**: Bの4 test退役とは分け、後続source工程でPLAN wrapperを退役するときにpublic callerを直接再接続し、必要なhelperを移す。その後に共有evidence 9 moduleをForward側へ移す。identity loader、custody、evidence 9 moduleは4 test処分の対象にしない。
+**B2の許容path**: B1 merge後に直ちに実施し、旧4 test fileの削除、`src/doctor/test-repository-isolation.ts` の旧4 testに対応する `CONTRACT_ROWS` 3 token (`tests/plan-lint.test.ts`、`tests/node-plan-revision-runner.test.ts`、`tests/plan-asset/ledger-schema.test.ts`) と `tests/plan-revision-digest-query.test.ts` の明示登録だけの削除、`tests/windows-hide-default.test.ts` のU-WHIDE-014 nested regression rosterから `tests/node-plan-revision-runner.test.ts` を除く同期、`docs/governance/code-size-baseline.json` の同期だけを含める。`CONTRACT_ROWS` の他登録は変更しない。code-size baselineでは旧4 test fileの対応rowを除き、上記4登録とnested rosterの削減に対してcheckerが要求する実測縮小だけを反映する。他rowの変更、追加、拡大はしない。oracle citation baselineは変更しない。B1のtitle文字列変更は行数を変えないものとし、code-size baseline全体の免除とはしない。protected docs、他baseline、他source/testは変更しない。B1で追加した保持negativeは引き続き実行される。generic state-db path containmentとschema constraintの既存testは変更せず保持する。PLAN内の共有やquery固有のjournal検査をgeneric契約に昇格させない。
+
+**B1/B2の検証条件**: 各段の差分pathが上記allowlistに一致し、該当のactual checkerで実patchを検証する。baseline追加・拡大は禁止し、仮想projectionのpassを実patch passとみなさない。
+
+**後続工程**: B2の4 test退役とは分け、後続source工程でPLAN wrapperを退役するときにpublic callerを直接再接続し、必要なhelperを移す。その後に共有evidence 9 moduleをForward側へ移す。identity loader、custody、evidence 9 moduleは4 test処分の対象にしない。
 
 ## 4. 昇格と引用の方針
 
