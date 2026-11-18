@@ -11,7 +11,11 @@ const head = "a".repeat(40);
 const otherHead = "b".repeat(40);
 const now = "2026-11-18T00:00:00.000Z";
 const prView = (headRefOid = head) =>
-  JSON.stringify({ headRefOid, state: "OPEN", statusCheckRollup: [] });
+  JSON.stringify({
+    headRefOid,
+    state: "OPEN",
+    statusCheckRollup: [{ name: "harness-check", conclusion: "SUCCESS" }],
+  });
 
 interface CapturedCall {
   command: string;
@@ -76,7 +80,12 @@ describe("gh command timeout and prompt controls for PR merge ports", () => {
     const facts = ports.getPullRequest(465);
     ports.mergePullRequest(465, head);
 
-    expect(facts).toMatchObject({ pr: 465, headSha: head, evaluatedHeadSha: otherHead });
+    expect(facts).toMatchObject({
+      pr: 465,
+      headSha: head,
+      evaluatedHeadSha: otherHead,
+      checksGreen: true,
+    });
     expect(calls.map(({ command, args }) => [command, ...args])).toEqual([
       ["gh", "pr", "view", "465", "--json", "headRefOid,state,statusCheckRollup"],
       ["gh", "pr", "view", "465", "--json", "headRefOid,state,statusCheckRollup"],
