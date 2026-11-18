@@ -279,7 +279,7 @@ telemetry lifecycle に責務を絞る。
 
 ## §3 ③ 単体テスト設計とのペア (G6 pair freeze 対象)
 
-generates pair: `docs/test-design/harness/L7-unit-test-design.md` §1.8 **U-HOVER-001〜002 / 005 / 007** + **U-HOVER-011〜012** (IMP-078 gap) + **U-HOVER-013** (A-138 ITEM-4 同日累積 slim) + **U-HOVER-014** (PLAN-L7-83 累積上限化 `boundSameDayEntries`) + §1.5 **U-SLOG-006b** (generic git HEAD `headCommit` capture) + §1.8.1 **U-MEMORY-001〜004 / U-MEMORY-019** (共有 memory write/load/projection/secret/surface/service境界) + **U-SCHEDULE-LIVE-002 / 004** (工程 live state / 固定4段 digest)。本書 §2.3 の generic pointer / stale / orchestration 関数 + §2.7 の品質増分関数 (checkHandoverBypass/countHandoverEntries/latestSessionId) + §2.6 の slimSummary / boundSameDayEntries + §2.9 の memory surface + §2.10 の live digest を被覆。marker stale / reconcile と PLAN schedule selection / session digest classification は S7 で退役する。trace は G7 で双方向凍結。
+generates pair: `docs/test-design/harness/L7-unit-test-design.md` §1.8 **U-HOVER-001〜002 / 005 / 007** + **U-HOVER-011〜012** (IMP-078 gap) + **U-HOVER-013** (A-138 ITEM-4 同日累積 slim) + **U-HOVER-014** (PLAN-L7-83 累積上限化 `boundSameDayEntries`) + §1.5 **U-SLOG-006b** (generic git HEAD `headCommit` capture) + §1.8.1 **U-MEMORY-001〜004 / U-MEMORY-019** (共有 memory write/load/projection/secret/surface/service境界) + **U-SCHEDULE-LIVE-004** (固定4段 digest)。旧 `U-SCHEDULE-LIVE-002` の工程 live state は L7 の検証履歴を参照する。本書 §2.3 の generic pointer / stale / orchestration 関数 + §2.7 の品質増分関数 (checkHandoverBypass/countHandoverEntries/latestSessionId) + §2.6 の slimSummary / boundSameDayEntries + §2.9 の memory surface + §2.10 の live digest を被覆。marker stale / reconcile と PLAN schedule selection / session digest classification は S7 で退役する。trace は G7 で双方向凍結。
 
 ## §4 carry / 次工程
 
