@@ -2149,7 +2149,7 @@ runtime 契約。実装 = `src/elicitation/context.ts` / `src/elicitation/record
   (feedback lifecycle と同じ「append-only log + 正本分離」方針)。DB projection 化は
   消費側需要が出た後続 PLAN で行う (現時点で新規テーブル無し)。
 
-oracle: `tests/elicitation-context.test.ts` (U-ELICIT-001..007)。
+oracle: `tests/elicitation-context.test.ts` (`U-ELICIT-006`、独立した append-only 採択記録)。
 
 ## PLAN-L7-421 テスト実行snapshot／検出provenance契約 (backprop、2026-07-13)
 
