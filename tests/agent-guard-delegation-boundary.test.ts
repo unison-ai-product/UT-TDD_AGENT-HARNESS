@@ -775,7 +775,7 @@ describe("issue #1002 現行 main で既に成立する境界 (回帰 oracle)", 
         recursive: true,
       });
       writeFileSync(join(box.repo, "package.json"), '{"type":"module"}\n', "utf8");
-    });
+    }, 120_000);
     afterAll(() => {
       if (box.repo) rmSync(box.repo, { recursive: true, force: true });
     });

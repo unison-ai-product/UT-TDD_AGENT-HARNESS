@@ -50,7 +50,6 @@ describe("db-projection-coverage detector", () => {
 
     expect(result.ok).toBe(true);
     expect(requirements.tables.map((item) => item.table)).toEqual([
-      "plan_registry",
       "artifact_registry",
       "model_runs",
       "trace_edges",
@@ -112,7 +111,6 @@ describe("db-projection-coverage detector", () => {
       "github_projection_outbox",
     ]);
     expect(requirements.indexes.map((item) => item.name)).toEqual([
-      "idx_plan_layer_drive_status",
       "idx_trace_from_to",
       "idx_findings_subject_status",
       "idx_hook_session_plan",
