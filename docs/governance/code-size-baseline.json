@@ -103,7 +103,7 @@
   "tests/pack-publication-admission.test.ts": { "lines": 624, "functionExcess": null },
   "tests/persistent-db-cleanup-contract.test.ts": { "lines": 616, "functionExcess": null },
   "tests/plan-asset/evidence-policy.test.ts": { "lines": 570, "functionExcess": null },
-  "tests/projection-writer.test.ts": { "lines": 2626, "functionExcess": null },
+  "tests/projection-writer.test.ts": { "lines": 2462, "functionExcess": null },
   "tests/provider-judgment-composition.test.ts": { "lines": 934, "functionExcess": null },
   "tests/relation-graph-loader.test.ts": { "lines": 843, "functionExcess": null },
   "tests/relation-graph.test.ts": { "lines": 514, "functionExcess": null },

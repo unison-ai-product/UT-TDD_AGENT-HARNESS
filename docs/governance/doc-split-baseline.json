@@ -5,7 +5,7 @@
   "docs/design/harness/L6-function-design/design-protection-diff-gate.md": { "lines": 268, "responsibilities": 17 },
   "docs/design/harness/L6-function-design/function-spec.md": { "lines": 2820, "responsibilities": 108 },
   "docs/design/harness/L6-function-design/memory.md": { "lines": 462, "responsibilities": 21 },
-  "docs/design/harness/L6-function-design/provider-invocation-input-validation.md": { "lines": 202, "responsibilities": 21 },
+  "docs/design/harness/L6-function-design/provider-invocation-input-validation.md": { "lines": 201, "responsibilities": 21 },
   "docs/design/harness/L6-function-design/release-channel-manifest.md": { "lines": 203, "responsibilities": 20 },
   "docs/design/harness/L6-function-design/skill-admission.md": { "lines": 207, "responsibilities": 26 },
   "docs/design/harness/L6-function-design/state-channel-consolidation.md": { "lines": 296, "responsibilities": 23 },
