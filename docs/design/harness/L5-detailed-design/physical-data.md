@@ -868,7 +868,7 @@ cross-subject/revision linkをSQLite実制約として拒否する。
 
 ### 9.10 GitHub Forward基盤テーブル（PLAN-L7-471）
 
-この節の5表はPLAN・依存グラフ・GitHub Project/Issue/branch/PR/check/review/mergeを結ぶ現行の
+この節の3表はPLAN・依存グラフ・GitHub Project/Issue/branch/PR/check/review/mergeを結ぶ現行の
 Forward read-model / delivery intentである。Execution Episode完成後の配送表とは名前と責務を
 分離し、episode IDを捏造しない。`github_projection_outbox.payload_json`は
 `project-item-upsert`の閉じた5項目だけをcanonical順で保持し、同時に`payload_digest`を保存する。
@@ -883,11 +883,13 @@ attemptを加算し、retry可能な`pending`を維持する。
 
 | table | 主キー | 必須 columns | 入力 | 目的 |
 |---|---|---|---|---|
-| `github_review_lane_receipts` | `review_lane_receipt_id` | `plan_id`, `plan_revision`, `lane`, `subject_head`, `verdict`, `reviewed_at`, `tests_green_at`, `worker_model`, `reviewer_model`, `attack_trials`, `citations_json`, `source` | canonical PLAN review evidence | `(plan_id,plan_revision,lane,subject_head)` UNIQUE。canonical PLAN sourceとの再照合 |
-| `execution_readiness_projection` | `plan_id` | `plan_revision`, `readiness`, `current_gate`, `predecessor_plan_ids`, `blocked_reason`, `unlock_condition`, `next_plan_ids`, `unlocked_plan_ids`, `computed_at` | PLAN / dependency graph | `implementation_order`はnullable。依存グラフから再構築し、authoring sourceを更新しない |
 | `github_project_item_projection` | `projection_id` | `repository_id`, `project_id`, `project_item_id`, `plan_id`, `plan_revision`, `content_node_id`, `head_sha`, `sync_status`, `last_reconciled_at` | Project V2 observation | `(repository_id,plan_id,plan_revision)` UNIQUE |
 | `github_object_bindings` | `binding_id` | `repository_id`, `plan_id`, `plan_revision`, `project_item_id`, `object_kind`, `object_id`, `object_url`, `head_sha`, `state`, `observed_at` | GitHub repository facts | `(repository_id,object_kind,object_id)` UNIQUE。stale時刻・異PLAN再割当を拒否 |
 | `github_projection_outbox` | `outbox_id` | `repository_id`, `plan_id`, `plan_revision`, `operation`, `payload_json`, `payload_digest`, `status`, `attempt_count`, `last_error`, `created_at`, `updated_at` | Project同期intent | `(repository_id,plan_id,plan_revision,operation)` UNIQUE。status=`pending|applying|applied`。payloadは閉じたsecret-safe schema + SHA-256 digest。claimとProject永続化のCAS境界でstale workerを隔離 |
+
+#### S7 で registry から外した表
+
+`github_review_lane_receipts` と `execution_readiness_projection`（および `idx_github_review_lane_subject` / `idx_execution_readiness_state_order`）は、S7 で harness.db の schema registry から外した（`docs/design/harness/L6-function-design/plan-mechanism-retirement.md` §3）。既存 DB の物理表は残るが、どの projection もこれらへ書き込まない。
 
 ### Execution Episode / GitHub配送の目標テーブル（後続降下）
 
