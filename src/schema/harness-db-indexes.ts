@@ -1,12 +1,6 @@
 import type { IndexDef } from "./harness-db.ts";
 
 export const HARNESS_DB_INDEXES: IndexDef[] = [
-  {
-    name: "idx_plan_layer_drive_status",
-    table: "plan_registry",
-    // physical-data §9.3 準拠: (plan_id, layer, drive, status)。plan_id は PK だが doc 宣言に整合させる。
-    columns: ["plan_id", "layer", "drive", "status"],
-  },
   { name: "idx_trace_from_to", table: "trace_edges", columns: ["from_artifact", "to_artifact"] },
   {
     name: "idx_findings_subject_status",
@@ -169,16 +163,6 @@ export const HARNESS_DB_INDEXES: IndexDef[] = [
     name: "idx_document_export_triggers_signal",
     table: "document_export_triggers",
     columns: ["signal", "workflow", "gate"],
-  },
-  {
-    name: "idx_roadmap_band_status",
-    table: "roadmap_band_coverage",
-    columns: ["status", "band_id"],
-  },
-  {
-    name: "idx_roadmap_gate_plan",
-    table: "roadmap_gate_progress",
-    columns: ["plan_id", "reached"],
   },
   {
     name: "idx_review_evidence_plan",

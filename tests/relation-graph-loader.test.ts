@@ -10,12 +10,8 @@ import {
 } from "../src/lint/relation-graph.ts";
 import { removeTestTree } from "./support/temp-tree.ts";
 
-// PLAN-L7-32 §9 discharge: repo→RelationGraphSourceSet loader の結合テスト。
-// tmp repo に PLAN(generates)+src+test(import)+design(pair_artifact)+test-design を置き、
-// loader が plan→source(generates) / source→test(covered-by) / design→test-design(pairs)
-// の edge を生む source set を返すこと、純関数と結合して impact/export が動くことを検証する。
+// Exercise source/test and design/test-design relationships through the repository loader.
 function buildRepo(root: string): void {
-  mkdirSync(join(root, "docs", "plans"), { recursive: true });
   mkdirSync(join(root, "docs", "adr"), { recursive: true });
   mkdirSync(join(root, "docs", "design", "harness"), { recursive: true });
   mkdirSync(join(root, "docs", "governance"), { recursive: true });
@@ -53,27 +49,6 @@ function buildRepo(root: string): void {
     ["# AI Dev Team Concept", "", "Fixture governance concept body.", ""].join("\n"),
     "utf8",
   );
-  writeFileSync(
-    join(root, "docs", "plans", "PLAN-TEST-01-widget.md"),
-    [
-      "---",
-      "plan_id: PLAN-TEST-01-widget",
-      "status: confirmed",
-      "kind: impl",
-      "generates:",
-      "  - artifact_path: src/widget/core.ts",
-      "    artifact_type: source_module",
-      "dependencies:",
-      "  requires:",
-      "    - FR-L1-99",
-      "---",
-      "",
-      "## body references FR-L1-99",
-      "",
-    ].join("\n"),
-    "utf8",
-  );
-  writeFileSync(join(root, "src", "widget", "core.ts"), "export const core = 1;\n", "utf8");
   writeFileSync(
     join(root, "tests", "core.test.ts"),
     'import { core } from "../src/widget/core";\nexport const t = core;\n',
@@ -193,54 +168,15 @@ function buildRepo(root: string): void {
 }
 
 describe("loadRelationGraphSourceSet", () => {
-  it("keeps draft outputs that are not materialized as pending graph artifacts", () => {
-    const root = mkdtempSync(join(tmpdir(), "ut-tdd-graph-loader-pending-"));
-    try {
-      buildRepo(root);
-      writeFileSync(
-        join(root, "docs", "plans", "PLAN-TEST-02-future.md"),
-        [
-          "---",
-          "plan_id: PLAN-TEST-02-future",
-          "status: draft",
-          "kind: add-impl",
-          "generates:",
-          "  - artifact_path: src/future/recovery.ts",
-          "    artifact_type: source_module",
-          "---",
-          "",
-        ].join("\n"),
-        "utf8",
-      );
-
-      const sourceSet = loadRelationGraphSourceSet(root);
-      const plan = sourceSet.plans?.find((item) => item.id === "PLAN-TEST-02-future");
-      expect(plan?.generates).toEqual(["src/future/recovery.ts"]);
-      expect(plan?.status).toBe("draft");
-      expect(plan?.availability).toEqual({ "src/future/recovery.ts": "planned" });
-
-      const projection = collectRelationGraphProjection(sourceSet);
-      expect(projection.edges).toContainEqual({
-        from: "plan:PLAN-TEST-02-future",
-        to: "source:src/future/recovery.ts",
-        kind: "generates",
-        lifecycle: "planned",
-      });
-      const result = analyzeRelationImpact({ changedPaths: [], projection });
-      expect(result.findings.filter((finding) => finding.code === "stale-edge")).toEqual([]);
-    } finally {
-      removeTestTree(root);
-    }
-  });
-
   it.each([
     "confirmed",
     "completed",
     "accepted",
-  ])("U-PAEXRET-002: PLAN generates targets are not stale-edge requirements ($0)", (status) => {
+  ])("U-PAEXRET-002: excludes legacy PLAN targets and keeps stale-edge detection ($0)", (status) => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-graph-loader-plan-target-retirement-"));
     try {
       buildRepo(root);
+      mkdirSync(join(root, "docs", "plans"), { recursive: true });
       const generatedPath = "src/widget/declared-but-absent.ts";
       writeFileSync(
         join(root, "docs", "plans", "PLAN-TEST-01-widget.md"),
@@ -277,24 +213,17 @@ describe("loadRelationGraphSourceSet", () => {
       );
 
       const sourceSet = loadRelationGraphSourceSet(root);
-      const plan = sourceSet.plans?.find((item) => item.id === "PLAN-TEST-01-widget");
-      expect(plan).toMatchObject({
-        id: "PLAN-TEST-01-widget",
-        path: "docs/plans/PLAN-TEST-01-widget.md",
-        status,
-        generates: [generatedPath],
-      });
-      expect(plan?.availability).toBeUndefined();
+      expect(sourceSet.plans ?? []).toEqual([]);
+      expect(sourceSet.requirements).toEqual([]);
 
       const projection = collectRelationGraphProjection(sourceSet);
-      expect(projection.nodes.map((node) => node.id)).toContain("plan:PLAN-TEST-01-widget");
-      expect(projection.nodes.map((node) => node.id)).not.toContain(`source:${generatedPath}`);
-      expect(projection.edges).toContainEqual({
-        from: "plan:PLAN-TEST-01-widget",
-        to: `source:${generatedPath}`,
-        kind: "generates",
-        lifecycle: "materialized",
-      });
+      expect(projection.nodes.some((node) => node.kind === "plan")).toBe(false);
+      expect(projection.nodes.map((node) => node.id)).not.toContain(
+        "source:src/widget/declared-but-absent.ts",
+      );
+      expect(
+        projection.edges.some((edge) => edge.kind === "generates" || edge.kind === "derives-from"),
+      ).toBe(false);
       const result = analyzeRelationImpact({ changedPaths: [], projection });
       const staleEdges = result.findings.filter((finding) => finding.code === "stale-edge");
       expect(staleEdges).toContainEqual(
@@ -305,30 +234,17 @@ describe("loadRelationGraphSourceSet", () => {
           ),
         }),
       );
-      expect(staleEdges).not.toContainEqual(
-        expect.objectContaining({
-          nodeId: "plan:PLAN-TEST-01-widget",
-          message: expect.stringContaining(
-            `plan:PLAN-TEST-01-widget -[generates]-> source:${generatedPath}`,
-          ),
-        }),
-      );
     } finally {
       removeTestTree(root);
     }
   });
 
-  it("builds a source set with plan→source, source→test, design→test-design edges", () => {
+  it("builds source-to-test and design-to-test-design relationships", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-graph-loader-"));
     try {
       // U-GRAPH-001
       buildRepo(root);
       const sourceSet = loadRelationGraphSourceSet(root);
-
-      // plan generates src + FR requirement ref
-      const plan = sourceSet.plans?.find((p) => p.id === "PLAN-TEST-01-widget");
-      expect(plan?.generates).toContain("src/widget/core.ts");
-      expect(plan?.requirements).toContain("FR-L1-99");
 
       // source→test covered-by (import 解析)
       const src = sourceSet.sourceFiles?.find((s) => s.path === "src/widget/core.ts");
@@ -447,14 +363,13 @@ describe("loadRelationGraphSourceSet", () => {
         path: "README.md",
       });
 
-      // projection + impact: changing the source surfaces its owning plan + sibling test
+      // Source changes propagate to the covering test.
       const projection = collectRelationGraphProjection(sourceSet);
       const impact = analyzeRelationImpact({
         changedPaths: ["src/widget/core.ts"],
         projection,
       });
       expect(impact.changedNodes.map((n) => n.id)).toContain("source:src/widget/core.ts");
-      expect(impact.impacted.map((n) => n.id)).toContain("plan:PLAN-TEST-01-widget");
       expect(impact.impacted.map((n) => n.id)).toContain("test:tests/core.test.ts");
 
       const processImpact = analyzeRelationImpact({
@@ -625,19 +540,33 @@ describe("loadRelationGraphSourceSet", () => {
     try {
       const sourceSet = loadRelationGraphSourceSet(root);
       expect(sourceSet.sourceFiles ?? []).toEqual([]);
+      expect(sourceSet.requirements ?? []).toEqual([]);
       expect(sourceSet.plans ?? []).toEqual([]);
     } finally {
       removeTestTree(root);
     }
   });
 
-  it("materializes a requirement node for every FR a plan derives from (no dangling derives-from)", () => {
+  it("materializes a requirement node from the FR registry", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-graph-loader-req-"));
     try {
-      buildRepo(root); // PLAN-TEST-01 derives-from FR-L1-99 (no FR registry doc in this tmp repo)
+      buildRepo(root);
+      const l1 = join(root, "docs", "design", "harness", "L1-requirements");
+      const l3 = join(root, "docs", "design", "harness", "L3-functional");
+      mkdirSync(l1, { recursive: true });
+      mkdirSync(l3, { recursive: true });
+      writeFileSync(
+        join(l1, "functional-requirements.md"),
+        ["## §1 機能一覧", "| **FR-L1-99** | Widget |", "### §1.1"].join("\n"),
+        "utf8",
+      );
+      writeFileSync(join(l1, "screen-requirements.md"), "", "utf8");
+      writeFileSync(join(l3, "functional-requirements.md"), "", "utf8");
+
       const sourceSet = loadRelationGraphSourceSet(root);
-      // requirement node must exist for the referenced FR even without a registry doc (union of refs)
-      expect(sourceSet.requirements?.map((r) => r.id)).toContain("FR-L1-99");
+      expect(sourceSet.requirements).toEqual([
+        { id: "FR-L1-99", path: "docs/design/harness/L1-requirements/functional-requirements.md" },
+      ]);
       const projection = collectRelationGraphProjection(sourceSet);
       const result = analyzeRelationImpact({ changedPaths: [], projection });
       const staleEdges = result.findings.filter((f) => f.code === "stale-edge");

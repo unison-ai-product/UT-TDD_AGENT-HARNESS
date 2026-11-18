@@ -11,7 +11,6 @@ import {
   parseCanonicalDocumentStructure,
 } from "../export/document-export.ts";
 import { loadRelationGraphSourceSet } from "../graph/loader.ts";
-import { resolveLegacyPlanAlias } from "../kernel/plan-alias.ts";
 import { loadChangedFiles } from "../lint/change-impact.ts";
 import {
   analyzeDescentObligations,
@@ -37,13 +36,6 @@ import {
   type RelationGraphProjection,
   type VerificationEvidenceProjection,
 } from "../lint/relation-graph.ts";
-import { loadReviewPlans } from "../lint/review-evidence.ts";
-import {
-  computeGateProgress,
-  computeProgramRollup,
-  loadRoadmaps,
-  PARKED_BANDS,
-} from "../lint/roadmap-registry.ts";
 import {
   analyzeSubDocCatalogDrift,
   loadSubDocCatalogDriftInput,
@@ -58,13 +50,10 @@ import {
 } from "../lint/verification-profile.ts";
 import { loadMemoryEntries } from "../memory/index.ts";
 import { RepositoryModelEvaluationConfig } from "../projection/adapters/model-evaluation-config.ts";
-import { loadRepositoryPlanSources } from "../projection/adapters/repository-plan-sources.ts";
 import { projectModelEvaluations as projectModelEvaluationsApplication } from "../projection/application/project-model-evaluations.ts";
 import { projectOperationalMetrics as projectOperationalMetricsApplication } from "../projection/application/project-operational-metrics.ts";
 import type { ProjectionEvent } from "../projection/contracts/projection-store.ts";
-import { type ProjectedPlan, projectPlanSources } from "../projection/domain/plan-projection.ts";
 import { HARNESS_DB_TABLES } from "../schema/harness-db.ts";
-import { workflowModeForPlan as catalogWorkflowModeForPlan } from "../schema/mode-catalog.ts";
 import { materializeSkillAssets, resolveSkillFiles } from "../shared/embedded-skills.ts";
 import { normalizePath } from "../shared/source-text.ts";
 import { stableId } from "../stable-id.ts";
@@ -157,13 +146,6 @@ export {
   deriveArtifactProgressDecision,
 } from "./artifact-progress-decision.ts";
 
-interface PlanDigestProjection {
-  plan_id: string;
-  sessions?: string[];
-  event_counts?: Record<string, number>;
-  updated_at?: string;
-}
-
 interface SessionLogProjection {
   ts?: string;
   session_id?: string;
@@ -175,10 +157,10 @@ interface SessionLogProjection {
 }
 
 interface ProviderHandoverProjection {
+  schema_version?: string;
   handover_id?: string;
   from?: string;
   to?: string;
-  active_plan?: string;
   created_at?: string;
   context?: {
     summary?: string;
@@ -351,14 +333,6 @@ export function recordProjectionEvent(db: HarnessDb, event: ProjectionEvent): vo
   new SqliteProjectionStore(db).record(event);
 }
 
-function markdownFiles(dir: string): string[] {
-  if (!existsSync(dir)) return [];
-  return readdirSync(dir)
-    .filter((name) => name.endsWith(".md"))
-    .map((name) => join(dir, name))
-    .sort();
-}
-
 function frontmatterValue(content: string, key: string): string {
   const match = content.match(new RegExp(`^${key}:\\s*"?([^"\\r\\n]+)"?`, "m"));
   return match?.[1]?.trim() ?? "";
@@ -401,62 +375,7 @@ function readJson<T>(path: string): T | null {
   }
 }
 
-function projectPlans(repoRoot: string, db: HarnessDb): Map<string, ProjectedPlan> {
-  const result = projectPlanSources(loadRepositoryPlanSources(repoRoot), {
-    stableId,
-    hash: stableHash,
-  });
-  for (const write of result.writes) recordProjectionEvent(db, write);
-  return new Map(result.plans);
-}
-
-function projectDriveRuns(
-  repoRoot: string,
-  db: HarnessDb,
-  plans: Map<string, ProjectedPlan>,
-): void {
-  for (const plan of plans.values()) {
-    const digest = readJson<PlanDigestProjection>(
-      join(repoRoot, ".ut-tdd", "logs", "plan", `${plan.planId}.digest.json`),
-    );
-    const sessions = ["", ...(digest?.sessions ?? [])];
-    for (const sessionId of sessions) {
-      const id = stableId("drive-run", `${plan.planId}:${sessionId || "documented"}`);
-      const completed = (digest?.event_counts?.session_end ?? 0) > 0;
-      recordProjectionEvent(db, {
-        table: "drive_runs",
-        id,
-        row: {
-          drive_run_id: id,
-          plan_id: plan.planId,
-          session_id: sessionId,
-          drive: plan.drive,
-          mode: catalogWorkflowModeForPlan({
-            planId: plan.planId,
-            routeMode: plan.routeMode,
-            kind: plan.kind,
-          }),
-          layer: plan.layer,
-          kind: plan.kind,
-          started_at: plan.updatedAt || digest?.updated_at || "",
-          completed_at: completed ? (digest?.updated_at ?? "") : "",
-          status: sessionId ? (completed ? "completed" : "active") : plan.status || "documented",
-        },
-      });
-    }
-  }
-}
-
-function resolveProjectedPlanId(plans: Map<string, ProjectedPlan>, planId: string): string {
-  const resolved = resolveLegacyPlanAlias(planId, [...plans.keys()]);
-  return resolved.ok ? resolved.value : planId;
-}
-
-function projectHookEvents(
-  repoRoot: string,
-  db: HarnessDb,
-  plans: Map<string, ProjectedPlan>,
-): void {
+function projectHookEvents(repoRoot: string, db: HarnessDb): void {
   const sessionDir = join(repoRoot, ".ut-tdd", "logs", "session");
   if (existsSync(sessionDir)) {
     for (const file of readdirSync(sessionDir)
@@ -464,7 +383,7 @@ function projectHookEvents(
       .sort()) {
       const path = join(sessionDir, file);
       const relPath = normalizePath(relative(repoRoot, path));
-      for (const line of readFileSync(path, "utf8").split(/\r?\n/)) {
+      for (const [lineIndex, line] of readFileSync(path, "utf8").split(/\r?\n/).entries()) {
         if (!line.trim()) continue;
         let event: SessionLogProjection;
         try {
@@ -472,7 +391,7 @@ function projectHookEvents(
         } catch {
           continue;
         }
-        if (!event.session_id || event.plan_id === "" || !event.event_type) continue;
+        if (!event.session_id || !event.event_type) continue;
         const hookName =
           event.event_type === "session_start"
             ? "SessionStart"
@@ -481,17 +400,15 @@ function projectHookEvents(
               : event.event_type === "forced_stop"
                 ? "ForcedStop"
                 : "PostToolUse";
-        const id = stableId(
-          "hook-event",
-          `${event.session_id}:${event.plan_id ?? ""}:${event.ts ?? ""}:${event.event_type}`,
-        );
+        const lineNumber = lineIndex + 1;
+        const id = stableId("hook-event", `${relPath}:${lineNumber}`);
         recordProjectionEvent(db, {
           table: "hook_events",
           id,
           row: {
             event_id: id,
             session_id: event.session_id,
-            plan_id: event.plan_id ? resolveProjectedPlanId(plans, event.plan_id) : null,
+            plan_id: null,
             hook_name: hookName,
             event_type: event.event_type,
             occurred_at: event.ts ?? "",
@@ -499,12 +416,12 @@ function projectHookEvents(
             evidence_path: relPath,
           },
         });
-        projectRuntimeTestRunFromSessionEvent({ db, plans, event, evidencePath: relPath });
+        projectRuntimeTestRunFromSessionEvent({ db, event, evidencePath: relPath, lineNumber });
         projectRuntimeGuardrailDecisionFromSessionEvent({
           db,
-          plans,
           event,
           evidencePath: relPath,
+          lineNumber,
         });
       }
     }
@@ -518,18 +435,17 @@ function projectHookEvents(
     const path = join(providerDir, file);
     const relPath = normalizePath(relative(repoRoot, path));
     const handover = readJson<ProviderHandoverProjection>(path);
-    const rawPlanId = asString(handover?.active_plan);
-    if (!rawPlanId) continue;
-    const planId = resolveProjectedPlanId(plans, rawPlanId);
-    const handoverId = asString(handover?.handover_id) ?? file.replace(/\.json$/, "");
-    const id = stableId("hook-event", `provider:${handoverId}:${planId}`);
+    if (handover?.schema_version !== "provider-handover.v1") continue;
+    const handoverId = asString(handover.handover_id);
+    if (!handoverId) continue;
+    const id = stableId("hook-event", `provider:${handoverId}`);
     recordProjectionEvent(db, {
       table: "hook_events",
       id,
       row: {
         event_id: id,
         session_id: handoverId,
-        plan_id: planId,
+        plan_id: null,
         hook_name: "ProviderHandover",
         event_type: "provider_handover",
         occurred_at: handover?.created_at ?? "",
@@ -542,16 +458,16 @@ function projectHookEvents(
 
 export interface RuntimeTestRunProjectionInput {
   db: HarnessDb;
-  plans: Map<string, ProjectedPlan>;
   event: SessionLogProjection;
   evidencePath: string;
+  lineNumber: number;
 }
 
 export interface RuntimeGuardrailDecisionProjectionInput {
   db: HarnessDb;
-  plans: Map<string, ProjectedPlan>;
   event: SessionLogProjection;
   evidencePath: string;
+  lineNumber: number;
 }
 
 export interface RuntimeSkillInvocationProjectionInput {
@@ -566,7 +482,6 @@ export function projectRuntimeTestRunFromSessionEvent(input: RuntimeTestRunProje
     ...input,
     deps: {
       stableId,
-      resolvePlanId: (planId) => resolveProjectedPlanId(input.plans, planId),
       recordProjectionEvent,
     },
   });
@@ -579,7 +494,6 @@ export function projectRuntimeGuardrailDecisionFromSessionEvent(
     ...input,
     deps: {
       stableId,
-      resolvePlanId: (planId) => resolveProjectedPlanId(input.plans, planId),
       recordProjectionEvent,
     },
   });
@@ -602,47 +516,9 @@ function projectRuntimeSkillInvocationsFromSessionLogs(repoRoot: string, db: Har
   });
 }
 
-function runtimeForModel(model: string): string {
-  if (/claude/i.test(model)) return "claude";
-  if (/gpt|codex/i.test(model)) return "codex";
-  return "";
-}
-
-function projectReviewModelRuns(
-  repoRoot: string,
-  db: HarnessDb,
-  plans: Map<string, ProjectedPlan>,
-): void {
-  for (const plan of loadReviewPlans(repoRoot)) {
-    const meta = plans.get(plan.plan_id);
-    plan.crossEntries.forEach((entry, index) => {
-      for (const role of ["worker", "reviewer"] as const) {
-        const model = role === "worker" ? entry.worker_model : entry.reviewer_model;
-        if (!model) continue;
-        const id = stableId("model-run", `${plan.plan_id}:${index}:${role}:${model}`);
-        recordProjectionEvent(db, {
-          table: "model_runs",
-          id,
-          row: {
-            run_id: id,
-            runtime: runtimeForModel(model),
-            model,
-            role,
-            drive: meta?.drive ?? "",
-            plan_id: plan.plan_id,
-            started_at: entry.tests_green_at ?? entry.reviewed_at ?? "",
-            completed_at: entry.reviewed_at ?? "",
-            evidence_path: normalizePath(join("docs", "plans", plan.file)),
-          },
-        });
-      }
-    });
-  }
-}
-
 /**
  * token-tracker が走査した session ログの RunUsage[] を model_runs へ投入する (FR-L1-38、PLAN-L7-57)。
- * review-evidence 由来行 (token NULL) とは別ソースで、token/cost 列が非 NULL の行を足す。
+ * token/cost 列が非 NULL の実測行を足す。
  * cold-start (usages 空) は no-op。run_id は runtime:session:turn から安定生成 (再投入で重複しない)。
  */
 export function projectTokenUsage(db: HarnessDb, usages: RunUsage[]): void {
@@ -660,7 +536,7 @@ export function projectTokenUsage(db: HarnessDb, usages: RunUsage[]): void {
           model: u.model,
           role: "session",
           drive: "",
-          plan_id: "",
+          plan_id: null,
           started_at: "",
           completed_at: "",
           evidence_path: u.sessionId,
@@ -697,69 +573,6 @@ export function projectRepoScopedTokenUsage(repoRoot: string, db: HarnessDb): Re
   const { usages, stats } = loadRepoScopedRuntimeSessionUsage(repoRoot, repoScopedSessionDirs());
   projectTokenUsage(db, usages);
   return stats;
-}
-
-function planStatusMap(repoRoot: string): Map<string, string> {
-  return new Map(loadReviewPlans(repoRoot).map((plan) => [plan.plan_id, plan.status]));
-}
-
-function projectRoadmapRollup(repoRoot: string, db: HarnessDb): void {
-  const records = loadRoadmaps(repoRoot);
-  const statuses = planStatusMap(repoRoot);
-  const statusOf = (planId: string): string | null => statuses.get(planId) ?? null;
-  const rollup = computeProgramRollup(records, statusOf, new Set(PARKED_BANDS.keys()));
-  const computedAt = nowIso();
-
-  recordProjectionEvent(db, {
-    table: "roadmap_rollups",
-    id: "program",
-    row: {
-      rollup_id: "program",
-      total_bands: rollup.totalBands,
-      covered_bands: rollup.coveredBands,
-      parked_bands: rollup.parkedBands,
-      uncovered_bands: rollup.uncoveredBands,
-      total_gates: rollup.totalGates,
-      reached_gates: rollup.reachedGates,
-      total_spans: rollup.totalSpans,
-      confirmed_spans: rollup.confirmedSpans,
-      frontier: rollup.frontier.join(","),
-      computed_at: computedAt,
-    },
-  });
-
-  for (const band of rollup.perBand) {
-    recordProjectionEvent(db, {
-      table: "roadmap_band_coverage",
-      id: band.bandId,
-      row: {
-        band_id: band.bandId,
-        name: band.name,
-        status: band.status,
-        roadmap_ids: band.roadmaps.join(","),
-        computed_at: computedAt,
-      },
-    });
-  }
-
-  for (const record of records) {
-    for (const gate of computeGateProgress(record.roadmap, statusOf)) {
-      const id = stableId("roadmap-gate", `${record.planId}:${gate.gateId}`);
-      recordProjectionEvent(db, {
-        table: "roadmap_gate_progress",
-        id,
-        row: {
-          roadmap_gate_id: id,
-          plan_id: record.planId,
-          gate_id: gate.gateId,
-          total_spans: gate.totalSpans,
-          confirmed_spans: gate.confirmedSpans,
-          reached: gate.reached ? 1 : 0,
-          computed_at: computedAt,
-        },
-      });
-    }
-  }
 }
 
 function projectDescentObligations(repoRoot: string, db: HarnessDb): void {
@@ -829,7 +642,7 @@ function projectDescentObligations(repoRoot: string, db: HarnessDb): void {
 // Gate coverage reconciliation shares this pure reader with rebuild and doctor so both
 // compare the same evidence-backed six-column rows without writing through one another.
 export function collectGateRunEvidenceProjection(repoRoot: string): GateRunEvidenceProjection {
-  return collectGateRunEvidenceProjectionCore(repoRoot, { hash: stableHash, asString });
+  return collectGateRunEvidenceProjectionCore(repoRoot, { asString });
 }
 
 function projectGateRunEvidence(repoRoot: string, db: HarnessDb): void {
@@ -913,7 +726,7 @@ function projectRelationGraph(db: HarnessDb, graph: RelationGraphProjection | un
           from_artifact: fromArtifact,
           to_artifact: toArtifact,
           edge_kind: edge.kind,
-          plan_id: "",
+          plan_id: null,
           status: "current",
         },
       });
@@ -1183,7 +996,7 @@ function projectCurrentImpactResults(
   }
 }
 
-const PROGRESS_NODE_KINDS = new Set(["source", "design", "test-design", "plan", "requirement"]);
+const PROGRESS_NODE_KINDS = new Set(["source", "design", "test-design", "requirement"]);
 
 function artifactProgressType(kind: string): string {
   return kind === "source" ? "source" : kind;
@@ -1205,34 +1018,6 @@ function passedTestRunsForPaths(db: HarnessDb, testPaths: string[]): string[] {
     for (const row of rows) ids.add(String(row.test_run_id ?? ""));
   }
   return [...ids].filter(Boolean).sort();
-}
-
-function activeRecoveryPlanIds(db: HarnessDb): string[] {
-  const rows = db
-    .prepare(
-      `SELECT plan_id
-       FROM plan_registry
-       WHERE kind IN ('reverse', 'recovery', 'refactor')
-         AND status NOT IN ('confirmed', 'completed', 'accepted')
-       ORDER BY plan_id`,
-    )
-    .all();
-  return rows.map((row) => String(row.plan_id ?? "")).filter(Boolean);
-}
-
-function nodeRecoveryPlanIds(
-  activePlans: string[],
-  openDependencyImpacts: number,
-  artifactPath: string,
-): string[] {
-  if (openDependencyImpacts <= 0 || activePlans.length === 0) return [];
-  const slug = artifactPath
-    .split("/")
-    .at(-1)
-    ?.replace(/\.[^.]+$/, "")
-    .toLowerCase();
-  const direct = slug ? activePlans.filter((planId) => planId.toLowerCase().includes(slug)) : [];
-  return direct.length > 0 ? direct : activePlans;
 }
 
 function projectArtifactProgress(db: HarnessDb, graph: RelationGraphProjection | undefined): void {
@@ -1261,7 +1046,6 @@ function projectArtifactProgress(db: HarnessDb, graph: RelationGraphProjection |
       }
     }
   }
-  const activeRecoveries = activeRecoveryPlanIds(db);
   for (const node of progressNodes) {
     const artifactPath = node.path ?? node.id.replace(/^[^:]+:/, "");
     const linkedTestIds = (coveredByEdges.get(node.id) ?? [])
@@ -1283,11 +1067,6 @@ function projectArtifactProgress(db: HarnessDb, graph: RelationGraphProjection |
       [node.id, node.id],
     );
     const passedTestRunIds = passedTestRunsForPaths(db, linkedTestPaths);
-    const recoveryPlanIds = nodeRecoveryPlanIds(
-      activeRecoveries,
-      openDependencyImpacts,
-      artifactPath,
-    );
     const decision = deriveArtifactProgressDecision({
       linkedTestCount: linkedIds.length,
       passedLinkedTestRunCount: passedTestRunIds.length,
@@ -1295,7 +1074,6 @@ function projectArtifactProgress(db: HarnessDb, graph: RelationGraphProjection |
       dependencyCheckRunId,
       dependencyCheckedAt: indexedAt,
       openDependencyImpacts,
-      recoveryPlanIds,
     });
     const artifactHash = stableHash(
       JSON.stringify({
@@ -1303,7 +1081,6 @@ function projectArtifactProgress(db: HarnessDb, graph: RelationGraphProjection |
         tests: linkedIds,
         passedRuns: passedTestRunIds,
         impacts: openDependencyImpacts,
-        recoveryPlanIds,
       }),
     );
     recordProjectionEvent(db, {
@@ -1325,7 +1102,7 @@ function projectArtifactProgress(db: HarnessDb, graph: RelationGraphProjection |
         dependency_checked_at: indexedAt,
         dependency_check_source: "relation-impact",
         open_dependency_impacts: openDependencyImpacts,
-        recovery_plan_ids: recoveryPlanIds.join(","),
+        recovery_plan_ids: null,
         reason: decision.reason,
         indexed_at: indexedAt,
       },
@@ -1351,7 +1128,7 @@ function projectArtifactProgress(db: HarnessDb, graph: RelationGraphProjection |
               : "test-run-passed",
         test_run_ids: passedTestRunIds.join(","),
         dependency_check_run_id: dependencyCheckRunId,
-        recovery_plan_ids: recoveryPlanIds.join(","),
+        recovery_plan_ids: null,
         reason: decision.reason,
         occurred_at: indexedAt,
       },
@@ -1436,7 +1213,7 @@ function projectVerificationCatalogs(repoRoot: string, db: HarnessDb): void {
       row: {
         verification_recommendation_id: id,
         change_set_id: "working-tree",
-        plan_id: "",
+        plan_id: null,
         profile_id: rec.profile.id,
         profile_kind: rec.profile.sourceType,
         reason: rec.reasons.join("; "),
@@ -1566,7 +1343,6 @@ function canonicalDocInputs(repoRoot: string): Array<{
     { family: "concept", dir: join(repoRoot, "docs", "governance") },
     { family: "requirements", dir: join(repoRoot, "docs", "design", "harness", "L1-requirements") },
     { family: "design", dir: join(repoRoot, "docs", "design", "harness") },
-    { family: "plan", dir: join(repoRoot, "docs", "plans") },
     { family: "adr", dir: join(repoRoot, "docs", "adr") },
     { family: "test-design", dir: join(repoRoot, "docs", "test-design") },
   ];
@@ -1622,54 +1398,6 @@ function defaultDocumentExportProjection(repoRoot: string): DocumentExportProjec
   };
 }
 
-function planGeneratedPathMap(repoRoot: string): Map<string, string> {
-  const map = new Map<string, string>();
-  for (const [artifactPath, planIds] of planGeneratedPathMultiMap(repoRoot)) {
-    const planId = planIds.at(-1);
-    if (planId) map.set(artifactPath, planId);
-  }
-  return map;
-}
-
-export function missingTestPlanIdNextAction(status: string | undefined): string {
-  if (status === "draft")
-    return "confirm the owning PLAN and declare this test in generates together (merged-plan-status alignment)";
-  if (status === "confirmed") return "declare this test in the owning PLAN generates";
-  return "declare this test in an owning PLAN generates";
-}
-
-function planStatusById(repoRoot: string): Map<string, string> {
-  const statuses = new Map<string, string>();
-  for (const path of markdownFiles(join(repoRoot, "docs", "plans"))) {
-    const content = readFileSync(path, "utf8");
-    const planId = frontmatterValue(content, "plan_id");
-    const status = frontmatterValue(content, "status");
-    if (planId) statuses.set(planId, status);
-  }
-  return statuses;
-}
-
-function planGeneratedPathMultiMap(repoRoot: string): Map<string, string[]> {
-  const map = new Map<string, string[]>();
-  for (const path of markdownFiles(join(repoRoot, "docs", "plans"))) {
-    const content = readFileSync(path, "utf8");
-    const planId = frontmatterValue(content, "plan_id");
-    const meta = metadataFromContent(path, content);
-    const generates = Array.isArray(meta.generates) ? meta.generates : [];
-    for (const item of generates) {
-      if (!item || typeof item !== "object") continue;
-      const artifactPath = (item as Record<string, unknown>).artifact_path;
-      if (typeof artifactPath === "string" && artifactPath) {
-        const normalized = normalizePath(artifactPath);
-        const values = map.get(normalized) ?? [];
-        values.push(planId);
-        map.set(normalized, values);
-      }
-    }
-  }
-  return map;
-}
-
 interface ExtractedTestCase {
   name: string;
   oracleId: string;
@@ -1713,13 +1441,10 @@ function importedSourcePaths(content: string): string[] {
 }
 
 function projectTestCaseCatalog(repoRoot: string, db: HarnessDb): void {
-  const planByPath = planGeneratedPathMap(repoRoot);
-  const statusesByPlanId = planStatusById(repoRoot);
   const indexedAt = nowIso();
   for (const path of assetFiles(join(repoRoot, "tests"), /\.test\.ts$/i)) {
     const rel = normalizePath(relative(repoRoot, path));
     const content = readFileSync(path, "utf8");
-    const planId = planByPath.get(rel) ?? "";
     const sources = importedSourcePaths(content);
     const testCases = extractTestCases(content);
     for (const [index, testCase] of testCases.entries()) {
@@ -1735,7 +1460,7 @@ function projectTestCaseCatalog(repoRoot: string, db: HarnessDb): void {
           name,
           test_run_id: "",
           oracle_id: oracleId,
-          plan_id: planId,
+          plan_id: null,
           fr_id: name.match(/\bFR-L\d+-\d+\b/)?.[0] ?? "",
           artifact_id: sources[0] ?? "",
           kind: "unit",
@@ -1745,21 +1470,6 @@ function projectTestCaseCatalog(repoRoot: string, db: HarnessDb): void {
           evidence_path: rel,
         },
       });
-      if (!planId) {
-        const ownershipCandidate = sources
-          .map((source) => planByPath.get(source))
-          .find((candidate): candidate is string => Boolean(candidate));
-        recordFinding(db, {
-          kind: "missing-test-plan-id",
-          severity: "warn",
-          subjectId: testCaseId,
-          source: "test-case-catalog",
-          evidencePath: rel,
-          nextAction: missingTestPlanIdNextAction(
-            ownershipCandidate ? statusesByPlanId.get(ownershipCandidate) : undefined,
-          ),
-        });
-      }
       if (!oracleId) {
         recordFinding(db, {
           kind: "missing-test-oracle-id",
@@ -1780,7 +1490,7 @@ function projectTestCaseCatalog(repoRoot: string, db: HarnessDb): void {
             test_artifact_edge_id: compatibilityEdgeId,
             test_case_id: testCaseId,
             artifact_id: sourcePath,
-            plan_id: planId,
+            plan_id: null,
             source_path: rel,
             artifact_path: sourcePath,
             edge_kind: "tests",
@@ -2130,17 +1840,11 @@ export function rebuildHarnessDb(input: RebuildHarnessDbInput = {}): RebuildHarn
     runSqliteTransaction(db, () => {
       time("migrate", () => migrate(db));
       time("truncate", () => truncateProjectionTables(db));
-      const plans = time("plans", () => projectPlans(repoRoot, db));
       if (hasVmodelAuthoring(repoRoot)) {
         time("vmodel-authoring", () => projectVmodelAuthoring(repoRoot, db));
       }
-      time("drive-hook-model", () => {
-        projectDriveRuns(repoRoot, db, plans);
-        projectHookEvents(repoRoot, db, plans);
-        projectReviewModelRuns(repoRoot, db, plans);
-      });
-      time("roadmap-review", () => {
-        projectRoadmapRollup(repoRoot, db);
+      time("hook-events", () => projectHookEvents(repoRoot, db));
+      time("verification-evidence", () => {
         projectDescentObligations(repoRoot, db);
         projectDesignPairFreezeFindings(repoRoot, db);
         projectDesignQualityCoverage(repoRoot, db);
@@ -2156,8 +1860,7 @@ export function rebuildHarnessDb(input: RebuildHarnessDbInput = {}): RebuildHarn
         projectSkillEvaluations(db);
       });
       if (!input.skipTokenTelemetry) {
-        // repo スコープ token telemetry ingest (issue #82、PLAN-L7-454): 従来 model_runs には
-        // review-evidence 由来行しか無かった実測欠落を是正する。model-operational (token 効率集計) より
+        // repo スコープ token telemetry ingest (issue #82)。model-operational (token 効率集計) より
         // 前に走らせ、同一 rebuild 内の projectModelEvaluations が新規 token 行を反映できるようにする。
         // 専用の timing id で計測し、他の projection と切り分けて可視化する。session ログ読取の想定外失敗は
         // fail-open とし、rebuild 全体を落とさない (cold-start / 権限エラー等でも継続)。

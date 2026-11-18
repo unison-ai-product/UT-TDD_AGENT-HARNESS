@@ -4,16 +4,12 @@
  * master-hub PLAN frontmatter の `roadmap:` block を読み、第一級登録工程表として扱う:
  *  - extractRoadmap / parseRoadmap: frontmatter から roadmap を抽出・schema 検証。
  *  - computeGateProgress: 各層内ゲートの到達状況 (直前 span PLAN が全 confirmed か) を surface。
- *  - loadRoadmaps: docs/plans/ の登録工程表を全 load (harness.db projection 用)。
  *
  * 配置 = src/lint (既存 module、新 src/roadmap module を作ると module-drift 孤児になるため spike は
  * lint 配下に寄せる。S4 confirmed 後に dedicated module 化を Reverse で判断)。
  */
-import { readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
 import { parse as parseYaml } from "yaml";
 import { type Roadmap, roadmapSchema, validateRoadmapStructure } from "../schema/roadmap.ts";
-import { fmValue } from "./shared.ts";
 
 /** content から frontmatter block (先頭 `---` 〜 次 `---`) のテキストを返す。無ければ null。 */
 function frontmatterBlock(content: string): string | null {
@@ -239,29 +235,4 @@ export function computeProgramRollup(
     frontier,
     perBand,
   };
-}
-
-/** docs/plans/ から `roadmap:` block を持つ登録工程表を全 load。 */
-export function loadRoadmaps(repoRoot: string = process.cwd()): RoadmapRecord[] {
-  const dir = join(repoRoot, "docs", "plans");
-  let files: string[];
-  try {
-    files = readdirSync(dir).filter((f) => f.endsWith(".md"));
-  } catch {
-    return [];
-  }
-  const records: RoadmapRecord[] = [];
-  for (const f of files) {
-    const content = readFileSync(join(dir, f), "utf8");
-    const { roadmap, errors } = parseRoadmap(content);
-    if (roadmap) {
-      records.push({
-        planId: fmValue(content, "plan_id") ?? f.replace(/\.md$/, ""),
-        file: `docs/plans/${f}`,
-        roadmap,
-        errors,
-      });
-    }
-  }
-  return records;
 }

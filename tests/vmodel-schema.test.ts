@@ -39,7 +39,6 @@ describe("V-model physical schema definitions", () => {
   it("lets SQLite enforce enum, shape, unique, and foreign-key constraints", () => {
     const db = openHarnessDb(":memory:");
     db.exec("PRAGMA foreign_keys=ON");
-    db.exec("CREATE TABLE plan_registry (plan_id TEXT PRIMARY KEY)");
     for (const table of HARNESS_DB_VMODEL_TABLES) db.exec(createTableSql(table));
     expect(() =>
       db.exec(

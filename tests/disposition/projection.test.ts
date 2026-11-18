@@ -46,7 +46,6 @@ describe("I-DISP-001 V-model projection", () => {
     const db = openHarnessDb(":memory:");
     try {
       migrate(db);
-      seedPlan(db);
       projectVmodelAuthoring(repoRoot, db);
       expect(count(db, "vmodel_sources")).toBe(109);
       expect(count(db, "vmodel_categories")).toBe(21);
@@ -224,7 +223,6 @@ describe("I-DISP-001 V-model projection", () => {
     const db = openHarnessDb(":memory:");
     try {
       migrate(db);
-      seedPlan(db);
       projectVmodelAuthoring(repoRoot, db);
       const before = snapshot(db);
       const provenance = new GitAuthoringProvenance(repoRoot);
@@ -252,12 +250,6 @@ describe("I-DISP-001 V-model projection", () => {
     }
   });
 });
-
-function seedPlan(db: ReturnType<typeof openHarnessDb>): void {
-  db.prepare("INSERT INTO plan_registry (plan_id) VALUES (?)").run(
-    "PLAN-L7-417-source-disposition-profile-projection",
-  );
-}
 
 function count(db: ReturnType<typeof openHarnessDb>, table: string): number {
   return Number(db.prepare(`SELECT COUNT(*) AS count FROM ${table}`).get()?.count ?? 0);

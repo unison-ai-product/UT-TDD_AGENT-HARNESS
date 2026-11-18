@@ -157,7 +157,6 @@ const COMPATIBILITY_PATHS = new Set([
   "src/runtime/node-slice-admission.ts",
   "src/lint/design-language.ts",
   "src/lint/erasable-syntax.ts",
-  "src/lint/review-evidence.ts",
   "src/lint/verification-profile.ts",
   "src/lint/verification-profile-types.ts",
   "src/lint/verification-profile-catalog.ts",
