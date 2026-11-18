@@ -19,10 +19,12 @@ import {
   scanDSource,
   scanE,
   scanF,
+} from "./support/planret-s7-acceptance.ts";
+import {
   scanHPlanLintEntry,
   scanIImportsSource,
   scanIPlanAssetImports,
-} from "./support/planret-s7-acceptance.ts";
+} from "./support/planret-s7-import-scan.ts";
 import { removeTestTree } from "./support/temp-tree.ts";
 import { headSnapshotRoot } from "./support/workspace-roots.ts";
 
