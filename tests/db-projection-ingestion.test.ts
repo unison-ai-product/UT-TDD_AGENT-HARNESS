@@ -71,9 +71,9 @@ describe("db projection ingestion detector", () => {
 
       expect(rebuilt.ok).toBe(true);
       expect(rebuilt.rowCounts.graph_nodes).toBeGreaterThan(0);
-      expect(rebuilt.timings?.map((timing) => timing.id)).toEqual(
-        expect.arrayContaining(["plans", "graph-impact", "row-counts"]),
-      );
+      const timingIds = rebuilt.timings?.map((timing) => timing.id);
+      expect(timingIds).toEqual(expect.arrayContaining(["migrate", "graph-impact", "row-counts"]));
+      expect(timingIds).not.toContain("plans");
       expect(rebuilt.timings?.every((timing) => timing.duration_ms >= 0)).toBe(true);
     } finally {
       db.close();
@@ -96,12 +96,10 @@ describe("db projection ingestion detector", () => {
 
       expect(result.ok).toBe(true);
       expect(result.messages.join("\n")).not.toContain("db-projection-ingestion profile");
-      expect(result.timingSubsteps?.map((timing) => timing.id)).toEqual(
-        expect.arrayContaining(["plans", "graph-impact"]),
-      );
-      expect(result.timingSubsteps?.map((timing) => timing.id)).not.toContain(
-        "runtime-model-telemetry",
-      );
+      const timingIds = result.timingSubsteps?.map((timing) => timing.id);
+      expect(timingIds).toEqual(expect.arrayContaining(["migrate", "graph-impact"]));
+      expect(timingIds).not.toContain("plans");
+      expect(timingIds).not.toContain("runtime-model-telemetry");
     } finally {
       if (previousClaude === undefined) {
         delete process.env.UT_TDD_CLAUDE_SESSIONS_DIR;
