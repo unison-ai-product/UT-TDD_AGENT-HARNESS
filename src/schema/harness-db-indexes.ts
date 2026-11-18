@@ -233,36 +233,6 @@ export const HARNESS_DB_INDEXES: IndexDef[] = [
     columns: ["to_spec_id", "relation_kind"],
   },
   {
-    name: "idx_schedule_plan_status",
-    table: "schedule_entries",
-    columns: ["plan_id", "status", "rag"],
-  },
-  {
-    name: "idx_schedule_layer_subdoc_status",
-    table: "schedule_entries",
-    columns: ["layer", "sub_doc", "status"],
-  },
-  {
-    name: "idx_activation_profile_status",
-    table: "activation_entries",
-    columns: ["profile_id", "scope_status"],
-  },
-  {
-    name: "idx_activation_version_status",
-    table: "activation_entries",
-    columns: ["target_version", "scope_status"],
-  },
-  {
-    name: "idx_activation_schedule_plan_profile",
-    table: "activation_schedule_reviews",
-    columns: ["plan_id", "profile_id", "scope_status"],
-  },
-  {
-    name: "idx_activation_schedule_scope_rag",
-    table: "activation_schedule_reviews",
-    columns: ["scope_status", "rag", "enabled"],
-  },
-  {
     name: "idx_document_catalog_layer_subdoc",
     table: "document_catalog_entries",
     columns: ["layer", "sub_doc", "applicability"],

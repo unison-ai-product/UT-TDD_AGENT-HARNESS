@@ -803,77 +803,6 @@ function projectRoadmapRollup(repoRoot: string, db: HarnessDb): void {
   }
 }
 
-export function latestReviewEvidenceEntry<T extends { reviewed_at?: string }>(
-  entries: T[],
-): T | undefined {
-  const timestampRank = (value?: string): number => {
-    const parsed = Date.parse(value ?? "");
-    return Number.isFinite(parsed) ? parsed : Number.NEGATIVE_INFINITY;
-  };
-  return entries.reduce<T | undefined>((latest, entry) => {
-    if (!latest) return entry;
-    return timestampRank(entry.reviewed_at) >= timestampRank(latest.reviewed_at) ? entry : latest;
-  }, undefined);
-}
-
-function projectReviewEvidenceRegistry(repoRoot: string, db: HarnessDb): void {
-  const indexedAt = nowIso();
-  for (const plan of loadReviewPlans(repoRoot)) {
-    const latestEntry = latestReviewEvidenceEntry(plan.crossEntries);
-    const id = stableId("review-evidence", plan.plan_id);
-    recordProjectionEvent(db, {
-      table: "review_evidence_registry",
-      id,
-      row: {
-        review_evidence_id: id,
-        plan_id: plan.plan_id,
-        kind: plan.kind,
-        status: plan.status,
-        has_evidence: plan.hasEvidence ? 1 : 0,
-        review_kind: latestEntry?.review_kind ?? "",
-        verdict: latestEntry?.verdict ?? "",
-        reviewed_at: latestEntry?.reviewed_at ?? "",
-        tests_green_at: latestEntry?.tests_green_at ?? "",
-        worker_model: latestEntry?.worker_model ?? "",
-        reviewer_model: latestEntry?.reviewer_model ?? "",
-        source: normalizePath(join("docs", "plans", plan.file)),
-        indexed_at: indexedAt,
-      },
-    });
-    for (const [entryIndex, entry] of plan.crossEntries.entries()) {
-      for (const [commandIndex, command] of (entry.green_commands ?? []).entries()) {
-        const completedAt = command.completed_at ?? entry.tests_green_at ?? entry.reviewed_at ?? "";
-        const testRunId = stableId(
-          "test-run",
-          `${plan.plan_id}:${entryIndex}:${commandIndex}:${command.command}:${command.evidence_path}:${completedAt}`,
-        );
-        recordProjectionEvent(db, {
-          table: "test_runs",
-          id: testRunId,
-          row: {
-            test_run_id: testRunId,
-            session_id: "",
-            plan_id: plan.plan_id,
-            command: command.command,
-            runner: command.runner,
-            runtime: "",
-            os: "",
-            shell: "",
-            scope: command.scope,
-            started_at: "",
-            completed_at: completedAt,
-            exit_code: command.exit_code ?? -1,
-            evidence_path: command.evidence_path,
-            output_digest: command.output_digest,
-            green_definition_id: "",
-            status: command.exit_code === 0 ? "passed" : "failed",
-          },
-        });
-      }
-    }
-  }
-}
-
 function advisorySubject(rule: string, reviewEvidenceId: string): string {
   // Plan-id-free, stable subject. The warn-first advisory must surface as a
   // feedback event WITHOUT flipping automation readiness, which scans
@@ -1324,19 +1253,15 @@ function projectCurrentImpactResults(
   }
   if (changedFiles.length === 0) return;
   const result = analyzeRelationImpact({ changedPaths: changedFiles, projection: graph });
-  const plansByGeneratedPath = planGeneratedPathMultiMap(repoRoot);
   const nodeById = new Map(graph.nodes.map((node) => [node.id, node]));
   const computedAt = nowIso();
   for (const action of result.actions) {
     const id = stableId("impact-result", `working-tree:${action.kind}:${action.nodeId}`);
-    const closure = resolvedImpactClosure({
-      db,
-      plansByGeneratedPath,
-      nodeById,
-      nodeId: action.nodeId,
-      actionKind: action.kind,
-      changedFiles,
-    });
+    const path = normalizePath(
+      nodeById.get(action.nodeId)?.path ?? action.nodeId.replace(/^[^:]+:/, ""),
+    );
+    const pairedArtifactVerified =
+      action.kind === "update-paired-artifact" && !changedFiles.includes(path);
     recordProjectionEvent(db, {
       table: "impact_results",
       id,
@@ -1346,9 +1271,9 @@ function projectCurrentImpactResults(
         root_node_id: action.nodeId,
         impacted_node_id: action.nodeId,
         required_action: action.kind,
-        status: closure.closed ? "closed" : "open",
+        status: pairedArtifactVerified ? "closed" : "open",
         reason: action.reason,
-        evidence_path: closure.evidencePath || "git status --porcelain",
+        evidence_path: pairedArtifactVerified ? "doctor:pair-freeze" : "git status --porcelain",
         computed_at: computedAt,
       },
     });
@@ -1362,44 +1287,6 @@ function projectCurrentImpactResults(
       evidencePath: finding.evidencePath,
     });
   }
-}
-
-function resolvedImpactClosure(input: {
-  db: HarnessDb;
-  plansByGeneratedPath: Map<string, string[]>;
-  nodeById: Map<string, { path?: string }>;
-  nodeId: string;
-  actionKind: string;
-  changedFiles: string[];
-}): { closed: boolean; evidencePath: string } {
-  const { db, plansByGeneratedPath, nodeById, nodeId, actionKind, changedFiles } = input;
-  const path = normalizePath(nodeById.get(nodeId)?.path ?? nodeId.replace(/^[^:]+:/, ""));
-  if (actionKind === "update-paired-artifact" && !changedFiles.includes(path)) {
-    return { closed: true, evidencePath: "doctor:pair-freeze" };
-  }
-  const candidatePlanIds = [
-    ...(plansByGeneratedPath.get(path) ?? []),
-    nodeId.startsWith("plan:") ? nodeId.replace(/^plan:/, "") : "",
-  ].filter(Boolean);
-  if (candidatePlanIds.length === 0) return { closed: false, evidencePath: "" };
-  const placeholders = candidatePlanIds.map(() => "?").join(", ");
-  const row = db
-    .prepare(
-      `SELECT r.source AS source
-       FROM plan_registry p
-       JOIN review_evidence_registry r ON r.plan_id = p.plan_id
-       WHERE p.plan_id IN (${placeholders})
-         AND p.status IN ('confirmed', 'completed', 'accepted')
-         AND r.has_evidence = 1
-         AND r.verdict IN ('approve', 'approve_after_fixes', 'pass', 'pass-with-fixes')
-         AND COALESCE(r.tests_green_at, '') <> ''
-       ORDER BY r.reviewed_at DESC
-       LIMIT 1`,
-    )
-    .get(...candidatePlanIds) as { source?: string } | undefined;
-  return row
-    ? { closed: true, evidencePath: row.source ?? "" }
-    : { closed: false, evidencePath: "" };
 }
 
 const PROGRESS_NODE_KINDS = new Set(["source", "design", "test-design", "plan", "requirement"]);
@@ -2373,7 +2260,6 @@ export function rebuildHarnessDb(input: RebuildHarnessDbInput = {}): RebuildHarn
       });
       time("roadmap-review", () => {
         projectRoadmapRollup(repoRoot, db);
-        projectReviewEvidenceRegistry(repoRoot, db);
         projectGuardrailInvariantAdvisories(db);
         projectDescentObligations(repoRoot, db);
         projectDesignPairFreezeFindings(repoRoot, db);

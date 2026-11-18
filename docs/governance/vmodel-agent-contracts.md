@@ -20,45 +20,32 @@ read_first / done_when の欠落や gate 未定義を doctor が検出する。
 
 ```yaml
 agent_contracts:
-  - contract_id: VAGENT-001
-    target_path: docs/governance/vmodel-upgrade-schedule.md
-    defines: [VMS-002]
-    read_first:
-      - docs/governance/vmodel-typed-spec-definitions.md
-      - docs/governance/vmodel-activation-profiles.md
-    done_when:
-      - doctor:db-currency
   - contract_id: VAGENT-002
     target_path: docs/governance/vmodel-typed-spec-definitions.md
     # VMS-008/VMS-009 は VAGENT-004 (function-spec.md) の単独所有へ訂正 (PLAN-L7-459 H2。
     # 二重宣言は typed-spec-definitions.md §4 の単一所有不変条件に違反していた)
     defines: [VMS-004, VMS-007]
     read_first:
-      - docs/governance/vmodel-upgrade-schedule.md
       - docs/test-design/harness/L7-unit-test-design.md
     done_when:
+      - doctor:db-currency
       - doctor:typed-spec-trace-closure
       - doctor:typed-spec-ledger-body-sync
       - doctor:typed-spec-owned-artifact-dispersal
       - doctor:typed-spec-phase-layer-alignment
-  - contract_id: VAGENT-003
-    target_path: docs/governance/vmodel-activation-profiles.md
-    defines: [VMS-003]
-    read_first:
-      - docs/governance/vmodel-upgrade-schedule.md
-    done_when:
-      - doctor:db-projection-ingestion
   - contract_id: VAGENT-004
     target_path: docs/design/harness/L6-function-design/function-spec.md
     defines: [VMS-008, VMS-009]
     read_first:
       - docs/governance/vmodel-agent-contracts.md
       - docs/governance/vmodel-typed-spec-definitions.md
-      - docs/governance/vmodel-upgrade-schedule.md
     done_when:
       - doctor:agent-contract-detection
       - doctor:l6-completion
 ```
+
+工程表の VAGENT-001 と activation の VAGENT-003 は S7 で退役した。
+VAGENT-001 が使っていた `doctor:db-currency` は、VAGENT-002 の仕様 IR 投影の検証で維持する。
 
 ## 2. 解釈規則
 
