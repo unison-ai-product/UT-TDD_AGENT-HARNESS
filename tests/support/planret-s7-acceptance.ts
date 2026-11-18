@@ -94,7 +94,7 @@ function reachesDocsPlans(node: ts.Node, scope: ts.Node, seen = new Set<string>(
   };
   collect(node);
   let hit = false;
-  const visit = (n: ts.Node): void => {
+  const declare = (n: ts.Node): void => {
     if (
       !hit &&
       ts.isVariableDeclaration(n) &&
@@ -106,13 +106,22 @@ function reachesDocsPlans(node: ts.Node, scope: ts.Node, seen = new Set<string>(
       seen.add(n.name.text);
       hit = reachesDocsPlans(n.initializer, scope, seen);
     }
+  };
+  const visit = (n: ts.Node): void => {
+    declare(n);
     ts.forEachChild(n, visit);
   };
-  visit(scope);
-  // module 直下の定数 (関数の外の宣言) も辿る。
   const file = scope.getSourceFile();
-  if (!hit && scope !== file)
-    for (const st of file.statements) if (ts.isVariableStatement(st)) visit(st);
+  // module 直下の定数は、関数の中の同名変数と混ぜないよう、直下の宣言だけを見る。
+  const topLevel = () => {
+    for (const st of file.statements)
+      if (ts.isVariableStatement(st)) st.declarationList.declarations.forEach(declare);
+  };
+  if (scope === file) topLevel();
+  else {
+    visit(scope);
+    topLevel();
+  }
   return hit;
 }
 
@@ -224,10 +233,12 @@ export function runScenario008() {
   return { before, after: tableShape(db, names), second, db };
 }
 
-/** 008: 2 表が無い DB (migrate のみ)。 */
+/** 008: migrate のあとで 2 表を取り除いた DB (表が欠けていても registry 側が要求しないことの確認用)。 */
 export function runScenario008Absent() {
   const { db } = tempDb();
   migrate(db);
+  db.exec("PRAGMA foreign_keys = OFF");
+  for (const t of ["schedule_entries", "plan_registry"]) db.exec(`DROP TABLE IF EXISTS ${t}`);
   return db;
 }
 
