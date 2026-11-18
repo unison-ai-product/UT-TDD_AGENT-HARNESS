@@ -34,10 +34,6 @@ export interface SkillProjectionDeps {
   skillDriveModelForPlan: (planId: string) => string;
 }
 
-export { PLAN_SUCCESS_STATUSES } from "../projection/domain/plan-status.ts";
-
-import { PLAN_SUCCESS_STATUSES } from "../projection/domain/plan-status.ts";
-
 export function skillScore(input: {
   plan: SkillProjectedPlan;
   asset: Record<string, unknown>;
@@ -209,7 +205,6 @@ export function projectSkillEvaluations(input: {
   const adoptionRows = db
     .prepare(
       `SELECT i.skill_id,
-              COUNT(DISTINCT i.plan_id) AS adoption_count,
               MAX(i.fired_at) AS last_fired_at
        FROM skill_invocations i
        WHERE i.accepted = 1
@@ -220,28 +215,8 @@ export function projectSkillEvaluations(input: {
 
   if (adoptionRows.length === 0) return;
 
-  const successStatusPlaceholders = PLAN_SUCCESS_STATUSES.map(() => "?").join(", ");
-
   for (const row of adoptionRows) {
     const skillId = String(row.skill_id ?? "");
-    const adoptionCount = Number(row.adoption_count ?? 0);
-
-    const successRow = db
-      .prepare(
-        `SELECT COUNT(DISTINCT i.plan_id) AS success_count
-         FROM skill_invocations i
-         JOIN plan_registry p ON p.plan_id = i.plan_id
-         WHERE i.skill_id = ?
-           AND i.accepted = 1
-           AND i.source LIKE ?
-           AND p.status IN (${successStatusPlaceholders})`,
-      )
-      .get(skillId, `${RUNTIME_SKILL_SOURCE_PREFIX}%`, ...PLAN_SUCCESS_STATUSES) as
-      | { success_count: number }
-      | undefined;
-
-    const successCount = Number(successRow?.success_count ?? 0);
-    const skillRating = adoptionCount === 0 ? 0 : Number((successCount / adoptionCount).toFixed(4));
 
     const recentRow = db
       .prepare(
@@ -258,9 +233,6 @@ export function projectSkillEvaluations(input: {
       id: skillId,
       row: {
         skill_id: skillId,
-        skill_rating: skillRating,
-        adoption_count: adoptionCount,
-        success_count: successCount,
         unused_flag: unusedFlag,
         evaluated_at: evaluatedAt,
       },

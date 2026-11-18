@@ -1,12 +1,6 @@
 import type { OutstandingWork } from "../lint/outstanding.ts";
-import type { PlanDigest } from "../runtime/session-log.ts";
 
 type HandoverStatus = "in_progress" | "completed";
-
-type PlanDigestRef = Pick<
-  PlanDigest,
-  "plan_id" | "sessions" | "commits" | "files_touched" | "failures" | "updated_at"
->;
 
 interface HandoverPointer {
   active_plan: string | null;
@@ -17,16 +11,10 @@ interface HandoverPointer {
   outstanding?: OutstandingWork;
 }
 
-interface HandoverScope {
-  active_plan: string | null;
-  digests: PlanDigestRef[];
-}
-
 interface HandoverArgs {
   date: string;
   dryRun?: boolean;
   complete?: boolean;
-  sessionId?: string;
 }
 
 interface HandoverResult {
@@ -42,12 +30,7 @@ interface HandoverDeps {
   listDir: (dir: string) => string[];
 }
 
-interface HandoverScopeOpts {
-  scopeToSession?: string;
-}
-
 interface BuildPointerInput {
-  scope: HandoverScope;
   status: HandoverStatus;
   now: string;
 }
@@ -58,8 +41,5 @@ export type {
   HandoverDeps,
   HandoverPointer,
   HandoverResult,
-  HandoverScope,
-  HandoverScopeOpts,
   HandoverStatus,
-  PlanDigestRef,
 };

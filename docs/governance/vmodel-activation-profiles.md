@@ -52,16 +52,6 @@ DB は正本ではない。本書を `activation_entries` へ投影し、工程�
 - `target_version` は ZIP 由来の wave 識別子であり、ファイル hash や外部 release 番号の代替ではない。
 - `activation_schedule_reviews` は read-model であり、正本ではない。
 
-## U11 型付きスペック所有 artifact
+## U11 型付き spec の履歴
 
-```yaml
-spec:
-  defines:
-    - id: VMS-003
-      kind: activation-profile
-      traces_from: [VMS-001]
-      traces_to: [VMS-005]
-      tests: [TVMS-003]
-```
-
-VMS-003 は activation profile の所有 artifact で宣言される typed spec である。
+VMS-003 はactivation profile の型付き宣言元であり、S7 で退役した。

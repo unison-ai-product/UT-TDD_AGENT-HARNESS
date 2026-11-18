@@ -27,7 +27,6 @@ agent_contracts:
       - docs/governance/vmodel-typed-spec-definitions.md
       - docs/governance/vmodel-activation-profiles.md
     done_when:
-      - doctor:plan-schedule
       - doctor:db-currency
   - contract_id: VAGENT-002
     target_path: docs/governance/vmodel-typed-spec-definitions.md

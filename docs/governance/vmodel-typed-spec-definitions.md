@@ -53,24 +53,11 @@ typed_spec_ledger:
   - spec_id: VMS-001
     ledger_sources: [docs/design/harness/L0-planning/charter.md]
     v_phase: L0
-  - spec_id: VMS-002
-    ledger_sources:
-      - docs/governance/vmodel-upgrade-schedule.md
-      - docs/plans/PLAN-L6-40-vmodel-schedule-authoring-source.md
-    v_phase: L6
-  - spec_id: VMS-003
-    ledger_sources:
-      - docs/governance/vmodel-activation-profiles.md
-      - docs/plans/PLAN-L6-41-vmodel-activation-profile-join.md
-    v_phase: L6
   - spec_id: VMS-004
     ledger_sources:
       - docs/governance/vmodel-typed-spec-definitions.md
       - docs/plans/PLAN-L6-42-typed-spec-declaration-source.md
     v_phase: L6
-  - spec_id: VMS-005
-    ledger_sources: [docs/test-design/harness/L7-unit-test-design.md]
-    v_phase: L7
   - spec_id: VMS-006
     ledger_sources: [docs/test-design/harness/L7-unit-test-design.md]
     v_phase: L7
@@ -104,19 +91,8 @@ typed_spec_ledger:
   - spec_id: TVMS-001
     ledger_sources: [docs/test-design/harness/L7-unit-test-design.md]
     v_phase: L7
-  - spec_id: TVMS-002
-    ledger_sources: [docs/test-design/harness/L7-unit-test-design.md]
-    v_phase: L7
-  - spec_id: TVMS-003
-    ledger_sources: [docs/test-design/harness/L7-unit-test-design.md]
-    v_phase: L7
   - spec_id: TVMS-004
     ledger_sources: [docs/test-design/harness/L7-unit-test-design.md]
-    v_phase: L7
-  - spec_id: TVMS-005
-    ledger_sources:
-      - docs/test-design/harness/L7-unit-test-design.md
-      - tests/projection-writer.test.ts
     v_phase: L7
   - spec_id: TVMS-006
     ledger_sources:
@@ -163,15 +139,14 @@ typed_spec_ledger:
 
 ### VMS-001 上流憲章
 
-VMS-001 は V-model harness upgrade の上流憲章である。工程表、活性化 profile、
-typed spec 宣言元を下流に持ち、対応 oracle は TVMS-001 である。
+VMS-001 は V-model harness upgrade の上流憲章である。S7 後は型付き宣言元 VMS-004 へ接続し、対応 oracle は TVMS-001 である。
 
-### VMS-002 工程表宣言元
+### VMS-002 工程表宣言元（S7 で退役）
 
 VMS-002 は工程管理表を宣言元として扱う設計である。VMS-001 を上流に持ち、
 活性化と工程の review である VMS-005 へ接続する。対応 oracle は TVMS-002 である。
 
-### VMS-003 活性化 profile
+### VMS-003 活性化 profile（S7 で退役）
 
 VMS-003 は駆動モデル選択と scope 状態を活性化 profile として宣言する設計である。
 VMS-001 を上流に持ち、VMS-005 へ接続する。対応 oracle は TVMS-003 である。
@@ -181,7 +156,7 @@ VMS-001 を上流に持ち、VMS-005 へ接続する。対応 oracle は TVMS-00
 VMS-004 は `spec.defines` を typed spec の宣言元とする設計である。
 VMS-001 を上流に持ち、投影実装 VMS-006 へ接続する。対応 oracle は TVMS-004 である。
 
-### VMS-005 活性化工程 review
+### VMS-005 活性化工程 review（S7 で退役）
 
 VMS-005 は活性化 profile と工程管理表を join し、現在地と駆動モデル選択を同時に
 review 可能にする read-model である。VMS-002 と VMS-003 を上流に持つ。対応 oracle は TVMS-005 である。
@@ -236,11 +211,11 @@ VMS-015 は工程 authoring RAG と runtime test/review/gate signal を分離joi
 
 TVMS-001 は VMS-001 の上流憲章が typed spec 宇宙の root として検査されることを保証する。
 
-### TVMS-002 単体 oracle
+### TVMS-002 単体 oracle（S7 で退役）
 
 TVMS-002 は VMS-002 の工程表宣言元が projection に優先されることを保証する。
 
-### TVMS-003 単体 oracle
+### TVMS-003 単体 oracle（S7 で退役）
 
 TVMS-003 は VMS-003 の活性化 profile が scope と defer reason を保持することを保証する。
 
@@ -248,7 +223,7 @@ TVMS-003 は VMS-003 の活性化 profile が scope と defer reason を保持�
 
 TVMS-004 は VMS-004 の `spec.defines` 宣言が推測ではなく宣言読み取りで扱われることを保証する。
 
-### TVMS-005 結合 oracle
+### TVMS-005 結合 oracle（S7 で退役）
 
 TVMS-005 は VMS-005 の活性化工程 review が profile と工程表を join して検索できることを保証する。
 

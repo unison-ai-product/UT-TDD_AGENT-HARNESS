@@ -28,34 +28,33 @@ afterEach(() => {
   for (const database of opened.splice(0)) database.close();
 });
 
-describe("schedule live SessionStart digest", () => {
-  it("U-SCHEDULE-LIVE-004: renders one snapshot as the fixed four-stage digest", () => {
+describe("SessionStart digest", () => {
+  it("U-SCHEDULE-LIVE-004: renders the generic digest sections", () => {
     const database = db();
     put(database, "gate_runs", "gate_run_id", {
       gate_run_id: "gate:old",
       gate_id: "G-VERIFY.L8",
-      plan_id: "PLAN-M-00-verify-cutover",
+      plan_id: null,
       status: "failed",
       checked_at: "2026-07-10T00:00:00Z",
     });
     put(database, "gate_runs", "gate_run_id", {
       gate_run_id: "gate:new",
       gate_id: "G-VERIFY.L8",
-      plan_id: "PLAN-M-00-verify-cutover",
+      plan_id: null,
       status: "passed",
       checked_at: "2026-07-10T00:00:00Z",
     });
     put(database, "gate_runs", "gate_run_id", {
       gate_run_id: "gate:l9",
       gate_id: "G-VERIFY.L9",
-      plan_id: "PLAN-M-00-verify-cutover",
+      plan_id: null,
       status: "passed",
       checked_at: "2026-07-10T00:00:00Z",
     });
     for (let index = 1; index <= 7; index += 1) {
       put(database, "feedback_events", "feedback_event_id", {
         feedback_event_id: `feedback:${index}`,
-        plan_id: `PLAN-L7-5${index}`,
         signal_type: `action-${index}`,
         severity: "warn",
         status: "open",
@@ -103,7 +102,7 @@ describe("schedule live SessionStart digest", () => {
       setUserVersion: (version) => database.setUserVersion(version),
       close: () => database.close(),
     };
-    const digest = selectSessionStartDigest(snapshotDb, ["abc123 feat: live schedule digest"], {
+    const digest = selectSessionStartDigest(snapshotDb, ["abc123 feat: session digest"], {
       escalationLines: ["attempt-escalation warning", "subject: 3 consecutive failures"],
       memory: memoryFromService,
     });
@@ -114,7 +113,7 @@ describe("schedule live SessionStart digest", () => {
     expect(rendered).toContain("gate: G-VERIFY.L9=passed");
     expect(rendered).toContain("escalation: attempt-escalation warning");
     expect(rendered).not.toContain("gate: G-VERIFY.L8=failed");
-    expect(rendered).toContain("abc123 feat: live schedule digest");
+    expect(rendered).toContain("abc123 feat: session digest");
     expect(rendered.match(/review action/g)).toHaveLength(5);
     expect(rendered).toContain("(+2 more actionable");
     expect(rendered).toContain("telemetry summarized: skill_firing_rate=1");

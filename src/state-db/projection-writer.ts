@@ -61,7 +61,6 @@ import { RepositoryModelEvaluationConfig } from "../projection/adapters/model-ev
 import { loadRepositoryPlanSources } from "../projection/adapters/repository-plan-sources.ts";
 import { projectModelEvaluations as projectModelEvaluationsApplication } from "../projection/application/project-model-evaluations.ts";
 import { projectOperationalMetrics as projectOperationalMetricsApplication } from "../projection/application/project-operational-metrics.ts";
-import { projectPocEvaluations as projectPocEvaluationsApplication } from "../projection/application/project-poc-evaluations.ts";
 import type { ProjectionEvent } from "../projection/contracts/projection-store.ts";
 import { type ProjectedPlan, projectPlanSources } from "../projection/domain/plan-projection.ts";
 import { HARNESS_DB_TABLES } from "../schema/harness-db.ts";
@@ -88,7 +87,6 @@ import {
   collectGateRunEvidenceProjection as collectGateRunEvidenceProjectionCore,
   type GateRunEvidenceProjection,
 } from "./gate-run-evidence-projection.ts";
-import { rebuildExecutionReadiness } from "./github-forward-projection.ts";
 import { type GuardrailDecisionInput, inspectGuardrailInvariants } from "./guardrail-invariants.ts";
 import { defaultHarnessDbPath, type HarnessDb, openHarnessDb } from "./index.ts";
 import { migrate, rowCounts } from "./migration.ts";
@@ -872,43 +870,6 @@ function projectReviewEvidenceRegistry(repoRoot: string, db: HarnessDb): void {
           },
         });
       }
-    }
-  }
-}
-
-function projectGithubReviewLaneReceipts(repoRoot: string, db: HarnessDb): void {
-  for (const plan of loadReviewPlans(repoRoot)) {
-    for (const [index, entry] of plan.crossEntries.entries()) {
-      if (
-        entry.review_kind !== "cross_agent" ||
-        !entry.lane ||
-        !entry.plan_revision ||
-        !entry.subject_head
-      )
-        continue;
-      const id = stableId(
-        "github-review-lane",
-        `${plan.plan_id}:${entry.plan_revision}:${entry.lane}:${entry.subject_head}:${index}`,
-      );
-      recordProjectionEvent(db, {
-        table: "github_review_lane_receipts",
-        id,
-        row: {
-          review_lane_receipt_id: id,
-          plan_id: plan.plan_id,
-          plan_revision: entry.plan_revision,
-          lane: entry.lane,
-          subject_head: entry.subject_head,
-          verdict: entry.verdict ?? "",
-          reviewed_at: entry.reviewed_at ?? "",
-          tests_green_at: entry.tests_green_at ?? "",
-          worker_model: entry.worker_model ?? "",
-          reviewer_model: entry.reviewer_model ?? "",
-          attack_trials: entry.attack_trials ?? 0,
-          citations_json: JSON.stringify(entry.citations ?? []),
-          source: normalizePath(join("docs", "plans", plan.file)),
-        },
-      });
     }
   }
 }
@@ -2204,38 +2165,6 @@ export function projectSkillEvaluations(db: HarnessDb, opts?: { asOf?: string })
 }
 
 /**
- * FR-L1-43: PoC success measurement projection.
- *
- * Identifies PoC PLANs (kind="poc") from plan_registry and reads their
- * decision_outcome ("confirmed" | "rejected" | "pivot").  Projects ONE
- * summary row with id "poc-evaluation:summary".
- *
- * poc_success_rate = confirmed_count / (confirmed + rejected + pivot)
- *   — pivot counts as a non-success outcome (denominator includes it).
- *
- * Decision outcome values rationale (hardcode-with-reason):
- *   "confirmed": S4 verdict = PoC adopted, forward into implementation.
- *   "rejected":  S4 verdict = PoC abandoned; hypothesis falsified.
- *   "pivot":     S4 verdict = PoC pivoted to a different hypothesis.
- *   Only PLANs with a non-empty decision_outcome contribute to the rate;
- *   PoC PLANs without an S4 decision yet (decision_outcome="") are excluded
- *   from the denominator (still pending), matching AC-43-01 intent.
- *   Source single-source: PLAN frontmatter `decision_outcome` field parsed
- *   by projectPlans (harness-db.ts plan_registry.decision_outcome).
- *
- * AC-FR-BR21-43-01: 10 PoC, 6 confirmed / 3 rejected / 1 pivot => rate 0.60.
- * AC-FR-BR21-43-02 cold-start: 0 PoC PLANs => 0 rows, no throw.
- */
-export function projectPocEvaluations(db: HarnessDb, opts?: { asOf?: string }): void {
-  const store = new SqliteProjectionStore(db);
-  projectPocEvaluationsApplication({
-    evaluatedAt: opts?.asOf ?? nowIso(),
-    read: store,
-    store,
-  });
-}
-
-/**
  * FR-L1-38: model evaluation projection (opt-in).
  *
  * Opt-in gate: reads .ut-tdd/config/model-opt-in.yaml under repoRoot.
@@ -2243,24 +2172,12 @@ export function projectPocEvaluations(db: HarnessDb, opts?: { asOf?: string }): 
  * Otherwise (file absent or enabled != true), writes 0 rows and returns.
  * Default (no file) = disabled. This is deterministic and does not throw.
  *
- * Success inferred by joining model_runs.plan_id -> plan_registry.status
- * IN PLAN_SUCCESS_STATUSES (single-source from this module).
+ * PLAN 由来の成功値 (success_count / success_rate / tokens_per_success / cost_per_success) は
+ * 書かない (NULL のまま、S7 #1379)。run_count と token / cost 総量だけを投影する。
  *
- * PLAN-L7-57: token/cost telemetry を model_runs に追加 (projectTokenUsage が session ログ走査で投入)。
- * 本関数は token 効率も集計する:
- *   - total_input/output_tokens, total_cost_usd = SUM over model_runs WHERE model (NULL は無視)。
- *   - tokens_per_success / cost_per_success の **分子と分母は別ソースで意図的に非対称** (review I-2、
- *     Option B = 定義を明示):
- *       分子 = その model の **全 model_runs** の token/cost (session ログ由来行 plan_id='' を含む)。
- *       分母 = success_count = plan_registry に join して success な行数 (review-evidence 由来)。
- *     session ログは PLAN に紐づかない (plan_id 不明) ため、両者は構造的に別母集団。よって指標の意味は
- *     「この model が全 session で費やした output token / その model が delivered した success PLAN 数」=
- *     **粗い「success PLAN あたり token コスト」proxy** であり、「success run あたり token」ではない。
- *     この非対称を解消するには session→PLAN 帰属が要るが現状ログに無い (carry)。
- *   - Output: per-model row (model PK, success_rate, run_count, success_count, evaluated_at,
- *     total_input_tokens, total_output_tokens, total_cost_usd, tokens_per_success, cost_per_success)。
+ * 投影する値: run_count と total_input/output_tokens, total_cost_usd (model_runs の SUM、NULL は無視)。
+ * PLAN 由来の値 (success_rate / success_count / tokens_per_success / cost_per_success) は NULL のまま。
  *
- * AC-38-01: model-A (2 runs, both success) => rate 1.0; model-B (2 runs, 1 success) => rate 0.5.
  * AC-38-02: disabled (no opt-in file) => 0 model_evaluations rows.
  * Cold-start (enabled but 0 model_runs): 0 rows, no throw.
  */
@@ -2457,7 +2374,6 @@ export function rebuildHarnessDb(input: RebuildHarnessDbInput = {}): RebuildHarn
       time("roadmap-review", () => {
         projectRoadmapRollup(repoRoot, db);
         projectReviewEvidenceRegistry(repoRoot, db);
-        projectGithubReviewLaneReceipts(repoRoot, db);
         projectGuardrailInvariantAdvisories(db);
         projectDescentObligations(repoRoot, db);
         projectDesignPairFreezeFindings(repoRoot, db);
@@ -2475,7 +2391,6 @@ export function rebuildHarnessDb(input: RebuildHarnessDbInput = {}): RebuildHarn
         projectSkillTelemetry(db, plans);
         projectSkillMetrics(db);
         projectSkillEvaluations(db);
-        projectPocEvaluations(db);
       });
       if (!input.skipTokenTelemetry) {
         // repo スコープ token telemetry ingest (issue #82、PLAN-L7-454): 従来 model_runs には
@@ -2516,9 +2431,6 @@ export function rebuildHarnessDb(input: RebuildHarnessDbInput = {}): RebuildHarn
       );
       time("test-cases", () => projectTestCaseCatalog(repoRoot, db));
       time("spec-ir", () => projectSpecIr(repoRoot, db, projectionDeps));
-      time("forward-readiness", () =>
-        rebuildExecutionReadiness({ db, now: nowIso(), transactional: false, repoRoot }),
-      );
       time("feedback", () => {
         projectFeedbackLifecycle(repoRoot, db, projectionDeps);
         projectVerificationDefectRoutingRefactorCandidates(db, projectionDeps);
