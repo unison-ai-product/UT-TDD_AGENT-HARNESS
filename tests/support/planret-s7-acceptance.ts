@@ -8,7 +8,7 @@ import { type HarnessDb, openHarnessDb } from "../../src/state-db/index.ts";
 import { migrate } from "../../src/state-db/migration.ts";
 import { clearRebuildableProjectionTables } from "../../src/state-db/sqlite-projection-rebuild.ts";
 import { createLegacyDatabase } from "./plan-mechanism-retirement-s3-migration.ts";
-import { removeTestTree } from "./temp-tree.ts";
+import { removeTestTree } from "../support/temp-tree.ts";
 
 /** L6 §3 の PLAN 用の表 9 件。 */
 export const PLAN_TABLES = [
