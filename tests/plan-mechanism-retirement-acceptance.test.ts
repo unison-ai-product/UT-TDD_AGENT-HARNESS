@@ -1,5 +1,4 @@
-import { mkdirSync, mkdtempSync, readFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { checkTraceGate } from "../src/doctor/process-quality.ts";
@@ -25,24 +24,21 @@ import {
   scanIImportsSource,
   scanIPlanAssetImports,
 } from "./support/planret-s7-import-scan.ts";
-import { removeTestTree } from "./support/temp-tree.ts";
+import {
+  cleanupTraceFixtures,
+  copyDocsWithout,
+  layerPairOk,
+} from "./support/planret-s7-trace-fixture.ts";
 import { headSnapshotRoot } from "./support/workspace-roots.ts";
 
 // S7 (#1379) の統合受入 oracle 008 / 018 (L7 plan-mechanism-retirement-test-design §3)。
 // S7 の source 撤去 PR はすべて merge 済み (#1798 / #1801 / #1803)。Red 段の it.fails は、すべて it に戻した。
 // (h)(i)(j) は Red 段の PR で足した。契約を満たさない (j) だけ it.fails で、(h)(i) は main が既に満たすので it。Green で (j) を it に戻す。
 const root = headSnapshotRoot();
-const emptyRoots: string[] = [];
 afterEach(() => {
   cleanupPlanretS7Fixtures();
-  for (const dir of emptyRoots.splice(0)) removeTestTree(dir);
+  cleanupTraceFixtures();
 });
-function emptyRepoRoot(): string {
-  const dir = mkdtempSync(join(tmpdir(), "planret-s7-h-"));
-  mkdirSync(join(dir, "docs"), { recursive: true });
-  emptyRoots.push(dir);
-  return dir;
-}
 
 describe("CANDIDATE-U-PLANRET-018 S7 の静的 scan (src / scripts / .github の tracked file)", () => {
   it("CANDIDATE-U-PLANRET-018(a) PLAN 用の表の名前を含む SQL 文字列が無い", () => {
@@ -164,6 +160,11 @@ describe("CANDIDATE-U-PLANRET-008 登録の無い PLAN 表の保全", () => {
   }
 });
 
+const TRACE_MISSING_DOC = {
+  G1: "docs/design/harness/L1-requirements/business-requirements.md",
+  G3: "docs/design/harness/L3-functional/business-detail.md",
+} as const;
+
 describe("CANDIDATE-U-PLANRET-018(h) G1 / G3 trace の直接経路", () => {
   for (const gate of ["G1", "G3"] as const) {
     const trace = `${gate}-trace` as const;
@@ -178,14 +179,19 @@ describe("CANDIDATE-U-PLANRET-018(h) G1 / G3 trace の直接経路", () => {
       expect(result.passed).toBe(true);
       expect(result.messages.join("\n")).toContain(`${lower} - OK (`);
     });
-    it(`CANDIDATE-U-PLANRET-018(h) 対象文書が欠けると gate ${gate} と doctor が ${lower} 固有の message で fail-close する`, () => {
-      const dir = emptyRepoRoot();
-      const missing = `${lower} - violation: required docs could not be read (Error: required doc not created: docs/design/harness/L1-requirements/`;
+    it(`CANDIDATE-U-PLANRET-018(h) layer-pair が成立していても、trace の対象文書だけが欠けると gate ${gate} と doctor が ${lower} 固有の message で拒否する`, () => {
+      const missingDoc = TRACE_MISSING_DOC[gate];
+      const dir = copyDocsWithout(root, missingDoc);
+      // (1) 拒否の原因が layer-pair ではないこと (layer-pair 単体は成立している)。
+      expect(layerPairOk(dir, gate, gate === "G1" ? "L1" : "L3")).toBe(true);
+      // (2) それでも gate 全体と doctor は trace 固有の message で拒否する。
+      const missing = `${lower} - violation: required docs could not be read (Error: required doc not created: ${missingDoc}`;
       const doctor = checkTraceGate(dir, trace);
       expect(doctor.ok).toBe(false);
       expect(doctor.messages.join("\n")).toContain(missing);
       const result = evaluateStaticGate({ gate, repoRoot: dir });
       expect(result.passed).toBe(false);
+      expect(result.messages.join("\n")).toContain(`${gate.toLowerCase()}-pair - OK (`);
       expect(result.messages.join("\n")).toContain(missing);
     });
   }
