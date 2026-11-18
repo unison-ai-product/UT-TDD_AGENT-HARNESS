@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   createRedactedCommandArgs,
   EvidenceRecord,
+  type EvidenceRecordInput,
 } from "../../src/forward/domain/evidence-record.ts";
 import {
   adaptLegacyPlan,
@@ -50,17 +51,10 @@ describe("PLAN Asset v2 domain", () => {
     }
   });
 
-  it("U-PA-004: revision and evidence snapshots remain immutable after revise", () => {
-    const created = PlanAsset.create({
-      assetId: `plan:legacy:${"2".repeat(64)}`,
-      alias: "PLAN-L6-2-old",
-      payload: { value: "before" },
-      bodyDigest: digest,
-    });
-    if (!created.ok) throw new Error("fixture must be valid");
-    const evidence = EvidenceRecord.create({
+  it("U-PA-004: evidence snapshots remain immutable after a newer snapshot is created", () => {
+    const input = {
       evidenceId: "evidence:old",
-      subjectId: created.value.assetId,
+      subjectId: "evidence-subject:old",
       subjectRevision: 1,
       sourceCommit: commit,
       evidenceKind: "green-test-run",
@@ -70,21 +64,12 @@ describe("PLAN Asset v2 domain", () => {
       exitCode: 0,
       producer: "ci",
       producedAt: "2026-07-10T00:00:00Z",
-    });
+    } satisfies EvidenceRecordInput<"green-test-run">;
+    const evidence = EvidenceRecord.create(input);
     if (!evidence.ok) throw new Error("fixture must be valid");
-    const before = JSON.stringify({ revision: created.value.latest, evidence: evidence.value });
-    created.value.revise({
-      baseRevision: 1,
-      alias: "PLAN-L6-2-new",
-      payload: { value: "after" },
-      bodyDigest: "d".repeat(64),
-      actor: "codex",
-      reason: "semantic update",
-    });
-    expect(JSON.stringify({ revision: created.value.latest, evidence: evidence.value })).toBe(
-      before,
-    );
-    expect(Object.isFrozen(created.value.latest)).toBe(true);
+    const before = JSON.stringify(evidence.value);
+    EvidenceRecord.create({ ...input, evidenceId: "evidence:new", subjectRevision: 2 });
+    expect(JSON.stringify(evidence.value)).toBe(before);
     expect(Object.isFrozen(evidence.value)).toBe(true);
   });
 

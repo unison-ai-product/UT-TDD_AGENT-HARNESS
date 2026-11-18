@@ -151,7 +151,7 @@ spec:
   defines:
     - id: VMS-001
       kind: upgrade-charter
-      traces_to: [VMS-002, VMS-003, VMS-004]
+      traces_to: [VMS-004]
       tests: [TVMS-001]
 ```
 
