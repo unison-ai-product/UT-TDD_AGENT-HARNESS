@@ -49,6 +49,7 @@ function buildRepo(root: string): void {
     ["# AI Dev Team Concept", "", "Fixture governance concept body.", ""].join("\n"),
     "utf8",
   );
+  writeFileSync(join(root, "src", "widget", "core.ts"), "export const core = 1;\n", "utf8");
   writeFileSync(
     join(root, "tests", "core.test.ts"),
     'import { core } from "../src/widget/core";\nexport const t = core;\n',

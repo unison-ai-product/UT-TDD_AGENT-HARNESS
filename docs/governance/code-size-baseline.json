@@ -93,7 +93,7 @@
   "tests/plan-asset/evidence-policy.test.ts": { "lines": 570, "functionExcess": null },
   "tests/projection-writer.test.ts": { "lines": 2178, "functionExcess": null },
   "tests/provider-judgment-composition.test.ts": { "lines": 934, "functionExcess": null },
-  "tests/relation-graph-loader.test.ts": { "lines": 775, "functionExcess": null },
+  "tests/relation-graph-loader.test.ts": { "lines": 776, "functionExcess": null },
   "tests/relation-graph.test.ts": { "lines": 514, "functionExcess": null },
   "tests/release-aggregate-admission.test.ts": { "lines": 693, "functionExcess": null },
   "tests/release-consumer-gates.test.ts": { "lines": 2956, "functionExcess": null },
