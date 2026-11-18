@@ -126,7 +126,6 @@ function runCli(
   program.configureOutput({ writeErr: () => {}, writeOut: () => {} });
   let spawnCalls = 0;
   registerDelegationCommands(program, {
-    gitBranch: () => "test/issue1600",
     gitHead: () => HEAD.slice(0, 7),
     resolveTaskText: (opts) => opts.task ?? null,
     runSessionStartSideEffects: () => {},

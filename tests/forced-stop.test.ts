@@ -24,8 +24,6 @@ function mockDeps(
     now: () => "2026-06-02T00:00:00.000Z",
     appendLine: (p, l) => files.set(p, `${files.get(p) ?? ""}${l}\n`),
     readText: (p) => files.get(p) ?? null,
-    writeText: (p, c) => files.set(p, c),
-    currentBranch: () => null,
     listDir: (dir) =>
       [...files.keys()]
         .filter((k) => k.startsWith(dir) && k.length > dir.length)
@@ -91,11 +89,7 @@ describe("forced-stop (PLAN-L7-02 add-impl / U-FSF)", () => {
     expect(parsed.text).toBeUndefined();
     expect(parsed.content).toBeUndefined();
 
-    const unresolved = mockDeps({
-      currentBranch: () => {
-        throw new Error("must not resolve active plan");
-      },
-    });
+    const unresolved = mockDeps();
     recordForcedStop({ session_id: "s2", dangling_from: "T2" }, unresolved);
     expect(JSON.parse((unresolved.files.get(sessionPath("s2")) ?? "{}").trim()).plan_id).toBeNull();
 

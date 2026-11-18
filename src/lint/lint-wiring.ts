@@ -43,6 +43,10 @@ export const DEFERRED_LINTS: Record<string, string> = {
     "#1358でruntime guard退役。凍結済み合成oracleとL14 evidenceのためlibraryとして残す。完全退役は#1379",
   "tool-adapter":
     "adapter-probe 純関数ライブラリ (catalog/probe/normalize/planDiagramRefresh)。`ut-tdd adapter` 統合は IMP-033 rule-engine / PLAN-L7-50 R8 で deferred (closed-as-library)。",
+  "zero-trust-download":
+    "#1741 Red の stub。runtime 配線とこの保留登録の撤去は #1741 Green で行う。",
+  "zero-trust-download-inputs":
+    "#1741 Red の stub。runtime 配線とこの保留登録の撤去は #1741 Green で行う。",
 };
 
 export interface LintWiringInput {

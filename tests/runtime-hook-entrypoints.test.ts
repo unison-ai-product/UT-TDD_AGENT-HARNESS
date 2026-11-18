@@ -571,7 +571,6 @@ describe("runtime hook entrypoints", () => {
         UT_TDD_CODEX_BIN: fakeCodex,
       };
 
-      expect(runCli(cwd, ["plan", "use", "PLAN-L4-13"]).status).toBe(0);
       const run = runCli(
         cwd,
         ["codex", "--role", "se", "--task", "implement parity", "--execute"],
@@ -602,7 +601,6 @@ describe("runtime hook entrypoints", () => {
         UT_TDD_CODEX_BIN: fakeCodex,
       };
 
-      expect(runCli(cwd, ["plan", "use", "PLAN-L4-13"]).status).toBe(0);
       const run = runCli(
         cwd,
         ["codex", "--role", "se", "--task-file", "task.md", "--execute"],
