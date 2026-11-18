@@ -7,8 +7,8 @@ import { recommendSkillsForText } from "../../src/skill-engine/recommend.ts";
 import { type HarnessDb, openHarnessDb } from "../../src/state-db/index.ts";
 import { migrate } from "../../src/state-db/migration.ts";
 import { clearRebuildableProjectionTables } from "../../src/state-db/sqlite-projection-rebuild.ts";
-import { createLegacyDatabase } from "./plan-mechanism-retirement-s3-migration.ts";
 import { removeTestTree } from "../support/temp-tree.ts";
+import { createLegacyDatabase } from "./plan-mechanism-retirement-s3-migration.ts";
 
 /** L6 §3 の PLAN 用の表 9 件。 */
 export const PLAN_TABLES = [
@@ -100,7 +100,10 @@ export const scanF = (root: string) => {
 };
 
 const roots: string[] = [];
+const opened: HarnessDb[] = [];
 export function cleanupPlanretS7Fixtures(): void {
+  // Windows は開いたままの DB file を消せない (EPERM)。tree を消す前に閉じる。
+  for (const db of opened.splice(0)) db.close();
   for (const root of roots.splice(0)) removeTestTree(root);
 }
 
@@ -108,7 +111,9 @@ function tempDb(): { root: string; db: HarnessDb } {
   const root = mkdtempSync(join(tmpdir(), "planret-s7-"));
   roots.push(root);
   mkdirSync(join(root, ".ut-tdd"), { recursive: true });
-  return { root, db: openHarnessDb(join(root, ".ut-tdd", "harness.db"), { repoRoot: root }) };
+  const db = openHarnessDb(join(root, ".ut-tdd", "harness.db"), { repoRoot: root });
+  opened.push(db);
+  return { root, db };
 }
 
 function tableNamesOf(db: HarnessDb): Set<string> {
