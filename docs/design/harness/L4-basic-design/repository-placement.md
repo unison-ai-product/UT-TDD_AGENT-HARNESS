@@ -75,12 +75,7 @@ UT-TDD-agent-harness/
 │   │   ├── b4-services/             サービス (gate・feedback・memory・github・registry)
 │   │   ├── b5-app/                  アプリ (workflow・team・consumer の setup)
 │   │   └── b6-entry/                入口 (CLI・hook の起動口)
-│   ├── intelligence/                管理知能 (Python・別プロセス、P6 決定 #575。v4 の 1.0.0 では作らない: ADR-001 決定 4 の運用上の注記)
-│   │   ├── planner/                 工程間の境界・チケットの発行
-│   │   ├── team/                    区分ごとのチームチケット・リーダーの全体ビュー
-│   │   └── feedback/                パターン抽出 → 改善先の選択 (R6)
 │   ├── contracts/                   境界の契約 (JSON schema)。言語と区分をまたぐ唯一の正本
-│   │   ├── kernel-intelligence/     kernel ⇔ 管理知能
 │   │   ├── ticket/                  チケット (実行と検収のペア、種類)
 │   │   ├── acceptance-catalog/      受入の宣言 (#589)
 │   │   └── placement-registry/      置き場所のルール (§4)
@@ -174,7 +169,7 @@ source の `product/` → Pack repo → asset → consumer とこの repo の ro
 
 ### §3.5 補足の規則
 
-- 本体を `src/` ではなく `product/engine/` とし、信頼の根を `product/kernel/` に分ける。「source」という名前では、本体のコードか開発用のコードかを区別できず、信頼の根もディレクトリの段階で隔離されていないと守れないためである。kernel・engine・intelligence が互いに知ってよいのは `contracts/` だけとし、これを path で lint する。
+- 本体を `src/` ではなく `product/engine/` とし、信頼の根を `product/kernel/` に分ける。「source」という名前では、本体のコードか開発用のコードかを区別できず、信頼の根もディレクトリの段階で隔離されていないと守れないためである。kernel と engine が互いに知ってよいのは `contracts/` だけとし、これを path で lint する。管理知能 (`product/intelligence/`、Python) と、境界の契約のうち管理知能との契約 (`contracts/kernel-intelligence/`) は、管理知能を作らないので置かない (UTV4-FR-070、2026-11-16 の訂正。2026-11-18 に図と本文を要件へ同期した、#1791)。
 - engine は「帯 = ディレクトリ」とし、依存の向きの lint を path だけで判定できるようにする (R3 の実測: 逆向きの依存 0)。
 - 設計の文書は、層のディレクトリに置く。右腕の層名は、PO が採択した v4 の構成 (#822) に合わせる。`docs/process/evidence/` にある右腕の設計は、ここへ戻す (矛盾 4)。
 - テンプレートは `product/parts/templates/` に一本化し、`docs/templates/vmodel/` は廃止する (矛盾 1 / 8)。
