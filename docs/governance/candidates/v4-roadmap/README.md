@@ -128,6 +128,7 @@
 | CI/role/Memory/図などの個別置換 (見直し前の記録) | [migration/03_COMPONENT_CUTOVERS.md](migration/03_COMPONENT_CUTOVERS.md) |
 | MPL対象、旧MIT、第三者、コピーされる生成物 (見直し前の記録) | [migration/04_LICENSE_BOUNDARY.md](migration/04_LICENSE_BOUNDARY.md) |
 | AI/CIコスト、セキュリティ、管理、context (見直し前の記録) | `workstreams/02`〜`05` |
+| 工程 ④⑤ の再編とリバースリファクタリングの計画 (候補、正本ではない) | [workstreams/06_RESTRUCTURE_AND_REVERSE_REFACTOR.md](workstreams/06_RESTRUCTURE_AND_REVERSE_REFACTOR.md) |
 | open issue を閉じる工程 | [execution/04_ISSUE_INTAKE.md](execution/04_ISSUE_INTAKE.md) |
 | 現行の候補 (50BR・80FR・95AC、release 必須 39) をどの版で閉じるか。区分と新しい版の列は要件候補・受入候補と版のはしごに揃えてある | [trace/REQUIREMENT_COVERAGE.md](trace/REQUIREMENT_COVERAGE.md) / [AC_COVERAGE.md](trace/AC_COVERAGE.md) |
 | 出典と、行った資料検査の範囲 | [SOURCES.md](SOURCES.md) / [VALIDATION.md](VALIDATION.md) |
