@@ -908,7 +908,6 @@ Issue #1357 の `U-DBPROJ-ING-001..003` は正式 ID へ昇格済み。S7 前は
 |---|---|---|
 | U-DBPROJ-ING-001 | `analyzeDbProjectionIngestion` | S7 前は `schedule_entries` が 0 行でも、他の全 automatic 要件が populated なら `ok=true` かつ `missingRows=[]`。さらに `AUTOMATIC_DB_PROJECTION_REQUIREMENTS` にこの表が含まれない。この表は PLAN 入力が無いときの無条件 population 要件ではない。S7 後は退役4表を fixture から外し、残る automatic 要件と fixture key の完全一致・成功・missingRows 空を維持する。 |
 | U-DBPROJ-ING-002 | `analyzeDbProjectionIngestion` | `schedule_entries` と既存 negative fixture の `mcp_server_profiles` が 0 行なら `ok=false` で、`missingRows.map(row => row.table)` の完全一致集合は `mcp_server_profiles` のみ。例外対象は `schedule_entries` だけで、他の automatic 要件は fail-close のまま。 |
-| U-DBPROJ-ING-003 | `rebuildHarnessDb` | S7 で退役する。S7 前は隔離 `repoRoot` の明示的な PLAN Markdown fixture 1 件を入力すると `schedule_entries > 0`。これは入力が存在する場合の生成保証であり、入力不在時の無条件 population 要件ではない。 |
 | U-DBPROJ-ATOMIC-01 | `rebuildHarnessDb` | truncate と再投影は 1 つの `BEGIN IMMEDIATE` transaction の中で走る。実 repo の基準 rebuild で 1 行以上ある、PLAN に依らない `test_cases` への最初の `INSERT` (truncate の後) で失敗を注入すると、例外が再送出されて rollback し、直前に commit した `test_cases` の行数が変わらない (0 にならない)。基準の行数が 0 なら失敗とし、`docs/plans` の有無で飛ばさない (#1430、旧版は `plan_registry` へ注入、修正前 188 → 0 で Red)。 |
 | U-DBPROJ-PROV-01 | `analyzeDbProjectionIngestion(..., { enforceTelemetryProvenance: true })` | Populated telemetry tables (`skill_invocations`, `test_runs`, `guardrail_decisions`, `model_runs`) with only projection provenance are not acceptable evidence for "fired/used/works" claims. Default doctor can surface migration state as partial, but provenance-enforced mode fail-closes when runtime rows are 0 and projection rows are non-zero. |
 | U-DBPROJ-PROV-02 | `projectRuntimeTestRunFromSessionEvent` | A session-log Bash verification event (`Bash (vitest)` etc.) creates exactly one `test_runs` row with non-empty `session_id`, `runtime=hook-session-log`, `scope=runtime-hook`, and the JSONL evidence path; non-verification Bash events such as `Bash (git)` do not fabricate runtime test evidence. |
@@ -1120,6 +1119,8 @@ This addendum pairs `screen-spec.md` with L7 unit-test oracles. It covers the L6
 > S7 で PLAN 工程表と activation profile の投影および join を退役する。以下の R1〜R4 は退役前の検証履歴。
 > `schedule_entries` / `activation_entries` / `activation_schedule_reviews` は旧 DB の物理表と行を保持する。
 > 残る文書カタログ・文書スケール・仕様 IR の検証は下表で維持する。
+> 旧 `U-SCHEDULE-LIVE-002` は S7 で退役する。projection-writer の時刻比較順序を確認するテストは writer の退役まで実行する。
+> 旧 U-DBPROJ-ING-003 は S7 で退役する。明示的な入力から予定表を投影するテストは、投影の退役まで実行する。
 
 | U-ID | Target | Oracle |
 |---|---|---|
@@ -1127,16 +1128,15 @@ This addendum pairs `screen-spec.md` with L7 unit-test oracles. It covers the L6
 | U-ACTIVATION-SCHEDULE-R2 | `joinActivationScheduleReviews(input)` | S7 前は `activation_entries.plan_id` と `schedule_entries.plan_id` を join し、`current_location` / `rag` / `schedule_status` / `v_pair` を read-model に含める。S7 で退役する。 |
 | U-ACTIVATION-SCHEDULE-R3 | `analyzeSpecIrIntegrity(input)` | S7 前は `scope_status=deferred` または `out_of_scope` の理由欠落、または `target_kind=plan` の工程表未接続を finding 化し、projection 側で工程行を創作しない。S7 で退役する。 |
 | U-ACTIVATION-SCHEDULE-R4 | `rebuildHarnessDb` / `findReference` | S7 前は real repo rebuild で `activation_schedule_reviews` が populated になり、`vmodel-clean-core` や `deferred` で検索できる。S7 で退役する。 |
-| U-SCHEDULE-LIVE-002 | `selectScheduleLiveState(db)` / `latestReviewEvidenceEntry` | authoring green と最新 test/gate (`blocked`を含む) または最新review snapshotの差し戻し矛盾を red にする一方、passing signal だけで authoring yellow/red を green に昇格しない。最新時刻はUTC instantで比較し、同一instantは後置row/entryを採用する。未知/空ragはyellowへfail-closedする。 |
 | U-SCHEDULE-LIVE-004 | `renderSessionStartDigest(digest)` / SessionStart | `state-and-gates / HEAD / actionable / memory` の固定4段を1回だけ出力し、旧 feedback/memory/escalation block を重複表示しない。Iron Law escalationは第1段に内包し、DB/HEAD不在は fail-open。 |
 | U-DOCUMENT-CATALOG-R1 | `parseDocumentCatalogEntries(input)` / `projectSpecIr` | `docs/governance/vmodel-document-catalog.md` から `document_catalog_entries` を populated にし、`DOC-L4-DATA` などを `findReference` で検索できる。 |
 | U-DOCUMENT-SCALE-R1 | `parseDocumentScaleProfileEntries(input)` / `joinDocumentScaleProfileReviews(input)` | `docs/governance/vmodel-document-scale-profiles.md` から `document_scale_profile_entries` を populated にし、`document_catalog_entries` と join して `document_scale_profile_reviews` に catalog layer/sub_doc/default status を含める。 |
 | U-DOCUMENT-SCALE-R2 | `analyzeSpecIrIntegrity(input)` | 未知 decision/detail/status、catalog 欠落、skip/defer/conditional の理由欠落、`required_plan_id` 未解決を finding 化し、profile 判定を projection 側で補完しない。 |
 | U-DOCUMENT-SCALE-R3 | `rebuildHarnessDb` / `findReference` | real repo rebuild で `document_scale_profile_reviews` が populated になり、`enterprise DOC-L4-REPORT adopt` などを検索できる。 |
 | U-SCOPE-PREVIEW-R1 | `buildScopeDryRunPreview(db, input)` | document scale profile の `conditional` 文書は capability flag が一致した場合だけ `resolved_scope_status=in_scope`、一致しなければ `conditional` のまま返す。 |
-| U-SCOPE-PREVIEW-R2 | `buildScopeDryRunPreview(db, input)` | `defer` 文書は `required_plan_id` が投影済みなら warn なしで `required_action=follow required plan ...` を返し、未投影なら warn finding を返す。 |
+| U-SCOPE-PREVIEW-R2 | `buildScopeDryRunPreview(db, input)` | defer 文書は理由と `resolved_scope_status=deferred` を保持し、`required_action=route defer target before implementation` を返す。 |
 | U-SCOPE-PREVIEW-R3 | `buildScopeDryRunPreview(db, input)` | document scale profile 不在は `scope-preview-profile-missing` error finding とし、dry-run が silent success しない。 |
-| U-SCOPE-PREVIEW-R4 | `ut-tdd db scope-preview --profile <id> --json` | CLI は JSON/text 両出力を持ち、`documents` / `activations` / `gates` / `detectors` / `findings` / `summary` を返す。source docs / PLAN / profile を更新しない。 |
+| U-SCOPE-PREVIEW-R4 | `ut-tdd db scope-preview --profile <id> --json` | S7 後の JSON は `documents` / `gates` / `detectors` / `findings` / `summary` を返し、text は同じ文書判定を表示する。旧表入り DB と新規 DB で同じ文書・gate・detector を返す。source docs と profile は保持する。 |
 
 ## PLAN-L6-42 Typed Spec Declaration Addendum (2026-07-08)
 
