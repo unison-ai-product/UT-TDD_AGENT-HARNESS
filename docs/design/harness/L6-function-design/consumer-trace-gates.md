@@ -16,7 +16,7 @@ issue: 971
 
 ## 1. 目的
 
-consumer (clean Pack を入れた製品 repo) で `ut-tdd gate G1` / `G3` と `ut-tdd plan lint --gate G1-trace` / `G3-trace` を意味のある検査にする。
+consumer (clean Pack を入れた製品 repo) で `ut-tdd gate G1` / `G3` と doctor の G1/G3 trace check を意味のある検査にする。最終 S7 では PLAN lint CLI を提供しない。
 現状には次の 3 つの欠陥がある。
 
 - #971: G1-trace は画面 ID を `(?:PM|HM|GD)-\d{2}` に固定して抽出する (`src/lint/g1-trace.ts` の `screenIds`)。consumer の画面 ID (例: `SC-001`) を読めない。
@@ -27,17 +27,17 @@ consumer (clean Pack を入れた製品 repo) で `ut-tdd gate G1` / `G3` と `u
 
 ## 2. 入口と契約の置き場所
 
-契約は lint 層に置く。gate と plan lint の 2 つの入口が、同じ lint 関数に到達するからである。
+契約は既存の G1/G3 trace helper に置く。public gate と doctor が同じ helper を直接呼び、trace の結果を共有する。最終 S7 では PLAN lint の互換入口を残さない。
 
 | 入口 | 経路 |
 |---|---|
-| `ut-tdd gate G1` / `G1-TRACE` | `src/gate/static.ts:273` → `lintPlanWithGate(undefined, repoRoot, "G1-trace")` |
-| `ut-tdd gate G3` / `G3-TRACE` | `src/gate/static.ts:283` → `lintPlanWithGate(undefined, repoRoot, "G3-trace")` |
-| `ut-tdd plan lint --gate G1-trace` / `G3-trace` | `src/cli.ts` の `plan lint` → `lintPlanWithGate(path, cwd, gate)` |
-| 共通の到達点 | `src/plan/lint.ts:1196-1218` (`lintPlanGate` 内) → `analyzeG3Trace(loadDocs(repoRoot))` / `analyzeG1Trace(loadG1TraceDocs(repoRoot))` |
+| `ut-tdd gate G1` / `G1-TRACE` | `src/gate/static.ts` → `src/lint/g1-trace.ts` の `lintG1Trace(repoRoot)` → trace と layer-pair result の別々の合成 |
+| `ut-tdd gate G3` / `G3-TRACE` | `src/gate/static.ts` → `src/lint/g3-trace.ts` の `lintG3Trace(repoRoot)` → trace と layer-pair result の別々の合成 |
+| doctor の G1/G3 trace | `src/doctor/process-quality.ts` → 同じ `lintG1Trace(repoRoot)` / `lintG3Trace(repoRoot)` を直接呼ぶ |
+| 最終 S7 後の `plan lint --gate G1-trace` / `G3-trace` | PLAN lint CLI と G1/G3 PLAN branch は削除され、互換入口を持たない |
 
-- 分岐 (§3) は `src/plan/lint.ts` の上記 2 つの handler から呼ぶ lint 関数の中に置く。`src/gate/static.ts` には置かない。gate 側にだけ置くと plan lint 側が旧挙動のまま残るからである。
-- gate の結果は、trace の結果と layer pair gate (`evaluateLayerPairGate(..., "L1" | "L3", ...)`) の結果を `combineStaticGates` で合わせたものである。本契約が「2 つの入口で同じ結果」と言うのは trace の部分 (ok と messages) についてであり、layer pair gate は本契約の範囲外である。
+- 分岐 (§3) と trace 読取は各既存 trace helper (`lintG1Trace` / `lintG3Trace`) が担う。public gate と doctor は PLAN lint を経由せず helper を直接呼ぶ。
+- public gate の結果は trace helper の結果と layer-pair gate (`evaluateLayerPairGate(..., "L1" | "L3", ...)`) を別々に合成する。doctor は trace helper の結果を直接使い、pair result と合成しない。契約上の一致対象は trace helper の `ok` と `messages` に限り、aggregate の `passed` を trace の `ok` と同値にしない。
 
 ## 3. 分岐の規則 (A1)
 
@@ -152,7 +152,7 @@ consumer 分岐では、必須集合が空なら違反とし、理由 `empty_req
 
 ## 8. 出力
 
-consumer 分岐の lint 関数は次を返す。`src/plan/lint.ts` の handler は既存と同じく `{ ok, messages }` に変換する。
+consumer 分岐の analyzer は次を返す。対応する trace helper が既存どおり `{ ok, messages }` へ変換し、public gate と doctor が利用する。
 
 | field | 内容 |
 |---|---|
@@ -167,8 +167,8 @@ consumer 分岐の lint 関数は次を返す。`src/plan/lint.ts` の handler �
 
 ## 9. 実装方式
 
-- 新規 `src/lint/consumer-trace.ts` に、表の抽出 (§6)、規則 (§7)、`analyzeConsumerG1Trace(reader)` / `analyzeConsumerG3Trace(reader)` を純粋関数として置く。
-- `src/plan/lint.ts` の G1-trace / G3-trace の handler で §3 の分岐を行う。harness 分岐は現行の `analyzeG1Trace(loadG1TraceDocs(repoRoot))` / `analyzeG3Trace(loadDocs(repoRoot))` をそのまま呼ぶ。
+- `src/lint/consumer-trace.ts` に表の抽出 (§6)、規則 (§7)、`analyzeConsumerG1Trace(reader)` / `analyzeConsumerG3Trace(reader)` を純粋関数として置く。
+- 既存 `src/lint/g1-trace.ts` / `src/lint/g3-trace.ts` の `lintG1Trace(repoRoot)` / `lintG3Trace(repoRoot)` が、harness / consumer の分岐、repository read、trace 診断を返す。`src/gate/static.ts` と `src/doctor/process-quality.ts` はこれらを直接呼ぶ。PLAN lint の handler や compat facade を挟まない。
 - `REQUIRED_L2_SCREEN_COLUMNS` と `tableCells` は `src/gate/right-arm-static.ts` から export して共有する (挙動は変えない)。
 - harness の抽出関数 (`extractG1*` / `extractFrL1Ids` など) は consumer 分岐で使わない。prefix 固定の正規表現を持つからである。
 
@@ -188,7 +188,7 @@ consumer 分岐の lint 関数は次を返す。`src/plan/lint.ts` の handler �
 | post (fail-close) | core 文書の欠落、`doc_type_id` の不一致、表の欠落、範囲表記の不正、必須集合の空は、いずれも `ok=false` |
 | post (trace) | §7.1 の各規則の違反 1 件 (token 1 個または参照 0 個の行 1 件) につき理由 1 件 |
 | invariant (prefix 非依存) | ID の抽出と照合は prefix に依存しない。ID の文字列を変えても、列の位置関係が同じなら結果は変わらない |
-| invariant (入口の一致) | 同じ repo に対して、gate と `plan lint --gate` の trace 部分の `ok` と messages は一致する |
+| invariant (入口の一致) | 同じ repo に対して、trace helper と public gate の trace-filtered messages は一致する。helper の `ok` は fixture の期待値で確かめ、aggregate gate の `passed` と比較しない |
 | invariant (読み取り専用) | lint は文書を書き換えない |
 | invariant (降下検査の読み取り) | 降下検査 (§13) は、consumer 分岐では §5 の文書だけを読む。harness 分岐では、§13.2 の L1 / L3 文書に加え、除外台帳を持つ本設計文書 (`docs/design/harness/L6-function-design/consumer-trace-gates.md`) を 1 path 読む。上の「harness 専用の文書を要求しない」は consumer 分岐に限る |
 
@@ -295,7 +295,7 @@ L1 の BR / UX / FR / 画面の ID が 1 件でも L3 の設計文書に現れ�
 
 - 新規 `src/lint/l1-l3-descent.ts` に、`analyzeL1L3Descent(reader)` を純粋関数として置く。L1 の ID 抽出は `extractG1BusinessIds` / `extractG1ScreenIds` を呼び、consumer の表の抽出は §9 の `src/lint/consumer-trace.ts` の関数を呼ぶ。新しい ID の抽出器は追加しない。範囲表記を引用に数えない照合規則 (§13.3) は本節が持つ。
 - FR-L1 は呼ばない (§13.1)。
-- 入口の配線は G1-trace の追加の規則とする (§13.9 の決定 DEC-1)。`src/plan/lint.ts` の G1-trace handler が `analyzeG1Trace` に続けて `analyzeL1L3Descent` を呼び、§13.4 の `l1-l3-descent - ...` の message を別の行として足す。`g1-trace - OK (...)` の行は変えない。doctor の full profile は `checkPlanTraceGate(root, "G1-trace")` で G1-trace を呼ぶので、harness では doctor からも同じ検査に届く。gate-static の基準となる message 配列は 1 行増える。その更新は実装 PR の範囲である。
+- 入口の配線は G1-trace の追加の規則とする (§13.9 の決定 DEC-1)。`lintG1Trace(repoRoot)` が `analyzeG1Trace` に続けて `analyzeL1L3Descent` を呼び、§13.4 の `l1-l3-descent - ...` の message を別の行として足す。`g1-trace - OK (...)` の行は変えない。public gate と doctor は同じ helper を直接呼ぶ。gate-static の期待では trace の追加 message を扱い、aggregate gate `passed` を helper `ok` と比較しない。
 
 ### 13.8 consumer の ID 体系 (#971 / #972)
 
@@ -376,7 +376,7 @@ Pack#10 の consumer は、consumer layout (`docs/design/L1-requirements/`) に 
 
 ### 15.1 目的と前提
 
-consumer で `ut-tdd gate G3` を回すと、`g3-trace - violation: required docs could not be read (Error: required doc not created: docs/design/harness/L3-functional/business-detail.md)` で毎回赤になる (Pack unison-ai-product/UT-TDD_AGENT-HARNESS-Pack#11、#972)。`src/lint/g3-trace.ts` の `loadDocs` は、5 文書を `resolveAuthoringSourceAbsolutePath` で consumer layout へ写したうえで、1 本でも無ければ `throw new Error("required doc not created: <path>")` する。`src/plan/lint.ts` の G3-trace handler はこの例外を `required docs could not be read (...)` に丸める。`src/lint/g1-trace.ts` の `loadG1TraceDocs` も同じ形である。
+当時 consumer で `ut-tdd gate G3` を回すと、`g3-trace - violation: required docs could not be read (Error: required doc not created: docs/design/harness/L3-functional/business-detail.md)` で毎回赤になる (Pack unison-ai-product/UT-TDD_AGENT-HARNESS-Pack#11、#972)。`src/lint/g3-trace.ts` の `loadDocs` は、5 文書を `resolveAuthoringSourceAbsolutePath` で consumer layout へ写したうえで、1 本でも無ければ `throw new Error("required doc not created: <path>")` する。当時の `src/plan/lint.ts` の G3-trace handler はこの例外を `required docs could not be read (...)` に丸めていた。`src/lint/g1-trace.ts` の `loadG1TraceDocs` も同じ形である。
 
 真因は、文書の配布漏れではなく、文書が無いときの縮退の分岐が無いことである。path の写像は効いているが、写した先に harness 専用の文書が無いときに、何を検査し何を報告するかが決まっていない。本節はこの縮退を G3-trace について固定する。方式は §3 (A1) と §5 から一意に決まるので、本節は新しい gate・新しい理由の種類・新しい設定項目を足さない。
 
@@ -456,10 +456,10 @@ consumer の G3-trace の PASS は、次を保証しない。これは縮退の�
 | post (fail-close) | core 文書が 1 本でも無ければ `ok=false`。無い文書ごとに `missing_core_doc:<doc_type_id>` を 1 件返し、辞書順で全件返す |
 | post (理由の重ね) | 無い core 文書について `doc_type_mismatch` / `required_table_missing` / `empty_required_set` を返さない。その文書の集合を参照先とする token の `dangling_reference` は返す |
 | post (診断の形) | consumer 分岐の message は `consumer column trace` を含み、`required doc not created` / `required docs could not be read` を含まない。harness 専用の文書が無いことは、理由も message も増やさない |
-| post (入口の一致) | `ut-tdd gate G3` の trace 部分と `ut-tdd plan lint --gate G3-trace` は、文書が無い状態でも同じ `ok` と messages を返す (§10 invariant (入口の一致)) |
+| post (入口の一致) | 同じ repo に対して `lintG3Trace(repoRoot)` と public `ut-tdd gate G3` の trace-filtered messages は一致する。helper の `ok` は fixture の期待値で検証し、aggregate gate `passed` と比較しない (§10 invariant (入口の一致)) |
 | invariant (harness 不変) | harness 分岐の G3-trace は、5 文書が揃った状態でも、1 本が無い状態でも、現行と同じ `ok` と messages を返す。無い状態の message は `g3-trace - violation: required docs could not be read (Error: required doc not created: <harness の path>)` の 1 行である |
 | invariant (分岐の決め方) | 縮退の有無は §3 の分岐だけで決まる。個々の文書の有無で、harness 分岐の中に consumer の縮退を持ち込まない |
 
 ### 15.8 検証
 
-テスト設計 `docs/test-design/harness/L7-consumer-trace-gates-test-design.md` の `CANDIDATE-U-CTRACE-046`〜`050` が本節を固定する。046 は Pack#11 の形の再現と 2 つの入口、047 は harness 専用文書が置かれた consumer、048 は core 文書の入力クラスごとの欠落と理由の重ね、049 は複数欠落の全件報告、050 は harness 分岐の不変である。既存の `CANDIDATE-U-CTRACE-019` (harness 専用文書を要求しない) と `021` (core 文書の欠落の fail-close) は、本節の前提として引き続き有効である。
+テスト設計 `docs/test-design/harness/L7-consumer-trace-gates-test-design.md` の `CANDIDATE-U-CTRACE-046`〜`050` が本節を固定する。046 は Pack#11 の形の再現と helper/public gate の trace-filtered messages、047 は harness 専用文書が置かれた consumer での同じ比較、048 は core 文書の入力クラスごとの欠落と理由の重ね、049 は複数欠落の全件報告、050 は harness 分岐の不変である。既存の `CANDIDATE-U-CTRACE-019` (harness 専用文書を要求しない) と `021` (core 文書の欠落の fail-close) は、本節の前提として引き続き有効である。

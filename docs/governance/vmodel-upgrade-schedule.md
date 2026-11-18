@@ -157,16 +157,6 @@ DB は正本ではない。本書、PLAN、設計 doc、test-design が authorin
 - `status=planned` の行は実装完了を意味しない。起票前の位置づけを明示するための計画行である。
 - 本表と projection の齟齬は doctor / detector の finding として扱い、projection 側で silent repair しない。
 
-## U11 型付きスペック所有 artifact
+## U11 型付き spec の履歴
 
-```yaml
-spec:
-  defines:
-    - id: VMS-002
-      kind: schedule-authoring-source
-      traces_from: [VMS-001]
-      traces_to: [VMS-005]
-      tests: [TVMS-002]
-```
-
-VMS-002 は工程管理表の所有 artifact で宣言される typed spec である。
+VMS-002 は工程表の型付き宣言元であり、S7 で退役した。

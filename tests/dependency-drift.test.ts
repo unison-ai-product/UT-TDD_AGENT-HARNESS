@@ -276,15 +276,8 @@ describe("dependency-drift and regression expansion (PLAN-REVERSE-42)", () => {
     ]);
   });
 
-  it("U-DEPD-004: real repo keeps plan-asset and state-db cycle-free through kernel", () => {
+  it("U-DEPD-004: real repo keeps the state-db dependency on kernel", () => {
     const result = analyzeDependencyDrift(loadDependencyDriftInput(process.cwd()));
-    expect(result.findings).not.toContainEqual(
-      expect.objectContaining({
-        code: "module-cycle",
-        cycle: expect.arrayContaining(["plan-asset", "state-db"]),
-      }),
-    );
-    expect(result.moduleEdges).toContainEqual({ from: "plan-asset", to: "kernel" });
     expect(result.moduleEdges).toContainEqual({ from: "state-db", to: "kernel" });
   });
 
