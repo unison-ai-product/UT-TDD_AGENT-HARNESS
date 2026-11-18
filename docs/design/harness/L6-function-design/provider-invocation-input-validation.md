@@ -147,9 +147,8 @@ gitの起動に対してはfail-closeとする: 拒否時は `listRemoteTags` �
 | `src/cli/review-live.ts:120` `validateLiveReviewSubject`の既定`run` (`gh`の呼出しは`:131`) | `git cat-file` と `gh pr view` | 無し | `status`が0以外 (timeout時は`null`) で`exact_head_not_found` / `pull_request_head_unavailable` |
 | `src/cli/review-live.ts:261` `publishLiveReviewReceipt` | `gh pr comment` (変更系) | 無し | throwし、`consumeLiveReview`のcatch (`live-review-projection.ts:226-230`) で`derived_verdict_publish_failed`、exit 1 |
 | `src/feedback/post-merge-backstop.ts:136` `defaultFetchMergedPrPage` | `gh api .../pulls` | `POST_MERGE_COMMAND_TIMEOUT_MS` (10_000) | throwし、呼出し元の既存処理 |
-| `src/feedback/review-merge-gate.ts:511` `readGhView` | `gh pr view` | 無し | throwし、`getPullRequest`のcatchで`ok: false` |
-| `src/feedback/review-merge-gate.ts:547` `createGhPrMergePorts().mergePullRequest` | `gh pr merge` (変更系、`stdio: "inherit"`) | 無し | throwし、`merge_failed` / `gh_merge_failed:<message>` |
-| `src/feedback/review-merge-github.ts` の `readGhMergeCommitTree` | `gh pr view --json mergeCommit` (マージ後の tree 確認) | 無し | 取得エラーを伝播し、取得した SHA が不正なら `merge_commit_sha_unavailable` |
+| `src/feedback/review-merge-github.ts` の `readGhView` / `readGhMergeCommitTree` | `gh pr view` と `gh pr view --json mergeCommit` (後者はマージ後の tree 確認) | 無し | 前者は `getPullRequest` で `ok: false`、後者は取得エラーを伝播し、不正な SHA は `merge_commit_sha_unavailable` |
+| `src/feedback/review-merge-github.ts` の `createGhPrMergePorts().mergePullRequest` | `gh pr merge` (変更系、`stdio: "inherit"`) | 無し | throwし、`merge_failed` / `gh_merge_failed:<message>` |
 
 対象外とする起動と、その理由:
 
