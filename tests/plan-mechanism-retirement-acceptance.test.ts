@@ -3,11 +3,13 @@ import { missingTables, rowCounts } from "../src/state-db/migration.ts";
 import {
   cleanupPlanretS7Fixtures,
   runScenario008,
+  runScenario008Absent,
   runScenarioG,
   scanA,
   scanB,
   scanC,
   scanD,
+  scanDSource,
   scanE,
   scanF,
 } from "./support/planret-s7-acceptance.ts";
@@ -41,6 +43,41 @@ describe("CANDIDATE-U-PLANRET-018 S7 の静的 scan (src / scripts / .github の
   });
 });
 
+describe("CANDIDATE-U-PLANRET-018(d) scanner の正例と負例 (合成入力)", () => {
+  const src = (...lines: string[]) =>
+    ['import { existsSync, statSync } from "node:fs";', ...lines].join("\n");
+  it("docs/plans を引数に直接取る実在確認を検出する", () => {
+    expect(
+      scanDSource("a.ts", src('export const x = existsSync(join(root, "docs/plans"));')),
+    ).toEqual([2]);
+  });
+  it("docs/plans を初期化式に持つ変数 (関数内・module 直下) を経由する実在確認を検出する", () => {
+    const local = src(
+      "export function f(r: string) {",
+      '  const d = join(r, "docs", "plans");',
+      "  return statSync(d);",
+      "}",
+    );
+    const top = src('const D = "docs/plans";', "export const f = () => existsSync(D);");
+    expect(scanDSource("a.ts", local)).toEqual([4]);
+    expect(scanDSource("a.ts", top)).toEqual([3]);
+  });
+  it("無関係な FS 検査と docs/plans の除外規則が同じ file にあっても hit にしない", () => {
+    const s = src(
+      'export const skip = (p: string) => p.startsWith("docs/plans/");',
+      'export const g = () => existsSync(".git");',
+    );
+    expect(scanDSource("a.ts", s)).toEqual([]);
+  });
+  it("別の関数にある docs/plans の変数は実在確認に流れ込まない", () => {
+    const s = src(
+      'export const a = () => { const d = "docs/plans"; return d; };',
+      "export const b = (d: string) => existsSync(d);",
+    );
+    expect(scanDSource("a.ts", s)).toEqual([]);
+  });
+});
+
 describe("CANDIDATE-U-PLANRET-018(g) 新規 DB と旧表入り DB の非 PLAN 動作", () => {
   it("CANDIDATE-U-PLANRET-018(g) text 推薦が新規 DB と旧表入り DB で同じ結果になる", () => {
     const g = runScenarioG();
@@ -66,7 +103,13 @@ describe("CANDIDATE-U-PLANRET-008 登録の無い PLAN 表の保全", () => {
     expect(r.after.plan_registry?.rows).toBe(3);
     expect(r.after.schedule_entries?.rows).toBe(2);
     expect(r.second.tables).toEqual(expect.arrayContaining(["plan_registry", "schedule_entries"]));
-    expect(missingTables(r.db)).not.toEqual(expect.arrayContaining(["plan_registry"]));
-    expect(Object.keys(rowCounts(r.db))).not.toEqual(expect.arrayContaining(["plan_registry"]));
   });
+  for (const table of ["plan_registry", "schedule_entries"]) {
+    it.fails(`CANDIDATE-U-PLANRET-008 rowCounts に ${table} が出ない`, () => {
+      expect(Object.keys(rowCounts(runScenario008().db))).not.toContain(table);
+    });
+    it.fails(`CANDIDATE-U-PLANRET-008 表の無い DB でも missingTables が ${table} を要求しない`, () => {
+      expect(missingTables(runScenario008Absent())).not.toContain(table);
+    });
+  }
 });

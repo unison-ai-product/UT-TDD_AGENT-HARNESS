@@ -2,13 +2,17 @@ import { execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import ts from "typescript";
 import { selectSessionStartDigest } from "../../src/handover/session-start-digest.ts";
 import { recommendSkillsForText } from "../../src/skill-engine/recommend.ts";
 import { type HarnessDb, openHarnessDb } from "../../src/state-db/index.ts";
 import { migrate } from "../../src/state-db/migration.ts";
 import { clearRebuildableProjectionTables } from "../../src/state-db/sqlite-projection-rebuild.ts";
 import { removeTestTree } from "../support/temp-tree.ts";
-import { createLegacyDatabase } from "./plan-mechanism-retirement-s3-migration.ts";
+import {
+  cleanupPlanretS3MigrationFixtures,
+  createLegacyDatabase,
+} from "./plan-mechanism-retirement-s3-migration.ts";
 
 /** L6 §3 の PLAN 用の表 9 件。 */
 export const PLAN_TABLES = [
@@ -75,14 +79,70 @@ export const scanC = (root: string) =>
       "i",
     ),
   );
+
+const FS_CHECKS = new Set(["existsSync", "statSync", "lstatSync", "readdirSync", "accessSync"]);
+const DOCS_PLANS = /docs(?:[/\\]+|["'`,\s]+)plans/;
+const CODE_FILE = /\.(?:ts|mts|cts|js|mjs|cjs)$/;
+
+/** 式 (と、その式が参照する同じ関数内の変数の初期化式) に docs/plans が現れるか。 */
+function reachesDocsPlans(node: ts.Node, scope: ts.Node, seen = new Set<string>()): boolean {
+  if (DOCS_PLANS.test(node.getText())) return true;
+  const names: string[] = [];
+  const collect = (n: ts.Node): void => {
+    if (ts.isIdentifier(n)) names.push(n.text);
+    ts.forEachChild(n, collect);
+  };
+  collect(node);
+  let hit = false;
+  const visit = (n: ts.Node): void => {
+    if (
+      !hit &&
+      ts.isVariableDeclaration(n) &&
+      ts.isIdentifier(n.name) &&
+      n.initializer &&
+      names.includes(n.name.text) &&
+      !seen.has(n.name.text)
+    ) {
+      seen.add(n.name.text);
+      hit = reachesDocsPlans(n.initializer, scope, seen);
+    }
+    ts.forEachChild(n, visit);
+  };
+  visit(scope);
+  // module 直下の定数 (関数の外の宣言) も辿る。
+  const file = scope.getSourceFile();
+  if (!hit && scope !== file)
+    for (const st of file.statements) if (ts.isVariableStatement(st)) visit(st);
+  return hit;
+}
+
+/** 1 file の source から、docs/plans の実在を確かめる呼び出しの行 (1 始まり) を返す。 */
+export function scanDSource(path: string, text: string): number[] {
+  if (!CODE_FILE.test(path) || !/plans/.test(text)) return [];
+  const file = ts.createSourceFile(path, text, ts.ScriptTarget.ES2022, true);
+  const lines: number[] = [];
+  const visit = (n: ts.Node, scope: ts.Node): void => {
+    const next = ts.isFunctionLike(n) ? n : scope;
+    if (ts.isCallExpression(n)) {
+      const callee = ts.isIdentifier(n.expression)
+        ? n.expression.text
+        : ts.isPropertyAccessExpression(n.expression)
+          ? n.expression.name.text
+          : "";
+      if (FS_CHECKS.has(callee) && n.arguments.some((a) => reachesDocsPlans(a, scope))) {
+        lines.push(file.getLineAndCharacterOfPosition(n.getStart()).line + 1);
+      }
+    }
+    ts.forEachChild(n, (c) => visit(c, next));
+  };
+  visit(file, file);
+  return lines;
+}
+
 export const scanD = (root: string) =>
-  sources(root)
-    .filter((s) =>
-      s.lines.some((l) => /\b(existsSync|statSync|lstatSync|readdirSync|accessSync)\b/.test(l)),
-    )
-    .flatMap((s) =>
-      s.lines.flatMap((l, i) => (/docs[/]+plans/.test(l) ? [`${s.path}:${i + 1}`] : [])),
-    );
+  sources(root).flatMap((s) =>
+    scanDSource(s.path, s.lines.join("\n")).map((line) => `${s.path}:${line}`),
+  );
 export const scanE = (root: string) => lineHits(root, /delete\w*ProjectV2\w*/i);
 export const scanF = (root: string) => {
   const readers = lineHits(
@@ -105,6 +165,8 @@ export function cleanupPlanretS7Fixtures(): void {
   // Windows は開いたままの DB file を消せない (EPERM)。tree を消す前に閉じる。
   for (const db of opened.splice(0)) db.close();
   for (const root of roots.splice(0)) removeTestTree(root);
+  // 旧 DB の root は s3 helper が所有する。db は上で閉じたので、ここで消してよい。
+  cleanupPlanretS3MigrationFixtures();
 }
 
 function tempDb(): { root: string; db: HarnessDb } {
@@ -162,6 +224,13 @@ export function runScenario008() {
   return { before, after: tableShape(db, names), second, db };
 }
 
+/** 008: 2 表が無い DB (migrate のみ)。 */
+export function runScenario008Absent() {
+  const { db } = tempDb();
+  migrate(db);
+  return db;
+}
+
 const emptyBackstop = { ok: true, detections: [], pagesScanned: 0 };
 
 function outputs(db: HarnessDb) {
@@ -176,6 +245,7 @@ export function runScenarioG() {
   const fresh = tempDb().db;
   migrate(fresh);
   const legacy = createLegacyDatabase().db;
+  opened.push(legacy);
   legacy
     .prepare(
       `INSERT INTO schedule_entries (schedule_entry_id, plan_id, current_location, rag, status, source_path)
