@@ -1014,7 +1014,7 @@ This addendum pairs `screen-spec.md` with L7 unit-test oracles. It covers the L6
 
 | L6 doc | 機能 | 対応 test ファイル | 判定 |
 |---|---|---|---|
-| function-spec.md | 関数 signature (§1) / pseudocode (§2) / rule engine 10 型 (§4) / routeFiling 契約 / spec IR projection 契約 | tests/plan-lint.test.ts, tests/vmodel-pair.test.ts, tests/agent-guard.test.ts, tests/mode-catalog.test.ts, tests/frontmatter.test.ts (U-FUNC/U-CORE/U-RULE は分散実装、専用 U-ID タグ無し)。後続 U3 L7 で tests/spec-ir-projections.test.ts, tests/projection-writer.test.ts, tests/doctor.test.ts に U-SPECIR を実装する。 | covered + pending U3 L7 |
+| function-spec.md | 関数 signature (§1) / pseudocode (§2) / rule engine 10 型 (§4) / routeFiling 契約 / spec IR projection 契約 | `tests/vmodel-pair.test.ts`, `tests/agent-guard.test.ts`, `tests/mode-catalog.test.ts`。`tests/plan-lint.test.ts` と `tests/frontmatter.test.ts` は S7 で退役した PLAN 専用対応で、代替 coverage は主張しない。U-FUNC/U-CORE/U-RULE は分散実装、専用 U-ID タグ無し。後続 U3 L7 の U-SPECIR は `tests/spec-ir-projections.test.ts`, `tests/projection-writer.test.ts`, `tests/doctor.test.ts` に対応する。 | 現行部分 covered + pending U3 L7。退役した PLAN 専用対応は coverage 外 |
 | edge-case.md | `@edge-normal/error/boundary/throws` 4 観点 | 各 lint test の `@edge-*` 契約実装先に分散 (専用ファイル無し) | covered |
 | session-log.md | resolveActivePlan/recordEvent/compressPlanDigest/onStop/onSessionStart | tests/session-log.test.ts | covered |
 | forced-stop-feedback.md | detectDanglingTurn/recordForcedStop/classifyFeedback/recordFeedback/scanDanglingStops | tests/forced-stop.test.ts | covered |
@@ -1024,16 +1024,16 @@ This addendum pairs `screen-spec.md` with L7 unit-test oracles. It covers the L6
 | governance-enforcement.md | scrum-reverse (pocOrphans/badReverseRefs) + propagation (signal 語彙一致) | tests/scrum-reverse.test.ts, tests/propagation.test.ts | covered |
 | backfill-pairing.md | parseRequires/parseGlossaryTerms/analyzeBackfill/loadBackfillDocs/checkBackfill | tests/backfill-pairing.test.ts | covered |
 | vmodel-pair-freeze.md | loadPairDocs/analyzePairFreeze (§1-§3) + analyzeVerificationGroups (§7) | tests/vmodel-pair.test.ts | covered |
-| review-evidence.md | hasReviewEvidence/parseReviewPlan/analyzeReviewEvidence/loadReviewPlans | tests/review-evidence.test.ts | covered |
-| review-evidence-stale.md | draft/降格 PLAN の stale approval 検出 (U-REVIEW-007/008) | tests/review-evidence.test.ts | covered |
-| cross-review-enforcement.md | extractReviewEntries/crossReviewViolations (U-XREVIEW) | tests/review-evidence.test.ts | covered |
-| test-before-review.md | tests_green_at ≤ reviewed_at 順序検証 (U-TORDER) | tests/review-evidence.test.ts | covered |
+| review-evidence.md | `hasReviewEvidence` / `parseReviewPlan` / `analyzeReviewEvidence` / `loadReviewPlans` (旧 PLAN 専用) | S7 で退役 (`tests/review-evidence.test.ts` も退役) | 退役した関数・case は coverage 外。汎用 `EvidencePolicy` の実装は `src/forward/domain/evidence-policy.ts`、既存テストは `tests/plan-asset/evidence-policy.test.ts` だが、旧 review 処理の代替とはしない |
+| review-evidence-stale.md | draft/降格 PLAN の stale approval 検出 (旧 U-REVIEW-007/008) | S7 で退役 (`tests/review-evidence.test.ts` も退役) | PLAN 専用 oracle 退役。代替 coverage は主張しない |
+| cross-review-enforcement.md | `extractReviewEntries` / `crossReviewViolations` (旧 U-XREVIEW) | S7 で退役 (`tests/review-evidence.test.ts` も退役) | PLAN 専用 oracle 退役。代替 coverage は主張しない |
+| test-before-review.md | `tests_green_at ≤ reviewed_at` 順序検証 (旧 U-TORDER) | S7 で退役 (`tests/review-evidence.test.ts` も退役) | PLAN 専用 oracle 退役。代替 coverage は主張しない |
 | module-drift.md | parseListedModules/analyzeModuleDrift + asset-drift/change-impact/coding-rules/ddd-tdd-rules addendum | tests/module-drift.test.ts, tests/asset-drift.test.ts, tests/change-impact.test.ts, tests/coding-rules.test.ts, tests/ddd-tdd-rules.test.ts | covered |
 | descent-obligation.md | loadDescentAdjacency/generateObligations/analyzeDescentObligations | tests/descent-obligation.test.ts | covered |
 | skill-index.md | analyzeSkillAssignments/scoreSkill/scanSkillCatalog + skill new scaffolder | tests/skill-assignment.test.ts, tests/skill-scaffold.test.ts, tests/skill-recommend.test.ts | covered |
 | fr-unit-coverage.md | U-FR-L1-* FR registry ↔ L6 spec ↔ U-* oracle 被覆 | tests/l6-fr-coverage.test.ts, tests/fr-registry-audit.test.ts, tests/fr-roadmap-coverage.test.ts | covered |
 | gate-confirm.md | judgment gate と confirm 結合 (U-GCONF) | tests/gate-confirm.test.ts | covered |
-| plan-schedule-lint.md | 工程表 schedule 最小強制 (U-PLANSCH) | tests/plan-lint.test.ts | covered |
+| plan-schedule-lint.md | 工程表 schedule 最小強制 (旧 U-PLANSCH) | S7 で退役 (`tests/plan-lint.test.ts` も退役) | PLAN 専用 oracle 退役。代替 coverage は主張しない |
 | screen-spec.md | parseScreenQuery/validateScreenQuery/handleScreenEvent/loadScreenViewModel/buildRouteRegistry (U-SCREEN-001〜006) | tests/screen-impl-pair-freeze.test.ts は pair-freeze gate のみを被覆し、上記個別関数 (parseScreenQuery 等) を直接 Grep しても実 test 未検出 | **gap** |
 
 ## PLAN-L6-38 Router Function Contracts Addendum (駆動モデルルーター関数契約、2026-07-07)
@@ -1057,7 +1057,7 @@ This addendum pairs `screen-spec.md` with L7 unit-test oracles. It covers the L6
 | U-ROUTE-R8 | `assertL7HasDesignAncestor(plan, registry)` | `layer=L7` の impl 系 PLAN (`impl`/`add-impl`) は parent 連鎖が設計層 PLAN (L4/L5/L6 の design/add-design) に到達しなければ `l7_cold_intake` で fail-close。到達すれば violation 0。 |
 | U-ROUTE-R9 | `assertL7HasDesignAncestor(plan, registry)` (two-phase intake) | 対の Reverse PLAN が draft でも intake (draft 起票) は許容。confirmed 昇格時は双方 pairing ready (相互参照解決 + Reverse 側 forward_routing 宣言) でなければ fail-close。 |
 | U-ROUTE-R10 | `routeFiling(signal)` (Reverse 出所必須) | `mode=reverse` の FilingTarget は `origin` (origin signal / origin plan_id) を必ず持つ。出所なき standalone reverse は途中導入 (既走プロジェクト onboarding) signal の場合のみ emit され、それ以外は fail-close。`requires_human_approval` は escalation 境界昇格の結果として FilingTarget 自身が保持する。 |
-| U-ROUTE-R11 | `analyzePlanGovernance.verifyGateBinding(plan)` / `frontmatterSchema` | `kind=verify` は `layer=L8..L14` と `verification_gate=G8..G14` を 1:1 で宣言しなければ `verify_gate_missing` / `verify_gate_layer_mismatch` で fail-close。non-verify PLAN の `verification_gate` も拒否し、右腕 gate を実装・設計 PLAN に誤接続しない。実装 oracle は `U-PLANGOV-011v5` と `frontmatter.test.ts` の verify gate 契約。 |
+| U-ROUTE-R11 | `analyzePlanGovernance.verifyGateBinding(plan)` / `frontmatterSchema` | `kind=verify` は `layer=L8..L14` と `verification_gate=G8..G14` を 1:1 で宣言しなければ `verify_gate_missing` / `verify_gate_layer_mismatch` で fail-close。non-verify PLAN の `verification_gate` も拒否し、右腕 gate を実装・設計 PLAN に誤接続しない。旧 oracle `U-PLANGOV-011v5` と `frontmatter.test.ts` の verify gate case は S7 で退役し、現行 test coverage とはしない。 |
 | U-RLG-001 | `analyzeRightLungDocGovernance(input)` | L8/L9/L10/L12/L14 の各 right-lung test-design doc が `Gx-WORKFLOW` と 9 marker (`test_strategy` / `test_plan` / `test_conditions` / `coverage_items` / `test_procedures` / `execution_evidence` / `exit_criteria` / `defect_routing` / `verification_design`) と層別 test case ID family (`IT-` / `ST-` / `UXV-` / `AT-` / `OT-`) を持てば pass。 |
 | U-RLG-002 | `analyzeRightLungDocGovernance(input)` | workflow marker、`defect_routing` / `verification_design` などの必須 marker、または層別 test case ID family が欠落した doc は violation として missing marker 名を返す。 |
 | U-RLG-003 | `checkRightLungDocGovernance(repoRoot)` / doctor full profile | repo root 不在は fail-close。実 repo は 5 doc checked で green となり、doctor full profile に `right-lung-doc-governance` が配線される。 |
@@ -1525,8 +1525,8 @@ debt routeを扱う後続5件は、後続sliceでIDを再採番してfreezeす�
 
 ## PLAN-L7-428 ステージ紐付きエリシテーション oracle (PLAN-REVERSE-428 backfill、2026-07-13)
 
-対象 = `src/elicitation/context.ts` / `src/elicitation/record.ts`。実テスト =
-`tests/elicitation-context.test.ts` (in-memory harness.db + temp repo fixture)。
+対象は `src/elicitation/record.ts` の採択記録のみ。`src/elicitation/context.ts` と PLAN 文脈選択のcaseは S7 で退役した。実テスト =
+`tests/elicitation-context.test.ts` の `U-ELICIT-006` (append-only JSONL 記録)。
 
 | ID | 観点 | fixture | expected |
 | --- | --- | --- | --- |
