@@ -1,10 +1,16 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
+import { checkTraceGate } from "../src/doctor/process-quality.ts";
+import { evaluateStaticGate } from "../src/gate/static.ts";
+import { SCHEMA_VERSION } from "../src/schema/harness-db.ts";
 import { missingTables, rowCounts } from "../src/state-db/migration.ts";
 import {
   cleanupPlanretS7Fixtures,
   runScenario008,
   runScenario008Absent,
   runScenarioG,
+  runScenarioJ,
   scanA,
   scanB,
   scanC,
@@ -13,13 +19,26 @@ import {
   scanE,
   scanF,
 } from "./support/planret-s7-acceptance.ts";
+import {
+  scanHPlanLintEntry,
+  scanIImportsSource,
+  scanIPlanAssetImports,
+} from "./support/planret-s7-import-scan.ts";
+import {
+  cleanupTraceFixtures,
+  copyDocsWithout,
+  layerPairOk,
+} from "./support/planret-s7-trace-fixture.ts";
 import { headSnapshotRoot } from "./support/workspace-roots.ts";
 
 // S7 (#1379) の統合受入 oracle 008 / 018 (L7 plan-mechanism-retirement-test-design §3)。
 // S7 の source 撤去 PR はすべて merge 済み (#1798 / #1801 / #1803)。Red 段の it.fails は、すべて it に戻した。
-// (h)(i)(j) は別の PR で扱う。
+// (h)(i)(j) は Red 段の PR で足した。契約を満たさない (j) だけ it.fails で、(h)(i) は main が既に満たすので it。Green で (j) を it に戻す。
 const root = headSnapshotRoot();
-afterEach(cleanupPlanretS7Fixtures);
+afterEach(() => {
+  cleanupPlanretS7Fixtures();
+  cleanupTraceFixtures();
+});
 
 describe("CANDIDATE-U-PLANRET-018 S7 の静的 scan (src / scripts / .github の tracked file)", () => {
   it("CANDIDATE-U-PLANRET-018(a) PLAN 用の表の名前を含む SQL 文字列が無い", () => {
@@ -139,4 +158,137 @@ describe("CANDIDATE-U-PLANRET-008 登録の無い PLAN 表の保全", () => {
       expect(missingTables(runScenario008Absent())).not.toContain(table);
     });
   }
+});
+
+const TRACE_MISSING_DOC = {
+  G1: "docs/design/harness/L1-requirements/business-requirements.md",
+  G3: "docs/design/harness/L3-functional/business-detail.md",
+} as const;
+
+describe("CANDIDATE-U-PLANRET-018(h) G1 / G3 trace の直接経路", () => {
+  for (const gate of ["G1", "G3"] as const) {
+    const trace = `${gate}-trace` as const;
+    const lower = trace.toLowerCase();
+    it(`CANDIDATE-U-PLANRET-018(h) gate ${gate} と doctor が実 repo で ${lower} を直接動かす`, () => {
+      // aggregate の passed ではなく、trace 固有の OK message で、trace の lint が実行されたことを確かめる。
+      const doctor = checkTraceGate(root, trace);
+      expect(doctor.ok).toBe(true);
+      expect(doctor.messages.join("\n")).toContain(`${lower} - OK (`);
+      const result = evaluateStaticGate({ gate, repoRoot: root });
+      expect(result.applicable).toBe(true);
+      expect(result.passed).toBe(true);
+      expect(result.messages.join("\n")).toContain(`${lower} - OK (`);
+    });
+    it(`CANDIDATE-U-PLANRET-018(h) layer-pair が成立していても、trace の対象文書だけが欠けると gate ${gate} と doctor が ${lower} 固有の message で拒否する`, () => {
+      const missingDoc = TRACE_MISSING_DOC[gate];
+      const dir = copyDocsWithout(root, missingDoc);
+      // (1) 拒否の原因が layer-pair ではないこと (layer-pair 単体は成立している)。
+      expect(layerPairOk(dir, gate, gate === "G1" ? "L1" : "L3")).toBe(true);
+      // (2) それでも gate 全体と doctor は trace 固有の message で拒否する。
+      const missing = `${lower} - violation: required docs could not be read (Error: required doc not created: ${missingDoc}`;
+      const doctor = checkTraceGate(dir, trace);
+      expect(doctor.ok).toBe(false);
+      expect(doctor.messages.join("\n")).toContain(missing);
+      const result = evaluateStaticGate({ gate, repoRoot: dir });
+      expect(result.passed).toBe(false);
+      expect(result.messages.join("\n")).toContain(`${gate.toLowerCase()}-pair - OK (`);
+      expect(result.messages.join("\n")).toContain(missing);
+    });
+  }
+  it("CANDIDATE-U-PLANRET-018(h) plan lint の互換入口が無い", () => {
+    expect(scanHPlanLintEntry(root)).toEqual([]);
+  });
+});
+
+describe("CANDIDATE-U-PLANRET-018(i) 共用型の移し先と plan-asset 参照", () => {
+  const exportsOf: [string, RegExp][] = [
+    ["src/github/git-diff.ts", /export type GitChange(?![A-Za-z])/],
+    ["src/lint/lint-result.ts", /export interface LintResult(?![A-Za-z])/],
+    ["src/kernel/project-identity.ts", /export function loadTrackedProjectIdentity(?![A-Za-z])/],
+  ];
+  for (const [path, pattern] of exportsOf) {
+    it(`CANDIDATE-U-PLANRET-018(i) ${path} が移し先として宣言を持つ`, () => {
+      expect(readFileSync(join(root, path), "utf8")).toMatch(pattern);
+    });
+  }
+  it("CANDIDATE-U-PLANRET-018(i) src / scripts / tests / .github に src/plan-asset/ を参照する import が無い", () => {
+    expect(scanIPlanAssetImports(root)).toEqual([]);
+  });
+  it("CANDIDATE-U-PLANRET-018(i) scanner が静的・副作用・動的・re-export・require の各形式を検出する (合成入力)", () => {
+    const cases: [string, number[]][] = [
+      ['import { x } from "../src/plan-asset/x.ts";', [1]],
+      ['import "../src/plan-asset/x.ts";', [1]],
+      ['const m = await import("../src/plan-asset/x.ts");', [1]],
+      ['export * from "./plan-asset/x.ts";', [1]],
+      ['const r = require("../plan-asset/x.cjs");', [1]],
+      ['type T = import("../plan-asset/x.ts").T;', [1]],
+    ];
+    for (const [source, hits] of cases) expect(scanIImportsSource("a.mts", source)).toEqual(hits);
+  });
+  it("CANDIDATE-U-PLANRET-018(i) scanner は import でない plan-asset の文字列を hit にしない (合成入力)", () => {
+    const source = [
+      'import { x } from "../src/other.ts";',
+      'export const id = "plan-asset-not-found";',
+      '// import "../src/plan-asset/x.ts";',
+    ].join("\n");
+    expect(scanIImportsSource("a.ts", source)).toEqual([]);
+  });
+});
+
+const NO_CHECK = /required_plan_id IS NOT NULL/;
+const EXPECTED_ENTRIES = [
+  {
+    profile_id: "PLANRET-J-A",
+    doc_type_id: "DOC-L0-CHARTER",
+    decision: "defer",
+    required_plan_id: null,
+  },
+  {
+    profile_id: "PLANRET-J-B",
+    doc_type_id: "DOC-L0-CHARTER",
+    decision: "adopt",
+    required_plan_id: null,
+  },
+];
+function expectDeferRowsProjectedWithNull(j: ReturnType<typeof runScenarioJ>) {
+  expect(j.thrown).toBeNull();
+  // 旧 ID 付きの source でも、書き込まれる行の required_plan_id は SQL の NULL (writer が旧値を持ち越さない)。
+  expect(j.entries).toEqual(EXPECTED_ENTRIES);
+  expect(j.reviewCount).toBe(2);
+  // 表そのものが defer + NULL を受ける (旧 CHECK が無い)。
+  expect(j.ddl).not.toMatch(NO_CHECK);
+  expect(j.deferNullUpdate).toBeNull();
+  // (g) の保存対象 12 表は rebuild の前後で DDL も行数も変わらない。
+  expect(j.preservedAfter).toEqual(j.preservedBefore);
+  // migrate の再適用は何も変えない。
+  expect(j.remigrateApplied).toBe(false);
+  expect(j.remigrateUnchanged).toBe(true);
+}
+
+describe("CANDIDATE-U-PLANRET-018(j) document_scale_profile_entries の defer 行 (required_plan_id=NULL)", () => {
+  it.fails("CANDIDATE-U-PLANRET-018(j) 新規 DB で defer 行を NULL で投影し、正例を保つ", () => {
+    const j = runScenarioJ("fresh");
+    expect(j.afterMigrate.version).toBe(SCHEMA_VERSION);
+    expectDeferRowsProjectedWithNull(j);
+  }, 120000);
+  it.fails("CANDIDATE-U-PLANRET-018(j) 旧 CHECK のある v29 からの migrate 後に defer 行を NULL で投影し、正例を保つ", () => {
+    const j = runScenarioJ("v29");
+    expect(j.before?.ddl).toMatch(NO_CHECK);
+    expect(j.before?.version).toBe(29);
+    expect(j.afterMigrate.applied).toBe(true);
+    expect(j.afterMigrate.version).toBe(SCHEMA_VERSION);
+    expect(j.afterMigrate.ddl).not.toMatch(NO_CHECK);
+    expectDeferRowsProjectedWithNull(j);
+  }, 120000);
+  it.fails("CANDIDATE-U-PLANRET-018(j) 旧 CHECK のある現行版 v30 からも migrate で版が上がり、defer 行を NULL で投影し、正例を保つ", () => {
+    const j = runScenarioJ("v30");
+    expect(j.before?.ddl).toMatch(NO_CHECK);
+    expect(j.before?.version).toBe(30);
+    // 既存の fromVersion < 30 の枝への追加では v30 の DB は直らない。新しい版への更新が要る。
+    expect(SCHEMA_VERSION).toBeGreaterThan(30);
+    expect(j.afterMigrate.applied).toBe(true);
+    expect(j.afterMigrate.version).toBe(SCHEMA_VERSION);
+    expect(j.afterMigrate.ddl).not.toMatch(NO_CHECK);
+    expectDeferRowsProjectedWithNull(j);
+  }, 120000);
 });

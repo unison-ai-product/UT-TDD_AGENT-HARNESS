@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import ts from "typescript";
@@ -7,11 +7,14 @@ import { selectSessionStartDigest } from "../../src/handover/session-start-diges
 import { recommendSkillsForText } from "../../src/skill-engine/recommend.ts";
 import { type HarnessDb, openHarnessDb } from "../../src/state-db/index.ts";
 import { migrate } from "../../src/state-db/migration.ts";
+import { rebuildHarnessDb } from "../../src/state-db/projection-writer.ts";
 import { clearRebuildableProjectionTables } from "../../src/state-db/sqlite-projection-rebuild.ts";
 import { removeTestTree } from "../support/temp-tree.ts";
 import {
   cleanupPlanretS3MigrationFixtures,
+  createIssueOnlyCatalogFixture,
   createLegacyDatabase,
+  databaseState,
 } from "./plan-mechanism-retirement-s3-migration.ts";
 
 /** L6 §3 の PLAN 用の表 9 件。 */
@@ -42,12 +45,12 @@ const READER_FILES = [
   "src/state-db/scope-preview.ts",
 ];
 
-interface Source {
+export interface Source {
   path: string;
   lines: string[];
 }
 
-function sources(root: string): Source[] {
+export function sources(root: string): Source[] {
   const paths = execFileSync("git", ["ls-files", "src", "scripts", ".github"], {
     cwd: root,
     encoding: "utf8",
@@ -302,4 +305,192 @@ export function runScenarioG() {
     before,
     after: tableShape(legacy, PRESERVED_TABLES),
   };
+}
+
+const SCALE_PROFILES_PATH = "docs/governance/vmodel-document-scale-profiles.md";
+const table = (rows: readonly (readonly string[])[]) =>
+  rows.map((cells) => `| ${cells.join(" | ")} |`).join("\n");
+
+/** (j) の source: defer 行 (現行の入力契約が要る旧 ID 付き) と adopt 行を持つ document scale profile。投影先の required_plan_id は NULL でなければならない。 */
+function writeScaleProfileSource(root: string): void {
+  const profileHeader = [
+    "profile_id",
+    "profile_axis",
+    "profile_rank",
+    "description",
+    "default_status",
+    "default_detail",
+    "scope_policy",
+  ];
+  const entryHeader = [
+    "profile_id",
+    "doc_type_id",
+    "decision",
+    "detail_override",
+    "status_override",
+    "reason",
+    "required_plan_id",
+  ];
+  const sep = (header: readonly string[]) => header.map(() => "---");
+  const body = [
+    table([
+      ["field", "value"],
+      ["---", "---"],
+      ["size_profile_count", "2"],
+      ["product_profile_count", "0"],
+      ["profile_count", "2"],
+      ["decision_count", "2"],
+    ]),
+    table([
+      profileHeader,
+      sep(profileHeader),
+      ["PLANRET-J-A", "size", "10", "defer fixture", "required", "standard", "minimal"],
+      ["PLANRET-J-B", "size", "20", "adopt fixture", "required", "standard", "minimal"],
+    ]),
+    table([
+      entryHeader,
+      sep(entryHeader),
+      ["PLANRET-J-A", "DOC-L0-CHARTER", "defer", "lite", "minimal", "Issue で追う", "PLAN-L6-01"],
+      ["PLANRET-J-B", "DOC-L0-CHARTER", "adopt", "standard", "required", "採用", ""],
+    ]),
+  ].join("\n\n");
+  writeFileSync(join(root, SCALE_PROFILES_PATH), `${body}\n`, "utf8");
+  // catalog の provenance は tracked な commit と照合されるので、書き換えた source も commit する。
+  const git = (...args: string[]) =>
+    execFileSync("git", ["-c", "core.autocrlf=false", ...args], { cwd: root, stdio: "ignore" });
+  git("add", "--", SCALE_PROFILES_PATH);
+  git(
+    "-c",
+    "user.name=UT-TDD test",
+    "-c",
+    "user.email=",
+    "-c",
+    "commit.gpgsign=false",
+    "commit",
+    "-q",
+    "-m",
+    "document scale profile defer fixture",
+  );
+}
+
+function projectScaleProfiles(root: string, db: HarnessDb) {
+  // 保存対象 12 表は、migrate 後・rebuild の前後で DDL も行数も変わらない (rebuild の経路での保存違反を捕まえる)。
+  const preservedBefore = tableShape(db, PRESERVED_TABLES);
+  let thrown: string | null = null;
+  try {
+    rebuildHarnessDb({ repoRoot: root, db, skipTokenTelemetry: true });
+  } catch (error) {
+    thrown = error instanceof Error ? error.message : String(error);
+  }
+  const preservedAfter = tableShape(db, PRESERVED_TABLES);
+  const entries = db
+    .prepare(
+      `SELECT profile_id, doc_type_id, decision, required_plan_id
+         FROM document_scale_profile_entries ORDER BY profile_id`,
+    )
+    .all()
+    .map((r) => ({ ...r }));
+  const reviewCount = Number(
+    db.prepare("SELECT COUNT(*) AS n FROM document_scale_profile_reviews").get()?.n ?? 0,
+  );
+  const ddl = ddlOf(db);
+  // 表そのものが defer + NULL を受けるか (旧 CHECK の有無) を、投影とは別に確かめる。
+  // 投影済みの defer 行を NULL に UPDATE するので、FK と一意制約は保たれ、CHECK だけが効く。
+  let deferNullUpdate: string | null = null;
+  db.exec("SAVEPOINT planret_j_probe");
+  try {
+    db.prepare(
+      "UPDATE document_scale_profile_entries SET required_plan_id = NULL WHERE decision = 'defer'",
+    ).run();
+    const n = Number(
+      db
+        .prepare(
+          `SELECT COUNT(*) AS n FROM document_scale_profile_entries
+            WHERE decision = 'defer' AND required_plan_id IS NULL`,
+        )
+        .get()?.n ?? 0,
+    );
+    if (n !== 1) deferNullUpdate = `probe target is ${n} rows, expected 1`;
+  } catch (error) {
+    deferNullUpdate = error instanceof Error ? error.message : String(error);
+  } finally {
+    db.exec("ROLLBACK TO planret_j_probe");
+    db.exec("RELEASE planret_j_probe");
+  }
+  // migrate の再適用は何も変えない。
+  const beforeRemigrate = databaseState(db);
+  const remigrate = migrate(db);
+  const remigrateUnchanged = JSON.stringify(databaseState(db)) === JSON.stringify(beforeRemigrate);
+  return {
+    thrown,
+    entries,
+    reviewCount,
+    ddl,
+    deferNullUpdate,
+    preservedBefore,
+    preservedAfter,
+    remigrateApplied: remigrate.applied,
+    remigrateUnchanged,
+  };
+}
+
+function ddlOf(db: HarnessDb): string {
+  return String(
+    db.prepare("SELECT sql FROM sqlite_master WHERE name = 'document_scale_profile_entries'").get()
+      ?.sql ?? "",
+  );
+}
+
+const SEED_PLAN_ROW = `INSERT INTO schedule_entries
+  (schedule_entry_id, plan_id, current_location, rag, status, source_path)
+  VALUES ('SCH-LEGACY-J', 'PLAN-L6-01', 'L6', 'RED', 'active', 'docs/plans/PLAN-L6-01.md')`;
+
+/**
+ * 旧 CHECK を持つ現行版 (v30) の DB。v29 の frozen DDL から、v30 の変更 (vmodel_item_target_edges の再作成)
+ * だけを手で当てて作る。`migrate` で作らないのは、Green の後の `migrate` が v30 を超えるためである。
+ */
+function createV30LegacyDatabase() {
+  const legacy = createLegacyDatabase();
+  opened.push(legacy.db);
+  const ref = tempDb().db;
+  migrate(ref);
+  const edgeDdl = String(
+    ref
+      .prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = ?")
+      .get("vmodel_item_target_edges")?.sql ?? "",
+  );
+  legacy.db.exec("DROP TABLE vmodel_item_target_edges");
+  legacy.db.exec(edgeDdl);
+  legacy.db.setUserVersion(30);
+  return legacy;
+}
+
+export type ScenarioJVariant = "fresh" | "v29" | "v30";
+
+/**
+ * (j): 新規 DB / 旧 CHECK 入り v29 / 旧 CHECK 入り v30 のそれぞれで、migrate してから、
+ * 旧 ID 付き defer 行の source を rebuild で投影する。
+ */
+export function runScenarioJ(variant: ScenarioJVariant) {
+  let target: { root: string; db: HarnessDb };
+  if (variant === "fresh") {
+    target = tempDb();
+  } else if (variant === "v29") {
+    target = createLegacyDatabase();
+    opened.push(target.db);
+  } else {
+    target = createV30LegacyDatabase();
+  }
+  createIssueOnlyCatalogFixture(target.root);
+  writeScaleProfileSource(target.root);
+  const before =
+    variant === "fresh" ? null : { ddl: ddlOf(target.db), version: target.db.userVersion() };
+  if (variant !== "fresh") target.db.exec(SEED_PLAN_ROW);
+  const migrated = migrate(target.db);
+  const afterMigrate = {
+    applied: migrated.applied,
+    version: target.db.userVersion(),
+    ddl: ddlOf(target.db),
+  };
+  return { before, afterMigrate, ...projectScaleProfiles(target.root, target.db) };
 }
