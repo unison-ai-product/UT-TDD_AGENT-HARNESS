@@ -8,6 +8,7 @@
  */
 import { spawnSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
+import { GH_COMMAND_TIMEOUT_MS, ghCommandEnv } from "../github/gh-command.ts";
 import { createGhAttestationVerifier } from "./adapters/gh-attestation-verifier.ts";
 import {
   admitReviewCustody,
@@ -282,7 +283,12 @@ function processEnvironment(): RunnerEnvironment {
   return {
     get: (name) => process.env[name],
     runGh: (args) => {
-      const result = spawnSync("gh", [...args], { encoding: "utf8", windowsHide: true });
+      const result = spawnSync("gh", [...args], {
+        encoding: "utf8",
+        windowsHide: true,
+        timeout: GH_COMMAND_TIMEOUT_MS,
+        env: ghCommandEnv(process.env),
+      });
       if (result.error) return { status: null, stdout: "" };
       return { status: result.status, stdout: result.stdout ?? "" };
     },

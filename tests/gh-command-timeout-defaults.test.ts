@@ -123,33 +123,33 @@ describe("GitHub CLI default launch options", () => {
     }
   });
 
-  it.fails("CANDIDATE-U-CMDINPUT-018: nodeGh sets a 30-second timeout", () => {
+  it("CANDIDATE-U-CMDINPUT-018: nodeGh sets a 30-second timeout", () => {
     expect(setup.timeout).toBe(30_000);
   });
 
-  it.fails("CANDIDATE-U-CMDINPUT-018: default attestation sets a 30-second timeout", () => {
+  it("CANDIDATE-U-CMDINPUT-018: default attestation sets a 30-second timeout", () => {
     expect(attestation.timeout).toBe(30_000);
   });
 
-  it.fails("CANDIDATE-U-CMDINPUT-018: live review gh sets a 30-second timeout", () => {
+  it("CANDIDATE-U-CMDINPUT-018: live review gh sets a 30-second timeout", () => {
     expect(liveGh.timeout).toBe(30_000);
   });
 
-  it.fails("CANDIDATE-U-CMDINPUT-019: nodeGh disables prompting and preserves environment", () => {
+  it("CANDIDATE-U-CMDINPUT-019: nodeGh disables prompting and preserves environment", () => {
     expect({
       promptDisabled: setup.env?.GH_PROMPT_DISABLED,
       sentinel: setup.env?.[sentinelKey],
     }).toEqual({ promptDisabled: "1", sentinel: sentinelValue });
   });
 
-  it.fails("CANDIDATE-U-CMDINPUT-019: default attestation disables prompting and preserves environment", () => {
+  it("CANDIDATE-U-CMDINPUT-019: default attestation disables prompting and preserves environment", () => {
     expect({
       promptDisabled: attestation.env?.GH_PROMPT_DISABLED,
       sentinel: attestation.env?.[sentinelKey],
     }).toEqual({ promptDisabled: "1", sentinel: sentinelValue });
   });
 
-  it.fails("CANDIDATE-U-CMDINPUT-019: live review gh disables prompting and preserves environment", () => {
+  it("CANDIDATE-U-CMDINPUT-019: live review gh disables prompting and preserves environment", () => {
     expect({
       promptDisabled: liveGh.env?.GH_PROMPT_DISABLED,
       sentinel: liveGh.env?.[sentinelKey],
@@ -162,7 +162,7 @@ describe("GitHub CLI default launch options", () => {
   });
 });
 
-it.fails("CANDIDATE-U-CMDINPUT-017: ghCommandEnv copies input and forces prompt suppression", async () => {
+it("CANDIDATE-U-CMDINPUT-017: ghCommandEnv copies input and forces prompt suppression", async () => {
   const specifier = ["..", "src", "github", "gh-command.ts"].join("/");
   const { ghCommandEnv } = (await import(/* @vite-ignore */ specifier)) as {
     ghCommandEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv;

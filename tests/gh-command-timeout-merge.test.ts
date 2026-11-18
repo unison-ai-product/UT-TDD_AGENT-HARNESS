@@ -93,7 +93,7 @@ describe("gh command timeout and prompt controls for PR merge ports", () => {
     ]);
   });
 
-  it.fails("CANDIDATE-U-CMDINPUT-018: getPullRequest は二つの観測に30秒timeoutを設定する", () => {
+  it("CANDIDATE-U-CMDINPUT-018: getPullRequest は二つの観測に30秒timeoutを設定する", () => {
     const calls: CapturedCall[] = [];
     const exec = spyExecFileSync(() => prView(), calls);
     const facts = createGhPrMergePorts({ execFileSync: exec }).getPullRequest(465);
@@ -103,7 +103,7 @@ describe("gh command timeout and prompt controls for PR merge ports", () => {
     expect(calls.map((call) => call.options.timeout)).toEqual([30_000, 30_000]);
   });
 
-  it.fails("CANDIDATE-U-CMDINPUT-019: getPullRequest は両観測でprompt抑止envを保つ", () => {
+  it("CANDIDATE-U-CMDINPUT-019: getPullRequest は両観測でprompt抑止envを保つ", () => {
     const priorPrompt = process.env.GH_PROMPT_DISABLED;
     const priorSentinel = process.env.UT_TDD_GH_TIMEOUT_SENTINEL;
     process.env.GH_PROMPT_DISABLED = "0";
@@ -128,7 +128,7 @@ describe("gh command timeout and prompt controls for PR merge ports", () => {
     }
   });
 
-  it.fails("CANDIDATE-U-CMDINPUT-018: mergePullRequest は30秒timeoutを設定する", () => {
+  it("CANDIDATE-U-CMDINPUT-018: mergePullRequest は30秒timeoutを設定する", () => {
     const calls: CapturedCall[] = [];
     const exec = spyExecFileSync(() => undefined, calls);
     createGhPrMergePorts({ execFileSync: exec }).mergePullRequest(465, head);
@@ -138,7 +138,7 @@ describe("gh command timeout and prompt controls for PR merge ports", () => {
     expect(calls[0]?.options.timeout).toBe(30_000);
   });
 
-  it.fails("CANDIDATE-U-CMDINPUT-019: mergePullRequest はprompt抑止envを保つ", () => {
+  it("CANDIDATE-U-CMDINPUT-019: mergePullRequest はprompt抑止envを保つ", () => {
     const priorPrompt = process.env.GH_PROMPT_DISABLED;
     const priorSentinel = process.env.UT_TDD_GH_TIMEOUT_SENTINEL;
     process.env.GH_PROMPT_DISABLED = "0";

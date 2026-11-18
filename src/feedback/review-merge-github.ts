@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+import { GH_COMMAND_TIMEOUT_MS, ghCommandEnv } from "../github/gh-command.ts";
 import type { PrObservation } from "./review-dispatch.ts";
 
 export interface MergeGateFacts extends PrObservation {
@@ -114,7 +115,7 @@ function readGhView(pr: number, runGh: ExecFileSync): Omit<MergeGateFacts, "eval
   const raw = runGh(
     "gh",
     ["pr", "view", String(pr), "--json", "headRefOid,state,statusCheckRollup"],
-    { encoding: "utf8" },
+    { encoding: "utf8", timeout: GH_COMMAND_TIMEOUT_MS, env: ghCommandEnv(process.env) },
   );
   const parsed = JSON.parse(raw) as GhPrView;
   if (
@@ -146,6 +147,8 @@ function readGhFacts(pr: number, runGh: ExecFileSync): MergeGateFacts {
 function readGhMergeCommitTree(pr: number, runGh: ExecFileSync): string {
   const raw = runGh("gh", ["pr", "view", String(pr), "--json", "mergeCommit"], {
     encoding: "utf8",
+    timeout: GH_COMMAND_TIMEOUT_MS,
+    env: ghCommandEnv(process.env),
   });
   const parsed = JSON.parse(raw) as { mergeCommit?: { oid?: unknown } | null };
   const mergeCommitSha = parsed.mergeCommit?.oid;
@@ -177,6 +180,8 @@ export function createGhPrMergePorts(
     mergePullRequest: (pr, headSha) => {
       runGh("gh", ["pr", "merge", String(pr), "--merge", "--match-head-commit", headSha], {
         stdio: "inherit",
+        timeout: GH_COMMAND_TIMEOUT_MS,
+        env: ghCommandEnv(process.env),
       });
     },
     readMergeCommitTree: (pr) => readGhMergeCommitTree(pr, runGh),
