@@ -815,7 +815,7 @@ export function evaluateAgentGuard(input: { stage: string; route: string; model:
 
       const db = openHarnessDb(":memory:", { repoRoot: root });
       try {
-        rebuildHarnessDb({ repoRoot: root, db });
+        rebuildHarnessDb({ repoRoot: root, db, skipTokenTelemetry: true });
         const gateRows = db
           .prepare(
             "SELECT gate_id, plan_id, status, evidence_path FROM gate_runs WHERE gate_id = ? ORDER BY checked_at",
