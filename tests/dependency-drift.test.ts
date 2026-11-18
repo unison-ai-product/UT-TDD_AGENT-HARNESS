@@ -1,3 +1,5 @@
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   analyzeDependencyDrift,
@@ -284,5 +286,30 @@ describe("dependency-drift and regression expansion (PLAN-REVERSE-42)", () => {
   it("U-DEPD-005: real repo module graph has no cycle", () => {
     const result = analyzeDependencyDrift(loadDependencyDriftInput(process.cwd()));
     expect(result.findings.filter((finding) => finding.code === "module-cycle")).toEqual([]);
+  });
+});
+
+describe("runtime dependency declaration (Issue #1720)", () => {
+  const listTs = (dir: string): string[] =>
+    readdirSync(dir, { withFileTypes: true }).flatMap((entry) =>
+      entry.isDirectory()
+        ? listTs(join(dir, entry.name))
+        : entry.name.endsWith(".ts")
+          ? [join(dir, entry.name)]
+          : [],
+    );
+
+  it("U-DEPD-006: typescript imported at runtime by src is declared in dependencies, not devDependencies", () => {
+    const runtimeImport = /^import\s+(?!type)[^;]*?from\s+["']typescript["']/m;
+    const importers = listTs(join(process.cwd(), "src")).filter((path) =>
+      runtimeImport.test(readFileSync(path, "utf8")),
+    );
+    expect(importers.length).toBeGreaterThan(0);
+    const pkg = JSON.parse(readFileSync(join(process.cwd(), "package.json"), "utf8")) as {
+      dependencies?: Record<string, string>;
+      devDependencies?: Record<string, string>;
+    };
+    expect(pkg.dependencies?.typescript).toBe("5.9.3");
+    expect(pkg.devDependencies?.typescript).toBeUndefined();
   });
 });
