@@ -302,19 +302,12 @@ L6 `harness-check` aggregate gate / E13 receipt契約を結合境界で検証す
 全負例、receipt鮮度、runtime/template profile分離、branch protection/E14消費境界の全てがGreenに
 なるまで「両OS CI済み」またはmerge可能を主張しない。
 
-## Appendix: PLAN 系譜 seal E.6 負系 oracle (PLAN-RECOVERY-16 / Issue #542)
+## Appendix: PLAN 系譜 seal E.6 負系 oracle — S7 退役記録 (PLAN-RECOVERY-16 / Issue #542)
 
-設計ペア: `docs/design/harness/L5-detailed-design/internal-processing.md` 付録 E。
-実装境界 `src/plan-asset/ledger/sealed-lineage-local-migration.ts` に対する負系 oracle は、
-実 projection の terminal 束縛と authority preimage の列を同時に検証する。既存
-`U-PA-SEAL-001..010` の契約を再所有せず、新規 oracle は次の行で登録する。
-
-| Oracle ID | Given | When | Then | Fixture / Boundary | Negative / Edge |
-|---|---|---|---|---|---|
-
-実行対応: `tests/plan-asset/sealed-lineage-local-migration.test.ts`
-(`U-PA-SEAL-011..028`)。これらは `src/lint/oracle-test-citation-baseline.ts` への追加対象ではなく、
-本書の paired test-design 宣言から test-label trace を閉じる。
+この付録の旧対応先 `src/plan-asset/ledger/sealed-lineage-local-migration.ts` と
+`tests/plan-asset/sealed-lineage-local-migration.test.ts` は S7 で退役した。
+旧 `U-PA-SEAL-011..028` の記述は履歴であり、現行の実行可能な integration-test mapping ではない。
+別の汎用 test へ移したという coverage 主張はしない。
 
 ## Node build image候補integration pair（Issue #152 D0-N）
 

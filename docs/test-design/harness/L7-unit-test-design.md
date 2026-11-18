@@ -779,11 +779,11 @@ SMB/NFS/OneDrive をまたぐ strict lease、heartbeat、clock-skew 耐性は主
 - **backfill-pairing.md §2.3 関数 (parseRequires/parseGlossaryTerms/normalizeTerm/parsePlan/analyzeBackfill/backfillMessages) → U-BACKFILL-001〜005** (add-feature 差分、IMP-051。normalizeTerm は parseGlossaryTerms/analyzeBackfill の内部パス経由で被覆。U-BACKFILL-006 の正式宣言は #1358 A4 PR-1 で退役。PLAN コーパス guard の実装と test body は後続 PR（退役 2/2）で物理削除。孤児 0)
 - **vmodel-pair-freeze.md §1-§3 関数 (loadPairDocs/analyzePairFreeze/pairFreezeMessages/lintVmodel) → U-VPAIR-001〜006** (add-feature 差分、PLAN-L7-11/IMP-067。lintVmodel は loadPairDocs→analyzePairFreeze→pairFreezeMessages の orchestration で U-VPAIR-005 実 repo ガードに内包。孤児 0)
 - **vmodel-pair-freeze.md §7 関数 (analyzeVerificationGroups/verificationGroupMessages、loadPairDocs status 拡張) → U-VTRIG-001〜005** (add-feature 差分、PLAN-L7-12/IMP-068。doctor checkVerificationGroups は U-VTRIG-005 実 repo ガードに内包。孤児 0)
-- **review-evidence.md §2-§4 関数 (hasReviewEvidence/parseReviewPlan/analyzeReviewEvidence/loadReviewPlans/reviewEvidenceMessages、schema review_evidence、doctor checkReviewEvidence) → U-REVIEW-001〜006** (add-feature 差分、PLAN-L7-13/IMP-071。reviewEvidenceMessages は U-REVIEW-003/006 経路で被覆、checkReviewEvidence は doctor try-catch ラッパーで U-REVIEW-006 実 repo ガードに内包。孤児 0)
-- **review-evidence.md §2-§4 の green_command anchor 必須化 (`greenCommandViolationReason` の `missing_anchor_commit` / `invalid_anchor_commit`) → U-REVIEW-009〜013** (add-feature 差分、PLAN-L7-497/issue #191。anchor 実在検査は含まない — squash merge 運用では判定不能で実測 29 件の false positive を出したため撤回、実在検査は issue #367 の守備範囲。孤児 0)
-- **review-evidence-stale.md §2-§4 関数 (draft/降格 PLAN に残る stale approval の検出) → U-REVIEW-007〜008** (add-feature 差分、PLAN-L7-19/IMP-080。review-evidence 双方向性の逆向き検出。孤児 0)
-- **cross-review-enforcement.md §1-§2 関数 (extractReviewEntries/analyzeReviewEvidence の crossReviewViolations、schema worker_model/reviewer_model) → U-XREVIEW-001〜005** (add-feature 差分、PLAN-L7-14/IMP-076。doctor 連動は U-REVIEW-006 実 repo ガードの crossReviewViolations==[] に内包。孤児 0)
-- **test-before-review.md §2-§3 関数 (analyzeReviewEvidence の testBeforeReviewViolations、schema tests_green_at、reviewed_at/tests_green_at 抽出) → U-TORDER-001〜005** (add-feature 差分、PLAN-L7-15/IMP-077。doctor 連動は U-REVIEW-006 実 repo ガードの testBeforeReviewViolations==[] に内包。全駆動モデル普遍。孤児 0)
+- S7 で退役した旧対応 **review-evidence.md §2-§4 関数 (hasReviewEvidence/parseReviewPlan/analyzeReviewEvidence/loadReviewPlans/reviewEvidenceMessages、schema review_evidence、doctor checkReviewEvidence) → U-REVIEW-001〜006** (add-feature 差分、PLAN-L7-13/IMP-071。reviewEvidenceMessages は U-REVIEW-003/006 経路で被覆、checkReviewEvidence は doctor try-catch ラッパーで U-REVIEW-006 実 repo ガードに内包）。
+- S7 で退役した旧対応 **review-evidence.md §2-§4 の green_command anchor 必須化 (`greenCommandViolationReason` の `missing_anchor_commit` / `invalid_anchor_commit`) → U-REVIEW-009〜013** (add-feature 差分、PLAN-L7-497/issue #191。anchor 実在検査は含まない — squash merge 運用では判定不能で実測 29 件の false positive を出したため撤回、実在検査は issue #367 の守備範囲）。
+- S7 で退役した旧対応 **review-evidence-stale.md §2-§4 関数 (draft/降格 PLAN に残る stale approval の検出) → U-REVIEW-007〜008** (add-feature 差分、PLAN-L7-19/IMP-080。review-evidence 双方向性の逆向き検出）。
+- S7 で退役した旧対応 **cross-review-enforcement.md §1-§2 関数 (extractReviewEntries/analyzeReviewEvidence の crossReviewViolations、schema worker_model/reviewer_model) → U-XREVIEW-001〜005** (add-feature 差分、PLAN-L7-14/IMP-076。doctor 連動は U-REVIEW-006 実 repo ガードの crossReviewViolations==[] に内包）。
+- S7 で退役した旧対応 **test-before-review.md §2-§3 関数 (analyzeReviewEvidence の testBeforeReviewViolations、schema tests_green_at、reviewed_at/tests_green_at 抽出) → U-TORDER-001〜005** (add-feature 差分、PLAN-L7-15/IMP-077。doctor 連動は U-REVIEW-006 実 repo ガードの testBeforeReviewViolations==[] に内包。全駆動モデル普遍）。
 - **provider-handover.ts / gate/review-tier.ts / team/run.ts / team/launch-policy.ts / runtime/adapter.ts → U-PHOVER-001〜002 / U-GATE-001〜003 / U-TEAMRUN-001〜003 / U-ADAPTER-001** (review 残課題解消差分、2026-06-08。provider handover package、mode-aware judgment gate、hybrid team 分散、runtime adapter dry-run surface。孤児 0)
 - **descent-obligation.md §1-§4 関数 (loadDescentAdjacency/loadTraceKeyedArtifacts/loadDeferLedger/generateObligations/analyzeDescentObligations/descentObligationMessages、doctor checkDescentObligation) → U-DESC-001〜008** (add-design 差分、PLAN-L6-35/FR-L1-03。load×3 は U-DESC-008 実 repo ガードに内包。上流駆動 obligation 生成 + defer ledger + impl-ahead ガードで absence-blind を是正。孤児 0)
 - **孤児 (設計で U 未被覆) = 0** を L7 entry で機械確認
@@ -1014,7 +1014,7 @@ This addendum pairs `screen-spec.md` with L7 unit-test oracles. It covers the L6
 
 | L6 doc | 機能 | 対応 test ファイル | 判定 |
 |---|---|---|---|
-| function-spec.md | 関数 signature (§1) / pseudocode (§2) / rule engine 10 型 (§4) / routeFiling 契約 / spec IR projection 契約 | tests/plan-lint.test.ts, tests/vmodel-pair.test.ts, tests/agent-guard.test.ts, tests/mode-catalog.test.ts, tests/frontmatter.test.ts (U-FUNC/U-CORE/U-RULE は分散実装、専用 U-ID タグ無し)。後続 U3 L7 で tests/spec-ir-projections.test.ts, tests/projection-writer.test.ts, tests/doctor.test.ts に U-SPECIR を実装する。 | covered + pending U3 L7 |
+| function-spec.md | 関数 signature (§1) / pseudocode (§2) / rule engine 10 型 (§4) / routeFiling 契約 / spec IR projection 契約 | `tests/vmodel-pair.test.ts`, `tests/agent-guard.test.ts`, `tests/mode-catalog.test.ts`。`tests/plan-lint.test.ts` と `tests/frontmatter.test.ts` は S7 で退役した PLAN 専用対応で、代替 coverage は主張しない。U-FUNC/U-CORE/U-RULE は分散実装、専用 U-ID タグ無し。後続 U3 L7 の U-SPECIR は `tests/spec-ir-projections.test.ts`, `tests/projection-writer.test.ts`, `tests/doctor.test.ts` に対応する。 | 現行部分 covered + pending U3 L7。退役した PLAN 専用対応は coverage 外 |
 | edge-case.md | `@edge-normal/error/boundary/throws` 4 観点 | 各 lint test の `@edge-*` 契約実装先に分散 (専用ファイル無し) | covered |
 | session-log.md | resolveActivePlan/recordEvent/compressPlanDigest/onStop/onSessionStart | tests/session-log.test.ts | covered |
 | forced-stop-feedback.md | detectDanglingTurn/recordForcedStop/classifyFeedback/recordFeedback/scanDanglingStops | tests/forced-stop.test.ts | covered |
@@ -1024,16 +1024,16 @@ This addendum pairs `screen-spec.md` with L7 unit-test oracles. It covers the L6
 | governance-enforcement.md | scrum-reverse (pocOrphans/badReverseRefs) + propagation (signal 語彙一致) | tests/scrum-reverse.test.ts, tests/propagation.test.ts | covered |
 | backfill-pairing.md | parseRequires/parseGlossaryTerms/analyzeBackfill/loadBackfillDocs/checkBackfill | tests/backfill-pairing.test.ts | covered |
 | vmodel-pair-freeze.md | loadPairDocs/analyzePairFreeze (§1-§3) + analyzeVerificationGroups (§7) | tests/vmodel-pair.test.ts | covered |
-| review-evidence.md | hasReviewEvidence/parseReviewPlan/analyzeReviewEvidence/loadReviewPlans | tests/review-evidence.test.ts | covered |
-| review-evidence-stale.md | draft/降格 PLAN の stale approval 検出 (U-REVIEW-007/008) | tests/review-evidence.test.ts | covered |
-| cross-review-enforcement.md | extractReviewEntries/crossReviewViolations (U-XREVIEW) | tests/review-evidence.test.ts | covered |
-| test-before-review.md | tests_green_at ≤ reviewed_at 順序検証 (U-TORDER) | tests/review-evidence.test.ts | covered |
+| review-evidence.md | `hasReviewEvidence` / `parseReviewPlan` / `analyzeReviewEvidence` / `loadReviewPlans` (旧 PLAN 専用) | S7 で退役 (`tests/review-evidence.test.ts` も退役) | 退役した関数・case は coverage 外。汎用 `EvidencePolicy` の実装は `src/forward/domain/evidence-policy.ts`、既存テストは `tests/plan-asset/evidence-policy.test.ts` だが、旧 review 処理の代替とはしない |
+| review-evidence-stale.md | draft/降格 PLAN の stale approval 検出 (旧 U-REVIEW-007/008) | S7 で退役 (`tests/review-evidence.test.ts` も退役) | PLAN 専用 oracle 退役。代替 coverage は主張しない |
+| cross-review-enforcement.md | `extractReviewEntries` / `crossReviewViolations` (旧 U-XREVIEW) | S7 で退役 (`tests/review-evidence.test.ts` も退役) | PLAN 専用 oracle 退役。代替 coverage は主張しない |
+| test-before-review.md | `tests_green_at ≤ reviewed_at` 順序検証 (旧 U-TORDER) | S7 で退役 (`tests/review-evidence.test.ts` も退役) | PLAN 専用 oracle 退役。代替 coverage は主張しない |
 | module-drift.md | parseListedModules/analyzeModuleDrift + asset-drift/change-impact/coding-rules/ddd-tdd-rules addendum | tests/module-drift.test.ts, tests/asset-drift.test.ts, tests/change-impact.test.ts, tests/coding-rules.test.ts, tests/ddd-tdd-rules.test.ts | covered |
 | descent-obligation.md | loadDescentAdjacency/generateObligations/analyzeDescentObligations | tests/descent-obligation.test.ts | covered |
 | skill-index.md | analyzeSkillAssignments/scoreSkill/scanSkillCatalog + skill new scaffolder | tests/skill-assignment.test.ts, tests/skill-scaffold.test.ts, tests/skill-recommend.test.ts | covered |
 | fr-unit-coverage.md | U-FR-L1-* FR registry ↔ L6 spec ↔ U-* oracle 被覆 | tests/l6-fr-coverage.test.ts, tests/fr-registry-audit.test.ts, tests/fr-roadmap-coverage.test.ts | covered |
 | gate-confirm.md | judgment gate と confirm 結合 (U-GCONF) | tests/gate-confirm.test.ts | covered |
-| plan-schedule-lint.md | 工程表 schedule 最小強制 (U-PLANSCH) | tests/plan-lint.test.ts | covered |
+| plan-schedule-lint.md | 工程表 schedule 最小強制 (旧 U-PLANSCH) | S7 で退役 (`tests/plan-lint.test.ts` も退役) | PLAN 専用 oracle 退役。代替 coverage は主張しない |
 | screen-spec.md | parseScreenQuery/validateScreenQuery/handleScreenEvent/loadScreenViewModel/buildRouteRegistry (U-SCREEN-001〜006) | tests/screen-impl-pair-freeze.test.ts は pair-freeze gate のみを被覆し、上記個別関数 (parseScreenQuery 等) を直接 Grep しても実 test 未検出 | **gap** |
 
 ## PLAN-L6-38 Router Function Contracts Addendum (駆動モデルルーター関数契約、2026-07-07)
@@ -1052,12 +1052,12 @@ This addendum pairs `screen-spec.md` with L7 unit-test oracles. It covers the L6
 | U-ROUTE-R3 | `routeFiling(signal)` (不変条件) | 非 forward の FilingTarget は `forward_insufficient_reason` 無しに生成されない。生成時は reason にトリガ signal が含まれる。 |
 | U-ROUTE-R4 | `routeFiling(signal)` (cold L7 禁止) | いかなる signal に対しても `(allowed_kinds=[impl] 単独, layer_band=[L7])` の filing 入口を emit しない。 |
 | U-ROUTE-R5 | `routeFiling(signal)` (競合/境界) | 失敗系 signal 競合は Incident > Recovery > Reverse > Refactor の全順序で解決。最長一致 (`regression_prod` が `regression` に吸われない)。escalation 境界 signal は mode 非依存で `requires_human_approval=true` へ昇格。 |
-| U-ROUTE-R6 | `analyzePlanGovernance.routeModeKindLayer(plan)` | `route_mode` の layer band 外の non-archived PLAN は `route_mode_kind_layer_mismatch` で fail-close。band 内は violation 0。実装済み oracle は `U-PLANGOV-011v4`: `verify` は L8-L14 のみ、`add-feature` は L3-L7 のみを受理する。 |
+| U-ROUTE-R6 | `analyzePlanGovernance.routeModeKindLayer(plan)` | `route_mode` の layer band 外の non-archived PLAN は `route_mode_kind_layer_mismatch` で fail-close。band 内は violation 0。`verify` は L8-L14 のみ、`add-feature` は L3-L7 のみを受理する。旧 oracle `U-PLANGOV-011v4` は S7 で退役し、現行 test coverage とはしない。 |
 | U-ROUTE-R7 | `analyzePlanGovernance.routeModeKindLayer(plan)` (免除) | legacy landed / draft debt は `routeModeKind` と同一 allowlist を使う。legacy landed は恒久免除、draft debt は status=draft の間のみ免除し、着手時に fail-close。`promote_by` 有効期限 + justification までの escape hardening は Appendix C.4 carry として別 slice で固定する。 |
 | U-ROUTE-R8 | `assertL7HasDesignAncestor(plan, registry)` | `layer=L7` の impl 系 PLAN (`impl`/`add-impl`) は parent 連鎖が設計層 PLAN (L4/L5/L6 の design/add-design) に到達しなければ `l7_cold_intake` で fail-close。到達すれば violation 0。 |
 | U-ROUTE-R9 | `assertL7HasDesignAncestor(plan, registry)` (two-phase intake) | 対の Reverse PLAN が draft でも intake (draft 起票) は許容。confirmed 昇格時は双方 pairing ready (相互参照解決 + Reverse 側 forward_routing 宣言) でなければ fail-close。 |
 | U-ROUTE-R10 | `routeFiling(signal)` (Reverse 出所必須) | `mode=reverse` の FilingTarget は `origin` (origin signal / origin plan_id) を必ず持つ。出所なき standalone reverse は途中導入 (既走プロジェクト onboarding) signal の場合のみ emit され、それ以外は fail-close。`requires_human_approval` は escalation 境界昇格の結果として FilingTarget 自身が保持する。 |
-| U-ROUTE-R11 | `analyzePlanGovernance.verifyGateBinding(plan)` / `frontmatterSchema` | `kind=verify` は `layer=L8..L14` と `verification_gate=G8..G14` を 1:1 で宣言しなければ `verify_gate_missing` / `verify_gate_layer_mismatch` で fail-close。non-verify PLAN の `verification_gate` も拒否し、右腕 gate を実装・設計 PLAN に誤接続しない。実装 oracle は `U-PLANGOV-011v5` と `frontmatter.test.ts` の verify gate 契約。 |
+| U-ROUTE-R11 | `analyzePlanGovernance.verifyGateBinding(plan)` / `frontmatterSchema` | `kind=verify` は `layer=L8..L14` と `verification_gate=G8..G14` を 1:1 で宣言しなければ `verify_gate_missing` / `verify_gate_layer_mismatch` で fail-close。non-verify PLAN の `verification_gate` も拒否し、右腕 gate を実装・設計 PLAN に誤接続しない。旧 oracle `U-PLANGOV-011v5` と `frontmatter.test.ts` の verify gate case は S7 で退役し、現行 test coverage とはしない。 |
 | U-RLG-001 | `analyzeRightLungDocGovernance(input)` | L8/L9/L10/L12/L14 の各 right-lung test-design doc が `Gx-WORKFLOW` と 9 marker (`test_strategy` / `test_plan` / `test_conditions` / `coverage_items` / `test_procedures` / `execution_evidence` / `exit_criteria` / `defect_routing` / `verification_design`) と層別 test case ID family (`IT-` / `ST-` / `UXV-` / `AT-` / `OT-`) を持てば pass。 |
 | U-RLG-002 | `analyzeRightLungDocGovernance(input)` | workflow marker、`defect_routing` / `verification_design` などの必須 marker、または層別 test case ID family が欠落した doc は violation として missing marker 名を返す。 |
 | U-RLG-003 | `checkRightLungDocGovernance(repoRoot)` / doctor full profile | repo root 不在は fail-close。実 repo は 5 doc checked で green となり、doctor full profile に `right-lung-doc-governance` が配線される。 |
@@ -1395,13 +1395,8 @@ spec:
 
 | test ID | precondition / fixture | command / query | postcondition / invariant / expected finding |
 |---|---|---|---|
-| `U-PA-001` | 空/不正`asset_id` | `PlanAsset.create` | `plan-asset-invalid-id`, exit 1 |
-| `U-PA-002` | revision 1,3 | `PlanAsset.reconstruct` | `plan-revision-gap`, exit 1 |
-| `U-PA-003` | alias/layer変更command | `PlanAsset.revise` | 新revisionでも`asset_id`不変、exit 0 |
 | `U-PA-004` | 旧EvidenceRecord snapshot + 新revisionの作成 | `EvidenceRecord.create` | 新snapshot作成後も旧recordのJSONは不変で、旧recordは凍結される。既存 usability 条件はU-PA-005で検証する。 |
 | `U-PA-005` | expired/別revision/policy別exit evidence | `EvidenceRecord.isUsableFor` | `evidence-stale-or-subject-mismatch`、Red expected nonzeroだけusable、exit 1/0 |
-| `U-PA-006` | legacy PLAN全field + short alias現HEAD全衝突群 | canonical adapter / alias resolver | field loss 0、多義は`plan-migration-collision`で自動選択0、exit 1 |
-| `U-PA-007` | 同ordinal同時予約 | `PlanIdReservation.reserve` | 片方だけ成功、他方`plan-id-reservation-conflict` |
 | `U-PA-008` | HEAD tracked `ut-tdd.project.json`、改竄bytes/receipt、schema/identity不正、remote無し | `loadTrackedProjectIdentity` / `loadProjectIdentityFromHead` | exact HEAD blobだけ成功しreceipt digest安定。index/working tree/remote補完0、異常種別を専用findingでfail-close |
 | `U-PA-045` | 複数kind/producer/subject/revision/commit/expiry/exit/claims outcomeを組合せたevidence全履歴 | `EvidenceRecord` / `EvidencePolicy` | policy定義と評価contextを分離し、typed claimsRuleに適合するactive frontierだけをmin/max cardinalityへ数え、requirement別missing/rejected IDをstable順で返す |
 | `U-PA-046` | raw/split/env/header/URI secret command、未知kind/producer/exit/claims rule、kind不一致claims、自己/orphan/cycle/fork/逆因果supersede、全record field改変 | `EvidenceRecord.create` / policy frontier / digest | branded redacted argv以外は拒否、claimsを自由文から推測しない、supersession不正とrecord digest不一致を拒否、旧record不変 |
@@ -1508,8 +1503,8 @@ debt routeを扱う後続5件は、後続sliceでIDを再採番してfreezeす�
 
 ## PLAN-L7-428 ステージ紐付きエリシテーション oracle (PLAN-REVERSE-428 backfill、2026-07-13)
 
-対象 = `src/elicitation/context.ts` / `src/elicitation/record.ts`。実テスト =
-`tests/elicitation-context.test.ts` (in-memory harness.db + temp repo fixture)。
+対象は `src/elicitation/record.ts` の採択記録のみ。`src/elicitation/context.ts` と PLAN 文脈選択のcaseは S7 で退役した。実テスト =
+`tests/elicitation-context.test.ts` の `U-ELICIT-006` (append-only JSONL 記録)。
 
 | ID | 観点 | fixture | expected |
 | --- | --- | --- | --- |
