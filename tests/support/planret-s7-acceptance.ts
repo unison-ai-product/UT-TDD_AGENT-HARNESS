@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import ts from "typescript";
@@ -7,10 +7,12 @@ import { selectSessionStartDigest } from "../../src/handover/session-start-diges
 import { recommendSkillsForText } from "../../src/skill-engine/recommend.ts";
 import { type HarnessDb, openHarnessDb } from "../../src/state-db/index.ts";
 import { migrate } from "../../src/state-db/migration.ts";
+import { rebuildHarnessDb } from "../../src/state-db/projection-writer.ts";
 import { clearRebuildableProjectionTables } from "../../src/state-db/sqlite-projection-rebuild.ts";
 import { removeTestTree } from "../support/temp-tree.ts";
 import {
   cleanupPlanretS3MigrationFixtures,
+  createIssueOnlyCatalogFixture,
   createLegacyDatabase,
 } from "./plan-mechanism-retirement-s3-migration.ts";
 
@@ -302,4 +304,128 @@ export function runScenarioG() {
     before,
     after: tableShape(legacy, PRESERVED_TABLES),
   };
+}
+
+const SCALE_PROFILES_PATH = "docs/governance/vmodel-document-scale-profiles.md";
+const table = (rows: readonly (readonly string[])[]) =>
+  rows.map((cells) => `| ${cells.join(" | ")} |`).join("\n");
+
+/** (j) の source: defer 行 (required_plan_id が空) と adopt 行を持つ document scale profile。 */
+function writeScaleProfileSource(root: string): void {
+  const profileHeader = [
+    "profile_id",
+    "profile_axis",
+    "profile_rank",
+    "description",
+    "default_status",
+    "default_detail",
+    "scope_policy",
+  ];
+  const entryHeader = [
+    "profile_id",
+    "doc_type_id",
+    "decision",
+    "detail_override",
+    "status_override",
+    "reason",
+    "required_plan_id",
+  ];
+  const sep = (header: readonly string[]) => header.map(() => "---");
+  const body = [
+    table([
+      ["field", "value"],
+      ["---", "---"],
+      ["size_profile_count", "2"],
+      ["product_profile_count", "0"],
+      ["profile_count", "2"],
+      ["decision_count", "2"],
+    ]),
+    table([
+      profileHeader,
+      sep(profileHeader),
+      ["PLANRET-J-A", "size", "10", "defer fixture", "required", "standard", "minimal"],
+      ["PLANRET-J-B", "size", "20", "adopt fixture", "required", "standard", "minimal"],
+    ]),
+    table([
+      entryHeader,
+      sep(entryHeader),
+      ["PLANRET-J-A", "DOC-L0-CHARTER", "defer", "lite", "minimal", "Issue で追う", ""],
+      ["PLANRET-J-B", "DOC-L0-CHARTER", "adopt", "standard", "required", "採用", ""],
+    ]),
+  ].join("\n\n");
+  writeFileSync(join(root, SCALE_PROFILES_PATH), `${body}\n`, "utf8");
+}
+
+function projectScaleProfiles(root: string, db: HarnessDb) {
+  let thrown: string | null = null;
+  try {
+    rebuildHarnessDb({ repoRoot: root, db, skipTokenTelemetry: true });
+  } catch (error) {
+    thrown = error instanceof Error ? error.message : String(error);
+  }
+  const entries = db
+    .prepare(
+      `SELECT profile_id, doc_type_id, decision, required_plan_id
+         FROM document_scale_profile_entries ORDER BY profile_id`,
+    )
+    .all()
+    .map((r) => ({ ...r }));
+  const reviewCount = Number(
+    db.prepare("SELECT COUNT(*) AS n FROM document_scale_profile_reviews").get()?.n ?? 0,
+  );
+  const ddl = String(
+    db.prepare("SELECT sql FROM sqlite_master WHERE name = 'document_scale_profile_entries'").get()
+      ?.sql ?? "",
+  );
+  return { thrown, entries, reviewCount, ddl };
+}
+
+/** (j): 新規 DB と旧 CHECK 入り (v29 の frozen DDL) の DB の両方で、defer 行 (required_plan_id=NULL) を投影する。 */
+export function runScenarioJ() {
+  const fresh = tempDb();
+  createIssueOnlyCatalogFixture(fresh.root);
+  writeScaleProfileSource(fresh.root);
+  migrate(fresh.db);
+  const legacy = createLegacyDatabase();
+  opened.push(legacy.db);
+  createIssueOnlyCatalogFixture(legacy.root);
+  writeScaleProfileSource(legacy.root);
+  const legacyBefore = String(
+    legacy.db
+      .prepare("SELECT sql FROM sqlite_master WHERE name = 'document_scale_profile_entries'")
+      .get()?.sql ?? "",
+  );
+  return {
+    fresh: projectScaleProfiles(fresh.root, fresh.db),
+    legacy: projectScaleProfiles(legacy.root, legacy.db),
+    legacyBefore,
+  };
+}
+
+/** (h): `plan lint` の互換入口 (top-level の `plan` command か、`plan lint` を command 名に持つ定義)。 */
+export function scanHPlanLintEntry(root: string): string[] {
+  return sources(root)
+    .filter((s) => /^src\/(cli\.ts|cli\/)/.test(s.path))
+    .flatMap((s) => {
+      const text = s.lines.join("\n");
+      return [...text.matchAll(/(\w+)\s*\.command\(\s*["'`]plan(?:\s+lint)?(?:\s[^"'`]*)?["'`]/g)]
+        .filter((m) => m[1] !== "distribution")
+        .map((m) => `${s.path}:${text.slice(0, m.index).split("\n").length}`);
+    });
+}
+
+/** (i): src / scripts / .github / tests のどこにも `plan-asset` の module を指す import が無い。 */
+export function scanIPlanAssetImports(root: string): string[] {
+  const paths = execFileSync("git", ["ls-files", "src", "scripts", "tests"], {
+    cwd: root,
+    encoding: "utf8",
+  })
+    .split("\n")
+    .filter((p) => /\.(ts|mjs|js)$/.test(p));
+  return paths.flatMap((path) => {
+    const text = readFileSync(join(root, path), "utf8");
+    return [...text.matchAll(/(?:from|import\s*\(|require\()\s*["'][^"']*plan-asset[^"']*["']/g)].map(
+      (m) => `${path}:${text.slice(0, m.index).split("\n").length}`,
+    );
+  });
 }

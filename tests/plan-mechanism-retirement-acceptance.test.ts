@@ -1,4 +1,9 @@
+import { mkdirSync, mkdtempSync, readFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
+import { evaluateStaticGate } from "../src/gate/static.ts";
+import { checkTraceGate } from "../src/doctor/process-quality.ts";
 import { missingTables, rowCounts } from "../src/state-db/migration.ts";
 import {
   cleanupPlanretS7Fixtures,
@@ -12,14 +17,28 @@ import {
   scanDSource,
   scanE,
   scanF,
+  scanHPlanLintEntry,
+  scanIPlanAssetImports,
+  runScenarioJ,
 } from "./support/planret-s7-acceptance.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 import { headSnapshotRoot } from "./support/workspace-roots.ts";
 
 // S7 (#1379) の統合受入 oracle 008 / 018 (L7 plan-mechanism-retirement-test-design §3)。
 // S7 の source 撤去 PR はすべて merge 済み (#1798 / #1801 / #1803)。Red 段の it.fails は、すべて it に戻した。
-// (h)(i)(j) は別の PR で扱う。
+// (h)(i)(j) は Red 段の PR で足した。契約を満たさない (j) だけ it.fails で、(h)(i) は main が既に満たすので it。Green で (j) を it に戻す。
 const root = headSnapshotRoot();
-afterEach(cleanupPlanretS7Fixtures);
+const emptyRoots: string[] = [];
+afterEach(() => {
+  cleanupPlanretS7Fixtures();
+  for (const dir of emptyRoots.splice(0)) removeTestTree(dir);
+});
+function emptyRepoRoot(): string {
+  const dir = mkdtempSync(join(tmpdir(), "planret-s7-h-"));
+  mkdirSync(join(dir, "docs"), { recursive: true });
+  emptyRoots.push(dir);
+  return dir;
+}
 
 describe("CANDIDATE-U-PLANRET-018 S7 の静的 scan (src / scripts / .github の tracked file)", () => {
   it("CANDIDATE-U-PLANRET-018(a) PLAN 用の表の名前を含む SQL 文字列が無い", () => {
@@ -139,4 +158,67 @@ describe("CANDIDATE-U-PLANRET-008 登録の無い PLAN 表の保全", () => {
       expect(missingTables(runScenario008Absent())).not.toContain(table);
     });
   }
+});
+
+describe("CANDIDATE-U-PLANRET-018(h) G1 / G3 trace の直接経路", () => {
+  for (const gate of ["G1", "G3"] as const) {
+    it(`CANDIDATE-U-PLANRET-018(h) gate ${gate} と doctor が実 repo で trace を直接動かす`, () => {
+      const trace = `${gate}-trace` as const;
+      expect(checkTraceGate(root, trace).ok).toBe(true);
+      const result = evaluateStaticGate({ gate, repoRoot: root });
+      expect(result.applicable).toBe(true);
+      expect(result.passed).toBe(true);
+    });
+    it(`CANDIDATE-U-PLANRET-018(h) 対象文書が欠けると gate ${gate} と doctor が fail-close する`, () => {
+      const dir = emptyRepoRoot();
+      const trace = `${gate}-trace` as const;
+      const doctor = checkTraceGate(dir, trace);
+      expect(doctor.ok).toBe(false);
+      const result = evaluateStaticGate({ gate, repoRoot: dir });
+      expect(result.passed).toBe(false);
+    });
+  }
+  it("CANDIDATE-U-PLANRET-018(h) plan lint の互換入口が無い", () => {
+    expect(scanHPlanLintEntry(root)).toEqual([]);
+  });
+});
+
+describe("CANDIDATE-U-PLANRET-018(i) 共用型の移し先と plan-asset 参照", () => {
+  const exportsOf: [string, RegExp][] = [
+    ["src/github/git-diff.ts", /export type GitChange/],
+    ["src/lint/lint-result.ts", /export interface LintResult/],
+    ["src/kernel/project-identity.ts", /export function loadTrackedProjectIdentity/],
+  ];
+  for (const [path, pattern] of exportsOf) {
+    it(`CANDIDATE-U-PLANRET-018(i) ${path} が移し先として宣言を持つ`, () => {
+      expect(readFileSync(join(root, path), "utf8")).toMatch(pattern);
+    });
+  }
+  it("CANDIDATE-U-PLANRET-018(i) src/plan-asset/ を参照する import が無い", () => {
+    expect(scanIPlanAssetImports(root)).toEqual([]);
+  });
+});
+
+describe("CANDIDATE-U-PLANRET-018(j) document_scale_profile_entries の defer 行 (required_plan_id=NULL)", () => {
+  it.fails("CANDIDATE-U-PLANRET-018(j) 旧 CHECK のある DDL からの migrate 後に defer 行を NULL で投影する", () => {
+    const j = runScenarioJ();
+    expect(j.legacyBefore).toMatch(/required_plan_id IS NOT NULL/);
+    expect(j.legacy.thrown).toBeNull();
+    expect(j.legacy.entries).toEqual([
+      { profile_id: "PLANRET-J-A", doc_type_id: "DOC-L0-CHARTER", decision: "defer", required_plan_id: null },
+      { profile_id: "PLANRET-J-B", doc_type_id: "DOC-L0-CHARTER", decision: "adopt", required_plan_id: null },
+    ]);
+    expect(j.legacy.reviewCount).toBe(2);
+    expect(j.legacy.ddl).not.toMatch(/required_plan_id IS NOT NULL/);
+  }, 120000);
+  it.fails("CANDIDATE-U-PLANRET-018(j) 新規 DB で defer 行を NULL で投影し document profile / decision / count の正例を保つ", () => {
+    const j = runScenarioJ();
+    expect(j.fresh.thrown).toBeNull();
+    expect(j.fresh.entries).toEqual([
+      { profile_id: "PLANRET-J-A", doc_type_id: "DOC-L0-CHARTER", decision: "defer", required_plan_id: null },
+      { profile_id: "PLANRET-J-B", doc_type_id: "DOC-L0-CHARTER", decision: "adopt", required_plan_id: null },
+    ]);
+    expect(j.fresh.reviewCount).toBe(2);
+    expect(j.fresh.ddl).not.toMatch(/required_plan_id IS NOT NULL/);
+  }, 120000);
 });
