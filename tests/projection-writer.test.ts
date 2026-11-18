@@ -1598,100 +1598,56 @@ export function evaluateAgentGuard(input: { stage: string; route: string; model:
     }
   });
 
-  it("projects runtime skill_invocations from skill suggest session events only", () => {
+  it("projects runtime skill invocation observations without PLAN or catalog identities", () => {
     const db = openHarnessDb(":memory:");
     try {
       migrate(db);
-      recordProjectionEvent(db, {
-        table: "plan_registry",
-        id: "PLAN-L7-201-runtime-skill-provenance",
-        row: {
-          plan_id: "PLAN-L7-201-runtime-skill-provenance",
-          kind: "impl",
-          layer: "L7",
-          drive: "db",
-          status: "confirmed",
-          title: "runtime skill provenance",
-          source_path: "docs/plans/PLAN-L7-201-runtime-skill-provenance.md",
-          source_hash: "sha256:test",
-          updated_at: "2026-06-29T00:00:00Z",
-        },
-      });
-      recordProjectionEvent(db, {
-        table: "automation_assets",
-        id: "skill:review-checklist",
-        row: {
-          asset_id: "skill:review-checklist",
-          asset_type: "skill",
-          path: "docs/skills/review-checklist.yaml",
-          trigger: "review checklist",
-          role: "reviewer",
-          capability: "quality review checklist",
-          skill_type: "workflow",
-          applies_layers: "L7",
-          applies_drive_models: "Forward",
-          drift_status: "ok",
-          indexed_at: "2026-06-29T00:00:00Z",
-        },
-      });
-      const plans = new Map([
-        [
-          "PLAN-L7-201-runtime-skill-provenance",
-          {
-            planId: "PLAN-L7-201-runtime-skill-provenance",
-            kind: "impl",
-            layer: "L7",
-            drive: "db",
-            status: "confirmed",
-            updatedAt: "2026-06-29T00:00:00Z",
-          },
-        ],
-      ]);
-
-      projectRuntimeSkillInvocationFromSessionEvent({
-        db,
-        plans,
-        event: {
-          ts: "2026-06-29T00:01:00Z",
-          session_id: "session-skill-1",
-          plan_id: "PLAN-L7-201-runtime-skill-provenance",
-          event_type: "tool_use",
-          tool: "Bash",
-          target: "Bash (skill)",
-          outcome: "ok",
-        },
-        evidencePath: ".ut-tdd/logs/session/session-skill-1.jsonl",
-      });
-      projectRuntimeSkillInvocationFromSessionEvent({
-        db,
-        plans,
-        event: {
-          ts: "2026-06-29T00:02:00Z",
-          session_id: "session-skill-1",
-          plan_id: "PLAN-L7-201-runtime-skill-provenance",
-          event_type: "tool_use",
-          tool: "Bash",
-          target: "Bash (bash)",
-          outcome: "ok",
-        },
-        evidencePath: ".ut-tdd/logs/session/session-skill-1.jsonl",
-      });
-
-      const rows = db
-        .prepare(
-          "SELECT session_id, skill_id, layer, drive, source, accepted, fired_at FROM skill_invocations",
-        )
-        .all();
-      expect(rows).toHaveLength(1);
-      expect(rows[0]).toMatchObject({
+      const event = {
+        ts: "2026-06-29T00:01:00Z",
         session_id: "session-skill-1",
-        skill_id: "skill:review-checklist",
-        layer: "L7",
-        drive: "db",
+        plan_id: null,
+        event_type: "tool_use",
+        tool: "Bash",
+        target: "Bash (skill)",
+        outcome: "ok",
+      };
+      const evidencePath = ".ut-tdd/logs/session/session-skill-1.jsonl";
+      const invocation = { db, event, evidencePath, lineNumber: 1 };
+      projectRuntimeSkillInvocationFromSessionEvent(invocation);
+      projectRuntimeSkillInvocationFromSessionEvent(invocation);
+      projectRuntimeSkillInvocationFromSessionEvent({
+        db,
+        event: { ...event, target: "Bash (bash)" },
+        evidencePath,
+        lineNumber: 2,
+      });
+
+      const selectObservations = db.prepare(
+        "SELECT session_id, plan_id, skill_id, layer, drive, source, accepted, fired_at FROM skill_invocations",
+      );
+      const observation = {
+        session_id: "session-skill-1",
+        plan_id: null,
+        skill_id: null,
+        layer: null,
+        drive: null,
         source: "runtime-hook:skill-suggest",
         accepted: 1,
         fired_at: "2026-06-29T00:01:00Z",
+      };
+      expect(selectObservations.all()).toEqual([observation]);
+
+      projectRuntimeSkillInvocationFromSessionEvent({
+        db,
+        event: { ...event, outcome: "error" },
+        evidencePath,
+        lineNumber: 3,
       });
+      const observations = selectObservations.all();
+      expect(observations).toHaveLength(2);
+      expect(observations).toEqual(
+        expect.arrayContaining([observation, { ...observation, accepted: 0 }]),
+      );
     } finally {
       db.close();
     }

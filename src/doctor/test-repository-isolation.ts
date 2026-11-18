@@ -41,7 +41,6 @@ global-setup.ts:1 support/workspace-roots.ts:3
 global-setup-fence:1 vitest-snapshot-runner:3 snapshot-runner-argv-candidates:2
 hook-native-launcher:1 claude-memory-terminal-gc:1 release-version-identity:2 windows-ci-single-snapshot:2 windows-ci-shard-red:1 pack-authoring-template-scope:3
 profile/tracked-loader:2
-plan-asset/project-identity-loader:1
 disposition/git-authoring-provenance:3 disposition/projection:6 disposition/tracked-target-registry:2
   forward-escape-issue-contract:2
   pack-consumer-runtime-release:3 release-consumer-vmodel-template:1
