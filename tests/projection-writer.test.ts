@@ -2126,53 +2126,35 @@ export function evaluateAgentGuard(input: { stage: string; route: string; model:
     }
   });
 
-  it("closes working-tree relation impacts when the owning PLAN has review and green evidence", () => {
+  it("projects open working-tree impacts and pair-freeze evidence without PLAN input", () => {
     const repoRoot = join(tmpdir(), `ut-tdd-impact-closure-${randomUUID()}`);
-    mkdirSync(join(repoRoot, "docs", "plans"), { recursive: true });
+    const designPath = "docs/design/contract.md";
+    const testDesignPath = "docs/test-design/L7-contract.md";
+    const designId = `design:${designPath}`;
+    const testDesignId = `test-design:${testDesignPath}`;
     mkdirSync(join(repoRoot, "docs", "design"), { recursive: true });
-    execFileSync("git", ["init"], { cwd: repoRoot, stdio: "ignore" });
-    writeFileSync(
-      join(repoRoot, "docs", "design", "contract.md"),
-      "# Contract\n\n設計本文。\n",
-      "utf8",
+    mkdirSync(join(repoRoot, "docs", "test-design"), { recursive: true });
+    const gitOptions = { cwd: repoRoot, stdio: "ignore" } as const;
+    execFileSync("git", ["init"], gitOptions);
+    writeFileSync(join(repoRoot, designPath), "# Contract\n\n設計本文。\n", "utf8");
+    writeFileSync(join(repoRoot, testDesignPath), "# Test design\n\n検証本文。\n", "utf8");
+    execFileSync("git", ["add", "--", designPath, testDesignPath], gitOptions);
+    execFileSync(
+      "git",
+      [
+        "-c",
+        "user.name=Projection Fixture",
+        "-c",
+        "user.email=projection-fixture@example.invalid",
+        "-c",
+        "commit.gpgsign=false",
+        "commit",
+        "-m",
+        "test: seed paired artifacts",
+      ],
+      gitOptions,
     );
-    writeFileSync(
-      join(repoRoot, "docs", "plans", "PLAN-L7-999-impact-closure.md"),
-      `---
-plan_id: PLAN-L7-999-impact-closure
-title: "PLAN-L7-999: Impact closure fixture"
-kind: impl
-layer: L7
-drive: db
-status: confirmed
-created: 2026-06-30
-updated: 2026-06-30
-generates:
-  - artifact_path: docs/design/contract.md
-    artifact_type: design_doc
-review_evidence:
-  - reviewer: codex-fixture
-    review_kind: intra_runtime_subagent
-    reviewed_at: "2026-06-30T00:00:00Z"
-    tests_green_at: "2026-06-30T00:00:00Z"
-    verdict: approve
-    green_commands:
-      - kind: unit_test
-        command: "bun run vitest run tests\\\\fixture.test.ts"
-        runner: bun
-        scope: targeted
-        exit_code: 0
-        completed_at: "2026-06-30T00:00:00Z"
-        evidence_path: tests/fixture.test.ts
-        output_digest: "sha256:fixture"
----
-
-# PLAN-L7-999
-
-Fixture.
-`,
-      "utf8",
-    );
+    writeFileSync(join(repoRoot, designPath), "# Contract\n\n設計本文を変更した。\n", "utf8");
     const db = openHarnessDb(":memory:");
     try {
       const result = rebuildHarnessDb({
@@ -2180,13 +2162,10 @@ Fixture.
         db,
         relationGraph: {
           nodes: [
-            {
-              id: "design:docs/design/contract.md",
-              kind: "design",
-              path: "docs/design/contract.md",
-            },
+            { id: designId, kind: "design", path: designPath },
+            { id: testDesignId, kind: "test-design", path: testDesignPath },
           ],
-          edges: [],
+          edges: [{ from: designId, to: testDesignId, kind: "pairs" }],
           verificationProfiles: [],
           findings: [],
         },
@@ -2194,29 +2173,36 @@ Fixture.
       expect(result.ok).toBe(true);
       const impacts = db
         .prepare(
-          `SELECT required_action, status, evidence_path
+          `SELECT root_node_id, required_action, status, evidence_path
            FROM impact_results
-           WHERE root_node_id = ?
+           WHERE change_set_id = ?
            ORDER BY required_action`,
         )
-        .all("design:docs/design/contract.md") as Array<{
-        required_action: string;
-        status: string;
-        evidence_path: string;
-      }>;
-      expect(impacts.map((row) => [row.required_action, row.status])).toEqual([
-        ["record-trace-freeze-evidence", "closed"],
-        ["update-plan-dod", "closed"],
+        .all("working-tree");
+      expect(impacts).toEqual([
+        {
+          root_node_id: designId,
+          required_action: "record-trace-freeze-evidence",
+          status: "open",
+          evidence_path: "git status --porcelain",
+        },
+        {
+          root_node_id: testDesignId,
+          required_action: "update-paired-artifact",
+          status: "closed",
+          evidence_path: "doctor:pair-freeze",
+        },
+        {
+          root_node_id: designId,
+          required_action: "update-plan-dod",
+          status: "open",
+          evidence_path: "git status --porcelain",
+        },
       ]);
-      expect(impacts.every((row) => row.evidence_path.includes("PLAN-L7-999"))).toBe(true);
       const progress = db
-        .prepare(
-          "SELECT color, open_dependency_impacts FROM artifact_progress WHERE artifact_path = ?",
-        )
-        .get("docs/design/contract.md") as
-        | { color: string; open_dependency_impacts: number }
-        | undefined;
-      expect(progress).toMatchObject({ color: "yellow", open_dependency_impacts: 0 });
+        .prepare("SELECT open_dependency_impacts FROM artifact_progress WHERE artifact_path = ?")
+        .get(designPath);
+      expect(progress).toMatchObject({ open_dependency_impacts: 2 });
     } finally {
       db.close();
       rmSync(repoRoot, { recursive: true, force: true });
