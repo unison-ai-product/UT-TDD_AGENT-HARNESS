@@ -69,7 +69,7 @@ describe("db projection ingestion detector", () => {
     }
   });
 
-  it("explicit PLAN input generates schedule/readiness rows", () => {
+  it("U-DBPROJ-ING-003: explicit PLAN input generates schedule/readiness rows", () => {
     const repoRoot = mkdtempSync(join(tmpdir(), "ut-tdd-db-projection-ingestion-plan-"));
     let db: ReturnType<typeof openHarnessDb> | undefined;
 
