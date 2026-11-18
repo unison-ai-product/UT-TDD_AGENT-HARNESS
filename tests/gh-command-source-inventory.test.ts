@@ -182,14 +182,14 @@ describe("CANDIDATE-U-CMDINPUT-020 gh runtime options", () => {
   });
 
   for (const { label, options } of staticOptions) {
-    it.fails(`${label} passes GH_COMMAND_TIMEOUT_MS`, () => {
+    it(`${label} passes GH_COMMAND_TIMEOUT_MS`, () => {
       const timeout = optionValue(options, "timeout");
       expect(timeout && ts.isIdentifier(timeout) ? timeout.text : undefined).toBe(
         "GH_COMMAND_TIMEOUT_MS",
       );
     });
 
-    it.fails(`${label} suppresses prompts with the inherited environment`, () => {
+    it(`${label} suppresses prompts with the inherited environment`, () => {
       const env = optionValue(options, "env");
       expect(
         env !== undefined &&

@@ -136,7 +136,7 @@ describe("gh timeout and prompt boundary exceptions", () => {
     expect(ghCall?.options.timeout).toBe(10_000);
   });
 
-  it.fails("CANDIDATE-U-CMDINPUT-025: post-merge gh adds prompt suppression while retaining its timeout", () => {
+  it("CANDIDATE-U-CMDINPUT-025: post-merge gh adds prompt suppression while retaining its timeout", () => {
     const calls = runPostMergeBackstop();
     const ghCall = calls.find((call) => call.command === "gh");
 

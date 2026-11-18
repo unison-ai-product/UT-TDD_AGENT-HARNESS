@@ -52,6 +52,7 @@ import { writeGateRunEvidence } from "./gate/run-evidence.ts";
 import { evaluateStaticGate } from "./gate/static.ts";
 import { runChangeLaneClassification, SystemGitDiffNamesPort } from "./github/change-lane.ts";
 import { runDesignProtectionCommand } from "./github/design-protection.ts";
+import { GH_COMMAND_TIMEOUT_MS, ghCommandEnv } from "./github/gh-command.ts";
 import { evaluateGithubOpsGuardWithCommitInput } from "./github/guard-commit-range.ts";
 import { collectJobSummary, renderJobSummary } from "./github/job-summary.ts";
 import { renderGithubOpsGuard } from "./github/ops-guard.ts";
@@ -503,14 +504,7 @@ function readMemoryThroughService(
   }
 }
 
-/**
- * Read-only PR lifecycle observation at the CLI boundary.
- *
- * The inbox core accepts an observation port so it never owns GitHub/network
- * policy.  `gh pr view` is deliberately invoked without a shell and every
- * parse/network failure returns `undefined`; callers then leave the entry
- * live.  A missing observation must never become a terminal decision.
- */
+/** CLI 側で PR を観測する。観測できなければ inbox の項目を保留したままにする。 */
 function observeClaudeInboxPullRequest(
   repoRoot: string,
   pr: number,
@@ -519,7 +513,13 @@ function observeClaudeInboxPullRequest(
     const raw = execFileSync(
       "gh",
       ["pr", "view", String(pr), "--json", "state,mergedAt,headRefOid"],
-      { cwd: repoRoot, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] },
+      {
+        cwd: repoRoot,
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "ignore"],
+        timeout: GH_COMMAND_TIMEOUT_MS,
+        env: ghCommandEnv(process.env),
+      },
     );
     return parseClaudeInboxPullRequestObservation(pr, raw);
   } catch {
@@ -532,13 +532,6 @@ function surfaceSessionStartDigestToStdout(
   escalationBlock = "",
   outputTo: "stdout" | "stderr" = "stdout",
 ): void {
-  const writeOutput = (text: string) => {
-    if (outputTo === "stderr") {
-      process.stderr.write(text);
-      return;
-    }
-    process.stdout.write(text);
-  };
   // memory は DB 障害と独立に正本ファイルから読む (PLAN-L7-468 欠陥 3)。
   const memory = readMemoryThroughService(repoRoot, { limit: 5 });
   let unclaimedInbox: ReturnType<typeof recoverAndSummarizeClaudeInboxForSessionStart> | undefined;
@@ -560,7 +553,7 @@ function surfaceSessionStartDigestToStdout(
           unclaimedInbox,
         }),
       );
-      if (block) writeOutput(block);
+      if (block) (outputTo === "stderr" ? process.stderr : process.stdout).write(block);
       process.stderr.write(renderMemoryHealth(memory));
     } finally {
       db.close();
@@ -3480,12 +3473,16 @@ function fetchRulesetsViaGh(repository: string): unknown[] {
   const list = JSON.parse(
     execFileSync("gh", ["api", `repos/${repository}/rulesets?includes_parents=true`], {
       encoding: "utf8",
+      timeout: GH_COMMAND_TIMEOUT_MS,
+      env: ghCommandEnv(process.env),
     }),
   ) as Array<Record<string, unknown>>;
   return list.map((entry) =>
     JSON.parse(
       execFileSync("gh", ["api", `repos/${repository}/rulesets/${String(entry.id)}`], {
         encoding: "utf8",
+        timeout: GH_COMMAND_TIMEOUT_MS,
+        env: ghCommandEnv(process.env),
       }),
     ),
   );
