@@ -266,12 +266,12 @@ function expectDeferRowsProjectedWithNull(j: ReturnType<typeof runScenarioJ>) {
 }
 
 describe("CANDIDATE-U-PLANRET-018(j) document_scale_profile_entries の defer 行 (required_plan_id=NULL)", () => {
-  it.fails("CANDIDATE-U-PLANRET-018(j) 新規 DB で defer 行を NULL で投影し、正例を保つ", () => {
+  it("CANDIDATE-U-PLANRET-018(j) 新規 DB で defer 行を NULL で投影し、正例を保つ", () => {
     const j = runScenarioJ("fresh");
     expect(j.afterMigrate.version).toBe(SCHEMA_VERSION);
     expectDeferRowsProjectedWithNull(j);
   }, 120000);
-  it.fails("CANDIDATE-U-PLANRET-018(j) 旧 CHECK のある v29 からの migrate 後に defer 行を NULL で投影し、正例を保つ", () => {
+  it("CANDIDATE-U-PLANRET-018(j) 旧 CHECK のある v29 からの migrate 後に defer 行を NULL で投影し、正例を保つ", () => {
     const j = runScenarioJ("v29");
     expect(j.before?.ddl).toMatch(NO_CHECK);
     expect(j.before?.version).toBe(29);
@@ -280,7 +280,7 @@ describe("CANDIDATE-U-PLANRET-018(j) document_scale_profile_entries の defer �
     expect(j.afterMigrate.ddl).not.toMatch(NO_CHECK);
     expectDeferRowsProjectedWithNull(j);
   }, 120000);
-  it.fails("CANDIDATE-U-PLANRET-018(j) 旧 CHECK のある現行版 v30 からも migrate で版が上がり、defer 行を NULL で投影し、正例を保つ", () => {
+  it("CANDIDATE-U-PLANRET-018(j) 旧 CHECK のある現行版 v30 からも migrate で版が上がり、defer 行を NULL で投影し、正例を保つ", () => {
     const j = runScenarioJ("v30");
     expect(j.before?.ddl).toMatch(NO_CHECK);
     expect(j.before?.version).toBe(30);

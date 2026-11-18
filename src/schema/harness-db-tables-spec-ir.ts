@@ -85,16 +85,6 @@ export const HARNESS_DB_SPEC_IR_TABLES: TableDef[] = [
         "profile_controlled",
         "skipped",
       ]),
-      {
-        kind: "or",
-        expressions: [
-          {
-            kind: "not",
-            expression: { kind: "compare", column: "decision", operator: "=", value: "defer" },
-          },
-          { kind: "is-null", column: "required_plan_id", negate: true },
-        ],
-      },
     ],
   },
   {

@@ -139,6 +139,8 @@ export function migrate(db: HarnessDb): MigrationResult {
       const fromVersion = db.userVersion();
       const rebuiltProjectionTables = rebuildVersion26ProjectionTables(db, fromVersion);
       const rebuiltIssueTargetTable = rebuildVersion30ProjectionTables(db, fromVersion);
+      // v31 は旧 CHECK を持つ投影表を再作成し、行は source から再投影する。
+      if (fromVersion < 31) db.exec("DROP TABLE IF EXISTS document_scale_profile_entries");
       const ddls = schemaDdl();
       for (const ddl of ddls.filter((s) => s.startsWith("CREATE TABLE"))) db.exec(ddl);
       const addedColumns = addMissingColumns(db);

@@ -116,7 +116,7 @@ describe("spec IR projections", () => {
           decision: "adopt",
           detail_override: "detailed",
           status_override: "required",
-          required_plan_id: "PLAN-L4-999-report-slot",
+          required_plan_id: null,
           source_path: "docs/governance/vmodel-document-scale-profiles.md",
         }),
       ]);
