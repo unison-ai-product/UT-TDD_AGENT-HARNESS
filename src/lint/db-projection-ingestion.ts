@@ -75,14 +75,6 @@ export const AUTOMATIC_DB_PROJECTION_REQUIREMENTS: DbProjectionIngestionRequirem
     reason: "spec relations are derived from PLAN dependencies and design/test pairs",
   },
   {
-    table: "activation_entries",
-    reason: "activation entries are derived from route mode and drive profile declarations",
-  },
-  {
-    table: "activation_schedule_reviews",
-    reason: "activation schedule reviews join activation profiles with V-model schedule state",
-  },
-  {
     table: "document_catalog_entries",
     reason:
       "document catalog entries are derived from the V-model document catalog authoring source",
