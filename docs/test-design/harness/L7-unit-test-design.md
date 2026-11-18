@@ -1117,16 +1117,16 @@ This addendum pairs `screen-spec.md` with L7 unit-test oracles. It covers the L6
 
 ## PLAN-L6-41 Activation Profile Schedule Join Addendum (2026-07-08)
 
-> 設計ペア: `docs/design/harness/L6-function-design/function-spec.md` の
-> `parseActivationEntries` / `joinActivationScheduleReviews` 契約 (PLAN-L6-41)。
-> `docs/governance/vmodel-activation-profiles.md` を第一入力にし、工程管理表と join した read-model を DB と検索へ出す。
+> S7 で PLAN 工程表と activation profile の投影および join を退役する。以下の R1〜R4 は退役前の検証履歴。
+> `schedule_entries` / `activation_entries` / `activation_schedule_reviews` は旧 DB の物理表と行を保持する。
+> 残る文書カタログ・文書スケール・仕様 IR の検証は下表で維持する。
 
 | U-ID | Target | Oracle |
 |---|---|---|
-| U-ACTIVATION-SCHEDULE-R1 | `parseActivationEntries(input)` | activation profile authoring row が PLAN frontmatter fallback より優先され、`scope_status` / `target_version` / `defer_reason` / `enabled` を保持する。 |
-| U-ACTIVATION-SCHEDULE-R2 | `joinActivationScheduleReviews(input)` | `activation_entries.plan_id` と `schedule_entries.plan_id` を join し、`current_location` / `rag` / `schedule_status` / `v_pair` を read-model に含める。 |
-| U-ACTIVATION-SCHEDULE-R3 | `analyzeSpecIrIntegrity(input)` | `scope_status=deferred|out_of_scope` の理由欠落、または `target_kind=plan` の工程表未接続を finding 化し、projection 側で工程行を創作しない。 |
-| U-ACTIVATION-SCHEDULE-R4 | `rebuildHarnessDb` / `findReference` | real repo rebuild で `activation_schedule_reviews` が populated になり、`vmodel-clean-core` や `deferred` で検索できる。 |
+| U-ACTIVATION-SCHEDULE-R1 | `parseActivationEntries(input)` | S7 前は activation profile authoring row が PLAN frontmatter fallback より優先され、`scope_status` / `target_version` / `defer_reason` / `enabled` を保持する。S7 で退役する。 |
+| U-ACTIVATION-SCHEDULE-R2 | `joinActivationScheduleReviews(input)` | S7 前は `activation_entries.plan_id` と `schedule_entries.plan_id` を join し、`current_location` / `rag` / `schedule_status` / `v_pair` を read-model に含める。S7 で退役する。 |
+| U-ACTIVATION-SCHEDULE-R3 | `analyzeSpecIrIntegrity(input)` | S7 前は `scope_status=deferred` または `out_of_scope` の理由欠落、または `target_kind=plan` の工程表未接続を finding 化し、projection 側で工程行を創作しない。S7 で退役する。 |
+| U-ACTIVATION-SCHEDULE-R4 | `rebuildHarnessDb` / `findReference` | S7 前は real repo rebuild で `activation_schedule_reviews` が populated になり、`vmodel-clean-core` や `deferred` で検索できる。S7 で退役する。 |
 | U-SCHEDULE-LIVE-002 | `selectScheduleLiveState(db)` / `latestReviewEvidenceEntry` | authoring green と最新 test/gate (`blocked`を含む) または最新review snapshotの差し戻し矛盾を red にする一方、passing signal だけで authoring yellow/red を green に昇格しない。最新時刻はUTC instantで比較し、同一instantは後置row/entryを採用する。未知/空ragはyellowへfail-closedする。 |
 | U-SCHEDULE-LIVE-004 | `renderSessionStartDigest(digest)` / SessionStart | `state-and-gates / HEAD / actionable / memory` の固定4段を1回だけ出力し、旧 feedback/memory/escalation block を重複表示しない。Iron Law escalationは第1段に内包し、DB/HEAD不在は fail-open。 |
 | U-DOCUMENT-CATALOG-R1 | `parseDocumentCatalogEntries(input)` / `projectSpecIr` | `docs/governance/vmodel-document-catalog.md` から `document_catalog_entries` を populated にし、`DOC-L4-DATA` などを `findReference` で検索できる。 |
@@ -1242,18 +1242,9 @@ spec:
     - id: TVMS-001
       kind: unit-oracle
       traces_from: [VMS-001]
-    - id: TVMS-002
-      kind: unit-oracle
-      traces_from: [VMS-002]
-    - id: TVMS-003
-      kind: unit-oracle
-      traces_from: [VMS-003]
     - id: TVMS-004
       kind: unit-oracle
       traces_from: [VMS-004]
-    - id: TVMS-005
-      kind: integration-oracle
-      traces_from: [VMS-005]
     - id: TVMS-006
       kind: projection-oracle
       traces_from: [VMS-006]
@@ -1286,22 +1277,13 @@ spec:
       traces_from: [VMS-015]
 ```
 
-TVMS-001、TVMS-002、TVMS-003、TVMS-004、TVMS-005、TVMS-006、TVMS-007 は L7 unit-test-design の所有 artifact で宣言される typed spec oracle である。
+TVMS-001、TVMS-004、TVMS-006、TVMS-007 は L7 unit-test-design の所有 artifact で宣言される typed spec oracle である。TVMS-002、TVMS-003、TVMS-005 は S7 で退役した。
 TVMS-007 は VMS-007 の phase/layer alignment が unit oracle と doctor gate で検証されることを保証する。
 TVMS-008 は agent contract authoring source、TVMS-009 は agent contract doctor gate の oracle である。
 TVMS-014 は VMS-014 の ID 単位実行割当台帳 contract が L7 unit oracle として定義されることを保証する。
 TVMS-015 は VMS-015 の工程 live state / 固定4段 SessionStart digest contract が L7 unit oracle として定義されることを保証する。
 
-```yaml
-spec:
-  defines:
-    - id: VMS-005
-      kind: activation-schedule-review
-      traces_from: [VMS-002, VMS-003]
-      tests: [TVMS-005]
-```
-
-VMS-005 は activation schedule review の L7 実装境界を表す typed spec である。
+VMS-005 は activation schedule review の旧 L7 実装境界であり、S7 で退役した。
 
 ```yaml
 spec:
