@@ -7,7 +7,6 @@ import { buildFullDoctorCheckDefinitions } from "../src/doctor/check-definitions
 import { FULL_DOCTOR_OUTPUT_IDS } from "../src/doctor/profiles.ts";
 import { nodeDoctorDeps } from "../src/doctor/runtime-state.ts";
 import { analyzeL14CloseAudit, loadL14CloseAuditDocs } from "../src/lint/l14-close-audit.ts";
-import * as githubForwardProjection from "../src/state-db/github-forward-projection.ts";
 import { headSnapshotRoot } from "./support/workspace-roots.ts";
 
 const snapshotRoot = headSnapshotRoot();
@@ -156,23 +155,6 @@ function testCallbacks(source: string, path: string): Map<string, string> {
   visit(file);
   return callbacks;
 }
-
-const retiredGithubWriterExports = [
-  "recordGithubBinding",
-  "queueGithubProjection",
-  "claimGithubProjection",
-  "markGithubProjectionApplied",
-  "markGithubProjectionFailed",
-  "syncForwardProject",
-  "persistProjectSync",
-  "syncRepositoryBindings",
-];
-
-const retiredGithubForwardHelpers = [
-  "selectActiveProjectRows",
-  "selectExistingProjectPlans",
-  "isManualGithubObservationKind",
-];
 
 const retiredForwardStoreTestIds = [
   "U-GHPROJ-011",
@@ -355,9 +337,10 @@ describe("PLAN 機構の S5 退役", () => {
     ])
       expect(existsSync(join(snapshotRoot, path)), path).toBe(false);
 
-    const githubForwardExports = Object.keys(githubForwardProjection);
-    for (const name of [...retiredGithubWriterExports, ...retiredGithubForwardHelpers])
-      expect(githubForwardExports, name).not.toContain(name);
+    expect(
+      existsSync(join(snapshotRoot, "src/state-db/github-forward-projection.ts")),
+      "github-forward-projection",
+    ).toBe(false);
 
     const forwardStorePath = "tests/github-forward-store.test.ts";
     const forwardStoreSource = readFileSync(join(snapshotRoot, forwardStorePath), "utf8");

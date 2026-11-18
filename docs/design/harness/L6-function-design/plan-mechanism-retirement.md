@@ -272,7 +272,7 @@ B2はB1 merge後に直ちに実施する。許容pathは旧4 test fileの削除�
 | `docs/governance/ut-tdd-agent-harness-extraction-plan_v0.1.md` | 版つき文書の履歴的な言及 (抽出計画 v0.1、`ut-tdd plan` 1 件) | 履歴として残す | 2 |
 | `docs/governance/version-up-route-debt-2026-07-10.md` | 履歴的な記録 (負債の台帳) | 履歴として残す | 3 |
 | `docs/governance/vmodel-activation-profiles.md` | 履歴注記 (PLAN ID 28 語) と `plan_id` の言及の混在 | 一部を直す (運用規則の行だけ。履歴注記は残す) | 16 |
-| `docs/governance/vmodel-agent-contracts.md` | 来歴の注記 (PLAN ID のみ。運用規則の記述が無いことを確認済み) | 履歴として残す | 1 |
+| `docs/governance/vmodel-agent-contracts.md` | 運用規則 (VAGENT-001 の `done_when` にあった `doctor:plan-schedule`) と来歴の注記 (PLAN ID) | S7 の前段で PLAN 専用 gate 参照を外す。`doctor:db-currency` と来歴の注記は維持する | 1 |
 | `docs/governance/vmodel-document-disposition-catalog.md` | 来歴の注記 (PLAN ID のみ。運用規則の記述が無いことを確認済み) | 履歴として残す | 7 |
 | `docs/governance/vmodel-document-scale-profiles.md` | 運用規則 (`plan_id`/`generates`/`route_signal` の言及) | 直す | 7 |
 | `docs/governance/vmodel-item-target-ledger.md` | 運用規則 (`plan_id`/`generates`/`route_signal` の言及) | 直す | 2 |

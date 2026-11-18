@@ -32,7 +32,6 @@ const populatedAutomaticProjectionCounts = {
   spec_defs: 1,
   spec_relations: 1,
   schedule_entries: 1,
-  execution_readiness_projection: 1,
   activation_entries: 1,
   activation_schedule_reviews: 1,
   document_catalog_entries: 1,
@@ -100,7 +99,6 @@ describe("db projection ingestion detector", () => {
       const rebuilt = rebuildHarnessDb({ repoRoot, db, skipTokenTelemetry: true });
 
       expect(rebuilt.rowCounts.schedule_entries).toBeGreaterThan(0);
-      expect(rebuilt.rowCounts.execution_readiness_projection).toBeGreaterThan(0);
     } finally {
       db?.close();
       removeTestTree(repoRoot);
@@ -177,7 +175,6 @@ describe("db projection ingestion detector", () => {
     const result = analyzeDbProjectionIngestion({
       ...populatedAutomaticProjectionCounts,
       schedule_entries: 0,
-      execution_readiness_projection: 0,
     });
 
     expect(result.ok).toBe(true);
@@ -185,14 +182,9 @@ describe("db projection ingestion detector", () => {
     expect(AUTOMATIC_DB_PROJECTION_REQUIREMENTS.map((item) => item.table)).not.toContain(
       "schedule_entries",
     );
-    expect(AUTOMATIC_DB_PROJECTION_REQUIREMENTS.map((item) => item.table)).not.toContain(
-      "execution_readiness_projection",
-    );
     expect(AUTOMATIC_DB_PROJECTION_REQUIREMENTS.map((item) => item.table).sort()).toEqual(
       Object.keys(populatedAutomaticProjectionCounts)
-        .filter(
-          (table) => table !== "schedule_entries" && table !== "execution_readiness_projection",
-        )
+        .filter((table) => table !== "schedule_entries")
         .sort(),
     );
   });
@@ -201,7 +193,6 @@ describe("db projection ingestion detector", () => {
     const result = analyzeDbProjectionIngestion({
       ...populatedAutomaticProjectionCounts,
       schedule_entries: 0,
-      execution_readiness_projection: 0,
       mcp_server_profiles: 0,
     });
 
@@ -224,12 +215,7 @@ describe("db projection ingestion detector", () => {
       ]),
     );
     expect(EVIDENCE_GATED_DB_PROJECTION_TABLES).toEqual(
-      expect.arrayContaining([
-        "model_evaluations",
-        "retry_events",
-        "detector_route_candidates",
-        "github_review_lane_receipts",
-      ]),
+      expect.arrayContaining(["model_evaluations", "retry_events", "detector_route_candidates"]),
     );
   });
 

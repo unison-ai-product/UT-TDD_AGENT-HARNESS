@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { nodeHandoverDeps, resolveHandoverScope, runHandover } from "../src/handover/index.ts";
+import { nodeHandoverDeps, runHandover } from "../src/handover/index.ts";
 import {
   buildProviderHandover,
   nodeProviderHandoverDeps,
@@ -161,13 +161,12 @@ describe("U-PLANRET-026 S4 handover retirement", () => {
     expect(runHandover({ date: "2026-11-11" }, handoverDeps(root)).pointer.active_plan).toBeNull();
   });
 
-  it("U-PLANRET-026: existing PLAN digest remains in handover scope", () => {
+  it("U-PLANRET-026: legacy PLAN digest does not populate new pointer fields", () => {
     const root = tempRepo();
     writeFixture(root, DIGEST, JSON.stringify(LEGACY_DIGEST));
 
-    expect(resolveHandoverScope(handoverDeps(root))).toMatchObject({
-      active_plan: null,
-      digests: [LEGACY_DIGEST],
-    });
+    const pointer = runHandover({ date: "2026-11-11" }, handoverDeps(root)).pointer;
+    expect(pointer.active_plan).toBeNull();
+    expect(pointer.digest_summary).toBeNull();
   });
 });

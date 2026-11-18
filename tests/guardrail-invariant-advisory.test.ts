@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { inspectGuardrailInvariants } from "../src/guardrail/ledger.ts";
+import { stableId } from "../src/stable-id.ts";
 import { openHarnessDb, upsertRow } from "../src/state-db/index.ts";
 import { migrate } from "../src/state-db/migration.ts";
 import { projectGuardrailInvariantAdvisories } from "../src/state-db/projection-writer.ts";
@@ -228,11 +229,11 @@ describe("IT-GUARDRAIL-ADVISORY-01: projection-based invariant advisories", () =
         table: "workflow_runs",
         primaryKey: "workflow_run_id",
         row: {
-          workflow_run_id: "wf-advisory",
+          workflow_run_id: stableId("gate-workflow", "gate-advisory"),
           plan_id: "PLAN-SELF-REVIEW-A",
           drive_run_id: "",
-          workflow: "Forward",
-          phase: "L7",
+          workflow: "routine-gate",
+          phase: "G-L7",
           ready_status: "pending",
           blocked_reason: "",
           human_required: 0,
@@ -266,14 +267,20 @@ describe("IT-GUARDRAIL-ADVISORY-01: projection-based invariant advisories", () =
 
       const baseline = evaluateAutomationReadiness(db);
       expect(baseline).toContainEqual(
-        expect.objectContaining({ workflow_run_id: "wf-advisory", ready_status: "ready" }),
+        expect.objectContaining({
+          workflow_run_id: stableId("gate-workflow", "gate-advisory"),
+          ready_status: "ready",
+        }),
       );
 
       projectGuardrailInvariantAdvisories(db);
 
       const afterAdvisory = evaluateAutomationReadiness(db);
       expect(afterAdvisory).toContainEqual(
-        expect.objectContaining({ workflow_run_id: "wf-advisory", ready_status: "ready" }),
+        expect.objectContaining({
+          workflow_run_id: stableId("gate-workflow", "gate-advisory"),
+          ready_status: "ready",
+        }),
       );
     } finally {
       db.close();
