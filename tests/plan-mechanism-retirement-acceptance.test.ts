@@ -27,7 +27,7 @@ describe("CANDIDATE-U-PLANRET-018 S7 の静的 scan (src / scripts / .github の
   it.fails("CANDIDATE-U-PLANRET-018(b) harness-ledger.db の path が無い", () => {
     expect(scanB(root)).toEqual([]);
   });
-  it.fails("CANDIDATE-U-PLANRET-018(c) PLAN 用の表と台帳への DROP / VACUUM / DELETE が無い", () => {
+  it("CANDIDATE-U-PLANRET-018(c) PLAN 用の表と台帳への DROP / VACUUM / DELETE が無い", () => {
     expect(scanC(root)).toEqual([]);
   });
   it.fails("CANDIDATE-U-PLANRET-018(d) docs/plans の実在を確かめるコードが無い", () => {
@@ -46,11 +46,11 @@ describe("CANDIDATE-U-PLANRET-018(g) 新規 DB と旧表入り DB の非 PLAN �
     const g = runScenarioG();
     expect(g.legacyOut.recommend).toEqual(g.freshOut.recommend);
   });
-  it.fails("CANDIDATE-U-PLANRET-018(g) PLAN に依らない digest が両 DB で同じ結果になる", () => {
+  it("CANDIDATE-U-PLANRET-018(g) PLAN に依らない digest が両 DB で同じ結果になる", () => {
     const g = runScenarioG();
     expect(g.legacyOut.digest).toEqual(g.freshOut.digest);
   });
-  it.fails("CANDIDATE-U-PLANRET-018(g) 旧表の行が出力に現れない", () => {
+  it("CANDIDATE-U-PLANRET-018(g) 旧表の行が出力に現れない", () => {
     expect(runScenarioG().leaked).toBe(false);
   });
   it("CANDIDATE-U-PLANRET-018(g) 旧表と保存対象 12 表の DDL と行数が変わらない", () => {
