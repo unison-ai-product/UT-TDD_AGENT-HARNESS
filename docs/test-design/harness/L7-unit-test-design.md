@@ -1134,9 +1134,9 @@ This addendum pairs `screen-spec.md` with L7 unit-test oracles. It covers the L6
 | U-DOCUMENT-SCALE-R2 | `analyzeSpecIrIntegrity(input)` | 未知 decision/detail/status、catalog 欠落、skip/defer/conditional の理由欠落、`required_plan_id` 未解決を finding 化し、profile 判定を projection 側で補完しない。 |
 | U-DOCUMENT-SCALE-R3 | `rebuildHarnessDb` / `findReference` | real repo rebuild で `document_scale_profile_reviews` が populated になり、`enterprise DOC-L4-REPORT adopt` などを検索できる。 |
 | U-SCOPE-PREVIEW-R1 | `buildScopeDryRunPreview(db, input)` | document scale profile の `conditional` 文書は capability flag が一致した場合だけ `resolved_scope_status=in_scope`、一致しなければ `conditional` のまま返す。 |
-| U-SCOPE-PREVIEW-R2 | `buildScopeDryRunPreview(db, input)` | `defer` 文書は `required_plan_id` が投影済みなら warn なしで `required_action=follow required plan ...` を返し、未投影なら warn finding を返す。 |
+| U-SCOPE-PREVIEW-R2 | `buildScopeDryRunPreview(db, input)` | defer 文書は理由と `resolved_scope_status=deferred` を保持し、`required_action=route defer target before implementation` を返す。 |
 | U-SCOPE-PREVIEW-R3 | `buildScopeDryRunPreview(db, input)` | document scale profile 不在は `scope-preview-profile-missing` error finding とし、dry-run が silent success しない。 |
-| U-SCOPE-PREVIEW-R4 | `ut-tdd db scope-preview --profile <id> --json` | CLI は JSON/text 両出力を持ち、`documents` / `activations` / `gates` / `detectors` / `findings` / `summary` を返す。source docs / PLAN / profile を更新しない。 |
+| U-SCOPE-PREVIEW-R4 | `ut-tdd db scope-preview --profile <id> --json` | S7 後の JSON は `documents` / `gates` / `detectors` / `findings` / `summary` を返し、text は同じ文書判定を表示する。旧表入り DB と新規 DB で同じ文書・gate・detector を返す。source docs と profile は保持する。 |
 
 ## PLAN-L6-42 Typed Spec Declaration Addendum (2026-07-08)
 

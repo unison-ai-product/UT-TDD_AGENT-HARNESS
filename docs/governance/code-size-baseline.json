@@ -80,7 +80,7 @@
   "tests/consumer-node-runtime-physical.test.ts": { "lines": 816, "functionExcess": null },
   "tests/consumer-node-runtime.test.ts": { "lines": 758, "functionExcess": null },
   "tests/db-currency.test.ts": { "lines": 871, "functionExcess": null },
-  "tests/db-projection-coverage.test.ts": { "lines": 572, "functionExcess": null },
+  "tests/db-projection-coverage.test.ts": { "lines": 563, "functionExcess": null },
   "tests/ddd-tdd-rules.test.ts": { "lines": 509, "functionExcess": null },
   "tests/design-protection.test.ts": { "lines": 830, "functionExcess": null },
   "tests/distribution-acceptance.test.ts": { "lines": 942, "functionExcess": null },
