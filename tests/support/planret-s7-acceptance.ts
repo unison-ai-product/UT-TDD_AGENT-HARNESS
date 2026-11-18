@@ -84,45 +84,74 @@ const FS_CHECKS = new Set(["existsSync", "statSync", "lstatSync", "readdirSync",
 const DOCS_PLANS = /docs(?:[/\\]+|["'`,\s]+)plans/;
 const CODE_FILE = /\.(?:ts|mts|cts|js|mjs|cjs)$/;
 
-/** 式 (と、その式が参照する同じ関数内の変数の初期化式) に docs/plans が現れるか。 */
-function reachesDocsPlans(node: ts.Node, scope: ts.Node, seen = new Set<string>()): boolean {
+/** binding 名 (分割代入を含む) の識別子名。 */
+function bindingNames(name: ts.BindingName): string[] {
+  if (ts.isIdentifier(name)) return [name.text];
+  return name.elements.flatMap((e) => (ts.isOmittedExpression(e) ? [] : bindingNames(e.name)));
+}
+
+type Binding = { init: ts.Expression | undefined } | null;
+
+/** scope node が「直接」持つ宣言から name を探す。入れ子の関数・ブロックへは潜らない。 */
+function directBinding(scope: ts.Node, name: string): Binding {
+  const fromList = (list: ts.VariableDeclarationList): Binding => {
+    for (const d of list.declarations)
+      if (bindingNames(d.name).includes(name))
+        return { init: ts.isIdentifier(d.name) ? d.initializer : undefined };
+    return null;
+  };
+  if (ts.isFunctionLike(scope)) {
+    for (const p of scope.parameters)
+      if (bindingNames(p.name).includes(name)) return { init: undefined };
+    return null;
+  }
+  if (ts.isCatchClause(scope)) {
+    const v = scope.variableDeclaration;
+    return v && bindingNames(v.name).includes(name) ? { init: undefined } : null;
+  }
+  if (ts.isForStatement(scope) || ts.isForInStatement(scope) || ts.isForOfStatement(scope)) {
+    const i = scope.initializer;
+    return i && ts.isVariableDeclarationList(i) ? fromList(i) : null;
+  }
+  const statements = ts.isCaseBlock(scope)
+    ? scope.clauses.flatMap((c) => [...c.statements])
+    : ts.isBlock(scope) || ts.isSourceFile(scope) || ts.isModuleBlock(scope)
+      ? [...scope.statements]
+      : [];
+  for (const st of statements) {
+    if (ts.isVariableStatement(st)) {
+      const b = fromList(st.declarationList);
+      if (b) return b;
+    } else if (ts.isFunctionDeclaration(st) && st.name?.text === name) return { init: undefined };
+  }
+  return null;
+}
+
+/** 参照の位置から外側へ scope をたどり、最初に見つかった束縛を返す (shadowing)。 */
+function resolveBinding(id: ts.Identifier): Binding {
+  for (let n: ts.Node | undefined = id.parent; n; n = n.parent) {
+    const b = directBinding(n, id.text);
+    if (b) return b;
+  }
+  return null;
+}
+
+/** 式 (と、式が参照する識別子の束縛の初期化式) に docs/plans が現れるか。 */
+function reachesDocsPlans(node: ts.Node, seen = new Set<ts.Node>()): boolean {
   if (DOCS_PLANS.test(node.getText())) return true;
-  const names: string[] = [];
+  const ids: ts.Identifier[] = [];
   const collect = (n: ts.Node): void => {
-    if (ts.isIdentifier(n)) names.push(n.text);
+    const isPropName = n.parent && ts.isPropertyAccessExpression(n.parent) && n.parent.name === n;
+    if (ts.isIdentifier(n) && !isPropName) ids.push(n);
     ts.forEachChild(n, collect);
   };
   collect(node);
-  let hit = false;
-  const declare = (n: ts.Node): void => {
-    if (
-      !hit &&
-      ts.isVariableDeclaration(n) &&
-      ts.isIdentifier(n.name) &&
-      n.initializer &&
-      names.includes(n.name.text) &&
-      !seen.has(n.name.text)
-    ) {
-      seen.add(n.name.text);
-      hit = reachesDocsPlans(n.initializer, scope, seen);
-    }
-  };
-  const visit = (n: ts.Node): void => {
-    declare(n);
-    ts.forEachChild(n, visit);
-  };
-  const file = scope.getSourceFile();
-  // module 直下の定数は、関数の中の同名変数と混ぜないよう、直下の宣言だけを見る。
-  const topLevel = () => {
-    for (const st of file.statements)
-      if (ts.isVariableStatement(st)) st.declarationList.declarations.forEach(declare);
-  };
-  if (scope === file) topLevel();
-  else {
-    visit(scope);
-    topLevel();
-  }
-  return hit;
+  return ids.some((id) => {
+    const init = resolveBinding(id)?.init;
+    if (!init || seen.has(init)) return false;
+    seen.add(init);
+    return reachesDocsPlans(init, seen);
+  });
 }
 
 /** 1 file の source から、docs/plans の実在を確かめる呼び出しの行 (1 始まり) を返す。 */
@@ -130,21 +159,20 @@ export function scanDSource(path: string, text: string): number[] {
   if (!CODE_FILE.test(path) || !/plans/.test(text)) return [];
   const file = ts.createSourceFile(path, text, ts.ScriptTarget.ES2022, true);
   const lines: number[] = [];
-  const visit = (n: ts.Node, scope: ts.Node): void => {
-    const next = ts.isFunctionLike(n) ? n : scope;
+  const visit = (n: ts.Node): void => {
     if (ts.isCallExpression(n)) {
       const callee = ts.isIdentifier(n.expression)
         ? n.expression.text
         : ts.isPropertyAccessExpression(n.expression)
           ? n.expression.name.text
           : "";
-      if (FS_CHECKS.has(callee) && n.arguments.some((a) => reachesDocsPlans(a, scope))) {
+      if (FS_CHECKS.has(callee) && n.arguments.some((a) => reachesDocsPlans(a))) {
         lines.push(file.getLineAndCharacterOfPosition(n.getStart()).line + 1);
       }
     }
-    ts.forEachChild(n, (c) => visit(c, next));
+    ts.forEachChild(n, visit);
   };
-  visit(file, file);
+  visit(file);
   return lines;
 }
 

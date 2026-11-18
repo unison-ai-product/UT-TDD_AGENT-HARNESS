@@ -76,6 +76,34 @@ describe("CANDIDATE-U-PLANRET-018(d) scanner の正例と負例 (合成入力)",
     );
     expect(scanDSource("a.ts", s)).toEqual([]);
   });
+  it("仮引数の d は、入れ子の関数にある同名の docs/plans 変数に結び付かない", () => {
+    const s = src(
+      "function f(d: string) {",
+      '  function unrelated() { const d = "docs/plans"; return d; }',
+      "  return existsSync(d);",
+      "}",
+    );
+    expect(scanDSource("a.ts", s)).toEqual([]);
+  });
+  it("別のブロックにある docs/plans の変数は、同名の別の束縛に結び付かない", () => {
+    const s = src(
+      "function f() {",
+      '  { const d = "docs/plans"; }',
+      '  const d = ".git";',
+      "  return existsSync(d);",
+      "}",
+    );
+    expect(scanDSource("a.ts", s)).toEqual([]);
+  });
+  it("内側の scope の docs/plans 変数が外側の同名変数を隠し、同じ scope の実在確認を検出する", () => {
+    const s = src(
+      'const d = ".git";',
+      "function f() {",
+      '  if (true) { const d = "docs/plans"; return existsSync(d); }',
+      "}",
+    );
+    expect(scanDSource("a.ts", s)).toEqual([4]);
+  });
 });
 
 describe("CANDIDATE-U-PLANRET-018(g) 新規 DB と旧表入り DB の非 PLAN 動作", () => {
