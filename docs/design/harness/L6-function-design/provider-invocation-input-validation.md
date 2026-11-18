@@ -135,7 +135,7 @@ gitの起動に対してはfail-closeとする: 拒否時は `listRemoteTags` �
 
 ### 8.1 対象の範囲
 
-対象は、`src/`配下でGitHubへ接続する`gh`の起動だけとする。S7 の PLAN source retirement 後に対象とする起動点は11箇所 (timeout未設定10、設定済み1: `post-merge-backstop.ts:136`) であり、L2の受入の分母は11とする。S7で退役する`src/plan-asset/ledger/sealed-lineage-local-migration.ts`のPLAN専用既定起動はこの表から除く。この数は、S5 (#1377) が`src/github/project-v2.ts`の`NodeGhCommandPort` (起動点2箇所、どちらも`30_000`設定済み) をファイルごと退役した後のものである。provider の実装は、同じ`project-v2.ts`を触るので S5 の後に行う。ネットワークの不調や認証プロンプトで止まりうるのはこれらであり、`review-attestation.yml` のjobには`timeout-minutes`が無いため、CIでの停止はrunnerの既定上限まで続く。
+対象は、`src/`配下でGitHubへ接続する`gh`の起動だけとする。S7 で PLAN 専用の既定起動を退役する前は13箇所である。`src/plan-asset/ledger/sealed-lineage-local-migration.ts` の1箇所を退役すると12箇所 (timeout 未設定11、設定済み1: `post-merge-backstop.ts:136`) になり、L2 の受入の分母は12とする。この数は、S5 (#1377) が`src/github/project-v2.ts`の`NodeGhCommandPort` (起動点2箇所、どちらも`30_000`設定済み) をファイルごと退役した後のものである。provider の実装は、同じ`project-v2.ts`を触るので S5 の後に行う。ネットワークの不調や認証プロンプトで止まりうるのはこれらであり、`review-attestation.yml` のjobには`timeout-minutes`が無いため、CIでの停止はrunnerの既定上限まで続く。
 
 | 起動点 (path:line) | コマンド | 現在のtimeout | 既存の失敗の扱い |
 |---|---|---|---|
@@ -149,6 +149,7 @@ gitの起動に対してはfail-closeとする: 拒否時は `listRemoteTags` �
 | `src/feedback/post-merge-backstop.ts:136` `defaultFetchMergedPrPage` | `gh api .../pulls` | `POST_MERGE_COMMAND_TIMEOUT_MS` (10_000) | throwし、呼出し元の既存処理 |
 | `src/feedback/review-merge-gate.ts:511` `readGhView` | `gh pr view` | 無し | throwし、`getPullRequest`のcatchで`ok: false` |
 | `src/feedback/review-merge-gate.ts:547` `createGhPrMergePorts().mergePullRequest` | `gh pr merge` (変更系、`stdio: "inherit"`) | 無し | throwし、`merge_failed` / `gh_merge_failed:<message>` |
+| `src/feedback/review-merge-github.ts` の `readGhMergeCommitTree` | `gh pr view --json mergeCommit` (マージ後の tree 確認) | 無し | 取得エラーを伝播し、取得した SHA が不正なら `merge_commit_sha_unavailable` |
 
 対象外とする起動と、その理由:
 

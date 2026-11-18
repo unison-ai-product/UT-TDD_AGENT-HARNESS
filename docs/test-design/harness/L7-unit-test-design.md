@@ -841,7 +841,7 @@ SMB/NFS/OneDrive をまたぐ strict lease、heartbeat、clock-skew 耐性は主
 
 | U-ID | 関数 | oracle (DbC) |
 |------|------|--------------|
-| U-FR-L1-36 | `projectSkillEvaluations` | **S7 前**: PLAN adoption / success から `adoption_count`・`success_count`・`skill_rating` を算出する。**S7 後**: この3列は NULL。非 PLAN `unused_flag`・`evaluated_at` と row、cold-start、text recommendation の既存 NULL-rating fallback を維持し、評価値の保存時に 0 で代用せず、新しい fallback や session adoption は導入しない。 S7処分は [L7 §3.1](L7-plan-mechanism-retirement-test-design.md) を参照。 |
+| U-FR-L1-36 | `projectSkillEvaluations` | **S7 前**: PLAN adoption / success から `adoption_count`・`success_count`・`skill_rating` を算出する。**S7 後**: この3列は NULL。非 PLAN `unused_flag`・`evaluated_at` と row、cold-start、text recommendation の既存 NULL-rating fallback を維持し、評価値の保存時に 0 で代用せず、新しい fallback や session adoption は導入しない。 有効な skill ID が無い操作観測行からは個別評価の行を作らず、同居する有効な ID の実測行を評価する。 S7処分は [L7 §3.1](L7-plan-mechanism-retirement-test-design.md) を参照。 |
 
 ### 2026-06-15 PoC Success Measurement Oracle (FR-L1-43, PLAN-L7-53)
 
@@ -913,8 +913,8 @@ Issue #1357 の `U-DBPROJ-ING-001..003` は正式 ID へ昇格済み。S7 前は
 | U-DBPROJ-PROV-01 | `analyzeDbProjectionIngestion(..., { enforceTelemetryProvenance: true })` | Populated telemetry tables (`skill_invocations`, `test_runs`, `guardrail_decisions`, `model_runs`) with only projection provenance are not acceptable evidence for "fired/used/works" claims. Default doctor can surface migration state as partial, but provenance-enforced mode fail-closes when runtime rows are 0 and projection rows are non-zero. |
 | U-DBPROJ-PROV-02 | `projectRuntimeTestRunFromSessionEvent` | A session-log Bash verification event (`Bash (vitest)` etc.) creates exactly one `test_runs` row with non-empty `session_id`, `runtime=hook-session-log`, `scope=runtime-hook`, and the JSONL evidence path; non-verification Bash events such as `Bash (git)` do not fabricate runtime test evidence. |
 | U-DBPROJ-PROV-03 | `checkDbProjectionIngestion` / `projectRuntimeModelTelemetryForDoctor` | Doctor's in-memory DB rebuild overlays existing Claude/Codex JSONL token usage through `projectTokenUsage`, so `model_runs` with token/cost-valued columns count as runtime provenance without requiring provider CLI execution. The deterministic `db rebuild` command remains source-projection-only. |
-| U-DBPROJ-PROV-04 | `projectRuntimeGuardrailDecisionFromSessionEvent` | A session-log `forced_stop` event creates exactly one `guardrail_decisions` row with non-empty `session_id`, `guardrail=forced-stop`, `decision=block`, `mode=runtime-hook`, and the JSONL evidence path; ordinary `tool_use` events do not fabricate guardrail decisions. |
-| U-DBPROJ-PROV-05 | `summarize` / `projectRuntimeSkillInvocationFromSessionEvent` | A Bash command containing `skill suggest` is logged as `Bash (skill)`. A session-log `Bash (skill)` event creates `skill_invocations` rows with non-empty `session_id`, `source=runtime-hook:skill-suggest`, and accepted status from the hook outcome; generic `Bash (bash)` events do not fabricate skill invocations. |
+| U-DBPROJ-PROV-04 | `projectRuntimeGuardrailDecisionFromSessionEvent` | A session-log `forced_stop` event creates exactly one `guardrail_decisions` row with non-empty `session_id`, `guardrail=forced-stop`, `decision=block`, `mode=runtime-hook`, and the JSONL evidence path; ordinary `tool_use` events do not fabricate guardrail decisions. S7 では旧 review 行に由来する rebuild advisory を既知の縮退として退役する。現在の非 PLAN forced-stop guardrail decision と共有の不変条件検査は引き続き検証する。 |
+| U-DBPROJ-PROV-05 | `summarize` / `projectRuntimeSkillInvocationFromSessionEvent` | `skill suggest` を含む Bash command は `Bash (skill)` として記録する。S7 後は PLAN の無い fixture の対象イベント1件から `plan_id=NULL`、`skill_id=NULL` の操作観測行を1件作る。非空 `session_id`、イベント時刻、`source=runtime-hook:skill-suggest`、hook outcome に基づく `accepted` を記録する。通常 Bash の観測行は0件。 |
 | U-DBPROJ-GATE-01 | `rebuildHarnessDb` / `.ut-tdd/gate_runs/*.json` | gate run evidence JSON を読み、`gate_runs` と `workflow_runs(workflow=routine-gate, phase=<gate_id>, workflow_run_id=stableId("gate-workflow", gate_run_id))` へ投影する。`plan_id` が空の証跡も省かずに両方へ投影し、`plan_id` は空のまま残す。同じ gate の別実行が 2 件以上あっても (`plan_id` が同じでも空でも) `routine-gate` row から `retry_events` を作らない。seed (A-132) は `G-VERIFY.L8`〜`L14` の `status=historical` の gate row だけを作り、PLAN の有無で結果が変わらず、`passed` の gate / workflow / coverage row を作らない。 |
 | U-DOCTOR-GATE-01 | `analyzeGateRunCoverage` / `checkGateRunCoverage` | PLAN の無い正当な実行 (`plan_id` 空、gate row と workflow row が実行単位で対応し、証跡が解決できて識別が一致する) は OK。`gate_runs` の 0 件、`routine-gate` の workflow row に対応する gate row の欠落と、gate row に対応する workflow row の欠落、空の `gate_id`、証跡の欠落・壊れた JSON・`gate_run_id` / `gate_id` の不一致は `gate-run-coverage` で fail-close。同じ `plan_id` を持つ無関係な 1 件の gate row や seed (A-132) の row があっても、対応の欠落は違反のまま残る。`plan_id` 空や `plan_registry` に無い `plan_id` だけを理由に違反にしない。証跡を足した後の古い永続投影で OK を返さない。A-132 だけがあり JSON 証跡が無い clean tree (正規の seed row だけ) では `gate_runs` が 7 行で violation 0。seed を名乗るのに条件 (`G-VERIFY.L8`〜`L14`、`gate_run_id` の seed 導出、A-132 の固定 path と実在、`status=historical`、`plan_id` 空、gate ごとに 1 件) を 1 つでも欠く row は違反 (`status=historical` だけでは JSON 証跡と対応の検査から外れない)。正規の seed row があっても `routine-gate` の workflow row に対応する gate row の欠落は違反のまま残る。 |
 | U-READY-GATE-01 | `evaluateAutomationReadiness` | `routine-gate` の workflow row は、`workflow_run_id` から導出して対応する gate row が `passed` のときだけ blocked を外す。`plan_id` が空でも対応する gate row が `passed` なら "missing evidence" にしない。対応する gate row が `failed` か欠落なら blocked とし、同じ `plan_id` (空を含む) の別実行の `passed` を借りない。seed (A-132) の `historical` row は `passed` に数えない。S7 後は `plan_id` 照合を退役し、この routine-gate 契約と generic workflow 更新を維持する。per-plan finding / gate / guardrail 集計の処分は [L7 §3.1](L7-plan-mechanism-retirement-test-design.md) を参照。 |
@@ -1024,7 +1024,7 @@ This addendum pairs `screen-spec.md` with L7 unit-test oracles. It covers the L6
 | governance-enforcement.md | scrum-reverse (pocOrphans/badReverseRefs) + propagation (signal 語彙一致) | tests/scrum-reverse.test.ts, tests/propagation.test.ts | covered |
 | backfill-pairing.md | parseRequires/parseGlossaryTerms/analyzeBackfill/loadBackfillDocs/checkBackfill | tests/backfill-pairing.test.ts | covered |
 | vmodel-pair-freeze.md | loadPairDocs/analyzePairFreeze (§1-§3) + analyzeVerificationGroups (§7) | tests/vmodel-pair.test.ts | covered |
-| review-evidence.md | `hasReviewEvidence` / `parseReviewPlan` / `analyzeReviewEvidence` / `loadReviewPlans` (旧 PLAN 専用) | S7 で退役 (`tests/review-evidence.test.ts` も退役) | 退役した関数・case は coverage 外。汎用 `EvidencePolicy` の実装は `src/forward/domain/evidence-policy.ts`、既存テストは `tests/plan-asset/evidence-policy.test.ts` だが、旧 review 処理の代替とはしない |
+| review-evidence.md | `hasReviewEvidence` / `parseReviewPlan` / `analyzeReviewEvidence` / `loadReviewPlans` (旧 PLAN 専用) | S7 で退役 (`tests/review-evidence.test.ts` も退役) | 退役した関数・case は coverage 外。汎用 `EvidencePolicy` の実装は `src/forward/domain/evidence-policy.ts`、既存テストは `tests/forward/evidence-policy.test.ts` だが、旧 review 処理の代替とはしない |
 | review-evidence-stale.md | draft/降格 PLAN の stale approval 検出 (旧 U-REVIEW-007/008) | S7 で退役 (`tests/review-evidence.test.ts` も退役) | PLAN 専用 oracle 退役。代替 coverage は主張しない |
 | cross-review-enforcement.md | `extractReviewEntries` / `crossReviewViolations` (旧 U-XREVIEW) | S7 で退役 (`tests/review-evidence.test.ts` も退役) | PLAN 専用 oracle 退役。代替 coverage は主張しない |
 | test-before-review.md | `tests_green_at ≤ reviewed_at` 順序検証 (旧 U-TORDER) | S7 で退役 (`tests/review-evidence.test.ts` も退役) | PLAN 専用 oracle 退役。代替 coverage は主張しない |
@@ -1993,22 +1993,22 @@ Actions 実 run の証跡 (unit oracle ではなく PLAN AC-4 / AC-5 の受入�
 source workflow / source template / Pack template / setup builtinのどれか1 artifactだけの更新を完了扱いにしない。
 検査対象本文をprofile選択に再利用せず、構造異常は例外でdoctor wrapperへ逃がさずanalyzer自身がviolation化する。
 
-## PLAN-L7-435 駆動モデル準拠PLAN Admission oracle (2026-07-15)
+## PLAN-L7-435 旧 PLAN Admission oracle の履歴 (2026-07-15)
 
-対象 = `PlanAdmissionPolicy` / `ut-tdd plan draft` / admission receipt / PLAN tamper fence。
+旧対象は `PlanAdmissionPolicy`、`ut-tdd plan draft`、admission receipt、PLAN tamper fence。CLI と lint の重複判定は #1783 で退役し、残る専用 adapter と parser は S7 の admission source 段で退役する。
 
 Issue #163のadditive deltaは、PLAN IDを共有parserの
-`namespace + numeric ordinal` で一意化し、legacy collision debtをexact setとして検査する。
+`namespace + numeric ordinal` で一意化し、legacy collision debt を exact set で検査していた。
 
-| ID | 対象 | oracle |
-|---|---|---|
-| `U-PLANGOV-002a` | slug違いの同一L6 ordinal | 両PLANを`duplicate_plan_identity`で拒否 |
-| `U-PLANGOV-002b` | `RECOVERY-070` / `RECOVERY-70` | zero paddingを除いた同一座標として拒否 |
-| `U-PLANGOV-002c` | legacy collision exact set | 既知集合だけを許容 |
-| `U-PLANGOV-002d` | legacy座標への3件目追加 | 3件すべてを拒否 |
-| `U-PLANGOV-002e` | legacy構成plan_idの差し替え | exact set不一致として拒否 |
-| `U-PLANGOV-002f` | legacy collisionの一方を削除 | 解消済み単独PLANを許容 |
-候補oracleはL7実装と同時に `U-PADM-*` へ昇格し、tests内citationを必須とする。
+以下は旧 `src/plan/lint.ts` の `analyzePlanGovernance` に対応する ID と検証の記録。
+
+- `U-PLANGOV-002a` は slug違いの同一L6 ordinal を対象とし、期待は「両PLANを`duplicate_plan_identity`で拒否」。
+- `U-PLANGOV-002b` は `RECOVERY-070` / `RECOVERY-70` を対象とし、期待は「zero paddingを除いた同一座標として拒否」。
+- `U-PLANGOV-002c` は legacy collision exact set を対象とし、期待は「既知集合だけを許容」。
+- `U-PLANGOV-002d` は legacy座標への3件目追加 を対象とし、期待は「3件すべてを拒否」。
+- `U-PLANGOV-002e` は legacy構成plan_idの差し替え を対象とし、期待は「exact set不一致として拒否」。
+- `U-PLANGOV-002f` は legacy collisionの一方を削除 を対象とし、期待は「解消済み単独PLANを許容」。
+旧規定では L7 実装と同時に候補 oracle を `U-PADM-*` へ昇格し、テストに ID を引用することを求めていた。
 
 | ID | 観点 | fixture / mutation | expected |
 | --- | --- | --- | --- |
@@ -2018,9 +2018,9 @@ Issue #163のadditive deltaは、PLAN IDを共有parserの
 工程表/replay/改ざん候補はL6正本の `CANDIDATE-PADM-006`〜`008` を再定義せず、そのIDのまま
 上記 `U-PADM-012`〜`016` / `U-PADM-024`〜`025` へ昇格した。候補IDの別意味への再利用は禁止する。
 
-property testは全signal×mode×tuple×status×createdの直積で、canonical policyがpermitした時だけ
-書込み可能であることを確認する。mutation testはunknown→Forward fallback、archived/date免除、
-tuple allowlist default、Issue requirement削除、schedule fallback、receipt digest比較除去を全てkillする。
+当時の property test は全 signal×mode×tuple×status×created の直積で、policy が許可した時だけ
+書込み可能であることを検証条件とした。mutation test は unknown→Forward fallback、archived/date 免除、
+tuple allowlist default、Issue requirement 削除、schedule fallback、receipt digest 比較除去を検証対象とした。
 
 ## PLAN-L7-436〜439 Execution Ledger / GitHub連動 oracle (2026-07-15)
 
