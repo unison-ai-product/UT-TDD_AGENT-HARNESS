@@ -48,13 +48,13 @@ const ok = (units: PrivacyUnit[]) => {
 
 describe("privacy scan E5 (L6 §3, issue #1754)", () => {
   // Red: E5 is not implemented yet, so each allowed form still hits on main. One case per test.
-  it.fails("CANDIDATE-U-PRIVSCAN-019(a): lets the Dependabot trailer line through", () => {
+  it("CANDIDATE-U-PRIVSCAN-019(a): lets the Dependabot trailer line through", () => {
     ok([message("subject", "", signed(G))]);
   });
-  it.fails("CANDIDATE-U-PRIVSCAN-019(b): ignores the case of the signed-off-by key", () => {
+  it("CANDIDATE-U-PRIVSCAN-019(b): ignores the case of the signed-off-by key", () => {
     ok([message("subject", "", signed(G, undefined, "signed-off-by"))]);
   });
-  it.fails("CANDIDATE-U-PRIVSCAN-019(d): handles blank lines, body lines and CRLF", () => {
+  it("CANDIDATE-U-PRIVSCAN-019(d): handles blank lines, body lines and CRLF", () => {
     ok([message("subject\r", "\r", "body line\r", `${signed(G)}\r`, "\r", "tail\r")]);
   });
   // (c) is already excluded by E2 on main: a regression guard, green on HEAD.
