@@ -40,7 +40,6 @@ import {
 } from "./review-admission.ts";
 
 export interface AdapterExecutionDeps {
-  gitBranch: () => string | null;
   gitHead: () => string | null;
   runSessionStartSideEffects: (input: {
     repoRoot: string;
@@ -185,7 +184,7 @@ export function executeAdapterPlanForCli(
   const sessionId = `${input.sessionPrefix}-${Date.now()}`;
   const repoRoot = resolveRepositoryRoot(process.cwd());
   const now = depsInput.now ?? nowIso;
-  const deps = nodeDeps(repoRoot, depsInput.gitBranch, depsInput.gitHead);
+  const deps = nodeDeps(repoRoot, depsInput.gitHead);
   if (input.jsonOut) {
     deps.warn = (message) => process.stderr.write(`${message}\n`);
   }

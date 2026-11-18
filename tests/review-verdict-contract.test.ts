@@ -89,7 +89,6 @@ function analyze(extraction: VerdictExtraction) {
 async function dryRunTask(provider: "claude" | "codex", role: string): Promise<string> {
   const program = new Command();
   registerDelegationCommands(program, {
-    gitBranch: () => "work/d3-verdict-receipt",
     gitHead: () => "a".repeat(40),
     resolveTaskText: (opts) => opts.task ?? null,
     runSessionStartSideEffects: () => {},

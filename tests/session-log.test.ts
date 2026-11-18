@@ -30,8 +30,6 @@ function mockDeps(
     now: () => "2026-06-02T00:00:00.000Z",
     appendLine: (p, l) => files.set(p, `${files.get(p) ?? ""}${l}\n`),
     readText: (p) => files.get(p) ?? null,
-    writeText: (p, c) => files.set(p, c),
-    currentBranch: () => null,
     ...over,
   };
 }
@@ -72,7 +70,7 @@ describe("session-log event lifecycle (U-SLOG)", () => {
   });
 
   it("U-SLOG-005: onSessionStart は session_start を append し常に 0 (fail-open)", () => {
-    const deps = mockDeps({ currentBranch: () => "add/session-log" });
+    const deps = mockDeps();
     expect(onSessionStart({ session_id: "s1" }, deps)).toBe(0);
     expect(deps.files.get(sessionPath("s1"))).toContain('"event_type":"session_start"');
     expect(deps.files.get(sessionPath("s1"))).toContain('"plan_id":null');
