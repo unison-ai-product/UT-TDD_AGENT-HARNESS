@@ -2,14 +2,15 @@ import { mkdirSync, mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { evaluateStaticGate } from "../src/gate/static.ts";
 import { checkTraceGate } from "../src/doctor/process-quality.ts";
+import { evaluateStaticGate } from "../src/gate/static.ts";
 import { missingTables, rowCounts } from "../src/state-db/migration.ts";
 import {
   cleanupPlanretS7Fixtures,
   runScenario008,
   runScenario008Absent,
   runScenarioG,
+  runScenarioJ,
   scanA,
   scanB,
   scanC,
@@ -19,7 +20,6 @@ import {
   scanF,
   scanHPlanLintEntry,
   scanIPlanAssetImports,
-  runScenarioJ,
 } from "./support/planret-s7-acceptance.ts";
 import { removeTestTree } from "./support/temp-tree.ts";
 import { headSnapshotRoot } from "./support/workspace-roots.ts";
@@ -185,9 +185,9 @@ describe("CANDIDATE-U-PLANRET-018(h) G1 / G3 trace の直接経路", () => {
 
 describe("CANDIDATE-U-PLANRET-018(i) 共用型の移し先と plan-asset 参照", () => {
   const exportsOf: [string, RegExp][] = [
-    ["src/github/git-diff.ts", /export type GitChange/],
-    ["src/lint/lint-result.ts", /export interface LintResult/],
-    ["src/kernel/project-identity.ts", /export function loadTrackedProjectIdentity/],
+    ["src/github/git-diff.ts", /export type GitChange(?![A-Za-z])/],
+    ["src/lint/lint-result.ts", /export interface LintResult(?![A-Za-z])/],
+    ["src/kernel/project-identity.ts", /export function loadTrackedProjectIdentity(?![A-Za-z])/],
   ];
   for (const [path, pattern] of exportsOf) {
     it(`CANDIDATE-U-PLANRET-018(i) ${path} が移し先として宣言を持つ`, () => {
@@ -205,20 +205,42 @@ describe("CANDIDATE-U-PLANRET-018(j) document_scale_profile_entries の defer �
     expect(j.legacyBefore).toMatch(/required_plan_id IS NOT NULL/);
     expect(j.legacy.thrown).toBeNull();
     expect(j.legacy.entries).toEqual([
-      { profile_id: "PLANRET-J-A", doc_type_id: "DOC-L0-CHARTER", decision: "defer", required_plan_id: null },
-      { profile_id: "PLANRET-J-B", doc_type_id: "DOC-L0-CHARTER", decision: "adopt", required_plan_id: null },
+      {
+        profile_id: "PLANRET-J-A",
+        doc_type_id: "DOC-L0-CHARTER",
+        decision: "defer",
+        required_plan_id: null,
+      },
+      {
+        profile_id: "PLANRET-J-B",
+        doc_type_id: "DOC-L0-CHARTER",
+        decision: "adopt",
+        required_plan_id: null,
+      },
     ]);
     expect(j.legacy.reviewCount).toBe(2);
+    expect(j.legacy.deferNullInsert).toBeNull();
     expect(j.legacy.ddl).not.toMatch(/required_plan_id IS NOT NULL/);
   }, 120000);
   it.fails("CANDIDATE-U-PLANRET-018(j) 新規 DB で defer 行を NULL で投影し document profile / decision / count の正例を保つ", () => {
     const j = runScenarioJ();
     expect(j.fresh.thrown).toBeNull();
     expect(j.fresh.entries).toEqual([
-      { profile_id: "PLANRET-J-A", doc_type_id: "DOC-L0-CHARTER", decision: "defer", required_plan_id: null },
-      { profile_id: "PLANRET-J-B", doc_type_id: "DOC-L0-CHARTER", decision: "adopt", required_plan_id: null },
+      {
+        profile_id: "PLANRET-J-A",
+        doc_type_id: "DOC-L0-CHARTER",
+        decision: "defer",
+        required_plan_id: null,
+      },
+      {
+        profile_id: "PLANRET-J-B",
+        doc_type_id: "DOC-L0-CHARTER",
+        decision: "adopt",
+        required_plan_id: null,
+      },
     ]);
     expect(j.fresh.reviewCount).toBe(2);
+    expect(j.fresh.deferNullInsert).toBeNull();
     expect(j.fresh.ddl).not.toMatch(/required_plan_id IS NOT NULL/);
   }, 120000);
 });

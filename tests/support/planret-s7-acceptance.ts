@@ -310,7 +310,7 @@ const SCALE_PROFILES_PATH = "docs/governance/vmodel-document-scale-profiles.md";
 const table = (rows: readonly (readonly string[])[]) =>
   rows.map((cells) => `| ${cells.join(" | ")} |`).join("\n");
 
-/** (j) の source: defer 行 (required_plan_id が空) と adopt 行を持つ document scale profile。 */
+/** (j) の source: defer 行 (現行の入力契約が要る旧 ID 付き) と adopt 行を持つ document scale profile。投影先の required_plan_id は NULL でなければならない。 */
 function writeScaleProfileSource(root: string): void {
   const profileHeader = [
     "profile_id",
@@ -349,11 +349,27 @@ function writeScaleProfileSource(root: string): void {
     table([
       entryHeader,
       sep(entryHeader),
-      ["PLANRET-J-A", "DOC-L0-CHARTER", "defer", "lite", "minimal", "Issue で追う", ""],
+      ["PLANRET-J-A", "DOC-L0-CHARTER", "defer", "lite", "minimal", "Issue で追う", "PLAN-L6-01"],
       ["PLANRET-J-B", "DOC-L0-CHARTER", "adopt", "standard", "required", "採用", ""],
     ]),
   ].join("\n\n");
   writeFileSync(join(root, SCALE_PROFILES_PATH), `${body}\n`, "utf8");
+  // catalog の provenance は tracked な commit と照合されるので、書き換えた source も commit する。
+  const git = (...args: string[]) =>
+    execFileSync("git", ["-c", "core.autocrlf=false", ...args], { cwd: root, stdio: "ignore" });
+  git("add", "--", SCALE_PROFILES_PATH);
+  git(
+    "-c",
+    "user.name=UT-TDD test",
+    "-c",
+    "user.email=",
+    "-c",
+    "commit.gpgsign=false",
+    "commit",
+    "-q",
+    "-m",
+    "document scale profile defer fixture",
+  );
 }
 
 function projectScaleProfiles(root: string, db: HarnessDb) {
@@ -377,7 +393,25 @@ function projectScaleProfiles(root: string, db: HarnessDb) {
     db.prepare("SELECT sql FROM sqlite_master WHERE name = 'document_scale_profile_entries'").get()
       ?.sql ?? "",
   );
-  return { thrown, entries, reviewCount, ddl };
+  // 表そのものが defer + NULL を受けるか (旧 CHECK の有無) を、投影とは別に直接確かめる。
+  let deferNullInsert: string | null = null;
+  try {
+    db.exec("SAVEPOINT planret_j_probe");
+    db.exec("PRAGMA foreign_keys = OFF");
+    db.prepare(
+      `INSERT INTO document_scale_profile_entries
+         (document_scale_profile_entry_id, profile_id, doc_type_id, decision, detail_override,
+          status_override, reason, required_plan_id, row_digest, source_path, indexed_at)
+       VALUES ('PROBE-J', 'PROBE-J', 'DOC-L0-CHARTER', 'defer', 'lite', 'minimal', 'probe', NULL,
+               'digest', 'probe.md', '2026-11-18T00:00:00Z')`,
+    ).run();
+  } catch (error) {
+    deferNullInsert = error instanceof Error ? error.message : String(error);
+  } finally {
+    db.exec("ROLLBACK TO planret_j_probe");
+    db.exec("RELEASE planret_j_probe");
+  }
+  return { thrown, entries, reviewCount, ddl, deferNullInsert };
 }
 
 /** (j): 新規 DB と旧 CHECK 入り (v29 の frozen DDL) の DB の両方で、defer 行 (required_plan_id=NULL) を投影する。 */
@@ -424,8 +458,8 @@ export function scanIPlanAssetImports(root: string): string[] {
     .filter((p) => /\.(ts|mjs|js)$/.test(p));
   return paths.flatMap((path) => {
     const text = readFileSync(join(root, path), "utf8");
-    return [...text.matchAll(/(?:from|import\s*\(|require\()\s*["'][^"']*plan-asset[^"']*["']/g)].map(
-      (m) => `${path}:${text.slice(0, m.index).split("\n").length}`,
-    );
+    return [
+      ...text.matchAll(/(?:from|import\s*\(|require\()\s*["'][^"']*plan-asset[^"']*["']/g),
+    ].map((m) => `${path}:${text.slice(0, m.index).split("\n").length}`);
   });
 }
