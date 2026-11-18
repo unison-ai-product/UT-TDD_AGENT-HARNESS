@@ -402,7 +402,7 @@ describe("skill recommendation telemetry", () => {
     });
   });
 
-  it("applies learning only from runtime-provenance skill evaluations", () => {
+  it("projects skill evaluations only for runtime-provenance invocations and applies no PLAN-derived learning", () => {
     const db = openHarnessDb(":memory:");
     try {
       migrate(db);
@@ -465,8 +465,8 @@ describe("skill recommendation telemetry", () => {
 
       const rows = recommendSkillsForPlan(db, "PLAN-L7-99-learning-target", { limit: 2 });
       const byId = Object.fromEntries(rows.map((row) => [row.skill_id, row] as const));
-      expect(byId["skill:runtime-learned"].score).toBeGreaterThan(byId["skill:auto-noise"].score);
-      expect(byId["skill:runtime-learned"].reason).toContain("learning=0.");
+      expect(byId["skill:runtime-learned"].score).toBe(byId["skill:auto-noise"].score);
+      expect(byId["skill:runtime-learned"].reason).toContain("learning=neutral");
       expect(byId["skill:auto-noise"].reason).toContain("learning=neutral");
     } finally {
       db.close();
