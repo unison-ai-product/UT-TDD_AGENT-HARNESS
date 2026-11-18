@@ -87,7 +87,6 @@ import {
   collectGateRunEvidenceProjection as collectGateRunEvidenceProjectionCore,
   type GateRunEvidenceProjection,
 } from "./gate-run-evidence-projection.ts";
-import { type GuardrailDecisionInput, inspectGuardrailInvariants } from "./guardrail-invariants.ts";
 import { defaultHarnessDbPath, type HarnessDb, openHarnessDb } from "./index.ts";
 import { migrate, rowCounts } from "./migration.ts";
 import {
@@ -99,8 +98,6 @@ import {
 import {
   projectSkillEvaluations as projectSkillEvaluationsCore,
   projectSkillMetrics as projectSkillMetricsCore,
-  projectSkillTelemetry as projectSkillTelemetryCore,
-  skillScore,
 } from "./skill-projections.ts";
 import { projectSpecIr } from "./spec-ir-projections.ts";
 import { clearRebuildableProjectionTables } from "./sqlite-projection-rebuild.ts";
@@ -395,19 +392,6 @@ function stringList(value: unknown): string[] {
   return [];
 }
 
-// PLAN-L7-243: mode 導出は route_mode 正本 + legacy フォールバック (mode-catalog) へ置換。
-// plan_id prefix 4 分岐のみの旧導出 (kind=refactor/troubleshoot 等の Forward 落ち) は廃止。
-function planModeResolver(plans: Map<string, ProjectedPlan>): (planId: string) => string {
-  return (planId) => {
-    const plan = plans.get(planId);
-    return catalogWorkflowModeForPlan({
-      planId,
-      routeMode: plan?.routeMode,
-      kind: plan?.kind,
-    });
-  };
-}
-
 function readJson<T>(path: string): T | null {
   if (!existsSync(path)) return null;
   try {
@@ -572,9 +556,9 @@ export interface RuntimeGuardrailDecisionProjectionInput {
 
 export interface RuntimeSkillInvocationProjectionInput {
   db: HarnessDb;
-  plans: Map<string, ProjectedPlan>;
   event: SessionLogProjection;
   evidencePath: string;
+  lineNumber: number;
 }
 
 export function projectRuntimeTestRunFromSessionEvent(input: RuntimeTestRunProjectionInput): void {
@@ -606,40 +590,15 @@ export function projectRuntimeSkillInvocationFromSessionEvent(
 ): void {
   projectRuntimeSkillInvocationFromSessionEventCore({
     ...input,
-    deps: {
-      stableId,
-      resolvePlanId: (planId) => resolveProjectedPlanId(input.plans, planId),
-      recordProjectionEvent,
-      skillScore: (plan, asset) =>
-        skillScore({
-          plan,
-          asset,
-          deps: { skillDriveModelForPlan: planModeResolver(input.plans) },
-        }),
-    },
+    deps: { stableId, recordProjectionEvent },
   });
 }
 
-function projectRuntimeSkillInvocationsFromSessionLogs(
-  repoRoot: string,
-  db: HarnessDb,
-  plans: Map<string, ProjectedPlan>,
-): void {
+function projectRuntimeSkillInvocationsFromSessionLogs(repoRoot: string, db: HarnessDb): void {
   projectRuntimeSkillInvocationsFromSessionLogsCore({
     repoRoot,
     db,
-    plans,
-    deps: {
-      stableId,
-      resolvePlanId: (planId) => resolveProjectedPlanId(plans, planId),
-      recordProjectionEvent,
-      skillScore: (plan, asset) =>
-        skillScore({
-          plan,
-          asset,
-          deps: { skillDriveModelForPlan: planModeResolver(plans) },
-        }),
-    },
+    deps: { stableId, recordProjectionEvent },
   });
 }
 
@@ -798,71 +757,6 @@ function projectRoadmapRollup(repoRoot: string, db: HarnessDb): void {
           reached: gate.reached ? 1 : 0,
           computed_at: computedAt,
         },
-      });
-    }
-  }
-}
-
-function advisorySubject(rule: string, reviewEvidenceId: string): string {
-  // Plan-id-free, stable subject. The warn-first advisory must surface as a
-  // feedback event WITHOUT flipping automation readiness, which scans
-  // findings.subject_id LIKE '%plan_id%' (severity-agnostic). The hard-gate that
-  // would block on this violation stays PO-gated (PLAN-L7-52 C-1 option A).
-  const digest = createHash("sha1").update(reviewEvidenceId).digest("hex").slice(0, 12);
-  return `guardrail-self-review:${rule}:${digest}`;
-}
-
-export function projectGuardrailInvariantAdvisories(db: HarnessDb): void {
-  // PLAN-L7-52 C-1 (option C, PO-approved): consult the guardrail invariant SSoT
-  // (inspectGuardrailInvariants) against committed review evidence at CLI-rebuild
-  // time — no API runtime. Surfaces violations (e.g. reviewer_model ==
-  // worker_model self-review) as non-blocking advisory findings only; projected
-  // decisions and readiness are unchanged. Empty model strings are passed as
-  // undefined so blank evidence never false-positives as same-model.
-  const rows = db
-    .prepare(
-      "SELECT review_evidence_id, plan_id, reviewer_model, worker_model, review_kind, source FROM review_evidence_registry ORDER BY review_evidence_id",
-    )
-    .all();
-  for (const row of rows) {
-    const reviewEvidenceId = String(row.review_evidence_id ?? "");
-    const reviewerModel = String(row.reviewer_model ?? "");
-    const workerModel = String(row.worker_model ?? "");
-    const reviewKind = String(row.review_kind ?? "");
-    const evidencePath = String(row.source ?? "");
-    const input: GuardrailDecisionInput = {
-      plan_id: String(row.plan_id ?? ""),
-      session_id: "",
-      guardrail: "review-self-review",
-      decision: "allow",
-      mode: "review",
-      evidence_path: evidencePath,
-      reviewer_model: reviewerModel ? reviewerModel : undefined,
-      worker_model: workerModel ? workerModel : undefined,
-    };
-    for (const violation of inspectGuardrailInvariants(input).violations) {
-      // review_kind scoping mirrors the doctor hard gate (src/doctor/index.ts
-      // checkGuardrailInvariants) and concept §2.1.2.1: same-model AND same-provider
-      // are defects ONLY for a review that CLAIMS cross-runtime independence
-      // (review_kind=cross_agent). intra_runtime_subagent is the design-sanctioned
-      // Tier ② single-runtime substitute whose review is same-model by definition
-      // (§2.1.2.1: "②は同一モデルである事実を必ず記録...cross-provider 要件には数えない"),
-      // so neither rule is a defect there. secret-evidence /
-      // human-required-without-evidence stay review_kind-independent. Full
-      // projection-gate parity — PLAN-L7-144 corrects PLAN-L7-143's same-model asymmetry.
-      if (
-        (violation.rule === "same-provider-cross-review" ||
-          violation.rule === "same-model-self-review") &&
-        reviewKind !== "cross_agent"
-      ) {
-        continue;
-      }
-      recordFinding(db, {
-        kind: `guardrail-invariant-advisory:${violation.rule}`,
-        severity: "warn",
-        subjectId: advisorySubject(violation.rule, reviewEvidenceId),
-        source: "guardrail-invariant-advisory",
-        evidencePath,
       });
     }
   }
@@ -2023,19 +1917,6 @@ function projectMemoryEntries(repoRoot: string, db: HarnessDb): void {
   }
 }
 
-function projectSkillTelemetry(db: HarnessDb, plans: Map<string, ProjectedPlan>): void {
-  projectSkillTelemetryCore({
-    db,
-    plans,
-    deps: {
-      nowIso,
-      stableId,
-      recordProjectionEvent,
-      skillDriveModelForPlan: planModeResolver(plans),
-    },
-  });
-}
-
 function projectSkillMetrics(db: HarnessDb): void {
   projectSkillMetricsCore({
     db,
@@ -2260,7 +2141,6 @@ export function rebuildHarnessDb(input: RebuildHarnessDbInput = {}): RebuildHarn
       });
       time("roadmap-review", () => {
         projectRoadmapRollup(repoRoot, db);
-        projectGuardrailInvariantAdvisories(db);
         projectDescentObligations(repoRoot, db);
         projectDesignPairFreezeFindings(repoRoot, db);
         projectDesignQualityCoverage(repoRoot, db);
@@ -2270,11 +2150,8 @@ export function rebuildHarnessDb(input: RebuildHarnessDbInput = {}): RebuildHarn
         projectAutomationAssets(repoRoot, db);
         projectMemoryEntries(repoRoot, db);
       });
-      time("runtime-skill-logs", () =>
-        projectRuntimeSkillInvocationsFromSessionLogs(repoRoot, db, plans),
-      );
+      time("runtime-skill-logs", () => projectRuntimeSkillInvocationsFromSessionLogs(repoRoot, db));
       time("skill-projections", () => {
-        projectSkillTelemetry(db, plans);
         projectSkillMetrics(db);
         projectSkillEvaluations(db);
       });

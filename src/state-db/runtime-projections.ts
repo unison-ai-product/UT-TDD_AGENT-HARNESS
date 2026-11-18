@@ -1,7 +1,6 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { normalizePath } from "../shared/source-text.ts";
-import { shouldScoreSkillAsset } from "../skill-scoring/scoring.ts";
 import type { HarnessDb } from "./index.ts";
 
 export interface RuntimeSessionLogProjection {
@@ -53,12 +52,10 @@ export interface RuntimeGuardrailDecisionProjectionInput {
 
 export interface RuntimeSkillInvocationProjectionInput {
   db: HarnessDb;
-  plans: Map<string, RuntimeProjectedPlan>;
   event: RuntimeSessionLogProjection;
   evidencePath: string;
-  deps: RuntimeProjectionDeps & {
-    skillScore: (plan: RuntimeProjectedPlan, asset: Record<string, unknown>) => number;
-  };
+  lineNumber: number;
+  deps: Pick<RuntimeProjectionDeps, "stableId" | "recordProjectionEvent">;
 }
 
 function verificationVerbFromSessionTarget(event: RuntimeSessionLogProjection): string | null {
@@ -144,56 +141,33 @@ function skillVerbFromSessionTarget(event: RuntimeSessionLogProjection): boolean
 export function projectRuntimeSkillInvocationFromSessionEvent(
   input: RuntimeSkillInvocationProjectionInput,
 ): void {
-  const { db, plans, event, deps } = input;
-  if (!event.session_id || !event.plan_id || !event.ts) return;
+  const { db, event, evidencePath, lineNumber, deps } = input;
+  if (!event.session_id || !event.ts) return;
   if (!skillVerbFromSessionTarget(event)) return;
-  const planId = deps.resolvePlanId(event.plan_id);
-  const plan = plans.get(planId);
-  if (!plan) return;
-  const assets = db
-    .prepare("SELECT * FROM automation_assets WHERE asset_type = ? ORDER BY asset_id")
-    .all("skill")
-    .filter(shouldScoreSkillAsset);
-  const ranked = assets
-    .map((asset) => ({ asset, score: deps.skillScore(plan, asset) }))
-    .filter((entry) => entry.score > 0)
-    .sort(
-      (a, b) =>
-        b.score - a.score ||
-        String(a.asset.asset_id ?? "").localeCompare(String(b.asset.asset_id ?? "")),
-    )
-    .slice(0, 5);
-  for (const entry of ranked) {
-    const skillId = String(entry.asset.asset_id ?? "");
-    const invId = deps.stableId(
-      "skill-inv-runtime",
-      `${event.session_id}:${planId}:${event.ts}:${skillId}`,
-    );
-    deps.recordProjectionEvent(db, {
-      table: "skill_invocations",
-      id: invId,
-      row: {
-        skill_invocation_id: invId,
-        session_id: event.session_id,
-        plan_id: planId,
-        skill_id: skillId,
-        layer: plan.layer,
-        drive: plan.drive,
-        fired_at: event.ts,
-        source: "runtime-hook:skill-suggest",
-        accepted: event.outcome === "error" ? 0 : 1,
-      },
-    });
-  }
+  const invId = deps.stableId("skill-inv-runtime", `${evidencePath}:${lineNumber}`);
+  deps.recordProjectionEvent(db, {
+    table: "skill_invocations",
+    id: invId,
+    row: {
+      skill_invocation_id: invId,
+      session_id: event.session_id,
+      plan_id: null,
+      skill_id: null,
+      layer: null,
+      drive: null,
+      fired_at: event.ts,
+      source: "runtime-hook:skill-suggest",
+      accepted: event.outcome === "error" ? 0 : 1,
+    },
+  });
 }
 
 export function projectRuntimeSkillInvocationsFromSessionLogs(input: {
   repoRoot: string;
   db: HarnessDb;
-  plans: Map<string, RuntimeProjectedPlan>;
   deps: RuntimeSkillInvocationProjectionInput["deps"];
 }): void {
-  const { repoRoot, db, plans, deps } = input;
+  const { repoRoot, db, deps } = input;
   const sessionDir = join(repoRoot, ".ut-tdd", "logs", "session");
   if (!existsSync(sessionDir)) return;
   for (const file of readdirSync(sessionDir)
@@ -201,7 +175,7 @@ export function projectRuntimeSkillInvocationsFromSessionLogs(input: {
     .sort()) {
     const path = join(sessionDir, file);
     const relPath = normalizePath(relative(repoRoot, path));
-    for (const line of readFileSync(path, "utf8").split(/\r?\n/)) {
+    for (const [index, line] of readFileSync(path, "utf8").split(/\r?\n/).entries()) {
       if (!line.trim()) continue;
       let event: RuntimeSessionLogProjection;
       try {
@@ -211,9 +185,9 @@ export function projectRuntimeSkillInvocationsFromSessionLogs(input: {
       }
       projectRuntimeSkillInvocationFromSessionEvent({
         db,
-        plans,
         event,
         evidencePath: relPath,
+        lineNumber: index + 1,
         deps,
       });
     }
