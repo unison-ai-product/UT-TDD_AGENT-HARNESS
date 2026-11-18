@@ -13,15 +13,6 @@ export interface RuntimeSessionLogProjection {
   outcome?: string;
 }
 
-export interface RuntimeProjectedPlan {
-  planId: string;
-  kind: string;
-  layer: string;
-  drive: string;
-  status: string;
-  updatedAt: string;
-}
-
 export interface RuntimeProjectionEvent {
   table: string;
   id: string;
@@ -30,23 +21,22 @@ export interface RuntimeProjectionEvent {
 
 export interface RuntimeProjectionDeps {
   stableId: (prefix: string, value: string) => string;
-  resolvePlanId: (planId: string) => string;
   recordProjectionEvent: (db: HarnessDb, event: RuntimeProjectionEvent) => void;
 }
 
 export interface RuntimeTestRunProjectionInput {
   db: HarnessDb;
-  plans: Map<string, RuntimeProjectedPlan>;
   event: RuntimeSessionLogProjection;
   evidencePath: string;
+  lineNumber: number;
   deps: RuntimeProjectionDeps;
 }
 
 export interface RuntimeGuardrailDecisionProjectionInput {
   db: HarnessDb;
-  plans: Map<string, RuntimeProjectedPlan>;
   event: RuntimeSessionLogProjection;
   evidencePath: string;
+  lineNumber: number;
   deps: RuntimeProjectionDeps;
 }
 
@@ -55,7 +45,7 @@ export interface RuntimeSkillInvocationProjectionInput {
   event: RuntimeSessionLogProjection;
   evidencePath: string;
   lineNumber: number;
-  deps: Pick<RuntimeProjectionDeps, "stableId" | "recordProjectionEvent">;
+  deps: RuntimeProjectionDeps;
 }
 
 function verificationVerbFromSessionTarget(event: RuntimeSessionLogProjection): string | null {
@@ -69,24 +59,20 @@ function verificationVerbFromSessionTarget(event: RuntimeSessionLogProjection): 
 }
 
 export function projectRuntimeTestRunFromSessionEvent(input: RuntimeTestRunProjectionInput): void {
-  const { db, event, evidencePath, deps } = input;
-  if (!event.session_id || event.plan_id === "" || !event.ts) return;
+  const { db, event, evidencePath, lineNumber, deps } = input;
+  if (!event.session_id || !event.ts) return;
   const verb = verificationVerbFromSessionTarget(event);
   if (!verb) return;
-  const planId = event.plan_id ? deps.resolvePlanId(event.plan_id) : null;
   const shell = event.tool === "PowerShell" ? "powershell" : "bash";
   const status = event.outcome === "error" ? "failed" : "passed";
-  const testRunId = deps.stableId(
-    "test-run-runtime",
-    `${event.session_id}:${planId}:${event.ts}:${verb}:${event.outcome ?? ""}`,
-  );
+  const testRunId = deps.stableId("test-run-runtime", `${evidencePath}:${lineNumber}`);
   deps.recordProjectionEvent(db, {
     table: "test_runs",
     id: testRunId,
     row: {
       test_run_id: testRunId,
       session_id: event.session_id,
-      plan_id: planId,
+      plan_id: null,
       command: event.target ?? `${event.tool} (${verb})`,
       runner: "node",
       runtime: "hook-session-log",
@@ -107,20 +93,16 @@ export function projectRuntimeTestRunFromSessionEvent(input: RuntimeTestRunProje
 export function projectRuntimeGuardrailDecisionFromSessionEvent(
   input: RuntimeGuardrailDecisionProjectionInput,
 ): void {
-  const { db, event, evidencePath, deps } = input;
-  if (!event.session_id || event.plan_id === "" || !event.ts) return;
+  const { db, event, evidencePath, lineNumber, deps } = input;
+  if (!event.session_id || !event.ts) return;
   if (event.event_type !== "forced_stop") return;
-  const planId = event.plan_id ? deps.resolvePlanId(event.plan_id) : null;
-  const guardrailDecisionId = deps.stableId(
-    "guardrail-runtime",
-    `${event.session_id}:${planId}:${event.ts}:forced-stop:${event.outcome ?? ""}`,
-  );
+  const guardrailDecisionId = deps.stableId("guardrail-runtime", `${evidencePath}:${lineNumber}`);
   deps.recordProjectionEvent(db, {
     table: "guardrail_decisions",
     id: guardrailDecisionId,
     row: {
       guardrail_decision_id: guardrailDecisionId,
-      plan_id: planId,
+      plan_id: null,
       session_id: event.session_id,
       guardrail: "forced-stop",
       decision: "block",

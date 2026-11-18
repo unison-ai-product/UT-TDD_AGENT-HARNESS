@@ -1,13 +1,28 @@
 import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   analyzeCycleP4Verification,
   cycleP4VerificationMessages,
 } from "../src/lint/cycle-p4-verification.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 
 const legacyRuntimeName = ["HE", "LIX"].join("");
+
+const roadmapFiles = [
+  "docs/design/harness/L3-functional/roadmap.md",
+  "src/doctor/roadmap-verification.ts",
+];
+const testEvidencePath = "tests/cycle-p4-verification.test.ts";
+const sourceIsolationEvidence = [
+  ...roadmapFiles,
+  testEvidencePath,
+  "plans-archive-20261102:src/lint/roadmap-registry.ts",
+]
+  .map((path) => `\`${path}\``)
+  .join(", ");
+const sourceIsolationRow = `| Source isolation current vocabulary | current docs | UT-TDD wording | ${sourceIsolationEvidence} | roadmap + doctor + verification lint | \`closed\` |`;
 
 const compliant = `# A-TEST
 
@@ -20,7 +35,7 @@ const compliant = `# A-TEST
 | UT-TDD Run P4 L9-L11 boundary | run layer | naming separation | \`tests/cycle-p4-verification.test.ts\` | roadmap + doctor | \`closed\` |
 | Production and PO signoff boundary | external | human required | \`tests/cycle-p4-verification.test.ts\` | DB projection + verification tests | \`human_required\` |
 | Handover current action | handover | current pointer | \`tests/cycle-p4-verification.test.ts\` | handover + doctor | \`closed\` |
-| Source isolation current vocabulary | current docs | UT-TDD wording | \`tests/cycle-p4-verification.test.ts\` | roadmap + doctor + verification lint | \`closed\` |
+${sourceIsolationRow}
 | Telemetry and self-improvement closure | telemetry | feedback loop | \`tests/cycle-p4-verification.test.ts\` | telemetry closure + doctor | \`closed\` |
 | Feature residual closure | feature residual | closure evidence | \`tests/cycle-p4-verification.test.ts\` | fr-roadmap coverage + doctor | \`closed\` |
 | Placeholder-deps carry boundary | carry | explicit boundary | \`tests/cycle-p4-verification.test.ts\` | test-design + doctor | \`closed\` |
@@ -40,10 +55,7 @@ describe("cycle-p4-verification lint", () => {
   });
 
   it("U-CP4-002: fails missing source isolation row", () => {
-    const content = compliant.replace(
-      "| Source isolation current vocabulary | current docs | UT-TDD wording | `tests/cycle-p4-verification.test.ts` | roadmap + doctor + verification lint | `closed` |\n",
-      "",
-    );
+    const content = compliant.replace(`${sourceIsolationRow}\n`, "");
     const r = analyzeCycleP4Verification([{ file: "A.md", content }], process.cwd());
 
     expect(r.ok).toBe(false);
@@ -68,20 +80,23 @@ describe("cycle-p4-verification lint", () => {
 
   it("U-CP4-005: fails current operational files that reintroduce legacy source cutover terms", () => {
     const repo = mkdtempSync(join(tmpdir(), "ut-tdd-cp4-"));
-    mkdirSync(join(repo, "docs", "design", "harness", "L3-functional"), { recursive: true });
-    mkdirSync(join(repo, "tests"), { recursive: true });
-    writeFileSync(join(repo, "tests", "cycle-p4-verification.test.ts"), "");
-    writeFileSync(
-      join(repo, "docs", "design", "harness", "L3-functional", "roadmap.md"),
-      `${legacyRuntimeName} to UT cutover`,
-    );
+    try {
+      mkdirSync(join(repo, "tests"), { recursive: true });
+      writeFileSync(join(repo, testEvidencePath), "");
+      for (const file of roadmapFiles) {
+        const path = join(repo, file);
+        mkdirSync(dirname(path), { recursive: true });
+        writeFileSync(path, `${legacyRuntimeName} to UT cutover`);
+      }
 
-    const r = analyzeCycleP4Verification([{ file: "A.md", content: compliant }], repo);
+      const r = analyzeCycleP4Verification([{ file: "A.md", content: compliant }], repo);
 
-    expect(r.ok).toBe(false);
-    expect(r.violations).toContainEqual({
-      file: "docs/design/harness/L3-functional/roadmap.md",
-      reason: "forbidden_legacy_source_term",
-    });
+      expect(r.ok).toBe(false);
+      expect(r.violations).toEqual(
+        roadmapFiles.map((file) => ({ file, reason: "forbidden_legacy_source_term" })),
+      );
+    } finally {
+      removeTestTree(repo);
+    }
   });
 });

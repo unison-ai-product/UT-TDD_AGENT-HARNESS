@@ -78,11 +78,12 @@ function planValue(value: string | null): string {
   return value ?? "";
 }
 
-function sameGateRun(left: GateRunRow, right: GateRunRow): boolean {
+function sameGateRun(left: GateRunRow, right: GateRunRow, legacyPlanId?: string): boolean {
+  const storedPlan = planValue(left.plan_id);
   return (
     left.gate_run_id === right.gate_run_id &&
     left.gate_id === right.gate_id &&
-    planValue(left.plan_id) === planValue(right.plan_id) &&
+    (!storedPlan || storedPlan === legacyPlanId) &&
     left.status === right.status &&
     left.checked_at === right.checked_at &&
     left.evidence_path === right.evidence_path
@@ -117,7 +118,7 @@ function expectedSeedRows(
       {
         gate_run_id: stableId("verification-band-gate", layer),
         gate_id: `G-VERIFY.${layer}`,
-        plan_id: "",
+        plan_id: null,
         status: "historical",
         checked_at: "",
         evidence_path: A132_PATH,
@@ -200,14 +201,7 @@ function verifyWorkflowPair(
 function insertGateRun(db: HarnessDb, row: GateRunRow): void {
   db.prepare(
     "INSERT INTO gate_runs (gate_run_id, gate_id, plan_id, status, checked_at, evidence_path) VALUES (?, ?, ?, ?, ?, ?)",
-  ).run(
-    row.gate_run_id,
-    row.gate_id,
-    planValue(row.plan_id),
-    row.status,
-    row.checked_at,
-    row.evidence_path,
-  );
+  ).run(row.gate_run_id, row.gate_id, row.plan_id, row.status, row.checked_at, row.evidence_path);
 }
 
 function insertRoutineGate(db: HarnessDb, row: ExpectedWorkflowRow): void {
@@ -273,6 +267,7 @@ function matchEvidenceRows(input: {
     }
     matchEvidencePair({
       expected,
+      legacyPlanId: input.projection.legacyPlanIds.get(expected.gate_run_id),
       existingGate,
       expectedWorkflow,
       workflowById: input.workflowById,
@@ -295,6 +290,7 @@ function isExpectedWorkflow(
 
 function matchEvidencePair(input: {
   expected: GateRunRow;
+  legacyPlanId: string | undefined;
   existingGate: GateRunRow | undefined;
   expectedWorkflow: ExpectedWorkflowRow;
   workflowById: Map<string, RoutineGateRow>;
@@ -306,13 +302,17 @@ function matchEvidencePair(input: {
     input.plan.addWorkflowRows.push(input.expectedWorkflow);
     return;
   }
-  if (!input.existingGate || !sameGateRun(input.existingGate, input.expected)) {
+  if (!input.existingGate || !sameGateRun(input.existingGate, input.expected, input.legacyPlanId)) {
     input.plan.orphanGateRuns += 1;
     return;
   }
   input.plan.matchedGateIds.add(input.existingGate.gate_run_id);
   if (
-    !verifyWorkflowPair(input.expected, existingWorkflow, input.expectedWorkflow.workflow_run_id)
+    !verifyWorkflowPair(
+      input.existingGate,
+      existingWorkflow,
+      input.expectedWorkflow.workflow_run_id,
+    )
   ) {
     input.plan.orphanGateRuns += 1;
     return;
