@@ -393,18 +393,23 @@ function projectScaleProfiles(root: string, db: HarnessDb) {
     db.prepare("SELECT sql FROM sqlite_master WHERE name = 'document_scale_profile_entries'").get()
       ?.sql ?? "",
   );
-  // 表そのものが defer + NULL を受けるか (旧 CHECK の有無) を、投影とは別に直接確かめる。
+  // 表そのものが defer + NULL を受けるか (旧 CHECK の有無) を、投影とは別に確かめる。
+  // 投影済みの defer 行を NULL に UPDATE するので、FK と一意制約は保たれ、CHECK だけが効く。
   let deferNullInsert: string | null = null;
+  db.exec("SAVEPOINT planret_j_probe");
   try {
-    db.exec("SAVEPOINT planret_j_probe");
-    db.exec("PRAGMA foreign_keys = OFF");
     db.prepare(
-      `INSERT INTO document_scale_profile_entries
-         (document_scale_profile_entry_id, profile_id, doc_type_id, decision, detail_override,
-          status_override, reason, required_plan_id, row_digest, source_path, indexed_at)
-       VALUES ('PROBE-J', 'PROBE-J', 'DOC-L0-CHARTER', 'defer', 'lite', 'minimal', 'probe', NULL,
-               'digest', 'probe.md', '2026-11-18T00:00:00Z')`,
+      "UPDATE document_scale_profile_entries SET required_plan_id = NULL WHERE decision = 'defer'",
     ).run();
+    const n = Number(
+      db
+        .prepare(
+          `SELECT COUNT(*) AS n FROM document_scale_profile_entries
+            WHERE decision = 'defer' AND required_plan_id IS NULL`,
+        )
+        .get()?.n ?? 0,
+    );
+    if (n !== 1) deferNullInsert = `probe target is ${n} rows, expected 1`;
   } catch (error) {
     deferNullInsert = error instanceof Error ? error.message : String(error);
   } finally {
