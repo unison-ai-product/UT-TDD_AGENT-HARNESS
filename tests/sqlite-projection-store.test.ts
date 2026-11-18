@@ -16,19 +16,18 @@ describe("U-DOMAIN-004: SQLite projection adapter", () => {
       expect(() => store.record({ table: "unknown", id: "x", row: {} })).toThrow(/unknown/);
 
       store.record({
-        table: "plan_registry",
-        id: "PLAN-L7-STORE-1",
-        row: { kind: "impl", status: "draft", ignored_column: "removed" },
+        table: "artifact_registry",
+        id: "artifact:store-1",
+        row: { artifact_type: "spec", status: "draft", ignored_column: "removed" },
       });
       store.record({
-        table: "plan_registry",
+        table: "artifact_registry",
         id: "event-id-is-not-used",
-        row: { plan_id: "PLAN-L7-STORE-2", kind: "impl", status: "draft" },
+        row: { artifact_id: "artifact:store-2", artifact_type: "spec", status: "draft" },
       });
-      expect(db.prepare("SELECT plan_id FROM plan_registry ORDER BY plan_id").all()).toEqual([
-        { plan_id: "PLAN-L7-STORE-1" },
-        { plan_id: "PLAN-L7-STORE-2" },
-      ]);
+      expect(
+        db.prepare("SELECT artifact_id FROM artifact_registry ORDER BY artifact_id").all(),
+      ).toEqual([{ artifact_id: "artifact:store-1" }, { artifact_id: "artifact:store-2" }]);
 
       expect(() =>
         store.record({
@@ -43,11 +42,11 @@ describe("U-DOMAIN-004: SQLite projection adapter", () => {
 
       const secret = `sk-${"b".repeat(20)}`;
       for (const event of [
-        { table: "plan_registry", id: secret, row: { kind: "impl" } },
+        { table: "artifact_registry", id: secret, row: { artifact_type: "spec" } },
         {
-          table: "plan_registry",
+          table: "artifact_registry",
           id: "safe-event-id",
-          row: { plan_id: secret, kind: "impl" },
+          row: { artifact_id: secret, artifact_type: "spec" },
         },
         {
           table: "model_runs",
@@ -58,7 +57,7 @@ describe("U-DOMAIN-004: SQLite projection adapter", () => {
         expect(() => store.record(event)).toThrow(/secret-like/);
       }
       expect(
-        db.prepare("SELECT plan_id FROM plan_registry WHERE plan_id = ?").get(secret),
+        db.prepare("SELECT artifact_id FROM artifact_registry WHERE artifact_id = ?").get(secret),
       ).toBeUndefined();
       expect(
         db.prepare("SELECT run_id FROM model_runs WHERE run_id = ?").get(secret),
@@ -100,17 +99,34 @@ describe("U-DOMAIN-004: SQLite projection adapter", () => {
     }
   });
 
-  it("clears rebuildable rows while retaining refactor debt", () => {
+  it("clears rebuildable rows while retaining refactor debt and unregistered PLAN-era tables", () => {
     const db = openHarnessDb(":memory:");
     try {
       migrate(db);
-      db.prepare("INSERT INTO plan_registry (plan_id) VALUES (?)").run("PLAN-L7-CLEAR");
+      const retiredTables = [
+        "plan_registry",
+        "roadmap_rollups",
+        "roadmap_band_coverage",
+        "roadmap_gate_progress",
+      ];
+      const store = new SqliteProjectionStore(db);
+      for (const table of retiredTables) {
+        db.exec(`CREATE TABLE ${table} (legacy_id TEXT PRIMARY KEY)`);
+        db.prepare(`INSERT INTO ${table} (legacy_id) VALUES (?)`).run("legacy:keep");
+        expect(() =>
+          store.record({ table, id: "legacy:reject", row: { legacy_id: "legacy:reject" } }),
+        ).toThrow(/unknown/);
+      }
+      db.prepare("INSERT INTO artifact_registry (artifact_id) VALUES (?)").run("artifact:clear");
       db.prepare("INSERT INTO refactor_candidates (candidate_key) VALUES (?)").run("debt:keep");
       clearRebuildableProjectionTables(db);
-      expect(db.prepare("SELECT plan_id FROM plan_registry").all()).toEqual([]);
+      expect(db.prepare("SELECT artifact_id FROM artifact_registry").all()).toEqual([]);
       expect(db.prepare("SELECT candidate_key FROM refactor_candidates").all()).toEqual([
         { candidate_key: "debt:keep" },
       ]);
+      for (const table of retiredTables) {
+        expect(db.prepare(`SELECT * FROM ${table}`).all()).toEqual([{ legacy_id: "legacy:keep" }]);
+      }
     } finally {
       db.close();
     }

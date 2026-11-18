@@ -97,7 +97,7 @@ export function checkPlaceholderDeps(repoRoot: string): { messages: string[]; ok
   }
 }
 
-export function checkPlanTraceGate(
+export function checkTraceGate(
   repoRoot: string,
   gate: "G1-trace" | "G3-trace",
 ): { messages: string[]; ok: boolean } {

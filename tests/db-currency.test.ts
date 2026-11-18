@@ -16,8 +16,7 @@ import { describe, expect, it, vi } from "vitest";
 import { checkDbProjectionIngestion, checkDesignDetection } from "../src/doctor/db-projection.ts";
 import { checkGateRunCoverage } from "../src/doctor/process-quality.ts";
 import { analyzeDbCurrency, dbCurrencyMessages } from "../src/lint/db-currency.ts";
-import { defaultHarnessDbPath, openHarnessDb } from "../src/state-db/index.ts";
-import { rebuildHarnessDb } from "../src/state-db/projection-writer.ts";
+import { defaultHarnessDbPath } from "../src/state-db/index.ts";
 import {
   isBunExecutable,
   refreshHarnessDbOnStop,
@@ -67,62 +66,6 @@ describe("db-currency lint", () => {
     expect(result.ok).toBe(false);
     expect(result.violations).toEqual([{ reason: "missing_db" }]);
     expect(dbCurrencyMessages(result)[0]).toContain("missing_db");
-  });
-
-  it("U-DBCURRENCY-005: Stop-hook refresh converges a stale persisted registry without manual rebuild (PLAN-L7-365 Step 2, issue #78)", () => {
-    const root = mkdtempSync(join(tmpdir(), "ut-tdd-stop-refresh-"));
-    try {
-      const planDir = join(root, "docs", "plans");
-      mkdirSync(planDir, { recursive: true });
-      const planDoc = (id: string) =>
-        [
-          "---",
-          `plan_id: ${id}`,
-          "kind: impl",
-          "layer: L7",
-          "drive: db",
-          "status: draft",
-          "updated: 2026-07-07",
-          "---",
-          "",
-          "## Body",
-          "",
-        ].join("\n");
-      writeFileSync(
-        join(planDir, "PLAN-TEST-refresh-a.md"),
-        planDoc("PLAN-TEST-refresh-a"),
-        "utf8",
-      );
-      rebuildHarnessDb({ repoRoot: root });
-
-      // 他ランタイム merge 相当: docs/plans に PLAN が増え persisted registry が stale 化する。
-      writeFileSync(
-        join(planDir, "PLAN-TEST-refresh-b.md"),
-        planDoc("PLAN-TEST-refresh-b"),
-        "utf8",
-      );
-      const readPersistedPlanIds = () => {
-        const db = openHarnessDb(defaultHarnessDbPath(root), { repoRoot: root });
-        try {
-          return db
-            .prepare("SELECT plan_id FROM plan_registry ORDER BY plan_id")
-            .all()
-            .map((row) => String(row.plan_id));
-        } finally {
-          db.close();
-        }
-      };
-      expect(readPersistedPlanIds()).toEqual(["PLAN-TEST-refresh-a"]);
-
-      const refresh = refreshHarnessDbOnStop({
-        repoRoot: root,
-      });
-      expect(refresh.ok).toBe(true);
-      expect(refresh.rebuilt).toBe(true);
-      expect(readPersistedPlanIds()).toEqual(["PLAN-TEST-refresh-a", "PLAN-TEST-refresh-b"]);
-    } finally {
-      removeTestTree(root);
-    }
   });
 
   it("U-DBCURRENCY-006: Stop-hook refresh fails open (returns a reason instead of throwing) when rebuild is impossible", () => {

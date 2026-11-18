@@ -14,11 +14,11 @@ import { dirname, join, relative, resolve } from "node:path";
 import { Command } from "commander";
 import { describe, expect, it } from "vitest";
 import { registerLiveReviewCommands, resolveLiveReviewTaskFile } from "../src/cli/review-live.ts";
-import { writeMemory } from "../src/memory/service.ts";
 import {
   canonicalProjectIdentityBytes,
   loadProjectIdentityFromHead,
-} from "../src/plan-asset/adapters/project-identity-loader.ts";
+} from "../src/kernel/project-identity.ts";
+import { writeMemory } from "../src/memory/service.ts";
 import {
   buildClaudeInboxEntry,
   claudeWorkspaceId,

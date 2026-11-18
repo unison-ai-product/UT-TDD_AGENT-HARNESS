@@ -14,12 +14,12 @@ import {
   checkL7Completion,
   checkL14CloseAudit,
   checkPlaceholderDeps,
-  checkPlanTraceGate,
   checkRuleAutomationClosure,
   checkScreenImplPairFreeze,
   checkSubDocCatalogDrift,
   checkSubDocSectionStructure,
   checkTelemetryClosure,
+  checkTraceGate,
 } from "../src/doctor/process-quality.ts";
 import { createTraceGateFixture, G1_G3_REQUIRED_DOC_CASES } from "./support/g1-g3-trace-fixture.ts";
 import { removeTestTree } from "./support/temp-tree.ts";
@@ -36,7 +36,7 @@ describe("doctor process quality checks", () => {
     for (const omitted of [undefined, missingPath]) {
       const root = createTraceGateFixture(gate, omitted);
       try {
-        const result = checkPlanTraceGate(root, doctorGate);
+        const result = checkTraceGate(root, doctorGate);
         if (omitted === undefined) {
           expect(result.ok).toBe(true);
           expect(result.messages.join("\n")).toContain(doctorGate.toLowerCase() + " - OK");
@@ -56,8 +56,8 @@ describe("doctor process quality checks", () => {
 
     const checks = [
       ["placeholder-deps", checkPlaceholderDeps(missingRoot)],
-      ["g1-trace", checkPlanTraceGate(missingRoot, "G1-trace")],
-      ["g3-trace", checkPlanTraceGate(missingRoot, "G3-trace")],
+      ["g1-trace", checkTraceGate(missingRoot, "G1-trace")],
+      ["g3-trace", checkTraceGate(missingRoot, "G3-trace")],
       ["rule-automation-closure", checkRuleAutomationClosure(missingRoot)],
       ["drive-model-passage", checkDriveModelPassage(missingRoot)],
       ["db-currency", checkDbCurrency(missingRoot)],

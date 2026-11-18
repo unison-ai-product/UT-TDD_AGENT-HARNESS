@@ -10,7 +10,6 @@ import {
   type DoctorOptions,
   resolveDoctorRunProfile,
 } from "./check-registry.ts";
-import { checkPlanReferenceFreshnessAdvisory } from "./plan-governance.ts";
 import type { DoctorRunProfile } from "./profiles.ts";
 import { buildDoctorResult, type DoctorResult } from "./result.ts";
 import {
@@ -53,9 +52,6 @@ export {
 } from "./lint-gates.ts";
 export {
   checkPairFreeze,
-  checkPlanGovernance,
-  checkPlanReferenceFreshnessAdvisory,
-  checkPlanSchedule,
   checkPropagation,
 } from "./plan-governance.ts";
 export {
@@ -70,12 +66,12 @@ export {
   checkL7Completion,
   checkL14CloseAudit,
   checkPlaceholderDeps,
-  checkPlanTraceGate,
   checkRuleAutomationClosure,
   checkScreenImplPairFreeze,
   checkSubDocCatalogDrift,
   checkSubDocSectionStructure,
   checkTelemetryClosure,
+  checkTraceGate,
 } from "./process-quality.ts";
 export {
   checkRoadmap,
@@ -156,7 +152,6 @@ export function runDoctorMeasured(
     checkHandover(deps),
     ...checkHandoverDisciplineMessages(deps).map((m) => `doctor: handover-discipline — ${m}`),
     checkAgentSlots(doctorSlotsDeps(deps)),
-    ...checkPlanReferenceFreshnessAdvisory(deps.repoRoot),
     ...checkWorktreeTopologyAdvisory(
       typeof deps.worktreeTopology === "function"
         ? deps.worktreeTopology()

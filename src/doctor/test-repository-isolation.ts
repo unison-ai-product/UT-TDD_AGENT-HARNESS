@@ -16,7 +16,7 @@ agent-guard-delegation-boundary:1
 asset-catalog:2 asset-drift:1 backfill-pairing:1 cited-command-existence:1 claude-version-floor:1 cli-surface:1 cli:1
 advisory-strict-gate-aging:4
 codex-hook-adapter:5 codex-hook-failure:1 coding-rules:1 context-doc-router:2 cycle-p4-verification:3 db-currency:1 db-projection-coverage:1 db-projection-ingestion:3
-dependency-drift:4 descent-obligation:3 distribution-acceptance:1 distribution-scratch-ignore:1 doctor-runtime-surface:2 doctor:25
+dependency-drift:3 descent-obligation:3 distribution-acceptance:1 distribution-scratch-ignore:1 doctor-runtime-surface:2 doctor:25
 drive-model-passage:1 fr-roadmap-coverage:4 frontend-design-coverage:1 g10-ux-workflow:5 g8-integration-workflow:6 g9-system-workflow:7
 erasable-syntax:1 gate-static:10 import-specifier:2 l6-completion:2 l6-fr-coverage:2 mode-catalog:2 model-id-ssot:1 model-id-ssot-drift:1 module-drift:2 oracle-test-trace:13
 projection-writer:9 proposal-document-coverage:2 readability:5 relation-graph-loader:1 support/plan-mechanism-retirement-s3-migration.ts:1
@@ -41,7 +41,6 @@ global-setup.ts:1 support/workspace-roots.ts:3
 global-setup-fence:1 vitest-snapshot-runner:3 snapshot-runner-argv-candidates:2
 hook-native-launcher:1 claude-memory-terminal-gc:1 release-version-identity:2 windows-ci-single-snapshot:2 windows-ci-shard-red:1 pack-authoring-template-scope:3
 profile/tracked-loader:2
-plan-asset/project-identity-loader:1
 disposition/git-authoring-provenance:3 disposition/projection:6 disposition/tracked-target-registry:2
   forward-escape-issue-contract:2
   pack-consumer-runtime-release:3 release-consumer-vmodel-template:1
@@ -141,7 +140,7 @@ repositoryReadContracts["tests/windows-ci-single-snapshot.test.ts"] = {
 };
 
 repositoryReadContracts["tests/doctor.test.ts"] = {
-  mode_calls: { head_snapshot: 19, isolated_fixture: 7 },
+  mode_calls: { head_snapshot: 18, isolated_fixture: 7 },
   reason: "doctor aggregate test exercises both detached HEAD and execution fixture",
 };
 

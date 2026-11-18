@@ -236,19 +236,6 @@ describe("L7 CLI surface closure", () => {
     }
   }, 15_000);
 
-  it("exposes plan complete as the completed handover lifecycle entrypoint", () => {
-    const root = mkdtempSync(join(tmpdir(), "ut-tdd-cli-plan-complete-"));
-    try {
-      const complete = runCliIn(root, ["plan", "complete", "--dry-run"]);
-      expect(complete.status).toBe(0);
-      expect(complete.stdout).toContain("plan complete:");
-      expect(complete.stdout).toContain("status=completed");
-      expect(complete.stdout).toContain("(dry-run)");
-    } finally {
-      removeTestTree(root);
-    }
-  }, 15_000);
-
   it("exposes skill suggest as a JSON command surface", () => {
     const run = runCli(["skill", "suggest", "--text", "expose a JSON command surface", "--json"]);
 
@@ -487,7 +474,7 @@ describe("L7 CLI surface closure", () => {
 
     expect(run.status).toBe(0);
     expect(run.stdout).toContain("--profile <profile>");
-    expect(run.stdout).toContain("--activation-profile <profile>");
+    expect(run.stdout).not.toContain("--activation-profile");
     expect(run.stdout).toContain("--capability <flag...>");
     expect(run.stdout).toContain("--json");
   }, 15_000);

@@ -82,8 +82,8 @@ const REQUIRED_EVIDENCE_BY_ITEM: Partial<Record<(typeof EXPECTED_ITEMS)[number],
   "workflow-definition": [
     "docs/process/forward/L08-L14-verification-phase.md",
     "docs/process/forward/overview.md",
-    "src/lint/roadmap-registry.ts",
-    "tests/roadmap.test.ts",
+    "src/gate/right-arm-static.ts",
+    "tests/release-consumer-gates.test.ts",
   ],
   "system-foundation": [
     "src/doctor/index.ts",

@@ -83,8 +83,6 @@ export const FULL_DOCTOR_OUTPUT_IDS = [
   "model-id-doc-drift",
   "gate-confirm",
   "gate-id-format",
-  "plan-schedule",
-  "plan-governance",
   "placeholder-deps",
   "g1-trace",
   "g3-trace",

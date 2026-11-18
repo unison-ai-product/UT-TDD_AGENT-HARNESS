@@ -41,7 +41,7 @@ pathspec を付けない理由は、分類 (§3) に `src/` と `scripts/` の�
 
 - rename は `--find-renames` の既定類似度で検出する。
 - rename は「`from` の削除 + `path` の追加」として §4 の拒否規則にかける (control 決定の「変更 + 削除として扱う」)。
-- 上の 4 種以外の status は不明として fail-close にする (§5 の `error`、code `git-status-unknown`)。既存 `parseNameStatus` と同じ扱いで、挙動を変えない。
+- 上の 4 種以外の status は不明として fail-close にする (§5 の `error`、code `git-status-unknown`)。共有の `parseNameStatusEntries` で判定する。
   - `C<score>` (copy): gate は `--find-copies` を付けないので、通常は出ない。git config `diff.renames=copies` などで出た場合も、copy を added として読み替えずに fail-close にする。PR 全体 (契約 PR を含む) が BLOCK になるが、CI の checkout に config は無いので通常の運用では起きない。
   - `T` (file と symlink などの type 変更) も fail-close にする。
 - mode だけの変更 (例: `100644` → `100755`) は git が `M` として出す。gate は内容と mode を区別せず modified として扱う (保護対象なら §4 で拒否)。
@@ -64,8 +64,8 @@ interface DesignProtectionInput {
 }
 ```
 
-- 全 tree の読み取りは `src/github/design-protection.ts` が持つ。同 file に `readDesignProtectionChanges(git, baseRef, headRef) => PlanChange[]` を置き、`resolveCommit` で base と head を解決してから、§2 の `git diff --name-status -z --find-renames <base> <head>` を pathspec なしで 1 回実行し、`splitNul` と `parseNameStatusEntries` で変更列にする。
-- 既存の `readAdmissionGitDiff` (`-- docs/plans` の pathspec 固定) は変えず、この gate からも呼ばない。全 tree を見ないためである。
+- 全 tree の読み取りは `src/github/design-protection.ts` が持つ。同 file に `readDesignProtectionChanges(git, baseRef, headRef) => GitChange[]` を置き、`resolveCommit` で base と head を解決してから、§2 の `git diff --name-status -z --find-renames <base> <head>` を pathspec なしで 1 回実行し、`splitNul` と `parseNameStatusEntries` で変更列にする。
+- PLAN 専用の `readAdmissionGitDiff` は `-- docs/plans` に限定された別経路である。S7 で専用 adapter と共に退役する。設計書保護は `src/github/git-diff.ts` の全 tree 用部品を使う。
 - `checkDesignProtection` は `GitDiffAdapterError` だけを捕まえ、その code を `error.code` にして `ok=false` を返す。それ以外の例外は捕まえない (CLI はそのまま非 0 で終わり、fail-close のまま)。
 - ref の事前検査 (空文字、NUL / LF / CR) は `resolveCommit` が subprocess を起動する前に行う。違反なら git を 1 回も呼ばずに `git-ref-invalid` になる。NUL を含む文字列は OS のプロセス引数に載らないので、この検査は CLI ではなく入力境界の unit oracle で固定する (テスト設計の CANDIDATE-U-DPROT-031)。`resolveCommit` は事前検査を通った ref の `rev-parse` が失敗したとき (起動失敗を含む) も `git-ref-invalid` を返す。これは既存の挙動で、本 gate でも変えない (§6)。そのため、CLI に NUL などを渡して subprocess の起動が失敗した結果は、同じ code になっても事前検査の証拠に数えない。事前検査の証拠は、git を 1 回も呼んでいないこと (031 の fake port の呼び出し 0 回) で示す。
 
@@ -154,14 +154,14 @@ format の一括修正や文字化け修正のように src と docs を同時�
 
 | 部品 | 方式 |
 |---|---|
-| git の実行 | `src/plan-admission/git-diff-adapter.ts` の `GitCommandPort` / `SystemGitCommandPort` をそのまま使う |
-| commit の解決 | 同 file の `resolveCommit` を export して使う (挙動は変えない) |
-| NUL 区切りの分解と path の検査 | 同 file の `splitNul` / `requirePath` を export して使う (挙動は変えない) |
-| name-status の解釈 | 同 file の `parseNameStatus` から PLAN path の絞り込みを外した汎用版 `parseNameStatusEntries(fields)` を切り出す。既存の `parseNameStatus` はその結果を PLAN path で絞るだけにする。既存の admission テストは無変更で green のままであること |
-| 変更の型 | `src/plan-admission/diff-fence.ts` の `PlanChange` (added / modified / deleted / renamed) をそのまま使う |
+| git の実行 | `src/github/git-diff.ts` の `GitCommandPort` / `SystemGitCommandPort` |
+| commit の解決 | 同 file の `resolveCommit` |
+| NUL 区切りの分解と path の検査 | 同 file の `splitNul` / `requirePath` |
+| name-status の解釈 | 同 file の `parseNameStatusEntries(fields)` が全 tree の変更列を解釈する |
+| 変更の型 | `src/github/git-diff.ts` の `GitChange` (added / modified / deleted / renamed) |
 | エラーの型 | `GitDiffAdapterError` と `GitDiffAdapterErrorCode` をそのまま使う |
 | path の一覧 | 同 file の export 定数 `IMPLEMENTATION_PATH_PREFIXES` / `PROTECTED_PATH_PREFIXES` (§3.1 の単一定義点) |
-| 全 tree の読み取り | 同 file の `readDesignProtectionChanges` (§2.1)。`readAdmissionGitDiff` は使わない |
+| 全 tree の読み取り | `src/github/design-protection.ts` の `readDesignProtectionChanges` (§2.1) |
 | 判定 | 新規 `src/github/design-protection.ts` に純粋関数 `classifyPullRequestChanges(changes) => "implementation" \| "non-implementation"` と `checkDesignProtection(input) => DesignProtectionResult` を置く |
 | CLI | `ut-tdd github design-protection --base <ref> --head <ref> [--json]` を `src/cli.ts` の既存 `github` command group に 1 つ足す |
 
@@ -169,10 +169,10 @@ format の一括修正や文字化け修正のように src と docs を同時�
 
 - `src/github/change-lane.ts` の `GitDiffNamesPort` は `--name-only` で status を持たない。追加と変更を区別できないので使わない。
 - `src/lint/branch-kind.ts` は working tree の `git status` を読むので、CI の PR 差分を見られない。使わない。
-- PLAN admission の receipt 照合 (`diff-fence.ts`) には載せない。PLAN admission は v4 R05 で削除予定だからである (§7)。
+- PLAN admission の receipt 照合 (`diff-fence.ts`) は PLAN 専用で、S7 の退役対象である。
 
-v4 R05 で `src/plan-admission/` を削除するとき、本 gate が import している git 読み取り部品は削除できない。
-削除すると typecheck が落ちるので、黙って消えることはない。そのときに中立な場所へ移す。
+S7 の `src/plan-admission/` 退役後も、設計書保護が import する `src/github/git-diff.ts` を維持する。
+共有 Git 部品の ref・path・status の検証は、既存の設計書保護の oracle で継続する。
 
 ## 7. CI への接続点
 

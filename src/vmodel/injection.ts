@@ -40,10 +40,10 @@ const DRIVE_SKILLS: Record<Drive, string[]> = {
 };
 
 const LAYER_COMMANDS: Partial<Record<Layer, string[]>> = {
-  L1: ["ut-tdd plan lint --gate G1-trace", "ut-tdd skill suggest --plan <path>"],
-  L3: ["ut-tdd plan lint --gate G3-trace", "ut-tdd skill suggest --plan <path>"],
-  L4: ["ut-tdd plan lint --gate governance", "ut-tdd vmodel lint"],
-  L5: ["ut-tdd plan lint --gate governance", "ut-tdd vmodel lint"],
+  L1: ["ut-tdd gate G1", "ut-tdd skill suggest --text <task>"],
+  L3: ["ut-tdd gate G3", "ut-tdd skill suggest --text <task>"],
+  L4: ["ut-tdd vmodel lint"],
+  L5: ["ut-tdd vmodel lint"],
   L6: ["ut-tdd doctor", "ut-tdd verify recommend"],
   L7: ["ut-tdd doctor", "ut-tdd verify recommend", "ut-tdd review --uncommitted"],
 };

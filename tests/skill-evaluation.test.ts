@@ -4,7 +4,7 @@
  * Oracle: projectSkillEvaluations は accepted=1 の skill_invocations から unused_flag を計算する。
  *   - unused_flag = 1 when no invocation has fired_at within last 30 days
  *   - PLAN 由来の skill_rating / adoption_count / success_count は NULL のまま (S7 #1379)
- *   - Cold-start: 0 invocations => 0 evaluation rows (no throw)
+ *   - Cold-start と skill ID が null / 空の操作サンプルのみの場合は評価行 0 件
  *
  * AC-FR-BR21-36-01: accepted invocation within 30 days => unused_flag 0、PLAN 由来値は NULL
  * AC-FR-BR21-36-02: skill with 0 adoption in last 30 days => unused_flag 1; no auto-delete
@@ -16,14 +16,20 @@ import { projectSkillEvaluations } from "../src/state-db/projection-writer.ts";
 
 function seedInvocation(
   db: ReturnType<typeof openHarnessDb>,
-  opts: { id: string; skillId: string; planId: string; accepted: number; firedAt: string },
+  opts: {
+    id: string;
+    skillId: string | null;
+    planId: string | null;
+    accepted: number;
+    firedAt: string;
+  },
 ): void {
   upsertRow(db, {
     table: "skill_invocations",
     primaryKey: "skill_invocation_id",
     row: {
       skill_invocation_id: opts.id,
-      session_id: "",
+      session_id: "test-skill-evaluation",
       plan_id: opts.planId,
       skill_id: opts.skillId,
       layer: "L7",
@@ -35,13 +41,24 @@ function seedInvocation(
   });
 }
 
+function seedPlanlessObservations(db: ReturnType<typeof openHarnessDb>, firedAt: string): void {
+  for (const [index, skillId] of [null, ""].entries()) {
+    seedInvocation(db, { id: `operation-${index}`, skillId, planId: null, accepted: 1, firedAt });
+  }
+}
+
 describe("U-FR-L1-36: projectSkillEvaluations", () => {
-  it("cold-start: zero invocations produces zero evaluation rows and does not throw", () => {
+  it("cold-start and PLAN-less observations without a skill ID produce zero evaluation rows", () => {
     // U-FR-L1-36 cold-start oracle
     const db = openHarnessDb(":memory:");
     try {
       migrate(db);
-      projectSkillEvaluations(db, { asOf: "2026-06-15T00:00:00.000Z" });
+      const asOf = "2026-06-15T00:00:00.000Z";
+      projectSkillEvaluations(db, { asOf });
+      expect(rowCounts(db).skill_evaluations).toBe(0);
+
+      seedPlanlessObservations(db, "2026-06-14T12:00:00.000Z");
+      projectSkillEvaluations(db, { asOf });
       expect(rowCounts(db).skill_evaluations).toBe(0);
     } finally {
       db.close();
@@ -57,12 +74,15 @@ describe("U-FR-L1-36: projectSkillEvaluations", () => {
       seedInvocation(db, {
         id: "inv-ac01-1",
         skillId: "skill:review-checklist",
-        planId: "",
+        planId: null,
         accepted: 1,
         firedAt: "2026-06-14T12:00:00.000Z",
       });
+      seedPlanlessObservations(db, "2026-06-14T12:00:00.000Z");
 
       projectSkillEvaluations(db, { asOf });
+
+      expect(rowCounts(db).skill_evaluations).toBe(1);
 
       const row = db
         .prepare("SELECT * FROM skill_evaluations WHERE skill_id = ?")
@@ -73,6 +93,7 @@ describe("U-FR-L1-36: projectSkillEvaluations", () => {
       expect(row?.skill_rating).toBeNull();
       expect(row?.adoption_count).toBeNull();
       expect(row?.success_count).toBeNull();
+      expect(row?.evaluated_at).toBe(asOf);
     } finally {
       db.close();
     }
@@ -110,8 +131,7 @@ describe("U-FR-L1-36: projectSkillEvaluations", () => {
     }
   });
 
-  it("rejected invocations (accepted=0) do not count toward adoption", () => {
-    // U-FR-L1-36: adoption = distinct plan_id with accepted=1
+  it("rejected invocations produce no evaluation rows", () => {
     const asOf = "2026-06-15T12:00:00.000Z";
     const recentAt = "2026-06-14T12:00:00.000Z";
     const db = openHarnessDb(":memory:");
@@ -127,7 +147,6 @@ describe("U-FR-L1-36: projectSkillEvaluations", () => {
       });
 
       projectSkillEvaluations(db, { asOf });
-      // No accepted=1 invocations => cold-start branch => 0 rows
       expect(rowCounts(db).skill_evaluations).toBe(0);
     } finally {
       db.close();

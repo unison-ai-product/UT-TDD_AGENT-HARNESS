@@ -386,7 +386,6 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 | U-DEPD-001 | `analyzeDependencyDrift` allowed graph | allowed source module imports normalize to deterministic module edges and OK messages. |
 | U-DEPD-002 | disallowed dependency | reverse dependency such as runtime -> lint returns `disallowed-module-dependency` finding. |
 | U-DEPD-003 | cycle detection | cyclic module imports return deterministic `module-cycle` finding. |
-| U-DEPD-004 | state-db real repository graph | `state-db`から`kernel`への依存辺を維持する。全repository cycleはU-DEPD-005で検証する。 |
 | U-DEPD-005 | full real repository module graph | `lint`は`DbIntrospectionPort`を所有しstate-db実装へ逆依存しない。全module cycleが0。 |
 | U-REGEXP-001 | `expandRegressionScope` affected modules | changed source module expands to direct tests and reverse-dependent module tests. |
 | U-REGEXP-002 | missing coverage | changed source module without direct test coverage returns `missing-regression-test` finding instead of silent fallback. |
@@ -651,7 +650,7 @@ SMB/NFS/OneDrive をまたぐ strict lease、heartbeat、clock-skew 耐性は主
 | U-GATE-008 | `writeGateRunEvidence` failure boundary | `.ut-tdd/gate_runs` 書込失敗は `gate_run_evidence_warning` として surface されるが、`evaluateGateReview` / `evaluateStaticGate` の合成結果と exit code を変更しない。 |
 | U-GATE-009 | `writeGateRunEvidence` no-clobber publish | 別 process から同じ ID を並行 publish すると一方だけ成功、他方は `EEXIST` 警告で exit/verdict 不変。完成 temp を同一 filesystem 上に `.tmp-*` (reader の `*.json` glob 外) で書き hard link publish。link 失敗・非対応・その他書込失敗は警告のみで未 publish・exit/verdict 不変 (fallback なし)。link 失敗の注入が発火したことと link 前に残した temp の実在を assert する。実際に crash させ retry し、final に不完全 JSON が現れず、残った temp を retry が削除せず projection reader も証跡として読まないことを確認する。**未証明の4軸** (EEXIST 固有 warning 時の exit/verdict 不変、link 失敗注入の発火、link 前の `.tmp-*` 実在、実 crash 後の retry と temp 保持) は #1468 で候補 ID を割り当てて Red → Green し、そこで証明する。 |
 | U-GATE-010 | `buildGateRunEvidence` ID / path と旧形式読込 | 新規 ID は `gate-run:${compactSlug(gateId)}:${sha256([gateId, checkedAt, sessionId ?? "", process.pid].join(":")).slice(0, 12)}` とし PLAN 値を含めず、path は UTF-8 ID の SHA-256 小文字 hex のみから決める。別 ID の hash collision は拒否。旧 `<gate>-<timestamp>-<hash>.json` も読み、新旧で同じ ID なら拒否。**未証明の2軸** (異なる ID 間で実際に起きる SHA-256 衝突の拒否、ASCII でない ID の hash 経路) は #1468 の追記範囲に含め、候補 ID を割り当てて Red → Green し、そこで証明する。 |
-| U-DOCTOR-GATE-02 | `checkGateRunCoverage` 証跡照合 | 証跡と DB の6列 (`gate_run_id` / `gate_id` / `plan_id` / `status` / `checked_at` / `evidence_path`) を全て比較して不一致を fail-close、`plan_id=null` と DB 空値は一致。 |
+| U-DOCTOR-GATE-02 | `checkGateRunCoverage` 証跡照合 | DB の実行 ID、gate ID、状態、日時、証跡パスを元の証跡と照合し、不一致を fail-close する。S7 後の新規投影・修復は `plan_id` に SQL NULL を記録する。既存の空文字と NULL は照合時に同値とし、既存の非空値は元の証跡と gate・workflow の両行で一致する場合だけ認め、保存値を保持する。 |
 | U-DOCTOR-GATE-03 | `checkGateRunCoverage` DB-only 除外 | 証跡が無い実行の DB-only gate row と `stableId("gate-workflow", gate_run_id)` 由来の対応 workflow row を両方除外し、欠落対にしない (`gate_runs=0` は fail-close)。既存 `U-DOCTOR-GATE-01` の「証跡欠落」は現存証跡に対する必要 row の欠落・不正を指す。正常再投影は冪等。 |
 | U-DOCTOR-GATE-04 | `checkGateRunCoverage` / `analyzeDriveDbRegistration` | 追加・除外・全列照合を全体 transaction 内で行い、全証跡を評価する。1件でも不一致なら追加・削除を含め rollback し旧状態を保つ (「独立」は評価順序であり部分 commit ではない)。 |
 | U-TEAMRUN-001 | `validateTeamRun` | hybrid 以外は fail / hybrid で worker(se) と reviewer(tl/qa) が別 provider なら pass |
@@ -779,11 +778,11 @@ SMB/NFS/OneDrive をまたぐ strict lease、heartbeat、clock-skew 耐性は主
 - **backfill-pairing.md §2.3 関数 (parseRequires/parseGlossaryTerms/normalizeTerm/parsePlan/analyzeBackfill/backfillMessages) → U-BACKFILL-001〜005** (add-feature 差分、IMP-051。normalizeTerm は parseGlossaryTerms/analyzeBackfill の内部パス経由で被覆。U-BACKFILL-006 の正式宣言は #1358 A4 PR-1 で退役。PLAN コーパス guard の実装と test body は後続 PR（退役 2/2）で物理削除。孤児 0)
 - **vmodel-pair-freeze.md §1-§3 関数 (loadPairDocs/analyzePairFreeze/pairFreezeMessages/lintVmodel) → U-VPAIR-001〜006** (add-feature 差分、PLAN-L7-11/IMP-067。lintVmodel は loadPairDocs→analyzePairFreeze→pairFreezeMessages の orchestration で U-VPAIR-005 実 repo ガードに内包。孤児 0)
 - **vmodel-pair-freeze.md §7 関数 (analyzeVerificationGroups/verificationGroupMessages、loadPairDocs status 拡張) → U-VTRIG-001〜005** (add-feature 差分、PLAN-L7-12/IMP-068。doctor checkVerificationGroups は U-VTRIG-005 実 repo ガードに内包。孤児 0)
-- **review-evidence.md §2-§4 関数 (hasReviewEvidence/parseReviewPlan/analyzeReviewEvidence/loadReviewPlans/reviewEvidenceMessages、schema review_evidence、doctor checkReviewEvidence) → U-REVIEW-001〜006** (add-feature 差分、PLAN-L7-13/IMP-071。reviewEvidenceMessages は U-REVIEW-003/006 経路で被覆、checkReviewEvidence は doctor try-catch ラッパーで U-REVIEW-006 実 repo ガードに内包。孤児 0)
-- **review-evidence.md §2-§4 の green_command anchor 必須化 (`greenCommandViolationReason` の `missing_anchor_commit` / `invalid_anchor_commit`) → U-REVIEW-009〜013** (add-feature 差分、PLAN-L7-497/issue #191。anchor 実在検査は含まない — squash merge 運用では判定不能で実測 29 件の false positive を出したため撤回、実在検査は issue #367 の守備範囲。孤児 0)
-- **review-evidence-stale.md §2-§4 関数 (draft/降格 PLAN に残る stale approval の検出) → U-REVIEW-007〜008** (add-feature 差分、PLAN-L7-19/IMP-080。review-evidence 双方向性の逆向き検出。孤児 0)
-- **cross-review-enforcement.md §1-§2 関数 (extractReviewEntries/analyzeReviewEvidence の crossReviewViolations、schema worker_model/reviewer_model) → U-XREVIEW-001〜005** (add-feature 差分、PLAN-L7-14/IMP-076。doctor 連動は U-REVIEW-006 実 repo ガードの crossReviewViolations==[] に内包。孤児 0)
-- **test-before-review.md §2-§3 関数 (analyzeReviewEvidence の testBeforeReviewViolations、schema tests_green_at、reviewed_at/tests_green_at 抽出) → U-TORDER-001〜005** (add-feature 差分、PLAN-L7-15/IMP-077。doctor 連動は U-REVIEW-006 実 repo ガードの testBeforeReviewViolations==[] に内包。全駆動モデル普遍。孤児 0)
+- S7 で退役した旧対応 **review-evidence.md §2-§4 関数 (hasReviewEvidence/parseReviewPlan/analyzeReviewEvidence/loadReviewPlans/reviewEvidenceMessages、schema review_evidence、doctor checkReviewEvidence) → U-REVIEW-001〜006** (add-feature 差分、PLAN-L7-13/IMP-071。reviewEvidenceMessages は U-REVIEW-003/006 経路で被覆、checkReviewEvidence は doctor try-catch ラッパーで U-REVIEW-006 実 repo ガードに内包）。
+- S7 で退役した旧対応 **review-evidence.md §2-§4 の green_command anchor 必須化 (`greenCommandViolationReason` の `missing_anchor_commit` / `invalid_anchor_commit`) → U-REVIEW-009〜013** (add-feature 差分、PLAN-L7-497/issue #191。anchor 実在検査は含まない — squash merge 運用では判定不能で実測 29 件の false positive を出したため撤回、実在検査は issue #367 の守備範囲）。
+- S7 で退役した旧対応 **review-evidence-stale.md §2-§4 関数 (draft/降格 PLAN に残る stale approval の検出) → U-REVIEW-007〜008** (add-feature 差分、PLAN-L7-19/IMP-080。review-evidence 双方向性の逆向き検出）。
+- S7 で退役した旧対応 **cross-review-enforcement.md §1-§2 関数 (extractReviewEntries/analyzeReviewEvidence の crossReviewViolations、schema worker_model/reviewer_model) → U-XREVIEW-001〜005** (add-feature 差分、PLAN-L7-14/IMP-076。doctor 連動は U-REVIEW-006 実 repo ガードの crossReviewViolations==[] に内包）。
+- S7 で退役した旧対応 **test-before-review.md §2-§3 関数 (analyzeReviewEvidence の testBeforeReviewViolations、schema tests_green_at、reviewed_at/tests_green_at 抽出) → U-TORDER-001〜005** (add-feature 差分、PLAN-L7-15/IMP-077。doctor 連動は U-REVIEW-006 実 repo ガードの testBeforeReviewViolations==[] に内包。全駆動モデル普遍）。
 - **provider-handover.ts / gate/review-tier.ts / team/run.ts / team/launch-policy.ts / runtime/adapter.ts → U-PHOVER-001〜002 / U-GATE-001〜003 / U-TEAMRUN-001〜003 / U-ADAPTER-001** (review 残課題解消差分、2026-06-08。provider handover package、mode-aware judgment gate、hybrid team 分散、runtime adapter dry-run surface。孤児 0)
 - **descent-obligation.md §1-§4 関数 (loadDescentAdjacency/loadTraceKeyedArtifacts/loadDeferLedger/generateObligations/analyzeDescentObligations/descentObligationMessages、doctor checkDescentObligation) → U-DESC-001〜008** (add-design 差分、PLAN-L6-35/FR-L1-03。load×3 は U-DESC-008 実 repo ガードに内包。上流駆動 obligation 生成 + defer ledger + impl-ahead ガードで absence-blind を是正。孤児 0)
 - **孤児 (設計で U 未被覆) = 0** を L7 entry で機械確認
@@ -841,7 +840,7 @@ SMB/NFS/OneDrive をまたぐ strict lease、heartbeat、clock-skew 耐性は主
 
 | U-ID | 関数 | oracle (DbC) |
 |------|------|--------------|
-| U-FR-L1-36 | `projectSkillEvaluations` | **S7 前**: PLAN adoption / success から `adoption_count`・`success_count`・`skill_rating` を算出する。**S7 後**: この3列は NULL。非 PLAN `unused_flag`・`evaluated_at` と row、cold-start、text recommendation の既存 NULL-rating fallback を維持し、評価値の保存時に 0 で代用せず、新しい fallback や session adoption は導入しない。 S7処分は [L7 §3.1](L7-plan-mechanism-retirement-test-design.md) を参照。 |
+| U-FR-L1-36 | `projectSkillEvaluations` | **S7 前**: PLAN adoption / success から `adoption_count`・`success_count`・`skill_rating` を算出する。**S7 後**: この3列は NULL。非 PLAN `unused_flag`・`evaluated_at` と row、cold-start、text recommendation の既存 NULL-rating fallback を維持し、評価値の保存時に 0 で代用せず、新しい fallback や session adoption は導入しない。 有効な skill ID が無い操作観測行からは個別評価の行を作らず、同居する有効な ID の実測行を評価する。 S7処分は [L7 §3.1](L7-plan-mechanism-retirement-test-design.md) を参照。 |
 
 ### 2026-06-15 PoC Success Measurement Oracle (FR-L1-43, PLAN-L7-53)
 
@@ -903,20 +902,20 @@ PR2 (`add-feature`) は昇格 PR merge 後の main から開始し、PLAN-L7-423
 ## PLAN-L7-76 Reliability Remediation Addendum
 
 Issue #1357 の `U-DBPROJ-ING-001..003` は正式 ID へ昇格済み。S7 前は 003 が PLAN 入力の有無を区別する対照である。S7 で 003 を退役し、001/002 の汎用の一覧整合・欠落拒否を維持する。automatic 一覧の schedule / readiness / activation と evidence-gated 一覧の旧 PLAN review receipt は S7 で除く。
+> 履歴 `U-DBPROJ-ING-003` は `rebuildHarnessDb` を対象とした。S7 で退役する。S7 前は隔離 `repoRoot` の明示的な PLAN Markdown fixture 1 件を入力すると `schedule_entries > 0`。これは入力が存在する場合の生成保証であり、入力不在時の無条件 population 要件ではない。
 
 | U-ID | Target | Oracle |
 |---|---|---|
 | U-DBPROJ-ING-001 | `analyzeDbProjectionIngestion` | S7 前は `schedule_entries` が 0 行でも、他の全 automatic 要件が populated なら `ok=true` かつ `missingRows=[]`。さらに `AUTOMATIC_DB_PROJECTION_REQUIREMENTS` にこの表が含まれない。この表は PLAN 入力が無いときの無条件 population 要件ではない。S7 後は退役4表を fixture から外し、残る automatic 要件と fixture key の完全一致・成功・missingRows 空を維持する。 |
 | U-DBPROJ-ING-002 | `analyzeDbProjectionIngestion` | `schedule_entries` と既存 negative fixture の `mcp_server_profiles` が 0 行なら `ok=false` で、`missingRows.map(row => row.table)` の完全一致集合は `mcp_server_profiles` のみ。例外対象は `schedule_entries` だけで、他の automatic 要件は fail-close のまま。 |
-| U-DBPROJ-ING-003 | `rebuildHarnessDb` | S7 で退役する。S7 前は隔離 `repoRoot` の明示的な PLAN Markdown fixture 1 件を入力すると `schedule_entries > 0`。これは入力が存在する場合の生成保証であり、入力不在時の無条件 population 要件ではない。 |
 | U-DBPROJ-ATOMIC-01 | `rebuildHarnessDb` | truncate と再投影は 1 つの `BEGIN IMMEDIATE` transaction の中で走る。実 repo の基準 rebuild で 1 行以上ある、PLAN に依らない `test_cases` への最初の `INSERT` (truncate の後) で失敗を注入すると、例外が再送出されて rollback し、直前に commit した `test_cases` の行数が変わらない (0 にならない)。基準の行数が 0 なら失敗とし、`docs/plans` の有無で飛ばさない (#1430、旧版は `plan_registry` へ注入、修正前 188 → 0 で Red)。 |
 | U-DBPROJ-PROV-01 | `analyzeDbProjectionIngestion(..., { enforceTelemetryProvenance: true })` | Populated telemetry tables (`skill_invocations`, `test_runs`, `guardrail_decisions`, `model_runs`) with only projection provenance are not acceptable evidence for "fired/used/works" claims. Default doctor can surface migration state as partial, but provenance-enforced mode fail-closes when runtime rows are 0 and projection rows are non-zero. |
 | U-DBPROJ-PROV-02 | `projectRuntimeTestRunFromSessionEvent` | A session-log Bash verification event (`Bash (vitest)` etc.) creates exactly one `test_runs` row with non-empty `session_id`, `runtime=hook-session-log`, `scope=runtime-hook`, and the JSONL evidence path; non-verification Bash events such as `Bash (git)` do not fabricate runtime test evidence. |
 | U-DBPROJ-PROV-03 | `checkDbProjectionIngestion` / `projectRuntimeModelTelemetryForDoctor` | Doctor's in-memory DB rebuild overlays existing Claude/Codex JSONL token usage through `projectTokenUsage`, so `model_runs` with token/cost-valued columns count as runtime provenance without requiring provider CLI execution. The deterministic `db rebuild` command remains source-projection-only. |
-| U-DBPROJ-PROV-04 | `projectRuntimeGuardrailDecisionFromSessionEvent` | A session-log `forced_stop` event creates exactly one `guardrail_decisions` row with non-empty `session_id`, `guardrail=forced-stop`, `decision=block`, `mode=runtime-hook`, and the JSONL evidence path; ordinary `tool_use` events do not fabricate guardrail decisions. |
-| U-DBPROJ-PROV-05 | `summarize` / `projectRuntimeSkillInvocationFromSessionEvent` | A Bash command containing `skill suggest` is logged as `Bash (skill)`. A session-log `Bash (skill)` event creates `skill_invocations` rows with non-empty `session_id`, `source=runtime-hook:skill-suggest`, and accepted status from the hook outcome; generic `Bash (bash)` events do not fabricate skill invocations. |
-| U-DBPROJ-GATE-01 | `rebuildHarnessDb` / `.ut-tdd/gate_runs/*.json` | gate run evidence JSON を読み、`gate_runs` と `workflow_runs(workflow=routine-gate, phase=<gate_id>, workflow_run_id=stableId("gate-workflow", gate_run_id))` へ投影する。`plan_id` が空の証跡も省かずに両方へ投影し、`plan_id` は空のまま残す。同じ gate の別実行が 2 件以上あっても (`plan_id` が同じでも空でも) `routine-gate` row から `retry_events` を作らない。seed (A-132) は `G-VERIFY.L8`〜`L14` の `status=historical` の gate row だけを作り、PLAN の有無で結果が変わらず、`passed` の gate / workflow / coverage row を作らない。 |
-| U-DOCTOR-GATE-01 | `analyzeGateRunCoverage` / `checkGateRunCoverage` | PLAN の無い正当な実行 (`plan_id` 空、gate row と workflow row が実行単位で対応し、証跡が解決できて識別が一致する) は OK。`gate_runs` の 0 件、`routine-gate` の workflow row に対応する gate row の欠落と、gate row に対応する workflow row の欠落、空の `gate_id`、証跡の欠落・壊れた JSON・`gate_run_id` / `gate_id` の不一致は `gate-run-coverage` で fail-close。同じ `plan_id` を持つ無関係な 1 件の gate row や seed (A-132) の row があっても、対応の欠落は違反のまま残る。`plan_id` 空や `plan_registry` に無い `plan_id` だけを理由に違反にしない。証跡を足した後の古い永続投影で OK を返さない。A-132 だけがあり JSON 証跡が無い clean tree (正規の seed row だけ) では `gate_runs` が 7 行で violation 0。seed を名乗るのに条件 (`G-VERIFY.L8`〜`L14`、`gate_run_id` の seed 導出、A-132 の固定 path と実在、`status=historical`、`plan_id` 空、gate ごとに 1 件) を 1 つでも欠く row は違反 (`status=historical` だけでは JSON 証跡と対応の検査から外れない)。正規の seed row があっても `routine-gate` の workflow row に対応する gate row の欠落は違反のまま残る。 |
+| U-DBPROJ-PROV-04 | `projectRuntimeGuardrailDecisionFromSessionEvent` | session log の `forced_stop` event は、非空 `session_id`、`guardrail=forced-stop`、`decision=block`、`mode=runtime-hook`、JSONL 証跡パスを持つ `guardrail_decisions` 行を 1 件作る。通常の `tool_use` event は 0 件とする。S7 で `review_evidence_registry` 由来の advisory 読み手を退役する。S7 後の rebuild 時の guardrail advisory は入力 0 件、出力 0 件となる。これは既知の縮退である。`review_evidence_registry` の既存表と行を保持し、rebuild の消去対象から外す。既存の forced-stop と承認は `guardrail_decisions` に直接投影する。両投影から `inspectGuardrailInvariants` への配線は無い。共有の `inspectGuardrailInvariants` は単体 oracle で検証する。#1799 で、投影した決定を検査する入力の契約を扱う。 |
+| U-DBPROJ-PROV-05 | `summarize` / `projectRuntimeSkillInvocationFromSessionEvent` | `skill suggest` を含む Bash command は `Bash (skill)` として記録する。S7 後は PLAN の無い fixture の対象イベント1件から `plan_id=NULL`、`skill_id=NULL` の操作観測行を1件作る。非空 `session_id`、イベント時刻、`source=runtime-hook:skill-suggest`、hook outcome に基づく `accepted` を記録する。通常 Bash の観測行は0件。 |
+| U-DBPROJ-GATE-01 | `rebuildHarnessDb` / `.ut-tdd/gate_runs/*.json` | gate run evidence JSON を読み、`gate_runs` と `workflow_runs(workflow=routine-gate, phase=<gate_id>, workflow_run_id=stableId("gate-workflow", gate_run_id))` へ投影する。S7 後は証跡に旧 PLAN ID・別名があっても参照せず、両表の新規 `plan_id` は SQL NULL とする。同じ gate の別実行が 2 件以上あっても `routine-gate` 行から `retry_events` を作らない。seed (A-132) は `G-VERIFY.L8`〜`L14` の `status=historical` の gate 行だけを作り、`plan_id` は NULL とし、`passed` の gate / workflow / coverage 行を作らない。 |
+| U-DOCTOR-GATE-01 | `analyzeGateRunCoverage` / `checkGateRunCoverage` | gate 行と workflow 行が実行単位で対応し、証跡が解決できて識別が一致する実行は OK。S7 後の新規 `plan_id` は SQL NULL。既存の空文字は互換入力として扱い、PLAN の登録は確かめない。`gate_runs` の 0 件、`routine-gate` の workflow 行または gate 行の片方の欠落、空の `gate_id`、証跡の欠落・壊れた JSON・`gate_run_id` / `gate_id` の不一致は `gate-run-coverage` で fail-close。無関係な gate 行や seed (A-132) があっても、対応の欠落は違反のまま残る。証跡を足した後の古い永続投影で OK を返さない。A-132 だけがあり JSON 証跡が無い clean tree では `gate_runs` が 7 行で violation 0。正規の seed は `G-VERIFY.L8`〜`L14`、`gate_run_id` の seed 導出、A-132 の固定 path と実在、`status=historical`、`plan_id` が NULL または既存の空文字、gate ごとに 1 件を満たす。条件が一つでも欠ければ違反。 |
 | U-READY-GATE-01 | `evaluateAutomationReadiness` | `routine-gate` の workflow row は、`workflow_run_id` から導出して対応する gate row が `passed` のときだけ blocked を外す。`plan_id` が空でも対応する gate row が `passed` なら "missing evidence" にしない。対応する gate row が `failed` か欠落なら blocked とし、同じ `plan_id` (空を含む) の別実行の `passed` を借りない。seed (A-132) の `historical` row は `passed` に数えない。S7 後は `plan_id` 照合を退役し、この routine-gate 契約と generic workflow 更新を維持する。per-plan finding / gate / guardrail 集計の処分は [L7 §3.1](L7-plan-mechanism-retirement-test-design.md) を参照。 |
 | U-CHGIMPACT-NONGIT-01 | `isGitRepository` / `checkChangeImpact` / `checkChangeSetIntegrity` | In a non-git directory both checks return `ok:true` with a "skipped (not a git repository)" message (matching the non-git fail-open convention of `tracked-canonical` / `runtime-portability`), while an unreadable repo root still fail-closes with a `violation` message. CI runs in a git repo so its behavior is unchanged. |
 | U-SLOT-009 | `nodeAgentSlotsDeps.writeText` | State is written atomically: stage to a unique `*.tmp-<pid>-<seq>` file then `renameSync` over the target. A fire→release round-trip through the real fs deps persists the complete slot array and leaves **no** `*.tmp-*` temp file behind (concurrent hook / crash-mid-write never yields a torn JSON that `loadSlots` would discard). |
@@ -1014,7 +1013,7 @@ This addendum pairs `screen-spec.md` with L7 unit-test oracles. It covers the L6
 
 | L6 doc | 機能 | 対応 test ファイル | 判定 |
 |---|---|---|---|
-| function-spec.md | 関数 signature (§1) / pseudocode (§2) / rule engine 10 型 (§4) / routeFiling 契約 / spec IR projection 契約 | tests/plan-lint.test.ts, tests/vmodel-pair.test.ts, tests/agent-guard.test.ts, tests/mode-catalog.test.ts, tests/frontmatter.test.ts (U-FUNC/U-CORE/U-RULE は分散実装、専用 U-ID タグ無し)。後続 U3 L7 で tests/spec-ir-projections.test.ts, tests/projection-writer.test.ts, tests/doctor.test.ts に U-SPECIR を実装する。 | covered + pending U3 L7 |
+| function-spec.md | 関数 signature (§1) / pseudocode (§2) / rule engine 10 型 (§4) / routeFiling 契約 / spec IR projection 契約 | `tests/vmodel-pair.test.ts`, `tests/agent-guard.test.ts`, `tests/mode-catalog.test.ts`。`tests/plan-lint.test.ts` と `tests/frontmatter.test.ts` は S7 で退役した PLAN 専用対応で、代替 coverage は主張しない。U-FUNC/U-CORE/U-RULE は分散実装、専用 U-ID タグ無し。後続 U3 L7 の U-SPECIR は `tests/spec-ir-projections.test.ts`, `tests/projection-writer.test.ts`, `tests/doctor.test.ts` に対応する。 | 現行部分 covered + pending U3 L7。退役した PLAN 専用対応は coverage 外 |
 | edge-case.md | `@edge-normal/error/boundary/throws` 4 観点 | 各 lint test の `@edge-*` 契約実装先に分散 (専用ファイル無し) | covered |
 | session-log.md | resolveActivePlan/recordEvent/compressPlanDigest/onStop/onSessionStart | tests/session-log.test.ts | covered |
 | forced-stop-feedback.md | detectDanglingTurn/recordForcedStop/classifyFeedback/recordFeedback/scanDanglingStops | tests/forced-stop.test.ts | covered |
@@ -1024,16 +1023,16 @@ This addendum pairs `screen-spec.md` with L7 unit-test oracles. It covers the L6
 | governance-enforcement.md | scrum-reverse (pocOrphans/badReverseRefs) + propagation (signal 語彙一致) | tests/scrum-reverse.test.ts, tests/propagation.test.ts | covered |
 | backfill-pairing.md | parseRequires/parseGlossaryTerms/analyzeBackfill/loadBackfillDocs/checkBackfill | tests/backfill-pairing.test.ts | covered |
 | vmodel-pair-freeze.md | loadPairDocs/analyzePairFreeze (§1-§3) + analyzeVerificationGroups (§7) | tests/vmodel-pair.test.ts | covered |
-| review-evidence.md | hasReviewEvidence/parseReviewPlan/analyzeReviewEvidence/loadReviewPlans | tests/review-evidence.test.ts | covered |
-| review-evidence-stale.md | draft/降格 PLAN の stale approval 検出 (U-REVIEW-007/008) | tests/review-evidence.test.ts | covered |
-| cross-review-enforcement.md | extractReviewEntries/crossReviewViolations (U-XREVIEW) | tests/review-evidence.test.ts | covered |
-| test-before-review.md | tests_green_at ≤ reviewed_at 順序検証 (U-TORDER) | tests/review-evidence.test.ts | covered |
+| review-evidence.md | `hasReviewEvidence` / `parseReviewPlan` / `analyzeReviewEvidence` / `loadReviewPlans` (旧 PLAN 専用) | S7 で退役 (`tests/review-evidence.test.ts` も退役) | 退役した関数・case は coverage 外。汎用 `EvidencePolicy` の実装は `src/forward/domain/evidence-policy.ts`、既存テストは `tests/forward/evidence-policy.test.ts` だが、旧 review 処理の代替とはしない |
+| review-evidence-stale.md | draft/降格 PLAN の stale approval 検出 (旧 U-REVIEW-007/008) | S7 で退役 (`tests/review-evidence.test.ts` も退役) | PLAN 専用 oracle 退役。代替 coverage は主張しない |
+| cross-review-enforcement.md | `extractReviewEntries` / `crossReviewViolations` (旧 U-XREVIEW) | S7 で退役 (`tests/review-evidence.test.ts` も退役) | PLAN 専用 oracle 退役。代替 coverage は主張しない |
+| test-before-review.md | `tests_green_at ≤ reviewed_at` 順序検証 (旧 U-TORDER) | S7 で退役 (`tests/review-evidence.test.ts` も退役) | PLAN 専用 oracle 退役。代替 coverage は主張しない |
 | module-drift.md | parseListedModules/analyzeModuleDrift + asset-drift/change-impact/coding-rules/ddd-tdd-rules addendum | tests/module-drift.test.ts, tests/asset-drift.test.ts, tests/change-impact.test.ts, tests/coding-rules.test.ts, tests/ddd-tdd-rules.test.ts | covered |
 | descent-obligation.md | loadDescentAdjacency/generateObligations/analyzeDescentObligations | tests/descent-obligation.test.ts | covered |
 | skill-index.md | analyzeSkillAssignments/scoreSkill/scanSkillCatalog + skill new scaffolder | tests/skill-assignment.test.ts, tests/skill-scaffold.test.ts, tests/skill-recommend.test.ts | covered |
 | fr-unit-coverage.md | U-FR-L1-* FR registry ↔ L6 spec ↔ U-* oracle 被覆 | tests/l6-fr-coverage.test.ts, tests/fr-registry-audit.test.ts, tests/fr-roadmap-coverage.test.ts | covered |
 | gate-confirm.md | judgment gate と confirm 結合 (U-GCONF) | tests/gate-confirm.test.ts | covered |
-| plan-schedule-lint.md | 工程表 schedule 最小強制 (U-PLANSCH) | tests/plan-lint.test.ts | covered |
+| plan-schedule-lint.md | 工程表 schedule 最小強制 (旧 U-PLANSCH) | S7 で退役 (`tests/plan-lint.test.ts` も退役) | PLAN 専用 oracle 退役。代替 coverage は主張しない |
 | screen-spec.md | parseScreenQuery/validateScreenQuery/handleScreenEvent/loadScreenViewModel/buildRouteRegistry (U-SCREEN-001〜006) | tests/screen-impl-pair-freeze.test.ts は pair-freeze gate のみを被覆し、上記個別関数 (parseScreenQuery 等) を直接 Grep しても実 test 未検出 | **gap** |
 
 ## PLAN-L6-38 Router Function Contracts Addendum (駆動モデルルーター関数契約、2026-07-07)
@@ -1052,12 +1051,12 @@ This addendum pairs `screen-spec.md` with L7 unit-test oracles. It covers the L6
 | U-ROUTE-R3 | `routeFiling(signal)` (不変条件) | 非 forward の FilingTarget は `forward_insufficient_reason` 無しに生成されない。生成時は reason にトリガ signal が含まれる。 |
 | U-ROUTE-R4 | `routeFiling(signal)` (cold L7 禁止) | いかなる signal に対しても `(allowed_kinds=[impl] 単独, layer_band=[L7])` の filing 入口を emit しない。 |
 | U-ROUTE-R5 | `routeFiling(signal)` (競合/境界) | 失敗系 signal 競合は Incident > Recovery > Reverse > Refactor の全順序で解決。最長一致 (`regression_prod` が `regression` に吸われない)。escalation 境界 signal は mode 非依存で `requires_human_approval=true` へ昇格。 |
-| U-ROUTE-R6 | `analyzePlanGovernance.routeModeKindLayer(plan)` | `route_mode` の layer band 外の non-archived PLAN は `route_mode_kind_layer_mismatch` で fail-close。band 内は violation 0。実装済み oracle は `U-PLANGOV-011v4`: `verify` は L8-L14 のみ、`add-feature` は L3-L7 のみを受理する。 |
+| U-ROUTE-R6 | `analyzePlanGovernance.routeModeKindLayer(plan)` | `route_mode` の layer band 外の non-archived PLAN は `route_mode_kind_layer_mismatch` で fail-close。band 内は violation 0。`verify` は L8-L14 のみ、`add-feature` は L3-L7 のみを受理する。旧 oracle `U-PLANGOV-011v4` は S7 で退役し、現行 test coverage とはしない。 |
 | U-ROUTE-R7 | `analyzePlanGovernance.routeModeKindLayer(plan)` (免除) | legacy landed / draft debt は `routeModeKind` と同一 allowlist を使う。legacy landed は恒久免除、draft debt は status=draft の間のみ免除し、着手時に fail-close。`promote_by` 有効期限 + justification までの escape hardening は Appendix C.4 carry として別 slice で固定する。 |
 | U-ROUTE-R8 | `assertL7HasDesignAncestor(plan, registry)` | `layer=L7` の impl 系 PLAN (`impl`/`add-impl`) は parent 連鎖が設計層 PLAN (L4/L5/L6 の design/add-design) に到達しなければ `l7_cold_intake` で fail-close。到達すれば violation 0。 |
 | U-ROUTE-R9 | `assertL7HasDesignAncestor(plan, registry)` (two-phase intake) | 対の Reverse PLAN が draft でも intake (draft 起票) は許容。confirmed 昇格時は双方 pairing ready (相互参照解決 + Reverse 側 forward_routing 宣言) でなければ fail-close。 |
 | U-ROUTE-R10 | `routeFiling(signal)` (Reverse 出所必須) | `mode=reverse` の FilingTarget は `origin` (origin signal / origin plan_id) を必ず持つ。出所なき standalone reverse は途中導入 (既走プロジェクト onboarding) signal の場合のみ emit され、それ以外は fail-close。`requires_human_approval` は escalation 境界昇格の結果として FilingTarget 自身が保持する。 |
-| U-ROUTE-R11 | `analyzePlanGovernance.verifyGateBinding(plan)` / `frontmatterSchema` | `kind=verify` は `layer=L8..L14` と `verification_gate=G8..G14` を 1:1 で宣言しなければ `verify_gate_missing` / `verify_gate_layer_mismatch` で fail-close。non-verify PLAN の `verification_gate` も拒否し、右腕 gate を実装・設計 PLAN に誤接続しない。実装 oracle は `U-PLANGOV-011v5` と `frontmatter.test.ts` の verify gate 契約。 |
+| U-ROUTE-R11 | `analyzePlanGovernance.verifyGateBinding(plan)` / `frontmatterSchema` | `kind=verify` は `layer=L8..L14` と `verification_gate=G8..G14` を 1:1 で宣言しなければ `verify_gate_missing` / `verify_gate_layer_mismatch` で fail-close。non-verify PLAN の `verification_gate` も拒否し、右腕 gate を実装・設計 PLAN に誤接続しない。旧 oracle `U-PLANGOV-011v5` と `frontmatter.test.ts` の verify gate case は S7 で退役し、現行 test coverage とはしない。 |
 | U-RLG-001 | `analyzeRightLungDocGovernance(input)` | L8/L9/L10/L12/L14 の各 right-lung test-design doc が `Gx-WORKFLOW` と 9 marker (`test_strategy` / `test_plan` / `test_conditions` / `coverage_items` / `test_procedures` / `execution_evidence` / `exit_criteria` / `defect_routing` / `verification_design`) と層別 test case ID family (`IT-` / `ST-` / `UXV-` / `AT-` / `OT-`) を持てば pass。 |
 | U-RLG-002 | `analyzeRightLungDocGovernance(input)` | workflow marker、`defect_routing` / `verification_design` などの必須 marker、または層別 test case ID family が欠落した doc は violation として missing marker 名を返す。 |
 | U-RLG-003 | `checkRightLungDocGovernance(repoRoot)` / doctor full profile | repo root 不在は fail-close。実 repo は 5 doc checked で green となり、doctor full profile に `right-lung-doc-governance` が配線される。 |
@@ -1120,6 +1119,7 @@ This addendum pairs `screen-spec.md` with L7 unit-test oracles. It covers the L6
 > S7 で PLAN 工程表と activation profile の投影および join を退役する。以下の R1〜R4 は退役前の検証履歴。
 > `schedule_entries` / `activation_entries` / `activation_schedule_reviews` は旧 DB の物理表と行を保持する。
 > 残る文書カタログ・文書スケール・仕様 IR の検証は下表で維持する。
+> 履歴 `U-SCHEDULE-LIVE-002` は `selectScheduleLiveState(db)` / `latestReviewEvidenceEntry` を対象とした。authoring green と最新 test/gate (`blocked`を含む) または最新review snapshotの差し戻し矛盾を red にする一方、passing signal だけで authoring yellow/red を green に昇格しない。最新時刻はUTC instantで比較し、同一instantは後置row/entryを採用する。未知/空ragはyellowへfail-closedする。
 
 | U-ID | Target | Oracle |
 |---|---|---|
@@ -1127,16 +1127,15 @@ This addendum pairs `screen-spec.md` with L7 unit-test oracles. It covers the L6
 | U-ACTIVATION-SCHEDULE-R2 | `joinActivationScheduleReviews(input)` | S7 前は `activation_entries.plan_id` と `schedule_entries.plan_id` を join し、`current_location` / `rag` / `schedule_status` / `v_pair` を read-model に含める。S7 で退役する。 |
 | U-ACTIVATION-SCHEDULE-R3 | `analyzeSpecIrIntegrity(input)` | S7 前は `scope_status=deferred` または `out_of_scope` の理由欠落、または `target_kind=plan` の工程表未接続を finding 化し、projection 側で工程行を創作しない。S7 で退役する。 |
 | U-ACTIVATION-SCHEDULE-R4 | `rebuildHarnessDb` / `findReference` | S7 前は real repo rebuild で `activation_schedule_reviews` が populated になり、`vmodel-clean-core` や `deferred` で検索できる。S7 で退役する。 |
-| U-SCHEDULE-LIVE-002 | `selectScheduleLiveState(db)` / `latestReviewEvidenceEntry` | authoring green と最新 test/gate (`blocked`を含む) または最新review snapshotの差し戻し矛盾を red にする一方、passing signal だけで authoring yellow/red を green に昇格しない。最新時刻はUTC instantで比較し、同一instantは後置row/entryを採用する。未知/空ragはyellowへfail-closedする。 |
 | U-SCHEDULE-LIVE-004 | `renderSessionStartDigest(digest)` / SessionStart | `state-and-gates / HEAD / actionable / memory` の固定4段を1回だけ出力し、旧 feedback/memory/escalation block を重複表示しない。Iron Law escalationは第1段に内包し、DB/HEAD不在は fail-open。 |
 | U-DOCUMENT-CATALOG-R1 | `parseDocumentCatalogEntries(input)` / `projectSpecIr` | `docs/governance/vmodel-document-catalog.md` から `document_catalog_entries` を populated にし、`DOC-L4-DATA` などを `findReference` で検索できる。 |
 | U-DOCUMENT-SCALE-R1 | `parseDocumentScaleProfileEntries(input)` / `joinDocumentScaleProfileReviews(input)` | `docs/governance/vmodel-document-scale-profiles.md` から `document_scale_profile_entries` を populated にし、`document_catalog_entries` と join して `document_scale_profile_reviews` に catalog layer/sub_doc/default status を含める。 |
 | U-DOCUMENT-SCALE-R2 | `analyzeSpecIrIntegrity(input)` | 未知 decision/detail/status、catalog 欠落、skip/defer/conditional の理由欠落、`required_plan_id` 未解決を finding 化し、profile 判定を projection 側で補完しない。 |
 | U-DOCUMENT-SCALE-R3 | `rebuildHarnessDb` / `findReference` | real repo rebuild で `document_scale_profile_reviews` が populated になり、`enterprise DOC-L4-REPORT adopt` などを検索できる。 |
 | U-SCOPE-PREVIEW-R1 | `buildScopeDryRunPreview(db, input)` | document scale profile の `conditional` 文書は capability flag が一致した場合だけ `resolved_scope_status=in_scope`、一致しなければ `conditional` のまま返す。 |
-| U-SCOPE-PREVIEW-R2 | `buildScopeDryRunPreview(db, input)` | `defer` 文書は `required_plan_id` が投影済みなら warn なしで `required_action=follow required plan ...` を返し、未投影なら warn finding を返す。 |
+| U-SCOPE-PREVIEW-R2 | `buildScopeDryRunPreview(db, input)` | defer 文書は理由と `resolved_scope_status=deferred` を保持し、`required_action=route defer target before implementation` を返す。 |
 | U-SCOPE-PREVIEW-R3 | `buildScopeDryRunPreview(db, input)` | document scale profile 不在は `scope-preview-profile-missing` error finding とし、dry-run が silent success しない。 |
-| U-SCOPE-PREVIEW-R4 | `ut-tdd db scope-preview --profile <id> --json` | CLI は JSON/text 両出力を持ち、`documents` / `activations` / `gates` / `detectors` / `findings` / `summary` を返す。source docs / PLAN / profile を更新しない。 |
+| U-SCOPE-PREVIEW-R4 | `ut-tdd db scope-preview --profile <id> --json` | S7 後の JSON は `documents` / `gates` / `detectors` / `findings` / `summary` を返し、text は同じ文書判定を表示する。旧表入り DB と新規 DB で同じ文書・gate・detector を返す。source docs と profile は保持する。 |
 
 ## PLAN-L6-42 Typed Spec Declaration Addendum (2026-07-08)
 
@@ -1395,13 +1394,8 @@ spec:
 
 | test ID | precondition / fixture | command / query | postcondition / invariant / expected finding |
 |---|---|---|---|
-| `U-PA-001` | 空/不正`asset_id` | `PlanAsset.create` | `plan-asset-invalid-id`, exit 1 |
-| `U-PA-002` | revision 1,3 | `PlanAsset.reconstruct` | `plan-revision-gap`, exit 1 |
-| `U-PA-003` | alias/layer変更command | `PlanAsset.revise` | 新revisionでも`asset_id`不変、exit 0 |
 | `U-PA-004` | 旧EvidenceRecord snapshot + 新revisionの作成 | `EvidenceRecord.create` | 新snapshot作成後も旧recordのJSONは不変で、旧recordは凍結される。既存 usability 条件はU-PA-005で検証する。 |
 | `U-PA-005` | expired/別revision/policy別exit evidence | `EvidenceRecord.isUsableFor` | `evidence-stale-or-subject-mismatch`、Red expected nonzeroだけusable、exit 1/0 |
-| `U-PA-006` | legacy PLAN全field + short alias現HEAD全衝突群 | canonical adapter / alias resolver | field loss 0、多義は`plan-migration-collision`で自動選択0、exit 1 |
-| `U-PA-007` | 同ordinal同時予約 | `PlanIdReservation.reserve` | 片方だけ成功、他方`plan-id-reservation-conflict` |
 | `U-PA-008` | HEAD tracked `ut-tdd.project.json`、改竄bytes/receipt、schema/identity不正、remote無し | `loadTrackedProjectIdentity` / `loadProjectIdentityFromHead` | exact HEAD blobだけ成功しreceipt digest安定。index/working tree/remote補完0、異常種別を専用findingでfail-close |
 | `U-PA-045` | 複数kind/producer/subject/revision/commit/expiry/exit/claims outcomeを組合せたevidence全履歴 | `EvidenceRecord` / `EvidencePolicy` | policy定義と評価contextを分離し、typed claimsRuleに適合するactive frontierだけをmin/max cardinalityへ数え、requirement別missing/rejected IDをstable順で返す |
 | `U-PA-046` | raw/split/env/header/URI secret command、未知kind/producer/exit/claims rule、kind不一致claims、自己/orphan/cycle/fork/逆因果supersede、全record field改変 | `EvidenceRecord.create` / policy frontier / digest | branded redacted argv以外は拒否、claimsを自由文から推測しない、supersession不正とrecord digest不一致を拒否、旧record不変 |
@@ -1508,8 +1502,8 @@ debt routeを扱う後続5件は、後続sliceでIDを再採番してfreezeす�
 
 ## PLAN-L7-428 ステージ紐付きエリシテーション oracle (PLAN-REVERSE-428 backfill、2026-07-13)
 
-対象 = `src/elicitation/context.ts` / `src/elicitation/record.ts`。実テスト =
-`tests/elicitation-context.test.ts` (in-memory harness.db + temp repo fixture)。
+対象は `src/elicitation/record.ts` の採択記録のみ。`src/elicitation/context.ts` と PLAN 文脈選択のcaseは S7 で退役した。実テスト =
+`tests/elicitation-context.test.ts` の `U-ELICIT-006` (append-only JSONL 記録)。
 
 | ID | 観点 | fixture | expected |
 | --- | --- | --- | --- |
@@ -1998,22 +1992,22 @@ Actions 実 run の証跡 (unit oracle ではなく PLAN AC-4 / AC-5 の受入�
 source workflow / source template / Pack template / setup builtinのどれか1 artifactだけの更新を完了扱いにしない。
 検査対象本文をprofile選択に再利用せず、構造異常は例外でdoctor wrapperへ逃がさずanalyzer自身がviolation化する。
 
-## PLAN-L7-435 駆動モデル準拠PLAN Admission oracle (2026-07-15)
+## PLAN-L7-435 旧 PLAN Admission oracle の履歴 (2026-07-15)
 
-対象 = `PlanAdmissionPolicy` / `ut-tdd plan draft` / admission receipt / PLAN tamper fence。
+旧対象は `PlanAdmissionPolicy`、`ut-tdd plan draft`、admission receipt、PLAN tamper fence。CLI と lint の重複判定は #1783 で退役し、残る専用 adapter と parser は S7 の admission source 段で退役する。
 
 Issue #163のadditive deltaは、PLAN IDを共有parserの
-`namespace + numeric ordinal` で一意化し、legacy collision debtをexact setとして検査する。
+`namespace + numeric ordinal` で一意化し、legacy collision debt を exact set で検査していた。
 
-| ID | 対象 | oracle |
-|---|---|---|
-| `U-PLANGOV-002a` | slug違いの同一L6 ordinal | 両PLANを`duplicate_plan_identity`で拒否 |
-| `U-PLANGOV-002b` | `RECOVERY-070` / `RECOVERY-70` | zero paddingを除いた同一座標として拒否 |
-| `U-PLANGOV-002c` | legacy collision exact set | 既知集合だけを許容 |
-| `U-PLANGOV-002d` | legacy座標への3件目追加 | 3件すべてを拒否 |
-| `U-PLANGOV-002e` | legacy構成plan_idの差し替え | exact set不一致として拒否 |
-| `U-PLANGOV-002f` | legacy collisionの一方を削除 | 解消済み単独PLANを許容 |
-候補oracleはL7実装と同時に `U-PADM-*` へ昇格し、tests内citationを必須とする。
+以下は旧 `src/plan/lint.ts` の `analyzePlanGovernance` に対応する ID と検証の記録。
+
+- `U-PLANGOV-002a` は slug違いの同一L6 ordinal を対象とし、期待は「両PLANを`duplicate_plan_identity`で拒否」。
+- `U-PLANGOV-002b` は `RECOVERY-070` / `RECOVERY-70` を対象とし、期待は「zero paddingを除いた同一座標として拒否」。
+- `U-PLANGOV-002c` は legacy collision exact set を対象とし、期待は「既知集合だけを許容」。
+- `U-PLANGOV-002d` は legacy座標への3件目追加 を対象とし、期待は「3件すべてを拒否」。
+- `U-PLANGOV-002e` は legacy構成plan_idの差し替え を対象とし、期待は「exact set不一致として拒否」。
+- `U-PLANGOV-002f` は legacy collisionの一方を削除 を対象とし、期待は「解消済み単独PLANを許容」。
+旧規定では L7 実装と同時に候補 oracle を `U-PADM-*` へ昇格し、テストに ID を引用することを求めていた。
 
 | ID | 観点 | fixture / mutation | expected |
 | --- | --- | --- | --- |
@@ -2023,9 +2017,9 @@ Issue #163のadditive deltaは、PLAN IDを共有parserの
 工程表/replay/改ざん候補はL6正本の `CANDIDATE-PADM-006`〜`008` を再定義せず、そのIDのまま
 上記 `U-PADM-012`〜`016` / `U-PADM-024`〜`025` へ昇格した。候補IDの別意味への再利用は禁止する。
 
-property testは全signal×mode×tuple×status×createdの直積で、canonical policyがpermitした時だけ
-書込み可能であることを確認する。mutation testはunknown→Forward fallback、archived/date免除、
-tuple allowlist default、Issue requirement削除、schedule fallback、receipt digest比較除去を全てkillする。
+当時の property test は全 signal×mode×tuple×status×created の直積で、policy が許可した時だけ
+書込み可能であることを検証条件とした。mutation test は unknown→Forward fallback、archived/date 免除、
+tuple allowlist default、Issue requirement 削除、schedule fallback、receipt digest 比較除去を検証対象とした。
 
 ## PLAN-L7-436〜439 Execution Ledger / GitHub連動 oracle (2026-07-15)
 
