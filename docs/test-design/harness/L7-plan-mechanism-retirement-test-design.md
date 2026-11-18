@@ -109,6 +109,8 @@ B1で変更できるのは旧4 testのtitle文字列、`docs/test-design/harness
 
 **後続工程**: B2の4 test退役とは分け、後続source工程でPLAN wrapperを退役するときにpublic callerを直接再接続し、必要なhelperを移す。その後に共有evidence 9 moduleをForward側へ移す。identity loader、custody、evidence 9 moduleは4 test処分の対象にしない。
 
+**S7 の工程表証跡切替**。A-136 の現行用語と証跡の実在検査、A-143 の `workflow-definition` の現物必須証跡と `closed` は維持する。S7 の実装2本目で、`tests/cycle-p4-verification.test.ts` と `tests/l14-close-audit.test.ts` の fixture を L6 §8 の現行証跡に合わせ、既存の実リポジトリ検査が旧工程表の module と test の撤去後も通ることを確認する。旧パスは archive 参照として監査記録に残す。
+
 ## 4. 昇格と引用の方針
 
 - 025 の Green 実装時に既存 `tests/github-repository-policy.test.ts` の `U-L7-451-W5-001` が要求する3 form の欄名を `origin_issue` に同期し、他の必須欄と blank issue 禁止の既存検査を維持する。
