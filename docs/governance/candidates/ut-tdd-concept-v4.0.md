@@ -23,7 +23,7 @@ issue: 530
 ## Authority 境界
 
 本書は **未承認候補**であり、現行 concept v3.1 と要件定義書 v1.2 を置換しない。L1 要求候補
-(`ut-tdd-concept-v4-requests.md`)、L3 要件候補 (`ut-tdd-concept-v4-requirements.md`)、L10 受入候補
+(`ut-tdd-concept-v4-requests.md`)、L3 要件候補 (`ut-tdd-concept-v4-requirements.md`)、L12 受入候補
 (`ut-tdd-concept-v4-acceptance.md`) への分解、PO の plan 固有承認、cross-review、main 反映後の再読が完了した
 場合だけ v4.0 へ昇格する。それまで CLAUDE.md の読込順、`docs/governance/README.md`、adapter、doctor gate は
 v3.1 を current authority として参照し続ける。本書だけを根拠に runtime、CLI、`.ut-tdd/` state、DB projection、
@@ -543,7 +543,7 @@ prompt 集、persona 集、multi-agent chat room、全会話保存、Issue を�
 ## 昇格条件
 
 1. v3.1 との差分を L1 要求候補へ materialize する。
-2. 原則を L3 要件候補へ分割し、L10 受入候補 (positive / negative oracle) を作る。
+2. 原則を L3 要件候補へ分割し、L12 受入候補 (positive / negative oracle) を作る。
 3. 既存 owner (VUP-REQ-01〜10、U23、BR-01〜08) との重複・矛盾・未実装主張を検査する。
 4. PO の plan 固有承認を typed provenance へ束縛する。
 5. concept v4.0 を `docs/governance/` へ昇格し、v3.1 を archive へ降格、CLAUDE.md / AGENTS.md / README /
