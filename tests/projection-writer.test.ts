@@ -23,6 +23,7 @@ import {
 import { type HarnessDb, isSecretLike, openHarnessDb } from "../src/state-db/index.ts";
 import { migrate, rowCounts } from "../src/state-db/migration.ts";
 import {
+  latestReviewEvidenceEntry,
   missingTestPlanIdNextAction,
   projectDesignPairFreezeFindings,
   projectRuntimeGuardrailDecisionFromSessionEvent,
@@ -49,6 +50,17 @@ const hasSourceScreenDocs = () =>
   existsSync(
     join(process.cwd(), "docs", "design", "harness", "L1-requirements", "screen-requirements.md"),
   );
+
+describe("review evidence projection selection", () => {
+  it("U-SCHEDULE-LIVE-002: compares reviewed_at as instants and resolves ties by declaration", () => {
+    const latest = latestReviewEvidenceEntry([
+      { reviewed_at: "2026-07-10T00:30:00+09:00", verdict: "offset-but-older" },
+      { reviewed_at: "2026-07-09T20:00:00Z", verdict: "absolute-latest" },
+      { reviewed_at: "2026-07-10T05:00:00+09:00", verdict: "approve-after-fix" },
+    ]);
+    expect(latest?.verdict).toBe("approve-after-fix");
+  });
+});
 
 describe("PLAN-L7-450 W1 remediation routing", () => {
   it("U-L7-450-W1-001: draft ownership candidate requires confirm and declaration together", () => {

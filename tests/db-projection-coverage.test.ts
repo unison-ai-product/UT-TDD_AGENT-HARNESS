@@ -110,8 +110,6 @@ describe("db-projection-coverage detector", () => {
       "spec_rag_closure_entries",
       "detector_route_candidates",
       "agent_contracts",
-      "github_review_lane_receipts",
-      "execution_readiness_projection",
       "github_project_item_projection",
       "github_object_bindings",
       "github_projection_outbox",

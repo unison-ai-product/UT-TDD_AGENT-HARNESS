@@ -93,6 +93,9 @@ describe("loadLintWiringInput (live repo regression fence)", () => {
       "forward-convergence",
       "scrum-reverse",
       "tool-adapter",
+      // #1741 Red の stub だけの保留登録 (#1282 の consumer-trace と同じ扱い)。Green で配線して撤去する。
+      "zero-trust-download",
+      "zero-trust-download-inputs",
     ]);
     expect(r.ok).toBe(true);
     // The audits this PLAN re-wired into doctor are now genuinely reachable.

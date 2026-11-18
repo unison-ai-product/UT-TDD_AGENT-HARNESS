@@ -83,6 +83,10 @@ function isExcludedAddress(local: string, domain: string, next: string | undefin
   return l === "git" && next === ":"; // E3
 }
 
+/** L6 §3 E5: Dependabot's whole-line sign-off trailer (commit message only). */
+const DEPENDABOT_SIGNOFF =
+  /^(?:[Ss][Ii][Gg][Nn][Ee][Dd]-[Oo][Ff][Ff]-[Bb][Yy]):[ \t]+dependabot\[bot\][ \t]+<support@github\.com>[ \t]*$/;
+
 function isPackageLock(path: string | null): boolean {
   return path !== null && path.replaceAll("\\", "/").split("/").at(-1) === "package-lock.json";
 }
@@ -99,7 +103,10 @@ function lineHasEmail(text: string): boolean {
 export function findEmailHitLines(unit: PrivacyUnit): number[] {
   if (unit.field === "content" && isPackageLock(unit.path)) return []; // E4
   const hits = new Set<number>();
-  for (const { line, text } of unit.lines) if (lineHasEmail(text)) hits.add(line);
+  for (const { line, text } of unit.lines) {
+    if (unit.field === "message" && DEPENDABOT_SIGNOFF.test(text.replace(/\r$/, ""))) continue; // E5
+    if (lineHasEmail(text)) hits.add(line);
+  }
   return [...hits].sort((a, b) => a - b);
 }
 
