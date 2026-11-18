@@ -48,7 +48,6 @@ import {
 import { runDoctor, runDoctorMeasured } from "./doctor/index.ts";
 import { writeDoctorResultEnvelopeFile } from "./doctor/result-file.ts";
 import { acquireDoctorLock, doctorLockBlockedMessage } from "./doctor/singleton-lock.ts";
-import { renderElicitationContext, selectElicitationContext } from "./elicitation/context.ts";
 import { appendDesignDecision, DESIGN_DECISION_LOG_PATH } from "./elicitation/record.ts";
 import { computeSkillMetrics } from "./feedback/engine.ts";
 import { registerForwardWorkflowCommands } from "./forward/adapters/cli-registrar.ts";
@@ -68,14 +67,7 @@ import {
   renderPolicyDiff,
 } from "./github/repository-policy.ts";
 import { loadRelationGraphSourceSet } from "./graph/loader.ts";
-import {
-  checkHandoverBypass,
-  checkHandoverDiscipline,
-  latestSessionId,
-  nodeHandoverDeps,
-  runHandover,
-  setActivePlanCli,
-} from "./handover/index.ts";
+import { checkHandoverBypass, nodeHandoverDeps, runHandover } from "./handover/index.ts";
 import {
   renderSessionStartDigest,
   selectSessionStartDigest,
@@ -193,7 +185,6 @@ import {
   dispatch,
   nodeDeps,
   parseSessionEvents,
-  resolveActivePlan,
   type SessionHookInput,
   safeName,
 } from "./runtime/session-log.ts";
@@ -422,7 +413,7 @@ function hookTargetPaths(input: { tool_input?: unknown } | null, repoRoot: strin
 
 function writeHandoverWarnings(): void {
   const hdeps = nodeHandoverDeps(process.cwd());
-  for (const w of [...checkHandoverDiscipline(hdeps), ...checkHandoverBypass(hdeps)]) {
+  for (const w of checkHandoverBypass(hdeps)) {
     process.stderr.write(`[ut-tdd handover] ${w}\n`);
   }
 }
@@ -1135,7 +1126,7 @@ session
   .action((opts: { session?: string }) => {
     const input = readHookInput(HOOK_EVENT_SESSION_START, opts.session);
     const repoRoot = requireRuntimeRepoRoot();
-    const deps = nodeDeps(repoRoot, gitBranch, gitHead);
+    const deps = nodeDeps(repoRoot, gitHead);
     dispatch(input, deps, HOOK_EVENT_SESSION_START);
     runSessionStartSideEffects({ repoRoot, input, deps });
     process.stdout.write(`session-log: start ${input.session_id ?? "ut-tdd-cli"}\n`);
@@ -1143,12 +1134,12 @@ session
 
 session
   .command("summary")
-  .description("compress session events into PLAN digest and surface handover discipline warnings")
+  .description("record session end and surface handover bypass warnings")
   .option("--session <id>", SESSION_OPTION_DESCRIPTION)
   .action((opts: { session?: string }) => {
     const input = readHookInput("Stop", opts.session);
     const repoRoot = requireRuntimeRepoRoot();
-    dispatch(input, nodeDeps(repoRoot, gitBranch, gitHead), "Stop");
+    dispatch(input, nodeDeps(repoRoot, gitHead), "Stop");
     writeHandoverWarnings();
     // PLAN-L7-365 Step 2 (issue #78): Stop 境界で on-disk harness.db を自動追従。
     // Stop hook の timeout 予算 (5s) を消費しないよう detached で fire-and-forget 起動し、
@@ -1241,7 +1232,7 @@ hook
       const input = readHookInput("PostToolUse", opts.session);
       const repoRoot = requireRuntimeRepoRoot({ allowCwdFallback: true });
       const postInput = createPostToolUseInput(input, opts);
-      dispatch(postInput, nodeDeps(repoRoot, gitBranch, gitHead), "PostToolUse");
+      dispatch(postInput, nodeDeps(repoRoot, gitHead), "PostToolUse");
       const encodingGuard = runWriteEncodingGuard(postInput, {
         repoRoot,
         changedFiles: () => loadChangedFiles(repoRoot),
@@ -1417,24 +1408,8 @@ plan
   });
 
 plan
-  .command("use [id]")
-  .description(
-    "active PLAN を .ut-tdd/state/current-plan に記録 (session-log digest を活性化)。--clear で解除",
-  )
-  .option("--clear", "current-plan を clear")
-  .action((id: string | undefined, opts: { clear?: boolean }) => {
-    if (!opts.clear && !id) {
-      process.stderr.write("plan use <id> または --clear を指定してください\n");
-      process.exitCode = 1;
-      return;
-    }
-    setActivePlanCli(process.cwd(), opts.clear ? null : (id as string), gitBranch);
-    process.stdout.write(opts.clear ? "current-plan: cleared\n" : `current-plan: ${id}\n`);
-  });
-
-plan
   .command("complete [id]")
-  .description("completed handover を記録し、current-plan を clear")
+  .description("completed handover を記録")
   .option("--dry-run", "handover を生成するが書き込まない")
   .action((_id: string | undefined, opts: { dryRun?: boolean }) => {
     const date = new Date().toISOString().slice(0, 10);
@@ -1455,42 +1430,28 @@ plan
 
 const handover = program
   .command("handover")
-  .description("既存 digest から機械ポインタ CURRENT.json を生成")
+  .description("機械ポインタ CURRENT.json を生成")
   .option("--dry-run", "書き込まず内容のみ表示")
   .option("--complete", "status=completed として記録")
-  .option(
-    "--scope-session",
-    "§1-§2 を直近 session が触れた digest のみへ絞る (IMP-078 gap④ 前 session 混入排除)",
-  )
-  .option(
-    "--session <id>",
-    "session scope に使う session_id を明示 (省略時 --scope-session で直近を推定)",
-  )
-  .action(
-    (opts: { dryRun?: boolean; complete?: boolean; scopeSession?: boolean; session?: string }) => {
-      const date = new Date().toISOString().slice(0, 10);
-      const deps = nodeHandoverDeps(process.cwd());
-      // IMP-078 gap④: --session 明示 > --scope-session 推定 (latestSessionId) > なし。
-      const sessionId =
-        opts.session ?? (opts.scopeSession ? (latestSessionId(deps) ?? undefined) : undefined);
-      const r = runHandover(
-        {
-          date,
-          dryRun: Boolean(opts.dryRun),
-          complete: Boolean(opts.complete),
-          ...(sessionId ? { sessionId } : {}),
-        },
-        deps,
-      );
-      process.stdout.write(
-        `handover: active=${r.pointer.active_plan ?? "-"} status=${r.pointer.status}${opts.dryRun ? " (dry-run)" : ""}\n`,
-      );
-      for (const w of r.written) process.stdout.write(`  + ${w}\n`);
-      if (opts.dryRun) {
-        process.stdout.write(`\n--- pointer ---\n${JSON.stringify(r.pointer, null, 2)}\n`);
-      }
-    },
-  );
+  .action((opts: { dryRun?: boolean; complete?: boolean }) => {
+    const date = new Date().toISOString().slice(0, 10);
+    const deps = nodeHandoverDeps(process.cwd());
+    const r = runHandover(
+      {
+        date,
+        dryRun: Boolean(opts.dryRun),
+        complete: Boolean(opts.complete),
+      },
+      deps,
+    );
+    process.stdout.write(
+      `handover: active=${r.pointer.active_plan ?? "-"} status=${r.pointer.status}${opts.dryRun ? " (dry-run)" : ""}\n`,
+    );
+    for (const w of r.written) process.stdout.write(`  + ${w}\n`);
+    if (opts.dryRun) {
+      process.stdout.write(`\n--- pointer ---\n${JSON.stringify(r.pointer, null, 2)}\n`);
+    }
+  });
 
 const providerHandover = handover.command("provider").description("Claude/Codex provider handover");
 providerHandover
@@ -2539,7 +2500,7 @@ program
           toolName: "advisor",
           jsonOut: Boolean(opts.json),
         },
-        { gitBranch, gitHead, runSessionStartSideEffects, writeHandoverWarnings },
+        { gitHead, runSessionStartSideEffects, writeHandoverWarnings },
       );
       // 一次相談先のレスポンスエラーは advisor 全体を落とさず fallback へ切替える
       // (advisor-tool の advisor_tool_result_error と同じ fail-soft 思想)。
@@ -2555,7 +2516,7 @@ program
             toolName: "advisor",
             jsonOut: Boolean(opts.json),
           },
-          { gitBranch, gitHead, runSessionStartSideEffects, writeHandoverWarnings },
+          { gitHead, runSessionStartSideEffects, writeHandoverWarnings },
         );
       }
       const output = {
@@ -2594,7 +2555,6 @@ program
   );
 
 registerDelegationCommands(program, {
-  gitBranch,
   gitHead,
   resolveTaskText,
   runSessionStartSideEffects,
@@ -3021,13 +2981,8 @@ team
         let teamSessionSeq = 0;
         const repoRoot = process.cwd();
         const repoHasGitDir = existsSync(join(repoRoot, ".git"));
-        const cachedBranch = repoHasGitDir ? gitBranch() : null;
         const cachedHead = repoHasGitDir ? gitHead() : null;
-        const sessionDeps = nodeDeps(
-          repoRoot,
-          () => cachedBranch,
-          () => cachedHead,
-        );
+        const sessionDeps = nodeDeps(repoRoot, () => cachedHead);
         if (opts.json) {
           sessionDeps.warn = (message) => process.stderr.write(`${message}\n`);
         }
@@ -3984,27 +3939,7 @@ memory
     process.stderr.write(renderMemoryHealth(result));
   });
 
-const elicit = program
-  .command("elicit")
-  .description("design-decision elicitation bound to the current design stage");
-elicit
-  .command("context")
-  .description(
-    "resolve current stage + skill decision defaults + design coverage into an elicitation packet",
-  )
-  .option("--json", "JSON output")
-  .action((opts: { json?: boolean }) => {
-    const repoRoot = process.cwd();
-    const db = openHarnessDb(defaultHarnessDbPath(repoRoot), { repoRoot });
-    try {
-      const ctx = selectElicitationContext(db, { repoRoot });
-      process.stdout.write(
-        opts.json ? `${JSON.stringify(ctx, null, 2)}\n` : renderElicitationContext(ctx),
-      );
-    } finally {
-      db.close();
-    }
-  });
+const elicit = program.command("elicit").description("append design-decision adoption records");
 elicit
   .command("record")
   .description(`append an adopted design decision to ${DESIGN_DECISION_LOG_PATH}`)
@@ -4021,22 +3956,9 @@ elicit
         return;
       }
       const repoRoot = process.cwd();
-      let currentLocation = "";
-      try {
-        const db = openHarnessDb(defaultHarnessDbPath(repoRoot), { repoRoot });
-        try {
-          const ctx = selectElicitationContext(db, { repoRoot });
-          currentLocation = ctx.stage?.current_location ?? "";
-        } finally {
-          db.close();
-        }
-      } catch {
-        // fail-open: 工程表 stage が引けなくても記録は成立させる
-      }
       try {
         const record = appendDesignDecision(repoRoot, {
           issueNumber: Number(opts.issue),
-          currentLocation,
           topic: opts.topic,
           options: opts.options?.split(",") ?? [],
           chosen: opts.chosen,

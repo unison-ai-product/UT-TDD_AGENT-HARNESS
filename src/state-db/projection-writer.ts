@@ -87,7 +87,6 @@ import {
   collectGateRunEvidenceProjection as collectGateRunEvidenceProjectionCore,
   type GateRunEvidenceProjection,
 } from "./gate-run-evidence-projection.ts";
-import { rebuildExecutionReadiness } from "./github-forward-projection.ts";
 import { type GuardrailDecisionInput, inspectGuardrailInvariants } from "./guardrail-invariants.ts";
 import { defaultHarnessDbPath, type HarnessDb, openHarnessDb } from "./index.ts";
 import { migrate, rowCounts } from "./migration.ts";
@@ -871,43 +870,6 @@ function projectReviewEvidenceRegistry(repoRoot: string, db: HarnessDb): void {
           },
         });
       }
-    }
-  }
-}
-
-function projectGithubReviewLaneReceipts(repoRoot: string, db: HarnessDb): void {
-  for (const plan of loadReviewPlans(repoRoot)) {
-    for (const [index, entry] of plan.crossEntries.entries()) {
-      if (
-        entry.review_kind !== "cross_agent" ||
-        !entry.lane ||
-        !entry.plan_revision ||
-        !entry.subject_head
-      )
-        continue;
-      const id = stableId(
-        "github-review-lane",
-        `${plan.plan_id}:${entry.plan_revision}:${entry.lane}:${entry.subject_head}:${index}`,
-      );
-      recordProjectionEvent(db, {
-        table: "github_review_lane_receipts",
-        id,
-        row: {
-          review_lane_receipt_id: id,
-          plan_id: plan.plan_id,
-          plan_revision: entry.plan_revision,
-          lane: entry.lane,
-          subject_head: entry.subject_head,
-          verdict: entry.verdict ?? "",
-          reviewed_at: entry.reviewed_at ?? "",
-          tests_green_at: entry.tests_green_at ?? "",
-          worker_model: entry.worker_model ?? "",
-          reviewer_model: entry.reviewer_model ?? "",
-          attack_trials: entry.attack_trials ?? 0,
-          citations_json: JSON.stringify(entry.citations ?? []),
-          source: normalizePath(join("docs", "plans", plan.file)),
-        },
-      });
     }
   }
 }
@@ -2412,7 +2374,6 @@ export function rebuildHarnessDb(input: RebuildHarnessDbInput = {}): RebuildHarn
       time("roadmap-review", () => {
         projectRoadmapRollup(repoRoot, db);
         projectReviewEvidenceRegistry(repoRoot, db);
-        projectGithubReviewLaneReceipts(repoRoot, db);
         projectGuardrailInvariantAdvisories(db);
         projectDescentObligations(repoRoot, db);
         projectDesignPairFreezeFindings(repoRoot, db);
@@ -2470,9 +2431,6 @@ export function rebuildHarnessDb(input: RebuildHarnessDbInput = {}): RebuildHarn
       );
       time("test-cases", () => projectTestCaseCatalog(repoRoot, db));
       time("spec-ir", () => projectSpecIr(repoRoot, db, projectionDeps));
-      time("forward-readiness", () =>
-        rebuildExecutionReadiness({ db, now: nowIso(), transactional: false, repoRoot }),
-      );
       time("feedback", () => {
         projectFeedbackLifecycle(repoRoot, db, projectionDeps);
         projectVerificationDefectRoutingRefactorCandidates(db, projectionDeps);

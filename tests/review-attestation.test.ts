@@ -158,7 +158,6 @@ function strictRefactorVerdictFixture(
 function runDelegation(args: string[]): Promise<{ stdout: string; stderr: string }> {
   const program = new Command();
   registerDelegationCommands(program, {
-    gitBranch: () => "work/d3b-review-attestation",
     gitHead: () => head,
     resolveTaskText: (opts) => opts.task ?? null,
     runSessionStartSideEffects: () => {},

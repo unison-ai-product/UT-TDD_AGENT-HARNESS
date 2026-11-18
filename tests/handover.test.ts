@@ -10,7 +10,6 @@ import {
   handoverStale,
   latestSessionId,
   readPointer,
-  resolveHandoverScope,
   runHandover,
 } from "../src/handover/index.ts";
 
@@ -41,18 +40,23 @@ describe("PLAN-L7-173 handover sidecars", () => {
   });
 });
 
-describe("U-HOVER-001 resolveHandoverScope", () => {
-  it("empty scope is active-plan free and does not throw", () => {
-    const scope = resolveHandoverScope(mockDeps());
-    expect(scope.active_plan).toBeNull();
-    expect(scope.digests).toEqual([]);
+describe("U-HOVER-001 runHandover ignores legacy PLAN digests", () => {
+  it("legacy digest data does not populate new pointer PLAN fields", () => {
+    const deps = mockDeps();
+    deps.files.set(
+      join("/repo", ".ut-tdd", "logs", "plan", "PLAN-L6-01.digest.json"),
+      JSON.stringify({ plan_id: "PLAN-L6-01", sessions: ["s1"], commits: ["abc"] }),
+    );
+
+    const result = runHandover({ date: "2026-06-04" }, deps);
+    expect(result.pointer.active_plan).toBeNull();
+    expect(result.pointer.digest_summary).toBeNull();
   });
 });
 
 describe("U-HOVER-002 buildPointer", () => {
-  it("empty digest input keeps generic pointer status, timestamp, and null fields", () => {
+  it("keeps generic pointer status, timestamp, and null PLAN fields", () => {
     const pointer = buildPointer({
-      scope: { active_plan: null, digests: [] },
       status: "in_progress",
       now: NOW,
     });
@@ -156,7 +160,7 @@ describe("U-HOVER-011 checkHandoverBypass 署名照合 (IMP-078 gap①、state-c
     expect(checkHandoverBypass(deps)).toEqual([]);
   });
 
-  it("pointer 不在 → 警告ゼロ (discipline 担当)", () => {
+  it("pointer 不在 → bypass 警告ゼロ", () => {
     expect(checkHandoverBypass(mockDeps())).toEqual([]);
   });
 });

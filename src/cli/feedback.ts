@@ -1,4 +1,3 @@
-import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import type { Command } from "commander";
 import { emitFeedbackEvents } from "../feedback/engine.ts";
@@ -12,16 +11,6 @@ import {
 } from "../runtime/forced-stop.ts";
 import { nodeDeps } from "../runtime/session-log.ts";
 import { defaultHarnessDbPath, openHarnessDb } from "../state-db/index.ts";
-
-function gitBranch(): string | null {
-  try {
-    return execFileSync("git", ["rev-parse", "--abbrev-ref", "HEAD"], {
-      encoding: "utf8",
-    }).trim();
-  } catch {
-    return null;
-  }
-}
 
 function readStdin(): string {
   try {
@@ -82,7 +71,7 @@ export function registerFeedbackCommands(program: Command): void {
         process.exitCode = 1;
         return;
       }
-      const deps = nodeDeps(process.cwd(), gitBranch);
+      const deps = nodeDeps(process.cwd());
       const ctx: FeedbackCtx = {
         session_id: opts.session ?? "unknown",
         plan_id: null,
@@ -101,7 +90,7 @@ export function registerFeedbackCommands(program: Command): void {
     .description("list unresolved recovery proposals captured from feedback entries")
     .option("--json", "JSON output")
     .action((opts: { json?: boolean }) => {
-      const deps = nodeDeps(process.cwd(), gitBranch);
+      const deps = nodeDeps(process.cwd());
       const pending = pendingRecoveryProposals(deps);
       if (opts.json) {
         process.stdout.write(`${JSON.stringify(pending, null, 2)}\n`);

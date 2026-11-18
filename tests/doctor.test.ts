@@ -1174,7 +1174,7 @@ describe("checkHandoverDisciplineMessages", () => {
     expect(messages.some((m) => m.includes("drift"))).toBe(false);
   });
 
-  it("runDoctor surfaces handover discipline as warning-only", () => {
+  it("runDoctor omits retired digest-activity warnings", () => {
     const fixtureParent = mkdtempSync(join(tmpdir(), "ut-tdd-doctor-handover-"));
     const repoRoot = join(fixtureParent, "missing-root");
     try {
@@ -1197,7 +1197,7 @@ describe("checkHandoverDisciplineMessages", () => {
       ]);
       const r = runDoctor(deps({ repoRoot, files }));
       expect(r.ok).toBe(false);
-      expect(r.messages.some((m) => m.includes("handover-discipline"))).toBe(true);
+      expect(r.messages.some((m) => m.includes("handover-discipline"))).toBe(false);
       expect(r.messages.some((m) => m.includes("verification group lint could not run"))).toBe(
         true,
       );

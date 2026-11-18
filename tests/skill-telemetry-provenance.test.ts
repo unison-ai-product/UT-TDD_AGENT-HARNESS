@@ -142,8 +142,6 @@ describe("PLAN-L7-262: skill telemetry provenance separation", () => {
       now: () => "2026-07-02T00:03:00.000Z",
       appendLine: (path, line) => lines.push({ path, line }),
       readText: () => null,
-      writeText: () => {},
-      currentBranch: () => null,
     };
 
     recordSkillInjectionAttempt(
@@ -177,8 +175,6 @@ describe("PLAN-L7-262: skill telemetry provenance separation", () => {
       now: () => "2026-07-02T00:04:00.000Z",
       appendLine: (path, line) => lines.push({ path, line }),
       readText: () => null,
-      writeText: () => {},
-      currentBranch: () => null,
     };
 
     recordSkillInjectionAttempt(
@@ -194,7 +190,7 @@ describe("PLAN-L7-262: skill telemetry provenance separation", () => {
 
     const event = JSON.parse(lines[0].line);
     expect(event.event_type).toBe("skill_injection");
-    // 正常系 skip は PlanDigest failures (outcome=error 収集) へ混入させない。
+    // 正常系 skip は error event にしない。
     expect(event.outcome).toBe("ok");
     expect(event.target).toContain("no-matching-skills");
   });
