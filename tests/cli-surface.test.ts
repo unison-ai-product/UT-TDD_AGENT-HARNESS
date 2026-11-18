@@ -474,7 +474,7 @@ describe("L7 CLI surface closure", () => {
 
     expect(run.status).toBe(0);
     expect(run.stdout).toContain("--profile <profile>");
-    expect(run.stdout).toContain("--activation-profile <profile>");
+    expect(run.stdout).not.toContain("--activation-profile");
     expect(run.stdout).toContain("--capability <flag...>");
     expect(run.stdout).toContain("--json");
   }, 15_000);

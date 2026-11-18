@@ -803,77 +803,6 @@ function projectRoadmapRollup(repoRoot: string, db: HarnessDb): void {
   }
 }
 
-export function latestReviewEvidenceEntry<T extends { reviewed_at?: string }>(
-  entries: T[],
-): T | undefined {
-  const timestampRank = (value?: string): number => {
-    const parsed = Date.parse(value ?? "");
-    return Number.isFinite(parsed) ? parsed : Number.NEGATIVE_INFINITY;
-  };
-  return entries.reduce<T | undefined>((latest, entry) => {
-    if (!latest) return entry;
-    return timestampRank(entry.reviewed_at) >= timestampRank(latest.reviewed_at) ? entry : latest;
-  }, undefined);
-}
-
-function projectReviewEvidenceRegistry(repoRoot: string, db: HarnessDb): void {
-  const indexedAt = nowIso();
-  for (const plan of loadReviewPlans(repoRoot)) {
-    const latestEntry = latestReviewEvidenceEntry(plan.crossEntries);
-    const id = stableId("review-evidence", plan.plan_id);
-    recordProjectionEvent(db, {
-      table: "review_evidence_registry",
-      id,
-      row: {
-        review_evidence_id: id,
-        plan_id: plan.plan_id,
-        kind: plan.kind,
-        status: plan.status,
-        has_evidence: plan.hasEvidence ? 1 : 0,
-        review_kind: latestEntry?.review_kind ?? "",
-        verdict: latestEntry?.verdict ?? "",
-        reviewed_at: latestEntry?.reviewed_at ?? "",
-        tests_green_at: latestEntry?.tests_green_at ?? "",
-        worker_model: latestEntry?.worker_model ?? "",
-        reviewer_model: latestEntry?.reviewer_model ?? "",
-        source: normalizePath(join("docs", "plans", plan.file)),
-        indexed_at: indexedAt,
-      },
-    });
-    for (const [entryIndex, entry] of plan.crossEntries.entries()) {
-      for (const [commandIndex, command] of (entry.green_commands ?? []).entries()) {
-        const completedAt = command.completed_at ?? entry.tests_green_at ?? entry.reviewed_at ?? "";
-        const testRunId = stableId(
-          "test-run",
-          `${plan.plan_id}:${entryIndex}:${commandIndex}:${command.command}:${command.evidence_path}:${completedAt}`,
-        );
-        recordProjectionEvent(db, {
-          table: "test_runs",
-          id: testRunId,
-          row: {
-            test_run_id: testRunId,
-            session_id: "",
-            plan_id: plan.plan_id,
-            command: command.command,
-            runner: command.runner,
-            runtime: "",
-            os: "",
-            shell: "",
-            scope: command.scope,
-            started_at: "",
-            completed_at: completedAt,
-            exit_code: command.exit_code ?? -1,
-            evidence_path: command.evidence_path,
-            output_digest: command.output_digest,
-            green_definition_id: "",
-            status: command.exit_code === 0 ? "passed" : "failed",
-          },
-        });
-      }
-    }
-  }
-}
-
 function advisorySubject(rule: string, reviewEvidenceId: string): string {
   // Plan-id-free, stable subject. The warn-first advisory must surface as a
   // feedback event WITHOUT flipping automation readiness, which scans
@@ -2373,7 +2302,6 @@ export function rebuildHarnessDb(input: RebuildHarnessDbInput = {}): RebuildHarn
       });
       time("roadmap-review", () => {
         projectRoadmapRollup(repoRoot, db);
-        projectReviewEvidenceRegistry(repoRoot, db);
         projectGuardrailInvariantAdvisories(db);
         projectDescentObligations(repoRoot, db);
         projectDesignPairFreezeFindings(repoRoot, db);
