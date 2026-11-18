@@ -14,6 +14,7 @@ import {
   cleanupPlanretS3MigrationFixtures,
   createIssueOnlyCatalogFixture,
   createLegacyDatabase,
+  databaseState,
 } from "./plan-mechanism-retirement-s3-migration.ts";
 
 /** L6 §3 の PLAN 用の表 9 件。 */
@@ -373,12 +374,15 @@ function writeScaleProfileSource(root: string): void {
 }
 
 function projectScaleProfiles(root: string, db: HarnessDb) {
+  // 保存対象 12 表は、migrate 後・rebuild の前後で DDL も行数も変わらない (rebuild の経路での保存違反を捕まえる)。
+  const preservedBefore = tableShape(db, PRESERVED_TABLES);
   let thrown: string | null = null;
   try {
     rebuildHarnessDb({ repoRoot: root, db, skipTokenTelemetry: true });
   } catch (error) {
     thrown = error instanceof Error ? error.message : String(error);
   }
+  const preservedAfter = tableShape(db, PRESERVED_TABLES);
   const entries = db
     .prepare(
       `SELECT profile_id, doc_type_id, decision, required_plan_id
@@ -389,13 +393,10 @@ function projectScaleProfiles(root: string, db: HarnessDb) {
   const reviewCount = Number(
     db.prepare("SELECT COUNT(*) AS n FROM document_scale_profile_reviews").get()?.n ?? 0,
   );
-  const ddl = String(
-    db.prepare("SELECT sql FROM sqlite_master WHERE name = 'document_scale_profile_entries'").get()
-      ?.sql ?? "",
-  );
+  const ddl = ddlOf(db);
   // 表そのものが defer + NULL を受けるか (旧 CHECK の有無) を、投影とは別に確かめる。
   // 投影済みの defer 行を NULL に UPDATE するので、FK と一意制約は保たれ、CHECK だけが効く。
-  let deferNullInsert: string | null = null;
+  let deferNullUpdate: string | null = null;
   db.exec("SAVEPOINT planret_j_probe");
   try {
     db.prepare(
@@ -409,36 +410,89 @@ function projectScaleProfiles(root: string, db: HarnessDb) {
         )
         .get()?.n ?? 0,
     );
-    if (n !== 1) deferNullInsert = `probe target is ${n} rows, expected 1`;
+    if (n !== 1) deferNullUpdate = `probe target is ${n} rows, expected 1`;
   } catch (error) {
-    deferNullInsert = error instanceof Error ? error.message : String(error);
+    deferNullUpdate = error instanceof Error ? error.message : String(error);
   } finally {
     db.exec("ROLLBACK TO planret_j_probe");
     db.exec("RELEASE planret_j_probe");
   }
-  return { thrown, entries, reviewCount, ddl, deferNullInsert };
+  // migrate の再適用は何も変えない。
+  const beforeRemigrate = databaseState(db);
+  const remigrate = migrate(db);
+  const remigrateUnchanged = JSON.stringify(databaseState(db)) === JSON.stringify(beforeRemigrate);
+  return {
+    thrown,
+    entries,
+    reviewCount,
+    ddl,
+    deferNullUpdate,
+    preservedBefore,
+    preservedAfter,
+    remigrateApplied: remigrate.applied,
+    remigrateUnchanged,
+  };
 }
 
-/** (j): 新規 DB と旧 CHECK 入り (v29 の frozen DDL) の DB の両方で、defer 行 (required_plan_id=NULL) を投影する。 */
-export function runScenarioJ() {
-  const fresh = tempDb();
-  createIssueOnlyCatalogFixture(fresh.root);
-  writeScaleProfileSource(fresh.root);
-  migrate(fresh.db);
+function ddlOf(db: HarnessDb): string {
+  return String(
+    db.prepare("SELECT sql FROM sqlite_master WHERE name = 'document_scale_profile_entries'").get()
+      ?.sql ?? "",
+  );
+}
+
+const SEED_PLAN_ROW = `INSERT INTO schedule_entries
+  (schedule_entry_id, plan_id, current_location, rag, status, source_path)
+  VALUES ('SCH-LEGACY-J', 'PLAN-L6-01', 'L6', 'RED', 'active', 'docs/plans/PLAN-L6-01.md')`;
+
+/**
+ * 旧 CHECK を持つ現行版 (v30) の DB。v29 の frozen DDL から、v30 の変更 (vmodel_item_target_edges の再作成)
+ * だけを手で当てて作る。`migrate` で作らないのは、Green の後の `migrate` が v30 を超えるためである。
+ */
+function createV30LegacyDatabase() {
   const legacy = createLegacyDatabase();
   opened.push(legacy.db);
-  createIssueOnlyCatalogFixture(legacy.root);
-  writeScaleProfileSource(legacy.root);
-  const legacyBefore = String(
-    legacy.db
-      .prepare("SELECT sql FROM sqlite_master WHERE name = 'document_scale_profile_entries'")
-      .get()?.sql ?? "",
+  const ref = tempDb().db;
+  migrate(ref);
+  const edgeDdl = String(
+    ref
+      .prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = ?")
+      .get("vmodel_item_target_edges")?.sql ?? "",
   );
-  return {
-    fresh: projectScaleProfiles(fresh.root, fresh.db),
-    legacy: projectScaleProfiles(legacy.root, legacy.db),
-    legacyBefore,
+  legacy.db.exec("DROP TABLE vmodel_item_target_edges");
+  legacy.db.exec(edgeDdl);
+  legacy.db.setUserVersion(30);
+  return legacy;
+}
+
+export type ScenarioJVariant = "fresh" | "v29" | "v30";
+
+/**
+ * (j): 新規 DB / 旧 CHECK 入り v29 / 旧 CHECK 入り v30 のそれぞれで、migrate してから、
+ * 旧 ID 付き defer 行の source を rebuild で投影する。
+ */
+export function runScenarioJ(variant: ScenarioJVariant) {
+  let target: { root: string; db: HarnessDb };
+  if (variant === "fresh") {
+    target = tempDb();
+  } else if (variant === "v29") {
+    target = createLegacyDatabase();
+    opened.push(target.db);
+  } else {
+    target = createV30LegacyDatabase();
+  }
+  createIssueOnlyCatalogFixture(target.root);
+  writeScaleProfileSource(target.root);
+  const before =
+    variant === "fresh" ? null : { ddl: ddlOf(target.db), version: target.db.userVersion() };
+  if (variant !== "fresh") target.db.exec(SEED_PLAN_ROW);
+  const migrated = migrate(target.db);
+  const afterMigrate = {
+    applied: migrated.applied,
+    version: target.db.userVersion(),
+    ddl: ddlOf(target.db),
   };
+  return { before, afterMigrate, ...projectScaleProfiles(target.root, target.db) };
 }
 
 /** (h): `plan lint` の互換入口 (top-level の `plan` command か、`plan lint` を command 名に持つ定義)。 */
@@ -453,18 +507,67 @@ export function scanHPlanLintEntry(root: string): string[] {
     });
 }
 
-/** (i): src / scripts / .github / tests のどこにも `plan-asset` の module を指す import が無い。 */
+const PLAN_ASSET_SPECIFIER = /plan-asset/;
+
+/** (i): 1 file の中で、`plan-asset` を指す静的 import / re-export / 副作用 import / 動的 import / require の行番号。 */
+export function scanIImportsSource(path: string, text: string): number[] {
+  const file = ts.createSourceFile(path, text, ts.ScriptTarget.Latest, true);
+  const lines: number[] = [];
+  const mark = (node: ts.Node, specifier: ts.Node | undefined) => {
+    if (
+      specifier &&
+      ts.isStringLiteralLike(specifier) &&
+      PLAN_ASSET_SPECIFIER.test(specifier.text)
+    ) {
+      lines.push(file.getLineAndCharacterOfPosition(node.getStart(file)).line + 1);
+    }
+  };
+  const visit = (node: ts.Node): void => {
+    if (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) {
+      mark(node, node.moduleSpecifier);
+    } else if (
+      ts.isImportEqualsDeclaration(node) &&
+      ts.isExternalModuleReference(node.moduleReference)
+    ) {
+      mark(node, node.moduleReference.expression);
+    } else if (ts.isImportTypeNode(node) && ts.isLiteralTypeNode(node.argument)) {
+      mark(node, node.argument.literal);
+    } else if (
+      ts.isCallExpression(node) &&
+      (node.expression.kind === ts.SyntaxKind.ImportKeyword ||
+        (ts.isIdentifier(node.expression) && node.expression.text === "require"))
+    ) {
+      mark(node, node.arguments[0]);
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(file);
+  return lines;
+}
+
+/** (i): src / scripts / tests の JS・TS の tracked file の import と、`.github` の tracked file の `src/plan-asset` 参照。 */
 export function scanIPlanAssetImports(root: string): string[] {
-  const paths = execFileSync("git", ["ls-files", "src", "scripts", "tests"], {
+  const paths = execFileSync("git", ["ls-files", "src", "scripts", "tests", ".github"], {
     cwd: root,
     encoding: "utf8",
   })
     .split("\n")
-    .filter((p) => /\.(ts|mjs|js)$/.test(p));
+    .filter(Boolean);
   return paths.flatMap((path) => {
-    const text = readFileSync(join(root, path), "utf8");
-    return [
-      ...text.matchAll(/(?:from|import\s*\(|require\()\s*["'][^"']*plan-asset[^"']*["']/g),
-    ].map((m) => `${path}:${text.slice(0, m.index).split("\n").length}`);
+    let text: string;
+    try {
+      text = readFileSync(join(root, path), "utf8");
+    } catch {
+      return [];
+    }
+    if (/\.(ts|mts|cts|tsx|js|mjs|cjs)$/.test(path)) {
+      return scanIImportsSource(path, text).map((line) => `${path}:${line}`);
+    }
+    if (path.startsWith(".github/")) {
+      return text
+        .split("\n")
+        .flatMap((l, i) => (/src\/plan-asset\b/.test(l) ? [`${path}:${i + 1}`] : []));
+    }
+    return [];
   });
 }
