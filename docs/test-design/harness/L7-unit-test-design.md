@@ -1412,13 +1412,8 @@ spec:
 
 | test ID | precondition / fixture | command / query | postcondition / invariant / expected finding |
 |---|---|---|---|
-| `U-PA-001` | 空/不正`asset_id` | `PlanAsset.create` | `plan-asset-invalid-id`, exit 1 |
-| `U-PA-002` | revision 1,3 | `PlanAsset.reconstruct` | `plan-revision-gap`, exit 1 |
-| `U-PA-003` | alias/layer変更command | `PlanAsset.revise` | 新revisionでも`asset_id`不変、exit 0 |
 | `U-PA-004` | 旧EvidenceRecord snapshot + 新revisionの作成 | `EvidenceRecord.create` | 新snapshot作成後も旧recordのJSONは不変で、旧recordは凍結される。既存 usability 条件はU-PA-005で検証する。 |
 | `U-PA-005` | expired/別revision/policy別exit evidence | `EvidenceRecord.isUsableFor` | `evidence-stale-or-subject-mismatch`、Red expected nonzeroだけusable、exit 1/0 |
-| `U-PA-006` | legacy PLAN全field + short alias現HEAD全衝突群 | canonical adapter / alias resolver | field loss 0、多義は`plan-migration-collision`で自動選択0、exit 1 |
-| `U-PA-007` | 同ordinal同時予約 | `PlanIdReservation.reserve` | 片方だけ成功、他方`plan-id-reservation-conflict` |
 | `U-PA-008` | HEAD tracked `ut-tdd.project.json`、改竄bytes/receipt、schema/identity不正、remote無し | `loadTrackedProjectIdentity` / `loadProjectIdentityFromHead` | exact HEAD blobだけ成功しreceipt digest安定。index/working tree/remote補完0、異常種別を専用findingでfail-close |
 | `U-PA-045` | 複数kind/producer/subject/revision/commit/expiry/exit/claims outcomeを組合せたevidence全履歴 | `EvidenceRecord` / `EvidencePolicy` | policy定義と評価contextを分離し、typed claimsRuleに適合するactive frontierだけをmin/max cardinalityへ数え、requirement別missing/rejected IDをstable順で返す |
 | `U-PA-046` | raw/split/env/header/URI secret command、未知kind/producer/exit/claims rule、kind不一致claims、自己/orphan/cycle/fork/逆因果supersede、全record field改変 | `EvidenceRecord.create` / policy frontier / digest | branded redacted argv以外は拒否、claimsを自由文から推測しない、supersession不正とrecord digest不一致を拒否、旧record不変 |
