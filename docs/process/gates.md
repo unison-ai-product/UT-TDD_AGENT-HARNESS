@@ -118,7 +118,7 @@ G7 は L7 実装完了の唯一の exit gate。以下 3 条件をすべて満た
 
 ## 4. 横断検出ゲート (§7.8.5)
 
-`ut-tdd doctor` / `ut-tdd plan lint` に束ねられる横断検出器。いずれも fail-close で該当 mode への接続を強制する。
+`ut-tdd doctor` に束ねられる横断検出器。いずれも fail-close で該当 mode への接続を強制する。
 
 | 検出器 | fail 条件 | 接続先 mode |
 |--------|----------|------------|

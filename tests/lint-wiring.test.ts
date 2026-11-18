@@ -91,7 +91,6 @@ describe("loadLintWiringInput (live repo regression fence)", () => {
       "backfill-pairing",
       "consumer-trace",
       "forward-convergence",
-      "plan-supersession",
       "scrum-reverse",
       "tool-adapter",
       // #1741 Red の stub だけの保留登録 (#1282 の consumer-trace と同じ扱い)。Green で配線して撤去する。

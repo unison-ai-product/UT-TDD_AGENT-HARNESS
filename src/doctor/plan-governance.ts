@@ -9,49 +9,7 @@ import {
   loadTestDesignDocs,
   testDesignNamingMessages,
 } from "../lint/test-design-naming.ts";
-import {
-  analyzePlanReferenceFreshness,
-  lintPlan,
-  lintPlanWithGate,
-  loadPlanGovernanceDocs,
-  planReferenceFreshnessMessages,
-} from "../plan/lint.ts";
 import { analyzePairFreeze, loadPairDocs, pairFreezeMessages } from "../vmodel/lint.ts";
-
-export function checkPlanSchedule(repoRoot: string): { messages: string[]; ok: boolean } {
-  if (!existsSync(repoRoot)) {
-    return { messages: ["plan-schedule - violation: repo root could not be read"], ok: false };
-  }
-  try {
-    return lintPlan(undefined, repoRoot);
-  } catch {
-    return { messages: ["plan-schedule - violation: PLAN schedule lint could not run"], ok: false };
-  }
-}
-
-export function checkPlanGovernance(repoRoot: string): { messages: string[]; ok: boolean } {
-  if (!existsSync(repoRoot)) {
-    return { messages: ["plan-governance - violation: repo root could not be read"], ok: false };
-  }
-  try {
-    return lintPlanWithGate(undefined, repoRoot, "governance");
-  } catch {
-    return {
-      messages: ["plan-governance - violation: PLAN governance lint could not run"],
-      ok: false,
-    };
-  }
-}
-
-export function checkPlanReferenceFreshnessAdvisory(repoRoot: string): string[] {
-  if (!existsSync(repoRoot)) return [];
-  try {
-    const freshness = analyzePlanReferenceFreshness(loadPlanGovernanceDocs(repoRoot), repoRoot);
-    return planReferenceFreshnessMessages(freshness).map((message) => `doctor: ${message}`);
-  } catch {
-    return ["doctor: plan-reference-freshness - advisory: skipped (PLAN refs could not be read)"];
-  }
-}
 
 export function checkPropagation(repoRoot: string): { messages: string[]; ok: boolean } {
   if (!existsSync(repoRoot)) {

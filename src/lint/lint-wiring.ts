@@ -9,10 +9,9 @@
  *
  * 検査の向き: **すべての lint module は (a) RUNTIME_ENTRYPOINTS から推移的に到達可能、または
  * (b) DEFERRED_LINTS に理由付きで登録済み、のいずれか**。どちらでもない module は violation。
- * 加えて DEFERRED に登録されているのに実は到達可能な module (= stale 申告) も violation
- * (errata が片肺化しないよう plan-supersession と同型の双方向健全性)。
+ * 加えて DEFERRED に登録されているのに実は到達可能な module (= stale 申告) も violation。
  *
- * 到達性: `ut-tdd` CLI (`src/cli.ts`) が唯一の実行ルート。CLI が import する doctor / plan-lint /
+ * 到達性: `ut-tdd` CLI (`src/cli.ts`) が唯一の実行ルート。CLI が import する doctor /
  * handover / status / db / 各 lint へ推移的に展開した集合が「live なコード」。テスト
  * (`tests/*.test.ts`) は実行経路ではないので到達性の根拠にしない。
  *
@@ -36,8 +35,6 @@ export const DEFERRED_LINTS: Record<string, string> = {
     "#1358でruntime guard退役。凍結済み合成oracleとL14 evidenceのためlibraryとして残す。完全退役は#1379",
   "consumer-trace": "#1282 Red の stub。runtime 配線とこの保留登録の撤去は #1314 Green で行う。",
   "forward-convergence":
-    "#1358でruntime guard退役。凍結済み合成oracleとL14 evidenceのためlibraryとして残す。完全退役は#1379",
-  "plan-supersession":
     "#1358でruntime guard退役。凍結済み合成oracleとL14 evidenceのためlibraryとして残す。完全退役は#1379",
   "scrum-reverse":
     "#1358でruntime guard退役。凍結済み合成oracleとL14 evidenceのためlibraryとして残す。完全退役は#1379",

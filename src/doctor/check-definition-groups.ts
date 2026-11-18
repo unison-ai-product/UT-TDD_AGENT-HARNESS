@@ -34,13 +34,7 @@ import {
   checkSkillAssignment,
   checkVerificationProfile,
 } from "./lint-gates.ts";
-import {
-  checkPairFreeze,
-  checkPlanGovernance,
-  checkPlanSchedule,
-  checkPropagation,
-  checkTestDesignNaming,
-} from "./plan-governance.ts";
+import { checkPairFreeze, checkPropagation, checkTestDesignNaming } from "./plan-governance.ts";
 import {
   checkCycleP4Verification,
   checkDbCurrency,
@@ -53,13 +47,13 @@ import {
   checkL7Completion,
   checkL14CloseAudit,
   checkPlaceholderDeps,
-  checkPlanTraceGate,
   checkRuleAutomationClosure,
   checkScreenImplPairFreeze,
   checkSubDocCatalogDrift,
   checkSubDocSchemaIntegrity,
   checkSubDocSectionStructure,
   checkTelemetryClosure,
+  checkTraceGate,
 } from "./process-quality.ts";
 import {
   checkForwardFreezeContractsResult,
@@ -212,11 +206,9 @@ export function buildDoctorCheckDefinitionGroups(
         full("model-id-doc-drift", () => checkModelIdDocDrift(deps.repoRoot)),
         full("gate-confirm", () => checkGateConfirm(deps.repoRoot)),
         full("gate-id-format", () => checkGateIdFormat(deps.repoRoot)),
-        full("plan-schedule", () => checkPlanSchedule(deps.repoRoot)),
-        full("plan-governance", () => checkPlanGovernance(deps.repoRoot)),
         full("placeholder-deps", () => checkPlaceholderDeps(deps.repoRoot)),
-        full("g1-trace", () => checkPlanTraceGate(deps.repoRoot, "G1-trace")),
-        full("g3-trace", () => checkPlanTraceGate(deps.repoRoot, "G3-trace")),
+        full("g1-trace", () => checkTraceGate(deps.repoRoot, "G1-trace")),
+        full("g3-trace", () => checkTraceGate(deps.repoRoot, "G3-trace")),
         full("rule-automation-closure", () => checkRuleAutomationClosure(deps.repoRoot)),
         full("drive-model-passage", () => checkDriveModelPassage(deps.repoRoot)),
         full("db-currency", () => checkDbCurrency(deps.repoRoot)),
