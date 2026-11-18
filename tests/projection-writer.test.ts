@@ -52,7 +52,7 @@ const hasSourceScreenDocs = () =>
   );
 
 describe("review evidence projection selection", () => {
-  it("U-SCHEDULE-LIVE-002: compares reviewed_at as instants and resolves ties by declaration", () => {
+  it("compares reviewed_at as instants and resolves ties by declaration", () => {
     const latest = latestReviewEvidenceEntry([
       { reviewed_at: "2026-07-10T00:30:00+09:00", verdict: "offset-but-older" },
       { reviewed_at: "2026-07-09T20:00:00Z", verdict: "absolute-latest" },
