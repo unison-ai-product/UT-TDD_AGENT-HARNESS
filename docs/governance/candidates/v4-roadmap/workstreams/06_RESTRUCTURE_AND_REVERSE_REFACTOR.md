@@ -14,7 +14,7 @@
 2. 所有者の決まっていない抜け (§4 の表、15 件) の置き場。
 3. PO 判断が要る trade-off (§5)。
 
-扱わない物: 設計文書・src・tests の変更、Issue の起票 (§6 は案であり、本書の PR では起票しない)、PLAN の新規起票 (PLAN は凍結中、`CLAUDE.md` §PLAN 凍結)。
+扱わない物: 設計文書・src・tests の変更、Issue の起票 (§7 は案であり、本書の PR では起票しない)、PLAN の新規起票 (PLAN は凍結中、`CLAUDE.md` §PLAN 凍結)。
 
 ## 2. 前提 (正本の記述と出所)
 
@@ -55,10 +55,10 @@
 
 | 項目 | 内容 | 補足 |
 |---|---|---|
-| B1 registry | RP 段階 1。registry は「移動表の正本」と、報告だけの patrol にする。**参照の付け替え API は作らない** | RP §4・§8 の段階 1 は registry + 報告だけの patrol までで、付け替え API は契約に無い。153 件の path 参照には `.github` の YAML、`.claude` の JSON、tests の fixture が含まれ、TS の registry を import できない (件数は §7 の未再測) |
+| B1 registry | RP 段階 1。registry は「移動表の正本」と、報告だけの patrol にする。**参照の付け替え API は作らない** | RP §4・§8 の段階 1 は registry + 報告だけの patrol までで、付け替え API は契約に無い。153 件の path 参照には `.github` の YAML、`.claude` の JSON、tests の fixture が含まれ、TS の registry を import できない (件数は §8 の未再測) |
 | B2 参照の書き換え | codemod で一括。実行時に path を解決する src (docs/design・test-design を参照する約 62 件、層ディレクトリ名を参照する約 37 件) だけ registry 経由にする | **RP の改訂が先** (pair-freeze)。契約に無い方式を実装中に発明しない (`CLAUDE.md` §PR スコープ規律 2) |
 | B3 書き込み guard | RP 段階 2 | `work-guard.ts` の拡張 (RP §5)。Codex 側の hook の実測は RP に宿題として残っている |
-| B4 baseline の再キー | 論理名キーにしない。**移動表で再キー**し、検証は「再キー前後で値の多重集合が一致」 | 新しい仕組みを足さない。**再キーの前に**、code-size baseline が実測より古い原因を確かめる (`docs/governance/code-size-baseline.json:2` は `src/cli.ts` が 3,994 行、実測 4,103 行)。「縮むだけ」の gate が増加を止めていない兆候なら、移動で穴ごと引き継ぐ |
+| B4 baseline の再キー | 論理名キーにしない。**移動表で再キー**し、検証は「再キー前後で値の多重集合が一致」 | 新しい仕組みを足さない。code-size gate は空白行を除いて数えるので `src/cli.ts` は 3,994 行で baseline と一致する (全行は 4,103。`src/lint/code-size.ts:249,263`)。baseline 140 entry に、実測が超えるもの・stale・存在しない file は 0 で、増加は `code-size-required` / `baseline-grown` で止まる (`code-size.ts:303-320,340-373`)。再キーの前提に古さの調査は要らない |
 | B5 層番号の対応表 | **対応表だけ先に凍結**する。oracle ID と test ID は**不透明な識別子として据え置き**、ディレクトリ名と表示名だけ変える | L8 (結合 → as-built) と L9 (システム → 結合) は意味が入れ替わるので、「旧番号の残存 0」は grep で測れない。ID を変えると receipt と履歴の trace が切れる。v3.1 が正本の間の矛盾は §5 の判断 2 |
 | B6 配布 tree の差分 | **旧 Pack と新 Pack の配布 tree の差分を先に実測**して、consumer 移行方式を決める | consumer に届くのは bundle なので、`src` → `product` は consumer から見えない可能性が高い。見える差分は層名・テンプレート path・起動経路だけかもしれない (推測、未実測) |
 | B7 harness.db | path キーの行 (`artifact_path` / `file_path` など) の扱いを決める | **未検証**。S7 の §8 のような「既存 DB の表の扱い」の節が無い。`harness.db` は直接操作禁止 (global CLAUDE.md) なので、harness のコマンドで再投影する方式を前提に設計する |
@@ -93,7 +93,7 @@
 | `canonicalJson` の重複 | 5 か所 (`src/disposition/domain/document-disposition-catalog.ts:141`、`src/feedback/review-verdict-custody.ts:50`、`src/forward/domain/evidence-canonical.ts:1`、`src/setup/consumer-node-runtime.ts:161`、`src/state-db/github-review-lane-provenance.ts:56`) | 統合の前に、**同じ入力でバイト一致する特性テスト**を置く。digest は review custody / receipt / consumer runtime manifest に直結するので「振る舞い不変」は自明ではない |
 | `sha256` / `sha256Hex` の定義 | 約 19 か所 (`grep -rEn "function sha256(Hex)?\b\|const sha256(Hex)? =" src` で 19 件)。入力型 (string / bytes / parts 配列) と出力形式 (`sha256:` 接頭辞の有無) がバラバラ | 同上。統一できる形と、別名のまま残す形を特性テストで分ける |
 | projection の二重定義 | `projection-writer.ts` と `src/state-db/*-projections.ts` (5 file) の同名関数 6 組 (`projectRuntime*` など。組数は起草時の計測、未再測) | #1212 の続きとして扱う |
-| `src/cli.ts` の分割 | 4,103 行、`.command(` 105 件 (再測)、28 ディレクトリから import (起草時の計測) | command 登録を各ドメインへ。**④ の前に回さない** (下の理由) |
+| `src/cli.ts` の分割 | 空白行を除いて 3,994 行 (全行 4,103)、`.command(` 105 件 (再測)、28 ディレクトリから import (起草時の計測) | command 登録を各ドメインへ。**④ の前に回さない** (下の理由) |
 | 関数過大の上位 | functionExcess: pack-publication-adapter 371、cli/distribution 352、memory/service 228、spec-ir-projections 220 (起草時の計測、未再測) | #1084 の群として |
 
 **`cli.ts` の分割と helper 統合を ④ の前に回さない理由**:
@@ -110,7 +110,7 @@
 |---|---|---|---|---|
 | 1 | RP §8 段階 1〜2 (registry、patrol、書き込み guard) が未実装で Issue が無い | `src/schema/file-placement.ts` が存在しない (`ls` で確認、HEAD `3e1867320`) | 新規 Issue が要る (registry と patrol / guard は別の 1 PR = 1 論点) | B |
 | 2 | 移動の影響範囲を測る設計が無い | path 固定の参照: docs/design・test-design を参照する src 62 件、層ディレクトリ名を参照する src 37 件、文字列リテラル 153 件、docs/templates 参照 37 件 (起草時の計測、HEAD `5d6b7ec3`、未再測) | 新規 Issue が要る (計測を再現できる script と移動表) | B |
-| 3 | path キーの baseline の再キー手順と、新規違反との区別が未定義 | code-size-baseline (src キー 140 件)、doc-split-baseline (docs/design キー 16 件)、oracle-test-trace-baseline。`code-size-baseline.json:2` の `cli.ts` 3,994 行が実測 4,103 行より古い | 新規 Issue が要る (原因調査 + 再キー手順の契約) | B |
+| 3 | path キーの baseline の再キー手順と、新規違反との区別が未定義 | code-size-baseline (src キー 140 件)、doc-split-baseline (docs/design キー 16 件)、oracle-test-trace-baseline。code-size は空白行を除く数で baseline と一致しており、古さの問題は無い (B4) | 新規 Issue が要る (移動表による再キー手順の契約) | B |
 | 4 | harness.db の path キーの行の扱いが未定義 | S7 の §8 のような節が無い。**未検証** | 新規 Issue が要る | B |
 | 5 | git 履歴・blame の連続性 (rename と内容変更の分離、exact-head review と 1 PR = 1 論点の整合) | §3.3 のとおり pure rename は成立しない。「rename + codemod の機械的書き換え」を 1 PR として review できるかが未定 | 新規 Issue が要る (契約は設計文書へ) | B → C |
 | 6 | consumer の旧構成 → 新構成の移行方式 (in-place か世代切り替えか)。updater (#481) が構成変更を扱うか未確認 | 2 本立てにする (§3.3)。#481 の対応範囲は**未確認** | #481 (既存) に範囲の確認を足す + 方式の契約は新規 Issue | B → C |
@@ -152,7 +152,33 @@
 - 案 b: 別 canary。失敗の帰責を切り分けやすい。一方、同じファイルを 2 回触り、移動表を 2 段持つ。
 - 推奨: **案 a**。B の準備 (移動表の凍結、codemod の再実行で差分 0) で帰責は十分に切り分けられる。B6 の実測で consumer から見える差分が小さいと分かれば、分ける理由はさらに薄れる。
 
-## 6. 次の一手 (Issue 起票案、本書の PR では起票しない)
+## 6. ねじれ (不整合) の棚卸し
+
+2026-11-18 に main `3e1867320` で監査した結果 (control が抜き取りで確認済み。元記録は未追跡の `.ut-tdd/handover/control-tools/wf-twist-findings.md`)。再編の計画に効くものから順に並べる。「閉じる段」の S8 は #1380、「即時」は ④⑤ を待たずに直すもの、「control」は control lane が行う Issue の整理である。件数・行番号は監査時の値で、起票時に再測する。
+
+| # | ねじれ (内容) | 根拠 | 閉じる段 | 置き場 |
+|---|---|---|---|---|
+| T1 | oracle の ID 正規表現が末尾 `-[0-9]{2,3}` を要求し、`U-*-R<n>` 形式の宣言 65 件 (U-ASSIGN-LEDGER-R1..R4、U-ROUTE-R1..R11、U-SPECIR-R1..R13、U-TYPED-SPEC-R1..R4 など) が trace の対象外。tests にも src にも引用が 0。trace の OK が偽の否定証明になっている。数字の ID は orphan / undeclared / stale / duplicate すべて 0 | `src/lint/oracle-test-trace.ts:44,144` | ④-0 準備 (B)。層番号の対応表と ID 据え置きの前提 (B5) に効く | 新規 Issue が要る (§7 の 17) |
+| T2 | v3.1 と v4 で同じ層番号が別の工程を指す (v3.1: L5↔L8、L6↔L7、L10=UX / v4: L5↔L9、L4↔L10、L8=as-built、L9=結合)。v4 文書の内でも L10 が揺れる | `docs/governance/candidates/ut-tdd-concept-v4.0.md:26` は「L10 受入候補」、`v4-acceptance` は「L12 受入」 | ④-0 準備 (B5、§5 の判断 2) | #1791 |
+| T3 | test-design の `pair_artifact` が実在しない `docs/plans/PLAN-L7-690…` / `PLAN-L7-722…` を bare path で指す (2 件。他の 7 件は `plans-archive-20261102:` 接頭辞つき) | test-design の `pair_artifact` (監査時) | ④-0 準備 (移動表と codemod の入力を壊さないため先に正す) | 新規 Issue が要る |
+| T4 | PLAN は物理削除済み (#1365、`docs/plans/` は tracked 0 件) なのに、`CLAUDE.md` の凍結節は「物理撤去は範囲外」、`AGENTS.md:314`・`.claude/CLAUDE.md:59` は `docs/plans/` の確認と `ut-tdd plan lint` を指示したまま。`rule-drift` が全アダプタに `route_signal` / `generates` の記述を必須にしており、PLAN の文言を消すと CI が赤になる | `src/lint/rule-drift.ts:45-46` | S8 | #1380 |
+| T5 | 存在しない CLI が正本にある: `ut-tdd skill suggest --plan` (実際は `--text` / `--buckets`)、`ut-tdd task estimate --plan` (task は classify / route / roster のみ)、`ut-tdd reverse <type> R0` (top-level に無い) | `CLAUDE.md` / `AGENTS.md` の該当節 | S8 | #1380 |
+| T6 | `docs/governance/repository-structure.md` (正本を名乗る) が実物と違う: `docs/plans/` (削除済み)、`docs/skills/` (無い)、`.claude/agents/` (空、#1002)、`.claude/settings.json` 「hooks:{}」 (実物は 7 本以上)、§11 は物理削除を将来形で #1170 と書く (実際は #1365 で削除済み) | `docs/governance/repository-structure.md` | S8。RP の改訂 (§7 の 1) と同時に直すと 2 回触らずに済む | #1380 |
+| T7 | `requirements_v1.2` / `concept_v3.1` に PLAN を正本とする記述が、凍結・退役の注記なしで残る。stale な記述: ADR-001 の Node 版 24.13.0 (実物 24.22.3)、RP §7 の「canary.5 の後に自己導入」(実際は canary.8 の後)、RP §3.1 の「旧 PLAN を dev/docs/archive/plans に凍結」(実際は tag と物理削除)、`.claude/CLAUDE.md:160` の `PLAN-L6-96`、`:336-337` の Cutover evidence、design 文書 69 本の `docs/plans/PLAN…` 参照、`coding-rules.md:246`、`00_VERSION_STRATEGY.md` ⑧ 行 (README は ② で退役済み)、`.claude/CLAUDE.md:36-38` の文の途中切れ | 左の各 path | S8 (RP の記述は RP 改訂と同時) | #1380 |
+| T8 | 実体の無い confirmed の設計: 実行割当台帳 (`function-spec.md:988-991`、`ut-tdd assignment check`、U-ASSIGN-LEDGER-R1..R4、authoring source の `vmodel-execution-assignment-ledger.md` も無い)、screen 系 (`screen-spec.md` の `parseScreenQuery` ほか 6 関数は src に 0。`tests/l6-completion.test.ts:521-527` は文書に ID が書かれていることしか見ない) | 左の各 path:line | ⑤ (設計の検証・修正) | #1084 の群として |
+| T9 | 退役済みの関数を現役として書く設計: `function-spec.md:199-217` (`planDraft`、`sprintCheck`、`assertL7HasDesignAncestor`、`queueGithubProjection`、`syncRepositoryBindings`)、`L7-unit-test-design.md:68,71` (U-CORE-01/04)、`plan-mechanism-retirement.md:143,164` が 11-04 に退役済みの `github project sync` / `github binding observe` を「これから退役」と書く | 左の各 path:line | ⑤ | #1084 の群として |
+| T10 | 設計だけあって CLI に無い: `ut-tdd memory retire` (`memory.md:257-264`、`retireMemoryEpisodes` は src に呼び手なし)。未実装の目標契約が confirmed のまま (workflow-model-guard、snapshot-run-lease、gh-command、test-oracle-strength の module 分割。意図どおりの可能性が高いが、状態の明示が要る) | 左の各 path:line | ⑤ (状態の明示) | #1084 の群として |
+| T11 | `src/runtime/forced-stop.ts` に生の NUL バイト (`.join(` の区切り)。git が binary と判定し、grep / diff / review から見えにくい。`"\0"` へ直す | `src/runtime/forced-stop.ts` | 即時 | 新規 Issue が要る (1 PR) |
+| T12 | 許可リストに退役した baseline file の名前が残る | `harness-check.yml:83-85`、`github-ci-policy.ts:392-394` | ④-0 準備 (path 参照の計測と同時) | 新規 Issue が要る |
+| T13 | ③ の親 #961 の子に ③ と無関係な #1069 / #1384 / #1465 / #1554 / #1720 がある。本文の列挙 (#930 / #867 / #364) は実際の子ではない (#930 / #867 の親は #364、#364 の親は #224)。③ が閉じられない。#928 (Linux の受入) は起動条件が roadmap と逆で、題名が canary.6 のまま | GitHub の親子関係 | 即時 (control) | control が整理 |
+| T14 | ② の親 #958 の子に ④ の #913 と、② の凍結に関係の薄い #1037 / #1063 / #1073 / #1452 / #1419 / #1312 がある。④ と ⑤ に親 Issue が無い (④ は #913 だけ、⑤ は intake の 68 件の一覧だけ) | GitHub の親子関係、`04_ISSUE_INTAKE.md:22` | 即時 (control)。④ の親は §7 の 1 の RP 改訂の後に立てる | control が整理 |
+| T15 | #1211 / #1212 / #1213 の本文は「親: #1169 (closed)」、実際の親は #1078。#1226 は ⑦ の作業なのに親が #1084。#1084 は題名が 11 群、実際は 12〜13 群 | GitHub の親子関係 | 即時 (control)。#1084 の群数は ⑤ の束ねで確定 | control が整理 |
+| T16 | close の候補 (根拠つき): #1359 (Green #1486 merge 済み)、#1247 (vitest 4.1.12 済み、記録の確認が要る)、#1589 (#1644 で Node 24.22.3 済み)、#1032 (#1408 で実装・配線済み、残り AC は要確認)、#439 (#1600 と同じ事象)。重複: #982 と #1212、#668 と #1538、#1121 と #1721〜#1723 | 左の各 Issue | 即時 (control) | control が整理 |
+| T17 | 実行できない AC: #823 / #822 / #968 / #762 / #304 / #70 / #1083 が PLAN の起票を AC にしている。#1124 / #1125 の待ちの #1099 は closed。#759 は対象に S7 で退役する file を含み数値が古い。#1170 の明細の file は既に無い | 左の各 Issue | 即時 (control)。⑤ の束ねる Issue は ⑤ の着手時に再確認 | control が整理 |
+
+健全と確認できたもの (直さない): モデル ID と effort ラダーは 3 アダプタと `MODEL_IDS` で一致、WIP 規律は一致、oracle-test-trace (数字の ID) は orphan / undeclared / stale / duplicate すべて 0、hook / CI / `package.json` の path は全部実在、privacy-scan E5 は設計と実装が一致。code-size baseline も健全 (§3.2 B4)。
+
+## 7. 次の一手 (Issue 起票案、本書の PR では起票しない)
 
 各 1 行。順序は A → B → C → D。
 
@@ -164,7 +190,7 @@
 6. [B] file-placement registry (移動表の正本) と、報告だけの patrol を実装する (RP 段階 1、§4 の 1)。
 7. [B] 書き込み guard (RP 段階 2) を実装する。Codex 側の hook の実測を含める。
 8. [B] path 参照の影響範囲を測る再現可能な script を置く (§4 の 2)。件数 153 / 62 / 37 を HEAD で再測する。
-9. [B] code-size baseline が実測より古い原因の調査と、移動表による再キー手順の契約 (§4 の 3、B4)。
+9. [B] code-size baseline の移動表による再キー手順の契約 (§4 の 3、B4)。
 10. [B] 層番号の対応表を凍結する (oracle ID と test ID は据え置き、L8/L9 を個別に定義、§4 の 8)。
 11. [B] 旧 Pack と新 Pack の配布 tree の差分を実測し、consumer 移行方式 (2 本立て) を契約する (§4 の 6、#481 の対応範囲の確認を含む)。
 12. [B] harness.db の path キーの行の扱いを設計する (§4 の 4)。
@@ -172,10 +198,14 @@
 14. [C] ④-1 の canary: codemod を再実行して差分 0 を確かめる review 手順と、1 PR = 1 論点の扱い (§4 の 5)。
 15. [D] #1084 に ⑤ の順序と出口条件を足し、#1212 を ⑤ へ付け替えるか決める。
 16. [D] canonicalJson (5 か所) と sha256 系 (約 19 か所) の、バイト一致の特性テストを先に置く Issue。
+17. [B] oracle-test-trace の `ORACLE_ID` 正規表現の死角を直す (`U-*-R<n>` 形式 65 件が trace 対象外、§6 の T1)。直す前に 65 件の扱い (対象に入れる / 退役) を決める。
+18. [即時] ③ (#961) と ② (#958) の親子整理 (関係の無い子の付け替え、#913 の親、本文の列挙の訂正、§6 の T13・T14)。実施は control。
+19. [即時] `src/runtime/forced-stop.ts` の生の NUL を `"\0"` へ直す (§6 の T11)。
+20. [S8] 規範文書と rule-drift の PLAN の文言、存在しない CLI、`repository-structure.md` の食い違いを #1380 で直す (§6 の T4〜T7)。
 
-## 7. 未検証と限界
+## 8. 未検証と限界
 
-- 参照件数 153 / 62 / 37 / 37 と層番号の出現回数は、起草時 (HEAD `5d6b7ec3`) の計測値で、HEAD `3e1867320` では再測していない。再測した値は `cli.ts` 4,103 行・`.command(` 105 件、`canonicalJson` 5 か所、sha256 系 19 か所、`src/plan-asset` + `src/plan-admission` 11,410 行である。
+- 参照件数 153 / 62 / 37 / 37 と層番号の出現回数は、起草時 (HEAD `5d6b7ec3`) の計測値で、HEAD `3e1867320` では再測していない。再測した値は `cli.ts` 空白行を除いて 3,994 行 (全行 4,103)・`.command(` 105 件、`canonicalJson` 5 か所、sha256 系 19 か所、`src/plan-asset` + `src/plan-admission` 11,410 行である。
 - `cli.ts` が 28 ディレクトリから import する件数、functionExcess の値、projection の同名関数 6 組は再測していない。
 - updater (#481) が構成変更を扱うか、harness.db の path キーの行の扱い (§4 の 4・6) は**未検証**。
 - 相談 (`claude-fable-5-2`) の回答のうち、本書に採った反駁 6 件 (hook 切り替えは ③ 本体、橋渡し版、registry 経由の付け替えは契約外、pure rename は不成立、consumer 移行の 2 本立て、⑤ の親は既存) は、control lane が repo の実物で確かめている (`canonicalJson` 5 か所、sha256 系の重複、#1084 と #1212 の実在、`ut-tdd.mjs` が repo root に無いこと)。
