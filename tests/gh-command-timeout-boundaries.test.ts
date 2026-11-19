@@ -48,7 +48,7 @@ function runPostMergeBackstop(): Array<{
 }
 
 describe("gh timeout and prompt boundary exceptions", () => {
-  it("CANDIDATE-U-CMDINPUT-024: delegation preserves adapter env without adding a timeout", () => {
+  it("U-CMDINPUT-024: delegation preserves adapter env without adding a timeout", () => {
     const root = fixtureRoot("ut-gh-timeout-delegation-");
     const cwd = vi.spyOn(process, "cwd").mockReturnValue(root);
     const previousPromptDisabled = process.env.GH_PROMPT_DISABLED;
@@ -98,7 +98,7 @@ describe("gh timeout and prompt boundary exceptions", () => {
     }
   });
 
-  it("CANDIDATE-U-CMDINPUT-024: provider capability probe has no timeout or prompt env", () => {
+  it("U-CMDINPUT-024: provider capability probe has no timeout or prompt env", () => {
     const root = fixtureRoot("ut-gh-timeout-provider-probe-");
     const binary = join(root, process.platform === "win32" ? "codex.cmd" : "codex");
     writeFileSync(binary, "");
@@ -128,7 +128,7 @@ describe("gh timeout and prompt boundary exceptions", () => {
     expect(probeOptions?.env.GH_PROMPT_DISABLED).toBeUndefined();
   });
 
-  it("CANDIDATE-U-CMDINPUT-025: post-merge gh timeout remains exactly 10 seconds", () => {
+  it("U-CMDINPUT-025: post-merge gh timeout remains exactly 10 seconds", () => {
     const calls = runPostMergeBackstop();
     const ghCall = calls.find((call) => call.command === "gh");
 
@@ -136,7 +136,7 @@ describe("gh timeout and prompt boundary exceptions", () => {
     expect(ghCall?.options.timeout).toBe(10_000);
   });
 
-  it("CANDIDATE-U-CMDINPUT-025: post-merge gh adds prompt suppression while retaining its timeout", () => {
+  it("U-CMDINPUT-025: post-merge gh adds prompt suppression while retaining its timeout", () => {
     const calls = runPostMergeBackstop();
     const ghCall = calls.find((call) => call.command === "gh");
 
