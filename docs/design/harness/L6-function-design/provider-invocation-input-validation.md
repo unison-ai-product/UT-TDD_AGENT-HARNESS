@@ -14,7 +14,7 @@ issue: 1261
 
 > **契約状態**: 本文はM1の目標契約である。Issue #1284で対になるL7の11件を正式oracleへ昇格した。このID昇格はsource実装、Green結果、closing review PASSを示すものではない。frontmatterのconfirmedは文書revisionの固定を示し、実装完了を表さない。
 
-L6 contract marker: M1は既存の `buildProviderInvocation(input: ProviderInvocationInput) => ProviderInvocation` と `buildAdapterPlan(intent: AdapterIntent, mode: ExecutionMode) => AdapterPlan` (§5、正式oracle `U-CMDINPUT-001`〜`011`)、L1は `checkForUpdate(deps: UpdateCheckDeps) => UpdateCheckResult` (§7、正式oracle `U-CMDINPUT-012`〜`016`)、L2は `ghCommandEnv(env: NodeJS.ProcessEnv) => NodeJS.ProcessEnv` と定数 `GH_COMMAND_TIMEOUT_MS` (§8、候補 `CANDIDATE-U-CMDINPUT-017`〜`028`) を契約面とする。§7の012〜016は昇格済みの正式oracle、§8の017〜028は正式oracleではない候補である。
+L6 contract marker: M1は既存の `buildProviderInvocation(input: ProviderInvocationInput) => ProviderInvocation` と `buildAdapterPlan(intent: AdapterIntent, mode: ExecutionMode) => AdapterPlan` (§5、正式oracle `U-CMDINPUT-001`〜`011`)、L1は `checkForUpdate(deps: UpdateCheckDeps) => UpdateCheckResult` (§7、正式oracle `U-CMDINPUT-012`〜`016`)、L2は `ghCommandEnv(env: NodeJS.ProcessEnv) => NodeJS.ProcessEnv` と定数 `GH_COMMAND_TIMEOUT_MS` (§8、正式oracle `U-CMDINPUT-017`〜`028`、027は欠番) を契約面とする。
 
 ## 1. 目的と範囲
 
@@ -131,7 +131,7 @@ gitの起動に対してはfail-closeとする: 拒否時は `listRemoteTags` �
 
 ## 8. 外部コマンドのtimeoutとgh promptの抑止 (Issue #1261 L2)
 
-> **契約状態**: 本節はL2のpair-freezeのための契約案であり、非著者のclosing review前である。未実装の目標契約であり、source実装・L7候補の正式昇格・実行証跡を示さない。§1〜§7の契約は本節で変えない。行番号はorigin/main `5630f0f7d` 時点の実測である。
+> **契約状態**: #1322 で L2 の oracle 11 件を正式 ID に昇格する。実装は #1812 で main に合流済み。本文で引用する行番号は origin/main `5630f0f7d` 時点の調査記録である。
 
 ### 8.1 対象の範囲
 
@@ -198,4 +198,4 @@ Nodeは、`spawnSync`では`error` (code `ETIMEDOUT`) と`status: null`を返し
 | pre | `ghCommandEnv`の引数は任意のenv objectで、`GH_PROMPT_DISABLED`の有無を問わない。§8.1対象表の起動点は、ネットワーク不調・認証待ちで応答しない`gh`を外部入力として扱う。 |
 | post | S7後に§8.1の対象表へ残る12起動点のspawn optionsは`timeout` (`GH_COMMAND_TIMEOUT_MS`、`post-merge-backstop`は`POST_MERGE_COMMAND_TIMEOUT_MS`) と`env.GH_PROMPT_DISABLED === "1"`を持つ。timeoutは子への終了要求であって戻りまでの上限ではない。timeoutはその起動点の既存の失敗経路に載り、成功の認定・retryにならない。変更系では更新の有無を保証しない。`ghCommandEnv`は引数を変えず、他のkeyを保ち、既存の`GH_PROMPT_DISABLED`を上書きした新objectを返す。 |
 | invariant | provider実行・probe・`git` (`validateLiveReviewSubject`の共用runnerの`git`呼出しを含む)・`gh --version`のspawn optionsにtimeoutを足さず、`shell: true`を足さず、`process.env`と`adapterExecutionEnv`を変えない。既存の別値 (10_000 / 5000) を変えない。注入できる実行子の型を変えない。 |
-| oracle | 専用L7の `CANDIDATE-U-CMDINPUT-017`〜`028` (`027` は S5 で対象が退役するので欠番)。まだ正式oracleではない。 |
+| oracle | 専用 L7 の正式 oracle `U-CMDINPUT-017`〜`U-CMDINPUT-028`。`027` は S5 で対象が退役したため欠番。 |
