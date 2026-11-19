@@ -12,7 +12,7 @@ issue: 1359
 
 # gate-run 証跡保存失敗時の警告境界 (Issue #1359)
 
-> **L6 contract marker**: `runGate(gId) => exit status` のうち、`writeGateRunEvidence` が失敗した場合の警告境界を対象とする unit-test-granularity contract である。DbC oracle の詳細 (`U-GATE-011`) は対になる L7 に置く。
+> **L6 contract marker**: `runGate(gId) => exit status` のうち、`writeGateRunEvidence` の公開失敗時の警告と中断後の復旧を対象とする unit-test-granularity contract である。DbC oracle の詳細は対になる L7 に置く。
 
 ## 1. 位置付け
 
@@ -22,3 +22,34 @@ gate の判定と証跡書込の詳細は `docs/design/harness/L6-function-desig
 ## 2. 契約
 
 gate verdict は `evaluateGateReview` + `evaluateStaticGate` の合成であり、証跡書込の失敗も verdict / exit を変えず stderr 警告にする。
+
+## 3. 公開失敗と中断後の復旧 (Issue #1468)
+
+`function-spec.md` §2.2 の no-clobber 公開について、`U-GATE-009` で保留した4項目の検証境界を定める。通常の gate は、完成した証跡を同じディレクトリの `.tmp-*` に書き、hard link で final 名を作り、成功後に自分の temp を片付ける。
+
+### 3.1 同じ ID の衝突
+
+既存証跡の ID が一致する場合と、hard link が `EEXIST` で失敗した場合は、CLI の既存の証跡書込警告に `EEXIST` を含める。human-readable では stderr に出し、`--json` では `gate_run_evidence_warning` に格納する。公開できなかった実行の `gate_run_evidence` は `null`。証跡保存の成否によらず、同じ gate 入力の verdict と exit code を維持する。既存 final の内容を保持する。
+
+### 3.2 内部の検証入口
+
+`writeGateRunEvidence(input, boundary?)` の `boundary` は、writer の直接テストで使う任意の内部依存とする。引数を省略した通常実行では既存の filesystem 操作を使う。この依存を CLI オプション、環境変数、設定ファイルなどから writer に渡す本番経路は設けない。
+
+| 依存 | 呼ぶ位置と契約 |
+|---|---|
+| `beforeLink(stagedPath, finalPath)` | `.tmp-*` への完成 JSON の書き込みが成功した場合に、hard link の直前に同期で1回呼ぶ。両 path は writer が使う同じ証跡ディレクトリの path。呼び出し時に temp が実在し、今回の書き込みによる final はまだ作られていない。 |
+| `link(stagedPath, finalPath)` | `beforeLink` が戻った直後に呼ぶ hard link 操作。注入された例外を呼び出し元に伝え、copy・rename・final への直接書き込みで公開を続けることを禁止する。通常実行では `linkSync` を使う。 |
+
+#### CLI テストの起動と観測
+
+CLI 経由の衝突・link 失敗テストは、一時ディレクトリで実 CLI を起動する専用の子プロセスに、テスト専用の Node `--import` preload を指定する。観測記録は証跡ディレクトリと CLI の stdout/stderr から分離したファイルに置く。Node ESM import が参照する組み込み関数を差し替えた後は `syncBuiltinESMExports` を呼ぶ。
+
+既存 ID の事前検査では、preload が引数なしの `new Date()` に限って時計を固定する。同じ gate ID とセッション条件、子プロセスの実 PID を使い、`buildGateRunEvidence` で組み立てた完成 JSON を、正規の hash 名で CLI 起動前に書く。実 CLI が既存 final を読み、早期に拒否したことと、staging と link に進まなかったことを記録する。実行前後で既存 final の bytes が同一であることも確認する。
+
+link 時点の `EEXIST` ケースでは、preload は fixture の証跡ディレクトリに限定して native `linkSync` をラップする。staging 後、ラッパーが占有先 final を配置してから実際の `linkSync` を呼び、その path、呼び出し回数、返った code を記録して例外を再送出する。`EEXIST` 以外のケースも同じ限定ラッパーを使い、1回の呼び出しを記録して固定の `ENOTSUP` (または同等に型が特定できる失敗) を注入する。final は作られない。
+
+### 3.3 中断からの復旧
+
+hard link 前に writer の子プロセスが終了すると、当該実行の final は存在せず、完成 temp が残る。別プロセスの retry は新しい `gate_run_id` を使い、その ID に対応する final を1件公開する。前の temp は内容も名前も保持する。通常の `collectGateRunEvidenceProjection` は retry の final を読むが、残った temp は証跡として数えない。
+
+4項目のテスト設計、前提の検証、後続 Red の候補 ID は対になる L7 §2 に置く。
