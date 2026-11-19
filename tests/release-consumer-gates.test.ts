@@ -25,16 +25,37 @@ import {
   loadCompiledRightArmRegistry,
   VMODEL_CONTRACT_PATH,
 } from "../src/vmodel-contract/adapters/yaml-contract-loader.ts";
-import {
-  buildConsumerGateFixtureDocs,
-  type ConsumerGateFixtureOptions,
-} from "./support/consumer-gate-fixture.ts";
 import { describe, expect, heavyAfterAll, it } from "./support/hook-bounds.ts";
 
 const GATE_ASSETS = [
   "docs/governance/gate-design.md",
   "docs/process/gates.md",
   "docs/process/vmodel-contract.yaml",
+] as const;
+
+const CONSUMER_TEMPLATE_SLOTS = [
+  [
+    "docs/templates/vmodel/L1-requirements.md",
+    "docs/design/L1-requirements/functional-requirements.md",
+  ],
+  ["docs/templates/vmodel/L2-screen-list.md", "docs/design/L2-screen/screen-list.md"],
+  [
+    "docs/templates/vmodel/L3-functional-requirements.md",
+    "docs/design/L3-functional/functional-requirements.md",
+  ],
+  ["docs/templates/vmodel/L4-data.md", "docs/design/L4-basic-design/data.md"],
+  ["docs/templates/vmodel/L4-architecture.md", "docs/design/L4-basic-design/architecture.md"],
+  ["docs/templates/vmodel/L4-external-if.md", "docs/design/L4-basic-design/external-if.md"],
+  ["docs/templates/vmodel/L4-function.md", "docs/design/L4-basic-design/function.md"],
+  ["docs/templates/vmodel/L4-ui-standard.md", "docs/design/L4-basic-design/ui-standard.md"],
+  ["docs/templates/vmodel/L4-security.md", "docs/design/L4-basic-design/security.md"],
+  ["docs/templates/vmodel/L5-physical-data.md", "docs/design/L5-detailed-design/physical-data.md"],
+  [
+    "docs/templates/vmodel/L5-module-decomposition.md",
+    "docs/design/L5-detailed-design/module-decomposition.md",
+  ],
+  ["docs/templates/vmodel/L6-function-spec.md", "docs/design/L6-function-design/function-spec.md"],
+  ["docs/templates/vmodel/L7-unit-test-design.md", "docs/test-design/L7-unit-test-design.md"],
 ] as const;
 
 const roots: string[] = [];
@@ -58,11 +79,88 @@ function writeFixtureDoc(root: string, path: string, content: string): void {
   writeFileSync(target, content, "utf8");
 }
 
-function writeConsumerGateFixture(root: string, options: ConsumerGateFixtureOptions = {}): void {
+// consumer の core 文書の表 (consumer-trace-gates.md §5 / §6)。coreOnly の fixture は prefix 自由の ID だけを置く。
+const CORE_ROWS: Record<string, [heading: string, row: string]> = {
+  "docs/design/L1-requirements/functional-requirements.md": [
+    "#### 第4章 機能要求一覧",
+    "| REQ-001 | Consumer goal | Consumer function | P0 | SC-001, FN-001 |",
+  ],
+  "docs/design/L2-screen/screen-list.md": [
+    "#### 第4章 画面一覧",
+    "| SC-001 | Consumer screen | Consumer overview | REQ-001, FN-001 | user |",
+  ],
+  "docs/design/L3-functional/functional-requirements.md": [
+    "##### 3-1 機能一覧",
+    "| FN-001 | Consumer function | Consumer overview | user | REQ-001 |",
+  ],
+  "docs/test-design/L12-acceptance-test-design.md": [
+    "#### 第3章 テストケース一覧",
+    "| AT-001 | 受入 | Consumer acceptance | 手順 | 結果 | REQ-001, SC-001, FN-001 |",
+  ],
+};
+
+// coreOnly (U-RCDEV-027) は consumer の core 4 文書だけを置く。それ以外は G11 / G12 / G13 (U-RCDEV-032〜034) の
+// oracle が前提にする harness 形式の補助文書 (nfr-grade / business-detail など) も置く。
+function writeConsumerGateFixture(
+  root: string,
+  options: { omitRequiredSlot?: boolean; omitWireframe?: boolean; coreOnly?: boolean } = {},
+): void {
   const repositoryRoot = process.cwd();
-  const read = (path: string) => readFileSync(join(repositoryRoot, path), "utf8");
-  for (const [path, content] of Object.entries(buildConsumerGateFixtureDocs(read, options))) {
-    writeFixtureDoc(root, path, content);
+  const core = options.coreOnly === true;
+  const adapt = (path: string, pair: string, row?: [string, string]) => {
+    const text = readFileSync(join(repositoryRoot, path), "utf8")
+      .replace(/^status: .*$/m, "status: confirmed")
+      .replace(/^pair_artifact: .*$/m, `pair_artifact: ${pair}`)
+      .replace(/^plan: .*$/m, "plan: docs/plans/PLAN-CONSUMER-01.md");
+    const at = row ? text.indexOf(row[0]) : -1;
+    return core && row
+      ? text.slice(0, at) + text.slice(at).replace(/^\| <記入>.*$/m, row[1])
+      : text;
+  };
+  const unit = "docs/test-design/L7-unit-test-design.md";
+  for (const [templatePath, targetPath] of CONSUMER_TEMPLATE_SLOTS) {
+    if (options.omitRequiredSlot && targetPath.endsWith("/screen-list.md")) continue;
+    const pair = targetPath.startsWith("docs/test-design/") ? "docs/design/" : unit;
+    writeFixtureDoc(root, targetPath, adapt(templatePath, pair, CORE_ROWS[targetPath]));
+  }
+  if (!core) {
+    const l1 = adapt("docs/templates/vmodel/L1-requirements.md", unit);
+    const l3 = adapt("docs/templates/vmodel/L3-functional-requirements.md", unit);
+    const nfr = [1, 2, 3, 4, 5, 6, 7, 8, 11, 12, 13, 14, 15, 16, 17]
+      .map((n) => `| **NFR-${String(n).padStart(2, "0")}** | covered |`)
+      .join("\n");
+    const docs: Record<string, string> = {
+      "docs/design/L1-requirements/business-requirements.md": `${l1}\n| **BR-01** | Consumer goal |\n`,
+      "docs/design/L1-requirements/functional-requirements.md": `${l1}\n| **FR-L1-01** | Consumer function | P0 |\n`,
+      "docs/design/L1-requirements/screen-requirements.md": `${l1}\n\n## §1 画面一覧\nPM-01\n## §2 次\n### §5.1 業務要求トレース\n| **BR-01** | PM-01 |\n### §5.3 機能要求トレース\n| **FR-L1-01** | PM-01 |\n### §5.4 次\n### §5.5 画面トレース\n| **PM-01** | BR-01 / FR-L1-01 |\n### §5.6 次\n`,
+      "docs/design/L3-functional/business-detail.md": `${l3}\n`,
+      "docs/design/L3-functional/nfr-grade.md": `${l3}\n${nfr}\n`,
+      "docs/design/L3-functional/functional-requirements.md": `${l3}\n### FR-01: Consumer function\n#### AC-FR-01-01\n`,
+    };
+    for (const [path, content] of Object.entries(docs)) writeFixtureDoc(root, path, content);
+  }
+  writeFixtureDoc(
+    root,
+    "docs/test-design/L10-ux-validation-test-design.md",
+    adapt("docs/templates/vmodel/L10-ux-validation.md", "docs/design/L2-screen/"),
+  );
+  const l12 = "docs/test-design/L12-acceptance-test-design.md";
+  const l12Doc = adapt(
+    "docs/templates/vmodel/L12-acceptance-test-design.md",
+    "docs/design/",
+    CORE_ROWS[l12],
+  );
+  writeFixtureDoc(
+    root,
+    l12,
+    core ? l12Doc : `${l12Doc}\n| **AT-FR-01-01** | Consumer acceptance |\n`,
+  );
+  if (!options.omitWireframe) {
+    writeFixtureDoc(
+      root,
+      "docs/design/L2-screen/wireframe.md",
+      "---\nlayer: L2\nstatus: confirmed\npair_artifact: docs/test-design/L10-ux-validation-test-design.md\n---\n# Consumer wireframe\n",
+    );
   }
 }
 
@@ -1183,74 +1281,66 @@ describe("PR-G0 release-consumer gates", () => {
     expect(bundledGateMessage()).toContain("G1=consumer override");
   });
 
-  // U-RCDEV-027 (v) の G1 / G3 は consumer 分岐 (consumer-trace-gates.md §3.2 / §9.1) で判定する。
-  // main に consumer 分岐が無い間は Red。G1 は #1314 の Green、G3 は G3 の consumer 分岐の Green で `it` へ戻す。
-  it.fails("U-RCDEV-027: G1 passes on the consumer core documents with a free-prefix ID", () => {
+  // 5 件に分けた理由 (test-design の U-RCDEV-027 (v) は G1〜G6 を 1 件で述べる):
+  // - G1 / G3 / 欠落 slot は main に consumer 分岐が無く失敗する (it.fails)。
+  // - G2 / G4〜G6 と wireframe 欠落は consumer 分岐に依らず現挙動で通る (it)。
+  // - G1 と G3 は実装される PR が別なので、gate ごとに Red を外せるようにする。
+  // fixture は consumer の core 4 文書 (L1 要求 / L2 画面一覧 / L3 機能 / L12 受入) と
+  // 接頭辞自由の ID (REQ-001 / SC-001 / FN-001 / AT-001) だけで作る。
+  // harness 専用の文書 (business-requirements / screen-requirements /
+  // business-detail / nfr-grade) と harness 形式の ID (PM-01 など) は置かない。
+  // G3 の message は consumer-trace-gates.md §15.4 の形を期待する。
+  // 欠落 slot は core slot の DOC-L2-SCREEN を欠く形にする (§5 の理由 missing_core_doc)。
+  // harness 専用の文書名を含む message は期待しない (§9.1)。
+  // 実装前の main では it.fails が失敗を反転して通り、実装後は it へ戻す。
+  // U-RCDEV-027 の G1 / G3 / 欠落 slot は consumer 分岐 (consumer-trace-gates.md §3.2 / §9.1) で判定する。
+  // main に consumer 分岐が無い間は Red。G1 と欠落 slot は #1314 の Green、G3 は G3 の consumer 分岐の Green で `it` へ戻す。
+  const coreGate = (
+    gate: string,
+    options: { omitRequiredSlot?: boolean; omitWireframe?: boolean } = {},
+  ) => {
     const root = fixtureRoot();
-    writeConsumerGateFixture(root, { coreOnly: true });
+    writeConsumerGateFixture(root, { ...options, coreOnly: true });
+    const result = evaluateStaticGate({ gate, repoRoot: root });
+    return { result, messages: result.messages.join("\n") };
+  };
 
-    const result = evaluateStaticGate({ gate: "G1", repoRoot: root });
-    const messages = result.messages.join("\n");
-
+  it.fails("U-RCDEV-027: G1 passes on the consumer core documents with a free-prefix ID", () => {
+    const { result, messages } = coreGate("G1");
     expect(result).toMatchObject({ applicable: true, passed: true });
     expect(messages).toContain(
       "g1-trace - OK (consumer column trace: requirements=1, screens=1, functions=1)",
     );
-    expect(messages).not.toContain("could not run");
-    expect(messages).not.toContain("required doc not created");
+    expect(messages).not.toMatch(/could not run|required doc not created/);
   });
 
   it.fails("U-RCDEV-027: G3 passes on the consumer core documents without harness-only docs", () => {
-    const root = fixtureRoot();
-    writeConsumerGateFixture(root, { coreOnly: true });
-
-    const result = evaluateStaticGate({ gate: "G3", repoRoot: root });
-    const messages = result.messages.join("\n");
-
+    const { result, messages } = coreGate("G3");
     expect(result).toMatchObject({ applicable: true, passed: true });
     expect(messages).toContain(
       "g3-trace - OK (consumer column trace: requirements=1, functions=1, tests=1)",
     );
-    expect(messages).not.toContain("could not run");
-    expect(messages).not.toContain("required doc not created");
+    expect(messages).not.toMatch(/could not run|required doc not created/);
   });
 
   it("U-RCDEV-027: G2 and G4-G6 stay applicable and pass on the consumer fixture", () => {
-    const root = fixtureRoot();
-    writeConsumerGateFixture(root, { coreOnly: true });
-
-    const results = ["G2", "G4", "G5", "G6"].map((gate) =>
-      evaluateStaticGate({ gate, repoRoot: root }),
+    const results = ["G2", "G4", "G5", "G6"].map((gate) => coreGate(gate).result);
+    expect(results.map(({ applicable, passed }) => [applicable, passed])).toEqual(
+      results.map(() => [true, true]),
     );
-    expect(results.map(({ gate, applicable }) => [gate, applicable])).toEqual(
-      ["G2", "G4", "G5", "G6"].map((gate) => [gate, true]),
-    );
-    expect(results.every((result) => result.passed)).toBe(true);
     expect(results.flatMap((result) => result.messages).join("\n")).not.toContain("could not run");
   });
 
   it.fails("U-RCDEV-027: reports the missing required consumer slot, not could-not-run", () => {
-    const root = fixtureRoot();
-    writeConsumerGateFixture(root, { omitRequiredSlot: true, coreOnly: true });
-
-    const result = evaluateStaticGate({ gate: "G1", repoRoot: root });
-    const messages = result.messages.join("\n");
-
+    const { result, messages } = coreGate("G1", { omitRequiredSlot: true });
     expect(result).toMatchObject({ applicable: true, passed: false });
     expect(messages).toContain("missing_core_doc:DOC-L2-SCREEN");
-    expect(messages).not.toContain("business-requirements");
-    expect(messages).not.toContain("could not run");
+    expect(messages).not.toMatch(/business-requirements|could not run/);
   });
 
   it("U-RCDEV-027: rejects a consumer fixture without its L2-to-L10 wireframe pair", () => {
-    const root = fixtureRoot();
-    writeConsumerGateFixture(root, { omitWireframe: true, coreOnly: true });
-
-    const result = evaluateStaticGate({ gate: "G2", repoRoot: root });
-    const messages = result.messages.join("\n");
-
-    expect(result.applicable).toBe(true);
-    expect(result.passed).toBe(false);
+    const { result, messages } = coreGate("G2", { omitWireframe: true });
+    expect(result).toMatchObject({ applicable: true, passed: false });
     expect(messages).toContain("mock=missing");
     expect(messages).not.toContain("could not run");
   });
