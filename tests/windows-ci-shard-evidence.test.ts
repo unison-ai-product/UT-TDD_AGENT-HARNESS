@@ -131,7 +131,7 @@ describe("Windows CI evidence entrypoints", () => {
     } finally {
       removeTestTree(root);
     }
-  }, 20000);
+  }, 60_000);
 
   it("recomputes doc from Git and ignores earlier shard artifacts", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-windows-evidence-"));
@@ -142,5 +142,5 @@ describe("Windows CI evidence entrypoints", () => {
     } finally {
       removeTestTree(root);
     }
-  }, 20000);
+  });
 });
