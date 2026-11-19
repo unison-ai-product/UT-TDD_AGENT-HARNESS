@@ -1,5 +1,5 @@
 import { readdirSync, readFileSync } from "node:fs";
-import { dirname, join, normalize, relative, resolve } from "node:path";
+import { dirname, join, normalize, resolve } from "node:path";
 import ts from "typescript";
 import type { LintResult } from "../lint/lint-result.ts";
 
@@ -193,15 +193,14 @@ export function analyzeWindowsHide(input: WindowsHideInput): WindowsHideResult {
 }
 
 function walk(root: string, directory: string): string[] {
+  const absolute = join(root, directory);
   try {
-    return readdirSync(join(root, directory), { recursive: true, withFileTypes: true }).flatMap(
-      (entry) => {
-        if (entry.isDirectory()) return [];
-        const child = relative(root, join(entry.parentPath, entry.name));
-        const extension = child.slice(child.lastIndexOf("."));
-        return SOURCE_EXTENSIONS.has(extension) ? [slash(child)] : [];
-      },
-    );
+    return readdirSync(absolute, { withFileTypes: true }).flatMap((entry) => {
+      const child = join(directory, entry.name);
+      if (entry.isDirectory()) return walk(root, child);
+      const extension = child.slice(child.lastIndexOf("."));
+      return SOURCE_EXTENSIONS.has(extension) ? [slash(child)] : [];
+    });
   } catch {
     return [];
   }
