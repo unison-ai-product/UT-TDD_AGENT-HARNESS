@@ -64,7 +64,7 @@ function countWindowsTestFiles(report) {
   return executed.size;
 }
 
-function writeEvidence(kind, env) {
+function readEvidenceInput(env) {
   const directory = env.RUNNER_TEMP;
   const output = env.GITHUB_OUTPUT;
   const legOrShard = env.WINDOWS_CI_EVIDENCE_LEG;
@@ -79,21 +79,23 @@ function writeEvidence(kind, env) {
     throw new WindowsCiEvidenceError("malformed_evidence");
   }
   const binding = readWindowsCiBinding(env);
-  if (kind === "lane") {
-    const lane = env.WINDOWS_CI_LANE;
-    const leg = hasShard ? "windows-" + legOrShard[0] : "linux";
-    if (lane !== "full" && lane !== "doc")
-      throw new WindowsCiEvidenceError("malformed_evidence", [leg]);
-    writeFileSync(
-      join(directory, "lane-evidence.json"),
-      JSON.stringify({ ...binding, leg, lane }) + "\n",
-      { flag: "wx" },
-    );
-    appendFileSync(output, "leg=" + leg + "\n");
-    return;
-  }
-  const result = env.WINDOWS_CI_SHARD_RESULT;
-  if (kind !== "shard" || !hasShard || !SHARD_RESULTS.has(result)) {
+  return { directory, output, legOrShard, hasShard, binding };
+}
+
+function writeLaneEvidence({ directory, output, legOrShard, hasShard, binding }, lane) {
+  const leg = hasShard ? "windows-" + legOrShard[0] : "linux";
+  if (lane !== "full" && lane !== "doc")
+    throw new WindowsCiEvidenceError("malformed_evidence", [leg]);
+  writeFileSync(
+    join(directory, "lane-evidence.json"),
+    JSON.stringify({ ...binding, leg, lane }) + "\n",
+    { flag: "wx" },
+  );
+  appendFileSync(output, "leg=" + leg + "\n");
+}
+
+function writeShardEvidence({ directory, output, legOrShard, hasShard, binding }, result) {
+  if (!hasShard || !SHARD_RESULTS.has(result)) {
     throw new WindowsCiEvidenceError("malformed_evidence");
   }
   const report = JSON.parse(readFileSync(join(directory, REPORT_NAME), "utf8"));
@@ -109,4 +111,14 @@ function writeEvidence(kind, env) {
   appendFileSync(output, "index=" + legOrShard[0] + "\n");
 }
 
-if (import.meta.main) writeEvidence(process.argv[2], process.env);
+if (import.meta.main) {
+  const kind = process.argv[2];
+  const input = readEvidenceInput(process.env);
+  if (kind === "lane") {
+    writeLaneEvidence(input, process.env.WINDOWS_CI_LANE);
+  } else if (kind === "shard") {
+    writeShardEvidence(input, process.env.WINDOWS_CI_SHARD_RESULT);
+  } else {
+    throw new WindowsCiEvidenceError("malformed_evidence");
+  }
+}
