@@ -1281,20 +1281,8 @@ describe("PR-G0 release-consumer gates", () => {
     expect(bundledGateMessage()).toContain("G1=consumer override");
   });
 
-  // 5 件に分けた理由 (test-design の U-RCDEV-027 (v) は G1〜G6 を 1 件で述べる):
-  // - G1 / G3 / 欠落 slot は main に consumer 分岐が無く失敗する (it.fails)。
-  // - G2 / G4〜G6 と wireframe 欠落は consumer 分岐に依らず現挙動で通る (it)。
-  // - G1 と G3 は実装される PR が別なので、gate ごとに Red を外せるようにする。
-  // fixture は consumer の core 4 文書 (L1 要求 / L2 画面一覧 / L3 機能 / L12 受入) と
-  // 接頭辞自由の ID (REQ-001 / SC-001 / FN-001 / AT-001) だけで作る。
-  // harness 専用の文書 (business-requirements / screen-requirements /
-  // business-detail / nfr-grade) と harness 形式の ID (PM-01 など) は置かない。
-  // G3 の message は consumer-trace-gates.md §15.4 の形を期待する。
-  // 欠落 slot は core slot の DOC-L2-SCREEN を欠く形にする (§5 の理由 missing_core_doc)。
-  // harness 専用の文書名を含む message は期待しない (§9.1)。
-  // 実装前の main では it.fails が失敗を反転して通り、実装後は it へ戻す。
-  // U-RCDEV-027 の G1 / G3 / 欠落 slot は consumer 分岐 (consumer-trace-gates.md §3.2 / §9.1) で判定する。
-  // main に consumer 分岐が無い間は Red。G1 と欠落 slot は #1314 の Green、G3 は G3 の consumer 分岐の Green で `it` へ戻す。
+  // U-RCDEV-027 (consumer-trace-gates.md §9.1): G1 / G3 / 欠落 slot は main に consumer 分岐が無く Red (it.fails)。
+  // test-design の (v) を gate 別に分けたのは、G1 (#1314) と G3 の consumer 分岐が別 PR で入り、Red を個別に外すため。
   const coreGate = (
     gate: string,
     options: { omitRequiredSlot?: boolean; omitWireframe?: boolean } = {},
