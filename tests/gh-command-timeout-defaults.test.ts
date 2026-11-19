@@ -123,46 +123,46 @@ describe("GitHub CLI default launch options", () => {
     }
   });
 
-  it("CANDIDATE-U-CMDINPUT-018: nodeGh sets a 30-second timeout", () => {
+  it("U-CMDINPUT-018: nodeGh sets a 30-second timeout", () => {
     expect(setup.timeout).toBe(30_000);
   });
 
-  it("CANDIDATE-U-CMDINPUT-018: default attestation sets a 30-second timeout", () => {
+  it("U-CMDINPUT-018: default attestation sets a 30-second timeout", () => {
     expect(attestation.timeout).toBe(30_000);
   });
 
-  it("CANDIDATE-U-CMDINPUT-018: live review gh sets a 30-second timeout", () => {
+  it("U-CMDINPUT-018: live review gh sets a 30-second timeout", () => {
     expect(liveGh.timeout).toBe(30_000);
   });
 
-  it("CANDIDATE-U-CMDINPUT-019: nodeGh disables prompting and preserves environment", () => {
+  it("U-CMDINPUT-019: nodeGh disables prompting and preserves environment", () => {
     expect({
       promptDisabled: setup.env?.GH_PROMPT_DISABLED,
       sentinel: setup.env?.[sentinelKey],
     }).toEqual({ promptDisabled: "1", sentinel: sentinelValue });
   });
 
-  it("CANDIDATE-U-CMDINPUT-019: default attestation disables prompting and preserves environment", () => {
+  it("U-CMDINPUT-019: default attestation disables prompting and preserves environment", () => {
     expect({
       promptDisabled: attestation.env?.GH_PROMPT_DISABLED,
       sentinel: attestation.env?.[sentinelKey],
     }).toEqual({ promptDisabled: "1", sentinel: sentinelValue });
   });
 
-  it("CANDIDATE-U-CMDINPUT-019: live review gh disables prompting and preserves environment", () => {
+  it("U-CMDINPUT-019: live review gh disables prompting and preserves environment", () => {
     expect({
       promptDisabled: liveGh.env?.GH_PROMPT_DISABLED,
       sentinel: liveGh.env?.[sentinelKey],
     }).toEqual({ promptDisabled: "1", sentinel: sentinelValue });
   });
 
-  it("CANDIDATE-U-CMDINPUT-026: live review leaves local git timeout and environment unset", () => {
+  it("U-CMDINPUT-026: live review leaves local git timeout and environment unset", () => {
     expect(liveGit).not.toHaveProperty("timeout");
     expect(Object.hasOwn(liveGit, "env")).toBe(false);
   });
 });
 
-it("CANDIDATE-U-CMDINPUT-017: ghCommandEnv copies input and forces prompt suppression", async () => {
+it("U-CMDINPUT-017: ghCommandEnv copies input and forces prompt suppression", async () => {
   const specifier = ["..", "src", "github", "gh-command.ts"].join("/");
   const { ghCommandEnv } = (await import(/* @vite-ignore */ specifier)) as {
     ghCommandEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv;
@@ -193,7 +193,7 @@ describe("GitHub CLI default timeout handling", () => {
     child.spawnSync.mockReset();
   });
 
-  it("CANDIDATE-U-CMDINPUT-021: attestation rejects a timeout with valid JSON stdout", async () => {
+  it("U-CMDINPUT-021: attestation rejects a timeout with valid JSON stdout", async () => {
     child.spawnSync.mockReturnValueOnce(timedOutSpawn(attestationJson));
 
     expect(await createGhAttestationVerifier().verify(attestationQuery)).toEqual({
@@ -203,7 +203,7 @@ describe("GitHub CLI default timeout handling", () => {
     expect(child.spawnSync).toHaveBeenCalledTimes(1);
   });
 
-  it("CANDIDATE-U-CMDINPUT-021: live review rejects a gh timeout with the expected HEAD", () => {
+  it("U-CMDINPUT-021: live review rejects a gh timeout with the expected HEAD", () => {
     child.spawnSync
       .mockReturnValueOnce(successfulSpawn(""))
       .mockReturnValueOnce(timedOutSpawn(`${head}\n`));
@@ -215,7 +215,7 @@ describe("GitHub CLI default timeout handling", () => {
     expect(child.spawnSync.mock.calls.map(([command]) => command)).toEqual(["git", "gh"]);
   });
 
-  it("CANDIDATE-U-CMDINPUT-022: nodeGh reports failure on a timeout with valid JSON stdout", () => {
+  it("U-CMDINPUT-022: nodeGh reports failure on a timeout with valid JSON stdout", () => {
     child.execFileSync.mockImplementationOnce(() => {
       throw timeoutError(setupJson);
     });

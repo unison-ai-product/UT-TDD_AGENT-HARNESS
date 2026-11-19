@@ -90,7 +90,7 @@ function writeReviewFixture(root: string) {
   return { envelopePath, projection };
 }
 
-it("CANDIDATE-U-CMDINPUT-028: live-consume reports a timed-out publish without retry", async () => {
+it("U-CMDINPUT-028: live-consume reports a timed-out publish without retry", async () => {
   const root = mkdtempSync(join(tmpdir(), "ut-gh-comment-timeout-"));
   const originalExitCode = process.exitCode;
   try {

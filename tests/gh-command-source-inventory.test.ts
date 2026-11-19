@@ -173,7 +173,7 @@ const staticOptions = staticSites.map(([site, index, label]) => ({
   options: callOptions(ghLaunches.filter((launch) => launch.site === site)[index]?.call),
 }));
 
-describe("CANDIDATE-U-CMDINPUT-020 gh runtime options", () => {
+describe("U-CMDINPUT-020 gh runtime options", () => {
   it("matches all twelve GitHub launch sites and locates the six static option objects", () => {
     expect(ghLaunches.map(({ site }) => site).sort()).toEqual([...expectedLaunches].sort());
     for (const { label, options } of staticOptions) {
@@ -202,7 +202,7 @@ describe("CANDIDATE-U-CMDINPUT-020 gh runtime options", () => {
   }
 });
 
-it("CANDIDATE-U-CMDINPUT-024 leaves the team run provider spawn without a timeout", () => {
+it("U-CMDINPUT-024 leaves the team run provider spawn without a timeout", () => {
   expect(teamSpawns).toHaveLength(1);
   const options = callOptions(teamSpawns[0]);
   expect(options).toBeDefined();
