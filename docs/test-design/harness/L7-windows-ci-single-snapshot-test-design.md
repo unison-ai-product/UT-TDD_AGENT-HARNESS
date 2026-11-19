@@ -89,7 +89,7 @@ oracle は workflow YAML、`package.json`、policy manifest をそれぞれ構�
 | --- | --- | --- |
 | `CANDIDATE-U-CISHARD-001` | matrix の shard を 2 要素に減らす、4 要素に増やす、`2/3` を `2/4` へ変える、順序を入れ替える、`include` / `exclude` を足す、`fromJSON` で動的化する | policy が `strategy.matrix.shard` を `["1/3","2/3","3/3"]` と exact 照合し、各 mutant を violation にする。 |
 | `CANDIDATE-U-CISHARD-002` | `fail-fast` を `true` にする、削除する、job レベル `if`、shard 単位の skip 条件、`continue-on-error` を足す | `fail-fast: false` を要求し、`forbidden_job_level_lane_skip` を含む job レベル skip 禁止が従来どおり働く。 |
-| `CANDIDATE-U-CISHARD-003` | Windows leg の test step から `--shard=${{ matrix.shard }}` を外す (全件を 3 回実行)、固定値 `--shard=1/3` にする、raw `vitest` へ戻す | step manifest が `npm run test:windows -- --shard=${{ matrix.shard }}` と exact 一致し、sealed snapshot runner invocation は shard あたり exactly 1 のまま。 |
+| `CANDIDATE-U-CISHARD-003` | Windows leg の test step から `--shard=${{ matrix.shard }}` を外す (全件を 3 回実行)、固定値 `--shard=1/3` にする、raw `vitest` へ戻す | step manifest が `npm run test:windows -- --shard=${{ matrix.shard }}` に決定 3 の reporter・出力先を加えた形と一致し、sealed snapshot runner は shard あたり 1 回だけ起動する。 |
 | `CANDIDATE-U-CISHARD-004` | `strategy` を Linux / node-generation 系 job へ足す、Windows leg の許可キーを `runs-on` / `strategy` / `steps` 以外へ広げる | `strategy` は Windows leg だけが持ち、他 job への混入は `missing_runtime_leg` 系 violation になる。 |
 | `CANDIDATE-U-CISHARD-005` | aggregate の `needs.harness-check-windows.result` 判定を削除・`always()` 削除・`!= "failure"` へ緩める、matrix 一部 `skipped` を success 扱いにする | `REQUIRED_AGGREGATE_COMMAND` が不変で、`failure` / `cancelled` / `skipped` / 結果欠落を Red にする (matrix 集約の挙動を fixture で検証)。 |
 | `CANDIDATE-U-CISHARD-006` | shard evidence artifact を 1 つ欠落、同一 shard を重複、4 つ目を余剰に置く | aggregate の検証関数が shard 集合をちょうど `{1/3,2/3,3/3}` として要求し、欠落・重複・余剰を拒否する。 |
@@ -98,7 +98,7 @@ oracle は workflow YAML、`package.json`、policy manifest をそれぞれ構�
 | `CANDIDATE-U-CISHARD-013` | (正常系) doc lane の run で Windows shard 証跡が無く、`lane=doc` 証跡が同一 run / attempt / HEAD に束縛され、再計算 lane も `doc` | 集約は `source-doc-lane` doctor の成功を前提に、同じ実行に属する lane 証跡を照合し、Windows shard 証跡の省略を許す。分類単体は `tests/change-lane.test.ts` で確認済み。 |
 | `CANDIDATE-U-CISHARD-014` | 集約への入力で、claimed `doc` と再計算 `full` が食い違う、doc lane に Windows shard 証跡が存在する、または lane 証跡の run / attempt / HEAD が異なる | 集約は変更ファイルから独立に再計算し、分類と shard 証跡が矛盾する入力および別実行の lane 証跡を拒否する。判定不能・新種 path の `full` へのフォールバックは `tests/change-lane.test.ts` で確認済み。 |
 | `CANDIDATE-U-CISHARD-009` | `test:windows` の除外集合から 1 件落とす、shard 引数が runner で vitest へ透過されず全件実行になる | `vitest list --shard=i/3` (i=1..3) の和集合が独立算出した `W` と一致し、shard 同士が互いに素であること。runner が `--shard` を透過する (全件実行へ退行しない) こと。 |
-| `U-CISHARD-010` | Linux leg に matrix を加えるか、回帰コマンドに `--shard` を足す | Linux leg の従来の step manifest を維持する。`tests/windows-ci-shard-red.test.ts` の候補004が Linux の strategy 追加を拒否し、対応する回帰テストがコマンドの shard 指定を `missing_runtime_leg` で拒否する。 |
+| `U-CISHARD-010` | Linux leg に matrix を加えるか、回帰コマンドに `--shard` を足す | Linux leg は決定 3 の lane 証跡の生成・upload を追加し、既存の回帰コマンドと strategy 禁止を維持する。`tests/windows-ci-shard-red.test.ts` の候補004が Linux の strategy 追加を拒否し、対応する回帰テストがコマンドの shard 指定を `missing_runtime_leg` で拒否する。 |
 | `CANDIDATE-U-CISHARD-012` | 実装 PR が before/after 計測を未計測値・別 HEAD で埋める | before は main run `38694546173` / `38692344625` / `38690207164`、after は実装 PR exact HEAD の required run に束縛し、run / job / step identity 欠落と prose だけの短縮主張を拒否する (`CANDIDATE-CI490-008` と同形式)。 |
 
 ### 必須チェック名の運用証跡 (旧候補011)
@@ -117,7 +117,7 @@ oracle は workflow YAML、`package.json`、policy manifest をそれぞれ構�
 3. 昇格: `CANDIDATE-U-CISHARD-*` を正式 ID へ昇格し、引用を書き換える (src/ を含まない)。
 4. 実装 Green (policy + workflow + aggregate step、1 PR = 1 論点): Issue #898 の Green が `src/lint/github-ci-policy.ts` を変更するため、#898 merge 後に出す。Linux の shard 化、手動分割、larger runner は別 PR / 別判断。
 
-006〜009・012〜014 は候補表の確定後、Red を別 PR に入れる。その後、正式 ID への昇格と Green + Refactor を順に行う。
+決定 3 の 006〜008・013〜014 は、契約確定後に候補 ID の Red を一束で入れ、正式 ID への昇格と Green + Refactor を順に行う。009 (分割集合の被覆と互いに素であること) と 012 (before / after 計測) は、各入口の契約と Red を独立に進める。
 
 - required gate の弱体化 (テスト除外・skip、aggregate の `needs` 緩和、doctor strict flag 削除) は shard 化の名目でも行わない。
 - 短縮見積り (job wall 約 10〜12.5 分) は candidate であり、達成値の根拠にしない。

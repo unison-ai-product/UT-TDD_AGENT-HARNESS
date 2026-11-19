@@ -2619,52 +2619,52 @@ decisionを発行できたことだけである。過去のreview実施、custod
 | --- | --- | --- |
 | required check 名 | required context は `harness-check` 1 件のみ (branch protection 実測: `contexts=["harness-check"]`)。`harness-check-windows (1/3)` 等の表示名は required に入らず、保護設定の変更が不要 | 同左。ただし job が 3 個に増える |
 | aggregate | `needs.harness-check-windows.result` が matrix 全 instance の集約 (1 つでも failure / cancelled なら success にならない) で、`REQUIRED_AGGREGATE_COMMAND` と `needs` 完全一致の既存契約が不変 | `RUNTIME_LEGS` が 6 要素になり、aggregate の `needs` と result 式の全てを書き換える |
-| policy | step manifest は 1 組のまま。`strategy` の照合だけを追加する | step manifest を 3 job 分に複製するため drift 源が増える |
+| policy | Windows の step manifest は 1 組で全 shard に適用する | step manifest を 3 job 分に複製するため drift 源が増える |
 | shard 集合の欠落 | matrix 定義 (`shard` 配列) をポリシーが exact 照合する (決定 3) | 3 job の存在を `needs` で照合する |
 
 ### 決定 2: policy 契約の変更範囲
 
-- Windows leg の許可キーを `runs-on` / `steps` から `runs-on` / `strategy` / `steps` へ広げる。他の job
-  (Linux、node-generation 系) は従来のキー集合のまま (`strategy` を持たせたら violation)。
-- `strategy` は `{ "fail-fast": false, matrix: { shard: ["1/3", "2/3", "3/3"] } }` と exact に一致する。
-  shard 数・順序・`fail-fast: true`・`include` / `exclude` の追加・動的 matrix (`fromJSON`) は violation。
-- step manifest の差分は test step 1 つだけで、`npm run test:windows -- --shard=${{ matrix.shard }}` になる。
-  それ以外の step (typecheck / db rebuild / toolchain doctor / classify) は全 shard で同一に実行する。
-  重複実行は runner 時間を増やすが wall time は増やさず、特定 shard にだけ検査を置くことで
-  「その shard が skip された run が通る」穴を作らない。
+- Windows leg の許可キーは `runs-on` / `strategy` / `steps`。Linux と Node generation の job の許可キーは従来どおりで、`strategy` は拒否する。
+- `strategy` は `{ "fail-fast": false, matrix: { shard: ["1/3", "2/3", "3/3"] } }` と完全一致を求める。追加キー、個数・順序の変更、動的 matrix は拒否する。
+- 両 leg は決定 3 の証跡 step を追加する。既存 step の変更は Windows の回帰コマンドへの shard・reporter 引数追加に限る。
+  typecheck / db rebuild / toolchain doctor / classify は従来どおり全 shard で同一に実行し、Linux の回帰コマンドも維持する。
 - job レベルの `if`、matrix の一部 shard だけを skip する条件、`continue-on-error` は引き続き禁止する。
 - 実装 PR は Issue #898 の Green (`src/lint/github-ci-policy.ts` を変更する) が main に入った後に出す。
 
 ### 決定 3: aggregate が 3 shard を検証する方法
 
-一次ゲートは既存の `needs.harness-check-windows.result == success` と他 leg の成功条件を維持する。failure / cancelled / skipped は
-そこで拒否する。doc lane は、この条件と既存の step manifest が要求する `source-doc-lane` doctor の成功を前提とする。
-Node generation の証跡と既存の `scripts/node-generation-ci-aggregate.mjs` は従来の入口で検証する。
+対象は 006〜008・013〜014。009 (分割集合の被覆と互いに素であること) と 012 (before / after 計測) は各候補の契約で扱う。
+一次ゲートは既存の全 leg の `needs.*.result == success` を維持する。
+doc lane は既存 manifest が求める `source-doc-lane` doctor の成功も前提とする。Node generation は従来の入口で検証する。
+全証跡の束縛は `run_id: string`、`run_attempt: number`、`head_sha: string`。各 job の `GITHUB_RUN_ID`、`GITHUB_RUN_ATTEMPT`、checkout HEAD から作り、checkout HEAD と `GITHUB_SHA` の一致を必須とする。
 
-Windows 証跡の入口は `node scripts/windows-ci-shard-aggregate.mjs --evidence-dir <dir>` とする。既存の集約 job が一次ゲートの後で呼ぶ。
-script は JSON を読み、純粋関数 `admitWindowsShardAggregate(input: WindowsShardAggregateInput) => WindowsShardAggregateResult`
-(`src/lint/windows-ci-shard-admission.ts`) に渡す。単体テストはこの関数に入力を渡す。
+- Linux と各 Windows leg は `classify` 成功直後に `steps.classify.outputs.lane` (`full` / `doc`) と `leg` (`linux` / `windows-1` / `windows-2` / `windows-3`) を束縛値とともに `runner.temp` の `lane-evidence.json` に書く。
+  直後に `actions/upload-artifact@v4` で同ファイルだけを `harness-lane-<leg>-attempt-<run_attempt>` に保存する。
+  Windows の `<leg>` は matrix の shard 番号から作る。
+- full lane の Windows 回帰は `npm run test:windows -- --shard=<matrix.shard> --reporter=default --reporter=json --outputFile=<report>` を 1 回実行する。
+  snapshot runner は `--outputFile` を値付きオプションとして受け、reporter とともに Vitest へ透過する。
+  出力先は `runner.temp` 内の新規の絶対パスとする。
+  成功直後に JSON の `testResults` から `assertionResults` に `status: passed` または `failed` がある実行ファイルの一意な `name` を数えて `file_count` とする。report 欠落・不正は step 失敗とする。
+- Windows 回帰成功後、束縛値、`shard` (matrix の `1/3` 等)、実行結果 `result` (回帰 step の `outcome`)、`file_count` を `runner.temp` の `shard-evidence.json` に書き、`actions/upload-artifact@v4` で同ファイルだけを `windows-shard-<index>-attempt-<run_attempt>` に保存する。
+  doc lane では回帰・shard 証跡の生成と upload を行わない。両 upload は `if-no-files-found: error` とする。
+- 一次ゲート成功後、同じ run の `harness-lane-*-attempt-*` と `windows-shard-*-attempt-*` を個別の `actions/download-artifact@v4` step で同じ `${{ runner.temp }}/windows-ci-evidence` に取得する。
+  `merge-multiple: false` とし、配置は `<artifact名>/lane-evidence.json` または `<artifact名>/shard-evidence.json` とする。
+- `node scripts/windows-ci-shard-aggregate.mjs --evidence-dir "$RUNNER_TEMP/windows-ci-evidence"` は現在の attempt のディレクトリのみ読み、前者を `laneEvidence`、後者を `shardEvidence` に入れる。該当 artifact が無ければその集合は空とする。各ディレクトリに対応する JSON を 1 件だけ要求し、名前と JSON の leg / shard の不一致、ファイルの欠損・余剰・不正 JSON は `malformed_evidence` とする。
+- 現 attempt に必要な leg または full lane の shard が欠け、同じ leg / shard の過去 attempt のディレクトリがあれば、script が `attempt_binding_mismatch` を返す。過去分の JSON は読まない。過去分も無ければ純粋関数で欠落を判定する。doc lane では過去の shard を無視する。
+- `src/lint/github-ci-policy.ts` は両 leg の生成・upload、集約の両 download と、一次ゲート後の script のコマンド・順序・条件を step manifest で照合し、削除・置換・追加の skip 条件を拒否する。
 
-| 入力 | 形 |
-|---|---|
-| `expected` | `run_id: string`、`run_attempt: number`、`head_sha: string`。単一実行の束縛値。 |
-| `changedPaths` | `readonly string[]` または `null`。集約側の checkout と event から算出した差分の path。 |
-| `laneEvidence` | `readonly unknown[]`。各 JSON に束縛3項目、`leg` (`linux` / `windows-1` / `windows-2` / `windows-3`)、`lane` (`full` / `doc`)。 |
-| `shardEvidence` | `readonly unknown[]`。各 JSON に束縛3項目、`shard` (例 `2/3`)、`file_count: number`、`result` (`success` / `failure` / `cancelled` / `skipped`)。 |
+script は `admitWindowsShardAggregate(input: WindowsShardAggregateInput) => WindowsShardAggregateResult` (`src/lint/windows-ci-shard-admission.ts`) に渡す。
+入力は `expected` (集約側の束縛値)、`changedPaths: readonly string[] | null`、`laneEvidence: readonly unknown[]`、`shardEvidence: readonly unknown[]`。
+差分の範囲は集約の checkout、`GITHUB_EVENT_NAME` と `GITHUB_EVENT_PATH` から `resolveChangeDiffRange` で解決する。範囲または変更 path が得られなければ `null` とする。
+script は過去 attempt 照合に、純粋関数は証跡の判定に `classifyChangeLane` を使う。`null` と未知 path は `full` となる。
 
-`expected` は `GITHUB_RUN_ID`、`GITHUB_RUN_ATTEMPT`、checkout HEAD から作る。HEAD と `GITHUB_SHA` は一致が必須。
-差分範囲の解決には既存の `resolveChangeDiffRange` を使い、解決不能は `null` とする。純粋関数で `classifyChangeLane` を使い `lane` を再計算する。
-artifact は `harness-lane-<leg>-attempt-<run_attempt>` と `windows-shard-<index>-attempt-<run_attempt>` に、各 JSON を1件ずつ保存する。
+- JSON の型・必須項目不正は `malformed_evidence`。run・attempt・HEAD の不一致は `attempt_binding_mismatch` (007)。
+- lane 証跡は 4 leg 各 1 件とし、再計算値と一致しなければ `lane_evidence_mismatch` (014)。
+- full lane は shard がちょうど `{1/3, 2/3, 3/3}`。欠落・重複・余剰は `windows_shard_set_mismatch` (006)。
+- full lane の各 shard の `result` (`success` / `failure` / `cancelled` / `skipped`) は `success`、`file_count` は正の整数を要求する。不合格は `invalid_windows_shard_outcome` (008)。
+- doc lane は shard 証跡が空の場合に成功する (013)。1 件以上あれば `lane_evidence_mismatch` (014)。
 
-- 原則として現在の attempt 名の artifact を読む。現在の分が欠落して過去 attempt 分しか無ければ `attempt_binding_mismatch` とする。
-- JSON の型または必須項目の不正は `malformed_evidence`、run・attempt・HEAD の不一致は `attempt_binding_mismatch` で拒否する (007)。
-- lane は4 leg が各1件で、全て再計算値と一致することを求める。不一致は `lane_evidence_mismatch`。`null` と未知 path は `full` とする (014)。
-- full lane は shard 集合がちょうど `{1/3, 2/3, 3/3}` であることを求める。欠落・重複・余剰は `windows_shard_set_mismatch` (006)。
-- full lane の各 shard は `result: success` かつ `file_count` が正の整数であることを求める。不合格は `invalid_windows_shard_outcome` (008)。
-- doc lane は shard 証跡が空のときだけ成功する (013)。1件以上あれば `lane_evidence_mismatch` で拒否する (014)。
-
-結果は `{ ok: true, lane: 'full' | 'doc' }` または `{ ok: false, reason, affected: readonly string[] }`。`affected` は判明した対象 leg / shard。
-script は結果を1つの JSON として出力し、成功は exit 0、拒否は exit 1 とする。attempt 不一致の再実行は全 job を対象にする。
+結果は `{ ok: true, lane: 'full' | 'doc' }` または `{ ok: false, reason, affected: readonly string[] }`。`affected` は判明した対象 leg / shard。script は結果を JSON 1 件で出力し、成功は exit 0、拒否は exit 1。attempt 不一致時の再実行は全 job を対象とする。
 
 ### 決定 4: shard 失敗の報告
 
