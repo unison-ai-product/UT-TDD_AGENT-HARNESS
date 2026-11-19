@@ -29,7 +29,7 @@ vi.mock("node:fs", async (importOriginal) => {
   };
 });
 
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { evaluateStaticGate } from "../src/gate/static.ts";
@@ -46,6 +46,7 @@ import {
   type ConsumerScreenFixtureOptions,
   writeFixtureDoc,
 } from "./support/consumer-g1-screen-fixtures.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 
 const CORE_G1_PATHS = [
   "docs/design/L1-requirements/functional-requirements.md",
@@ -61,8 +62,12 @@ function fixtureRoot(): string {
   return root;
 }
 
+function readTemplate(relativePath: string): string {
+  return readFileSync(join(process.cwd(), relativePath), "utf8");
+}
+
 function consumerFixture(options?: ConsumerScreenFixtureOptions): string {
-  return buildConsumerScreenFixture(fixtureRoot(), options);
+  return buildConsumerScreenFixture(fixtureRoot(), readTemplate, options);
 }
 
 function observeFixture<T>(root: string, run: () => T): { result: T; paths: string[] } {
@@ -414,5 +419,5 @@ describe("consumer G1 screen namespace (issue #1273)", () => {
 });
 
 afterAll(() => {
-  for (const root of temporaryRoots.splice(0)) rmSync(root, { recursive: true, force: true });
+  for (const root of temporaryRoots.splice(0)) removeTestTree(root);
 });

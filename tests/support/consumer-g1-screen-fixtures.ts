@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 
 const TEMPLATE_SLOTS = [
@@ -27,10 +27,6 @@ export function writeFixtureDoc(root: string, relativePath: string, content: str
   const target = join(root, relativePath);
   mkdirSync(dirname(target), { recursive: true });
   writeFileSync(target, content, "utf8");
-}
-
-function readTemplate(relativePath: string): string {
-  return readFileSync(join(process.cwd(), relativePath), "utf8");
 }
 
 function appendRowsToTemplateTable(
@@ -105,6 +101,7 @@ function addLegacyHarnessDocs(root: string, includeFixedPrefixLabels = false): v
 
 export function buildConsumerScreenFixture(
   root: string,
+  readTemplate: (relativePath: string) => string,
   options: ConsumerScreenFixtureOptions = {},
 ): string {
   const requirements = options.requirementRows ?? [
