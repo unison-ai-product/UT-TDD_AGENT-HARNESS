@@ -92,7 +92,6 @@ describe("loadLintWiringInput (live repo regression fence)", () => {
       "forward-convergence",
       "scrum-reverse",
       "tool-adapter",
-      "windows-ci-shard-admission",
       // #1741 Red の stub だけの保留登録。Green で配線して撤去する。
       "zero-trust-download",
       "zero-trust-download-inputs",

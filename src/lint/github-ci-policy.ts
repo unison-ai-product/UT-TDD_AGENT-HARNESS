@@ -1,7 +1,13 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { parse as parseYaml } from "yaml";
-import { runtimeLegShapeProblems, WINDOWS_SHARD_TEST_COMMAND } from "./github-ci-windows-shard.ts";
+import {
+  githubExpression,
+  harnessAggregateSteps,
+  harnessLaneEvidenceSteps,
+  runtimeLegShapeProblems,
+  WINDOWS_SHARD_REGRESSION_STEPS,
+} from "./github-ci-windows-shard.ts";
 
 export interface GithubWorkflowDoc {
   file: string;
@@ -279,6 +285,9 @@ const LANE_SKIPPABLE_FULL_ONLY_STEP_MATCHERS: readonly ((text: string) => boolea
   (text) => text.includes("db rebuild"),
   (text) => /\bnpm\s+run\s+test\b(?!:)/.test(text),
   (text) => text.includes("npm run test:windows"),
+  (text) =>
+    text === "write Windows shard evidence\nnode scripts/windows-ci-shard-evidence.mjs shard",
+  (text) => text === "upload Windows shard evidence\nactions/upload-artifact@v4",
   (text) => text.includes("audit quality"),
   (text) => text.includes("src/cli.ts doctor") && !text.includes("--profile source-doc-lane"),
 ];
@@ -287,7 +296,6 @@ function matchesLaneSkipAllowlist(text: string): boolean {
   return LANE_SKIPPABLE_FULL_ONLY_STEP_MATCHERS.some((matches) => matches(text));
 }
 
-const githubExpression = (expression: string): string => ["$", `{{ ${expression} }}`].join("");
 const CLASSIFY_COMMAND = [
   "node src/cli.ts github classify-changes",
   `--event-name "${githubExpression("github.event_name")}"`,
@@ -466,6 +474,7 @@ const RUNTIME_STEP_MANIFESTS: Record<(typeof RUNTIME_LEGS)[number], readonly obj
           NODE`.replace(/^ {10}/gm, ""),
     }),
     step("classify changed files (doc lane vs full, fail-close)", classifyFields),
+    ...harnessLaneEvidenceSteps("linux"),
     step("branch-type guard (commitlint / poc / hotfix)", {
       env: {
         HEAD_REF: githubExpression("github.head_ref || github.ref_name"),
@@ -531,13 +540,10 @@ fi`,
       ...classifyFields,
       shell: "bash",
     }),
+    ...harnessLaneEvidenceSteps("windows"),
     run("typecheck (tsc --noEmit)", "npm run typecheck", LANE_FULL_ONLY_IF),
     run("db rebuild (deterministic projection on Windows SQLite)", DB_REBUILD, LANE_FULL_ONLY_IF),
-    run(
-      "test — Windows full 回帰 (vitest run, windows leg)",
-      WINDOWS_SHARD_TEST_COMMAND,
-      LANE_FULL_ONLY_IF,
-    ),
+    ...WINDOWS_SHARD_REGRESSION_STEPS,
     run("doc lane source checks", DOC_LANE_DOCTOR, LANE_DOC_ONLY_IF),
     run("doctor (toolchain scope)", "node src/cli.ts doctor --scope toolchain", LANE_FULL_ONLY_IF),
   ],
@@ -788,18 +794,11 @@ function checkRuntimeAggregate(input: {
     }
     const aggregateSteps =
       Array.isArray(aggregate.steps) && aggregate.steps.every(workflowStep) ? aggregate.steps : [];
-    const aggregateText = aggregateSteps.map(stepText).join("\n");
     const failCloseDisabled =
       ![undefined, false].includes(aggregate["continue-on-error"] as undefined | false) ||
-      aggregateSteps.some(
-        (step) => ![undefined, false].includes(step["continue-on-error"] as undefined | false),
-      ) ||
-      !aggregateSteps.some((step) => step.run?.trim() === REQUIRED_AGGREGATE_COMMAND) ||
-      !aggregateSteps.some(
-        (step) => step.run?.trim() === "node scripts/node-generation-ci-aggregate.mjs",
-      );
-    for (const leg of RUNTIME_LEGS) {
-      if (!failCloseDisabled && aggregateText.includes(aggregateResultExpression(leg))) continue;
+      JSON.stringify(canonicalSemantic(aggregateSteps)) !==
+        JSON.stringify(canonicalSemantic(harnessAggregateSteps(REQUIRED_AGGREGATE_COMMAND)));
+    for (const leg of failCloseDisabled ? RUNTIME_LEGS : []) {
       pushViolation({
         violations: input.violations,
         doc: input.doc,

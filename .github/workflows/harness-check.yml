@@ -16,7 +16,7 @@
 # PLAN-L7-455 (troubleshoot, issue #109) Phase 1: `classify` step (git diff ベース、
 # src/github/change-lane.ts) が doc-only 変更を検出したときだけ重い step
 # (typecheck / db rebuild / 全回帰 vitest / audit quality / full doctor) を skip する。
-# doc-safe allowlist (SSoT: src/github/change-lane.ts DOC_LANE_PREFIXES):
+# doc-safe allowlist (SSoT: src/shared/change-lane.ts DOC_LANE_PREFIXES):
 #   docs/archive/**.md, docs/migration/**.md, docs/reference/**.md, docs/research/**.md
 # 上記 4 tree (非正本の参照 prose) の *.md のみ。正本設計・governance・PLAN
 # (docs/plans/**)・runtime 規則 (root および .claude/ の *.md)・共有 memory
@@ -168,6 +168,20 @@ jobs:
             --before-sha "${{ github.event.before }}" \
             --github-output "$GITHUB_OUTPUT"
 
+      - name: write harness lane evidence
+        id: lane-evidence
+        env:
+          WINDOWS_CI_LANE: ${{ steps.classify.outputs.lane }}
+          WINDOWS_CI_EVIDENCE_LEG: linux
+        run: node scripts/windows-ci-shard-evidence.mjs lane
+
+      - name: upload harness lane evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: harness-lane-${{ steps.lane-evidence.outputs.leg }}-attempt-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/lane-evidence.json
+          if-no-files-found: error
+
       - name: branch-type guard (commitlint / poc / hotfix)
         env:
           HEAD_REF: ${{ github.head_ref || github.ref_name }}
@@ -292,6 +306,20 @@ jobs:
             --before-sha "${{ github.event.before }}" \
             --github-output "$GITHUB_OUTPUT"
 
+      - name: write harness lane evidence
+        id: lane-evidence
+        env:
+          WINDOWS_CI_LANE: ${{ steps.classify.outputs.lane }}
+          WINDOWS_CI_EVIDENCE_LEG: ${{ matrix.shard }}
+        run: node scripts/windows-ci-shard-evidence.mjs lane
+
+      - name: upload harness lane evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: harness-lane-${{ steps.lane-evidence.outputs.leg }}-attempt-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/lane-evidence.json
+          if-no-files-found: error
+
       - name: typecheck (tsc --noEmit)
         if: ${{ steps.classify.outputs.lane == 'full' }}
         run: npm run typecheck
@@ -301,8 +329,28 @@ jobs:
         run: node src/cli.ts db rebuild --json
 
       - name: test — Windows full 回帰 (vitest run, windows leg)
+        id: windows-full-regression
         if: ${{ steps.classify.outputs.lane == 'full' }}
-        run: npm run test:windows -- --shard=${{ matrix.shard }}
+        run: |
+          $report = Join-Path $env:RUNNER_TEMP 'windows-vitest-report.json'
+          if (Test-Path -LiteralPath $report) { throw 'Vitest report path already exists' }
+          npm run test:windows -- --shard=${{ matrix.shard }} --reporter=default --reporter=json "--outputFile=$report"
+
+      - name: write Windows shard evidence
+        id: shard-evidence
+        if: ${{ steps.classify.outputs.lane == 'full' }}
+        env:
+          WINDOWS_CI_EVIDENCE_LEG: ${{ matrix.shard }}
+          WINDOWS_CI_SHARD_RESULT: ${{ steps.windows-full-regression.outcome }}
+        run: node scripts/windows-ci-shard-evidence.mjs shard
+
+      - name: upload Windows shard evidence
+        if: ${{ steps.classify.outputs.lane == 'full' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-shard-${{ steps.shard-evidence.outputs.index }}-attempt-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/shard-evidence.json
+          if-no-files-found: error
 
       - name: doc lane source checks
         if: ${{ steps.classify.outputs.lane == 'doc' }}
@@ -411,3 +459,20 @@ jobs:
         run: node scripts/node-generation-ci-aggregate.mjs
         env:
           NODE_GENERATION_EVIDENCE_DIR: node-generation-evidence
+
+      - name: download harness lane evidence
+        uses: actions/download-artifact@v4
+        with:
+          pattern: harness-lane-*-attempt-*
+          path: ${{ runner.temp }}/windows-ci-evidence
+          merge-multiple: false
+
+      - name: download Windows shard evidence
+        uses: actions/download-artifact@v4
+        with:
+          pattern: windows-shard-*-attempt-*
+          path: ${{ runner.temp }}/windows-ci-evidence
+          merge-multiple: false
+
+      - name: admit Windows shard evidence
+        run: node scripts/windows-ci-shard-aggregate.mjs --evidence-dir "$RUNNER_TEMP/windows-ci-evidence"
