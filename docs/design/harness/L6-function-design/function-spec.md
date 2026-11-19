@@ -2637,34 +2637,34 @@ decisionを発行できたことだけである。過去のreview実施、custod
 
 ### 決定 3: aggregate が 3 shard を検証する方法
 
-aggregate の `needs.harness-check-windows.result == success` を一次ゲートとして維持する。matrix 全 instance が
-成功した場合だけ success になるため、1 つでも failure / cancelled / skipped があれば既存の
-`test ... = "success"` が Red になる。二次の束縛として、各 shard は終了時に次の evidence を
-artifact `windows-shard-<index>-attempt-<run_attempt>` として upload する。
+一次ゲートは既存の `needs.harness-check-windows.result == success` と他 leg の成功条件を維持する。failure / cancelled / skipped は
+そこで拒否する。doc lane は、この条件と既存の step manifest が要求する `source-doc-lane` doctor の成功を前提とする。
+Node generation の証跡と既存の `scripts/node-generation-ci-aggregate.mjs` は従来の入口で検証する。
 
-- `run_id`、`run_attempt`、`head_sha`、`shard` (例: `2/3`)、vitest が実行したテストファイル数と結果。
+Windows 証跡の入口は `node scripts/windows-ci-shard-aggregate.mjs --evidence-dir <dir>` とする。既存の集約 job が一次ゲートの後で呼ぶ。
+script は JSON を読み、純粋関数 `admitWindowsShardAggregate(input: WindowsShardAggregateInput) => WindowsShardAggregateResult`
+(`src/lint/windows-ci-shard-admission.ts`) に渡す。単体テストはこの関数に入力を渡す。
 
-aggregate は lane 判定に束縛して検証する。lane は `.github/workflows/harness-check.yml` の
-`classify changed files` step の出力 `steps.classify.outputs.lane` (`full` / `doc`、実装は
-`src/github/change-lane.ts`、判定不能・新種 path は必ず `full`) であり、Windows の
-`test:windows` step は `lane == 'full'` のときだけ走る。doc lane では `source-doc-lane` doctor だけが走り、
-vitest evidence は生成されない。したがって evidence の要否を無条件にせず、lane で分ける。
+| 入力 | 形 |
+|---|---|
+| `expected` | `run_id: string`、`run_attempt: number`、`head_sha: string`。単一実行の束縛値。 |
+| `changedPaths` | `readonly string[]` または `null`。集約側の checkout と event から算出した差分の path。 |
+| `laneEvidence` | `readonly unknown[]`。各 JSON に束縛3項目、`leg` (`linux` / `windows-1` / `windows-2` / `windows-3`)、`lane` (`full` / `doc`)。 |
+| `shardEvidence` | `readonly unknown[]`。各 JSON に束縛3項目、`shard` (例 `2/3`)、`file_count: number`、`result` (`success` / `failure` / `cancelled` / `skipped`)。 |
 
-- **full lane**: 全 3 shard の evidence を必須とする。要求は次の全てである。
-  1. shard 集合がちょうど `{1/3, 2/3, 3/3}` で、重複・欠落・余剰がない。
-  2. 全 evidence の `run_id` と `run_attempt` が aggregate 自身と一致し、`head_sha` が checkout した HEAD と一致する。
-  3. 全 shard の結果が成功で、**各 shard の実行ファイル数がそれぞれ正の整数**である (合計が正でも
-     `[10,0,10]` のように 1 つでも 0 の shard があれば拒否する。空振りした shard の成功を通さない)。
-- **doc lane**: vitest evidence は期待しない (3 shard 全て無くてよい)。ただし lane 判定そのものを
-  同じ run / attempt / HEAD に束縛した `lane` evidence (各 leg の classify 出力) で検証する。
-  aggregate が checkout した HEAD の変更ファイルから `src/github/change-lane.ts` の判定で自前に lane を再計算し、
-  claimed lane と食い違う場合は拒否する。特に「evidence が無い + claimed `doc` + 再計算が `full`」は
-  full lane を doc lane に偽装した run として Red にする。doc lane で 3 shard evidence が存在する矛盾も拒否する。
+`expected` は `GITHUB_RUN_ID`、`GITHUB_RUN_ATTEMPT`、checkout HEAD から作る。HEAD と `GITHUB_SHA` は一致が必須。
+差分範囲の解決には既存の `resolveChangeDiffRange` を使い、解決不能は `null` とする。純粋関数で `classifyChangeLane` を使い `lane` を再計算する。
+artifact は `harness-lane-<leg>-attempt-<run_attempt>` と `windows-shard-<index>-attempt-<run_attempt>` に、各 JSON を1件ずつ保存する。
 
-「失敗した job だけ再実行」で新 attempt が始まると、前 attempt で成功した shard は今 attempt の artifact を
-持たない。この場合 aggregate は `attempt_binding_mismatch` で Red になり、全 job 再実行を要求する
-(既存運用: rerun は常に全 job)。artifact 名に attempt を含めるのは、upload-artifact v4 の同名衝突を避けつつ、
-別 attempt の evidence を今 attempt の証拠として拾わないためである。
+- 原則として現在の attempt 名の artifact を読む。現在の分が欠落して過去 attempt 分しか無ければ `attempt_binding_mismatch` とする。
+- JSON の型または必須項目の不正は `malformed_evidence`、run・attempt・HEAD の不一致は `attempt_binding_mismatch` で拒否する (007)。
+- lane は4 leg が各1件で、全て再計算値と一致することを求める。不一致は `lane_evidence_mismatch`。`null` と未知 path は `full` とする (014)。
+- full lane は shard 集合がちょうど `{1/3, 2/3, 3/3}` であることを求める。欠落・重複・余剰は `windows_shard_set_mismatch` (006)。
+- full lane の各 shard は `result: success` かつ `file_count` が正の整数であることを求める。不合格は `invalid_windows_shard_outcome` (008)。
+- doc lane は shard 証跡が空のときだけ成功する (013)。1件以上あれば `lane_evidence_mismatch` で拒否する (014)。
+
+結果は `{ ok: true, lane: 'full' | 'doc' }` または `{ ok: false, reason, affected: readonly string[] }`。`affected` は判明した対象 leg / shard。
+script は結果を1つの JSON として出力し、成功は exit 0、拒否は exit 1 とする。attempt 不一致の再実行は全 job を対象にする。
 
 ### 決定 4: shard 失敗の報告
 
