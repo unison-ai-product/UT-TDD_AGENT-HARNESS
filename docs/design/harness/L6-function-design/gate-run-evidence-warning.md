@@ -33,14 +33,20 @@ gate verdict は `evaluateGateReview` + `evaluateStaticGate` の合成であり�
 
 ### 3.2 内部の検証入口
 
-`writeGateRunEvidence(input, boundary?)` の `boundary` は、writer の内部で使用する任意の依存とする。引数を省略した通常実行では既存の filesystem 操作を使う。
+`writeGateRunEvidence(input, boundary?)` の `boundary` は、writer の直接テストで使う任意の内部依存とする。引数を省略した通常実行では既存の filesystem 操作を使う。この依存を CLI オプション、環境変数、設定ファイルなどから writer に渡す本番経路は設けない。
 
 | 依存 | 呼ぶ位置と契約 |
 |---|---|
 | `beforeLink(stagedPath, finalPath)` | `.tmp-*` への完成 JSON の書き込みが成功した場合に、hard link の直前に同期で1回呼ぶ。両 path は writer が使う同じ証跡ディレクトリの path。呼び出し時に temp が実在し、今回の書き込みによる final はまだ作られていない。 |
 | `link(stagedPath, finalPath)` | `beforeLink` が戻った直後に呼ぶ hard link 操作。注入された例外を呼び出し元に伝え、copy・rename・final への直接書き込みで公開を続けることを禁止する。通常実行では `linkSync` を使う。 |
 
-CLI オプション、環境変数、設定ファイルからこの依存を指定する経路は設けない。テストは一時ディレクトリと専用の子プロセス内で注入する。
+#### CLI テストの起動と観測
+
+CLI 経由の衝突・link 失敗テストは、一時ディレクトリで実 CLI を起動する専用の子プロセスに、テスト専用の Node `--import` preload を指定する。観測記録は証跡ディレクトリと CLI の stdout/stderr から分離したファイルに置く。Node ESM import が参照する組み込み関数を差し替えた後は `syncBuiltinESMExports` を呼ぶ。
+
+既存 ID の事前検査では、preload が引数なしの `new Date()` に限って時計を固定する。同じ gate ID とセッション条件、子プロセスの実 PID を使い、`buildGateRunEvidence` で組み立てた完成 JSON を、正規の hash 名で CLI 起動前に書く。実 CLI が既存 final を読み、早期に拒否したことと、staging と link に進まなかったことを記録する。実行前後で既存 final の bytes が同一であることも確認する。
+
+link 時点の `EEXIST` ケースでは、preload は fixture の証跡ディレクトリに限定して native `linkSync` をラップする。staging 後、ラッパーが占有先 final を配置してから実際の `linkSync` を呼び、その path、呼び出し回数、返った code を記録して例外を再送出する。`EEXIST` 以外のケースも同じ限定ラッパーを使い、1回の呼び出しを記録して固定の `ENOTSUP` (または同等に型が特定できる失敗) を注入する。final は作られない。
 
 ### 3.3 中断からの復旧
 
