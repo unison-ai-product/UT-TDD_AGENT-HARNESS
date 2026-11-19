@@ -204,9 +204,7 @@ function writeConsumerGateFixture(
           "| テストID | 分類 | テスト項目 | 検証内容/手順 | 期待結果 | トレース元 |",
           ["| AT-001 | 受入 | Consumer acceptance | 手順 | 結果 | REQ-001, SC-001, FN-001 |"],
         )
-      : `${l12}
-| **AT-FR-01-01** | Consumer acceptance |
-`,
+      : `${l12}\n| **AT-FR-01-01** | Consumer acceptance |\n`,
   );
   if (!options.omitWireframe) {
     writeFixtureDoc(
