@@ -1,4 +1,4 @@
-import { chmodSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Command } from "commander";
@@ -12,6 +12,7 @@ import {
   reviewOutputContractExample,
   type VerdictExtraction,
 } from "../src/feedback/review-verdict-contract.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 
 // 期待値ビルダのみを共通化し、`expect` は各 test body に残す。
 // `ddd-tdd-rules` の `test-oracle-strength` は AST で body 内の literal expect/assert を要求するため、
@@ -51,7 +52,7 @@ beforeAll(() => {
 afterAll(() => {
   if (originalCodexBin === undefined) delete process.env.UT_TDD_CODEX_BIN;
   else process.env.UT_TDD_CODEX_BIN = originalCodexBin;
-  if (stubBinDir) rmSync(stubBinDir, { recursive: true, force: true });
+  if (stubBinDir) removeTestTree(stubBinDir);
 });
 
 function verdictReceipt(extraction: VerdictExtraction): ReviewReceipt {
