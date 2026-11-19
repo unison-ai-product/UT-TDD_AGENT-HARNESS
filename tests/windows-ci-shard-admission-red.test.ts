@@ -37,7 +37,7 @@ function docInput(): WindowsShardAggregateInput {
 }
 
 describe("Windows shard aggregate admission", () => {
-  it.fails("CANDIDATE-U-CISHARD-006: rejects missing, duplicate, and surplus shards", () => {
+  it.fails("U-CISHARD-006: rejects missing, duplicate, and surplus shards", () => {
     const input = fullInput();
     const extra = { ...expected, shard: "4/3", file_count: 10, result: "success" };
     const cases = [
@@ -51,7 +51,7 @@ describe("Windows shard aggregate admission", () => {
     ).toMatchObject(cases.map(() => ({ ok: false, reason: "windows_shard_set_mismatch" })));
   });
 
-  it.fails("CANDIDATE-U-CISHARD-007: binds shard evidence to run, attempt, and HEAD", () => {
+  it.fails("U-CISHARD-007: binds shard evidence to run, attempt, and HEAD", () => {
     const input = fullInput();
     const otherBindings = [{ run_id: "43" }, { run_attempt: 1 }, { head_sha: "b".repeat(40) }];
     const [, ...remainingShards] = input.shardEvidence;
@@ -70,7 +70,7 @@ describe("Windows shard aggregate admission", () => {
     );
   });
 
-  it.fails("CANDIDATE-U-CISHARD-008: requires a positive integer file count for each shard", () => {
+  it.fails("U-CISHARD-008: requires a positive integer file count for each shard", () => {
     const input = fullInput();
     const cases = [
       [10, 0, 10],
@@ -95,11 +95,11 @@ describe("Windows shard aggregate admission", () => {
     );
   });
 
-  it.fails("CANDIDATE-U-CISHARD-013: admits doc lane with bound lane evidence and no shards", () => {
+  it.fails("U-CISHARD-013: admits doc lane with bound lane evidence and no shards", () => {
     expect(admitWindowsShardAggregate(docInput())).toEqual({ ok: true, lane: "doc" });
   });
 
-  it.fails("CANDIDATE-U-CISHARD-014: rejects lane, shard, and run binding contradictions", () => {
+  it.fails("U-CISHARD-014: rejects lane, shard, and run binding contradictions", () => {
     const doc = docInput();
     const full = fullInput();
     const [, ...remainingLegs] = doc.laneEvidence;
