@@ -210,11 +210,7 @@ function base64Value(value: unknown, name: string, allowEmpty = false): string {
     throw new ConsumerRuntimeReleaseValidationError(`${name}_required`);
   const text = value;
   if (allowEmpty && text.length === 0) return text;
-  if (
-    text.length % 4 !== 0 ||
-    !BASE64.test(text) ||
-    Buffer.from(text, "base64").toString("base64") !== text
-  )
+  if (!BASE64.test(text) || Buffer.from(text, "base64").toString("base64") !== text)
     throw new ConsumerRuntimeReleaseValidationError(`${name}_base64_invalid`);
   return text;
 }
