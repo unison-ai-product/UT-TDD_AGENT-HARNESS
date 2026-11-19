@@ -2,7 +2,7 @@
 layer: L6
 sub_doc: function-spec
 status: confirmed
-pair_artifact: docs/test-design/harness/L7-unit-test-design.md
+pair_artifact: docs/test-design/harness/L7-gate-confirm-test-design.md
 issue: 1360
 ---
 

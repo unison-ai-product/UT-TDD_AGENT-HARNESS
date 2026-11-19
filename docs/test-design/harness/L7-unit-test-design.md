@@ -491,16 +491,12 @@ U-DEPD / U-REGEXP の oracle は `docs/test-design/harness/L7-dependency-drift-t
 
 ### §1.18 U-GCONF (gate-confirm coupling lint、PLAN-L7-18 / IMP-079)
 
-> ペア = `gate-confirm.md`。gate-design §2 台帳と design/test-design doc `status: confirmed` の coupling を検査する。parse 失敗を含む不整合は fail-close。
+[gate-confirm のテスト設計](L7-gate-confirm-test-design.md) が U-GCONF の検証を持つ。
+
+#### gate-id-format (U-GID)
 
 | Test ID | 対象 | 期待 |
 |---|---|---|
-| U-GCONF-001 | `parseGateStatuses` | gate table から G/L/status/PASS を抽出 |
-| U-GCONF-002 | `layerToGate` | `L5 -> G5`、非 layer は null |
-| U-GCONF-003 | `analyzeGateConfirm` | gate park の layer に confirmed doc → violation |
-| U-GCONF-004 | `analyzeGateConfirm` | gate PASS の layer に confirmed doc → ok |
-| U-GCONF-005 | `analyzeGateConfirm` | gate table parse 失敗 → `ok=false` + `violation` (fail-close) |
-| U-GCONF-006 | `analyzeGateConfirm` | draft doc は対象外 |
 | U-GID-001 | `analyzeGateIdFormat` | `G0.5` と `G1`〜`G14`、および `G8/G9` などの shorthand 分解結果を受理 |
 | U-GID-002 | `analyzeGateIdFormat` | `G15` / `G01` / `gate-3` を `invalid_forward_gate_id` で fail-close |
 | U-GID-003 | `checkGateIdFormat` | doctor full profile が `gate-id-format - OK` を surface し、repo root 不在では violation |
