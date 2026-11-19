@@ -25,6 +25,7 @@ import {
   readPrivacyDenylistFile,
 } from "../src/lint/privacy-scan-inputs.ts";
 import { heavyAfterAll } from "./support/hook-bounds.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 
 // L7 §2: no source line may match the email shape, so addresses are joined at runtime.
 const at = "@";
@@ -100,7 +101,7 @@ beforeAll(() => {
 });
 
 heavyAfterAll("teardown", () => {
-  if (scratchRoot) rmSync(scratchRoot, { recursive: true, force: true });
+  if (scratchRoot) removeTestTree(scratchRoot);
 });
 
 describe("privacy scan candidate oracles (adapters and live repository)", () => {

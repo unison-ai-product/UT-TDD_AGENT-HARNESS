@@ -28,6 +28,7 @@ import {
   digestMaterializedReleaseEntries,
 } from "../src/setup/index.ts";
 import { heavyAfterAll, heavyBeforeAll } from "./support/hook-bounds.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 
 // L7 §2: no source line may match the email shape, so addresses are joined at runtime.
 const at = "@";
@@ -183,7 +184,7 @@ beforeAll(() => {
 });
 
 heavyAfterAll(["teardown", 120000], () => {
-  if (scratchRoot) rmSync(scratchRoot, { recursive: true, force: true });
+  if (scratchRoot) removeTestTree(scratchRoot);
 }); // afterAll >10s on Windows (file 479s, hook unmeasured), bounded per #1063
 
 describe("privacy scan candidate oracles (distribution)", () => {

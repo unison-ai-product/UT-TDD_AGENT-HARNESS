@@ -7,7 +7,6 @@ import {
   mkdtempSync,
   readdirSync,
   readFileSync,
-  rmSync,
   statSync,
   writeFileSync,
 } from "node:fs";
@@ -24,6 +23,7 @@ import {
 } from "../src/lint/doc-split.ts";
 import { checkDocSplit, loadDocSplitSources } from "../src/lint/doc-split-inputs.ts";
 import { heavyAfterAll, heavyBeforeAll } from "./support/hook-bounds.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 import { headSnapshotRoot } from "./support/workspace-roots.ts";
 
 const BASELINE_PATH = "docs/governance/doc-split-baseline.json";
@@ -209,7 +209,7 @@ heavyBeforeAll(["git", 60000], () => {
 }); // 23s measured, bounded per #1063
 
 heavyAfterAll("teardown", () => {
-  if (scratchRoot) rmSync(scratchRoot, { recursive: true, force: true });
+  if (scratchRoot) removeTestTree(scratchRoot);
 });
 
 describe("doc-split live repository and CLI integration candidates", () => {

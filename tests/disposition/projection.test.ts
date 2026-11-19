@@ -27,6 +27,7 @@ import {
   heavyBeforeAll,
   heavyBeforeEach,
 } from "../support/hook-bounds.ts";
+import { removeTestTree } from "../support/temp-tree.ts";
 import { headSnapshotRoot } from "../support/workspace-roots.ts";
 
 const tables = [
@@ -89,8 +90,8 @@ describe("I-DISP-001 V-model projection", () => {
     }); // 54s measured, bounded per #1063
 
     heavyAfterAll("teardown", () => {
-      rmSync(tempRoot, { recursive: true, force: true });
-      rmSync(negativeRoot, { recursive: true, force: true });
+      removeTestTree(tempRoot);
+      removeTestTree(negativeRoot);
     });
 
     it("rebuilds the normal fixture through V-model and spec-IR projections", () => {
