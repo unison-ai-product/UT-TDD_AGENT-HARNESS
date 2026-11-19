@@ -198,11 +198,15 @@ function writeConsumerGateFixture(
   writeFixtureDoc(
     root,
     "docs/test-design/L12-acceptance-test-design.md",
-    `${withTableRows(
-      l12,
-      "| テストID | 分類 | テスト項目 | 検証内容/手順 | 期待結果 | トレース元 |",
-      ["| AT-001 | 受入 | Consumer acceptance | 手順 | 結果 | REQ-001, SC-001, FN-001 |"],
-    )}${options.coreOnly ? "" : "\n| **AT-FR-01-01** | Consumer acceptance |"}\n`,
+    options.coreOnly
+      ? withTableRows(
+          l12,
+          "| テストID | 分類 | テスト項目 | 検証内容/手順 | 期待結果 | トレース元 |",
+          ["| AT-001 | 受入 | Consumer acceptance | 手順 | 結果 | REQ-001, SC-001, FN-001 |"],
+        )
+      : `${l12}
+| **AT-FR-01-01** | Consumer acceptance |
+`,
   );
   if (!options.omitWireframe) {
     writeFixtureDoc(
