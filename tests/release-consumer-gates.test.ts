@@ -105,9 +105,64 @@ function withTableRows(content: string, header: string, rows: string[]): string 
   return lines.join("\n");
 }
 
+// G11 / G12 / G13 (U-RCDEV-032〜034) の oracle は harness 形式の L1 / L3 文書 (nfr-grade / business-detail など) を
+// consumer layout に置いた fixture を前提にする。G1 / G3 の consumer 分岐 (U-RCDEV-027) はこれを読まないので、
+// U-RCDEV-027 は coreOnly で呼び、この追加分を置かない。
+function writeHarnessShapedConsumerDocs(root: string): void {
+  const repositoryRoot = process.cwd();
+  const l1Template = readFileSync(
+    join(repositoryRoot, "docs/templates/vmodel/L1-requirements.md"),
+    "utf8",
+  );
+  const l3Template = readFileSync(
+    join(repositoryRoot, "docs/templates/vmodel/L3-functional-requirements.md"),
+    "utf8",
+  );
+  const l1Adapt = () =>
+    l1Template
+      .replace(/^status: .*$/m, "status: confirmed")
+      .replace(/^pair_artifact: .*$/m, `pair_artifact: docs/test-design/L7-unit-test-design.md`)
+      .replace(/^plan: .*$/m, "plan: docs/plans/PLAN-CONSUMER-01.md");
+  const l3Adapt = () =>
+    l3Template
+      .replace(/^status: .*$/m, "status: confirmed")
+      .replace(/^pair_artifact: .*$/m, "pair_artifact: docs/test-design/L7-unit-test-design.md")
+      .replace(/^plan: .*$/m, "plan: docs/plans/PLAN-CONSUMER-01.md");
+  {
+    writeFixtureDoc(
+      root,
+      "docs/design/L1-requirements/business-requirements.md",
+      `${l1Adapt()}\n| **BR-01** | Consumer goal |\n`,
+    );
+  }
+  writeFixtureDoc(
+    root,
+    "docs/design/L1-requirements/functional-requirements.md",
+    `${l1Adapt()}\n| **FR-L1-01** | Consumer function | P0 |\n`,
+  );
+  writeFixtureDoc(
+    root,
+    "docs/design/L1-requirements/screen-requirements.md",
+    `${l1Adapt()}\n\n## §1 画面一覧\nPM-01\n## §2 次\n### §5.1 業務要求トレース\n| **BR-01** | PM-01 |\n### §5.3 機能要求トレース\n| **FR-L1-01** | PM-01 |\n### §5.4 次\n### §5.5 画面トレース\n| **PM-01** | BR-01 / FR-L1-01 |\n### §5.6 次\n`,
+  );
+  for (const path of ["business-detail.md", "nfr-grade.md"]) {
+    let content = l3Adapt();
+    if (path === "business-detail.md") content += "\n";
+    else {
+      content += `\n${[1, 2, 3, 4, 5, 6, 7, 8, 11, 12, 13, 14, 15, 16, 17].map((n) => `| **NFR-${String(n).padStart(2, "0")}** | covered |`).join("\n")}\n`;
+    }
+    writeFixtureDoc(root, `docs/design/L3-functional/${path}`, content);
+  }
+  writeFixtureDoc(
+    root,
+    "docs/design/L3-functional/functional-requirements.md",
+    `${l3Adapt()}\n### FR-01: Consumer function\n#### AC-FR-01-01\n`,
+  );
+}
+
 function writeConsumerGateFixture(
   root: string,
-  options: { omitRequiredSlot?: boolean; omitWireframe?: boolean } = {},
+  options: { omitRequiredSlot?: boolean; omitWireframe?: boolean; coreOnly?: boolean } = {},
 ): void {
   const repositoryRoot = process.cwd();
   for (const [templatePath, targetPath] of CONSUMER_TEMPLATE_SLOTS) {
@@ -122,12 +177,10 @@ function writeConsumerGateFixture(
       .replace(/^plan: .*$/m, "plan: docs/plans/PLAN-CONSUMER-01.md");
     const core = CONSUMER_CORE_TABLE_ROWS[targetPath];
     if (core) adapted = withTableRows(adapted, core.header, core.rows);
-    // G11 / G12 / G13 (U-RCDEV-032〜034) の oracle が参照する L3 の FR-01 / AC-FR-01-01。G1 / G3 の consumer 分岐は読まない。
-    if (targetPath === "docs/design/L3-functional/functional-requirements.md") {
-      adapted += "\n### FR-01: Consumer function\n#### AC-FR-01-01\n";
-    }
     writeFixtureDoc(root, targetPath, adapted);
   }
+
+  if (!options.coreOnly) writeHarnessShapedConsumerDocs(root);
 
   const l10 = readFileSync(
     join(repositoryRoot, "docs/templates/vmodel/L10-ux-validation.md"),
@@ -147,9 +200,11 @@ function writeConsumerGateFixture(
   writeFixtureDoc(
     root,
     "docs/test-design/L12-acceptance-test-design.md",
-    withTableRows(l12, "| テストID | 分類 | テスト項目 | 検証内容/手順 | 期待結果 | トレース元 |", [
-      "| AT-001 | 受入 | Consumer acceptance | 手順 | 結果 | REQ-001, SC-001, FN-001 |",
-    ]) + "\n| **AT-FR-01-01** | Consumer acceptance |\n",
+    `${withTableRows(
+      l12,
+      "| テストID | 分類 | テスト項目 | 検証内容/手順 | 期待結果 | トレース元 |",
+      ["| AT-001 | 受入 | Consumer acceptance | 手順 | 結果 | REQ-001, SC-001, FN-001 |"],
+    )}\n| **AT-FR-01-01** | Consumer acceptance |\n`,
   );
   if (!options.omitWireframe) {
     writeFixtureDoc(
