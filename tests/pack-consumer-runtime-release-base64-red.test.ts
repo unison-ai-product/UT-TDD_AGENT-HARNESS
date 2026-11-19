@@ -156,13 +156,13 @@ function controlManifestError(controlManifestBase64: string): unknown {
 }
 
 describe("consumer runtime release base64 validation on large input (Issue #1565)", () => {
-  it.fails("U-PACKRT-014: accepts a ~6,000,000 char valid base64 value without RangeError", () => {
+  it("U-PACKRT-014: accepts a ~6,000,000 char valid base64 value without RangeError", () => {
     const large = paddedControlManifest(6_000_000);
     expect(large.length).toBeGreaterThanOrEqual(5_999_000);
     expect(controlManifestError(large)).toBeUndefined();
   });
 
-  it.fails("U-PACKRT-015: still fails closed for a ~6,000,000 char invalid base64 value", () => {
+  it("U-PACKRT-015: still fails closed for a ~6,000,000 char invalid base64 value", () => {
     const invalid = `${paddedControlManifest(6_000_000).slice(0, -4)}@@@@`;
     const error = controlManifestError(invalid);
     expect(error).toBeInstanceOf(ConsumerRuntimeReleaseValidationError);
