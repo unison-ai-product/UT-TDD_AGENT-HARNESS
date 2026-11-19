@@ -20,7 +20,7 @@ decision_points:
     over: "skipping threat modelling because it is internal"
     because: "internal surfaces are equally exploitable via prompt injection; the agent guard only catches external bypass attempts"
   - when: "deciding where to record threat model output"
-    choose: "docs/design/L3/<plan-id>-threat-model.md"
+    choose: "docs/design/L3/<subject>-threat-model.md"
     over: "writing the threat model directly into handover files"
     because: "docs/design/L3/ is versioned and discoverable by ut-tdd doctor; handover files are transient"
   - when: "the secret scan (`pre-push`, `src/lint/secret-scan.ts`) reports no findings"
@@ -47,12 +47,12 @@ code.
 
 ## When to load this skill
 
-- A PLAN introduces or modifies an agent-callable surface (tool, hook, subagent
+- An Issue introduces or modifies an agent-callable surface (tool, hook, subagent
   slot, MCP endpoint).
 - An L2 or L3 design doc adds a new trust boundary (runtime -> OS, agent ->
   harness DB, external API -> harness).
 - The `pre-push` secret scan reports an unresolved finding.
-- A Recovery PLAN must demonstrate the threat that caused the incident is
+- A Recovery Issue must demonstrate the threat that caused the incident is
   modelled and mitigated.
 
 ## Threat surface inventory for UT-TDD
@@ -72,7 +72,7 @@ The harness has four primary threat surfaces:
 
 ## STRIDE-lite per surface
 
-For each surface in a PLAN, document at L3:
+For each surface in an Issue, document at L3:
 
 | Threat category | Question to answer |
 |-----------------|-------------------|
@@ -84,7 +84,7 @@ For each surface in a PLAN, document at L3:
 | Elevation of privilege | Can a subagent call a command that requires guard bypass without evidence? |
 
 Unanswered questions are open threats. Document them in the L3 design doc and
-link to a mitigation PLAN before pair-freeze.
+link to a mitigation Issue before pair-freeze.
 
 ## Mitigation requirements
 
@@ -93,7 +93,7 @@ link to a mitigation PLAN before pair-freeze.
   `tool_name`. Fail-open is not acceptable.
 - **No credentials in state.** `.ut-tdd/`, `docs/`, audit evidence, and handover
   files must not contain API keys, passwords, or session tokens. Confirm the
-  `pre-push` secret scan (`src/lint/secret-scan.ts`) passes before accepting any PLAN that touches these paths.
+  `pre-push` secret scan (`src/lint/secret-scan.ts`) passes before accepting any change that touches these paths.
 - **Audit trail.** Every guard bypass (via `UT_TDD_ALLOW_RAW_AGENT=1`) must
   write an evidence record to `.ut-tdd/audit/`. No bypass without a trace.
 - **Input validation.** Hook stdin JSON must be validated against a schema; an
@@ -101,7 +101,7 @@ link to a mitigation PLAN before pair-freeze.
 
 ## Threat model record
 
-Write a threat model summary at `docs/design/L3/<plan-id>-threat-model.md`:
+Write a threat model summary at `docs/design/L3/<subject>-threat-model.md`:
 
 ```
 ## Trust boundary: <name>
@@ -113,7 +113,7 @@ Write a threat model summary at `docs/design/L3/<plan-id>-threat-model.md`:
 - Date: <ISO-8601>
 ```
 
-Link this doc from the PLAN `review_evidence` field before pair-freeze.
+Link this document from the Issue and its review evidence before pair-freeze.
 
 ## Anti-patterns
 

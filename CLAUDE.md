@@ -29,11 +29,7 @@ group has completed Forward freeze and a verification cycle is being run.
 source material is historical reference only; current UT-TDD runtime commands
 use `ut-tdd`, not legacy commands.
 
-ADR-001 is binding: source concepts may be used as design source material, but
-UT-TDD core implementation is TypeScript/Node. old W1-W3a Python is not
-current product runtime. The v4 management intelligence is the only Python
-component (ADR-001 decision 4): a separate, proposal-only process behind a
-JSON Schema boundary.
+ADR-001 に従い、UT-TDD の実装言語は TypeScript/Node とする。旧 W1–W3a の Python は設計の参照資料である。v4 の 1.0.0 では管理知能を作らない。後続で作る場合は、別プロセスの提案専用機能とし、入出力を JSON Schema で定める (ADR-001 決定 4 の運用上の注記)。
 
 ## Purpose
 
@@ -60,10 +56,10 @@ Design and implementation should be judged by these pillars:
 見出し・箇条書きラベルも日本語を優先する。
 
 ただし成果物はそれぞれの規約に従う: コード/識別子/commit message は従来どおり、ファイル名は
-英語 (文字化け回避)、技術用語・コマンド・PLAN ID・パスは原語のまま埋め込んでよい (無理に和訳しない)。
+英語 (文字化け回避)、技術用語・コマンド・Issue ID・パスは原語のまま埋め込んでよい (無理に和訳しない)。
 
-**ドキュメント本文 (`docs/` 配下の PLAN / ADR / design / test-design / governance 等) は日本語で書く**
-(PO ルール、2026-06-30。Claude / Codex 両ランタイム共通)。コード・識別子・コマンド・PLAN ID・パスは
+**ドキュメント本文 (`docs/` 配下の ADR / design / test-design / governance 等) は日本語で書く**
+(PO ルール、2026-06-30。Claude / Codex 両ランタイム共通)。コード・識別子・コマンド・Issue ID・パスは
 英語/原語のまま。Windows 文字化けは UTF-8 化 (`.editorconfig` charset=utf-8 / `.gitattributes` eol=lf) と
 `readability` gate (mojibake fail-close) で防ぐ前提であり、**文字化け回避を理由に doc を英語化しない**。
 
@@ -72,13 +68,13 @@ Design and implementation should be judged by these pillars:
 - 「改善する」は**実装すること**を指す。調査・提案で止めない (§教訓はメモリではなく仕組みにして改善する)。
 - 工程は記録のために必ず通す。近道で省略しない (§運用規律の再締結 1)。
 - Recovery は本線であり、傍流の後回し作業として扱わない。
-- 強制停止 (作業の即時中断を要する事態) は最高 severity として扱う。PLAN 完了時の handover は必須である
+- 強制停止 (作業の即時中断を要する事態) は最高 severity として扱う。担当作業の完了時には handover が必要である
   (機構は `docs/design/` の forced-stop-feedback / handover-mechanism が正本)。
 
 ### GitHub 記載言語 (PO ルール 2026-09-16)
 
 GitHub の Issue / PR / Discussion のタイトル、本文、コメント、レビュー記録、ラベル説明、リリースノートは、
-**日本語を原則**とする。タイトルも例外にしない。コード・関数名・型名・変数名・CLI コマンド・PLAN / Issue / PR ID・
+**日本語を原則**とする。タイトルも例外にしない。コード・関数名・型名・変数名・CLI コマンド・Issue / PR ID・
 パス・URL・ログ・機械生成フィールド・外部仕様の引用は、正確性を優先して英語または原語のまま記載してよい。
 英語の技術用語を含める場合は、周囲の説明と判断理由を日本語で書く。外部引用やログを原文のまま貼る場合も、
 要点と対応内容を日本語で併記する。Claude / Codex のどちらが起票・更新してもこの規則を適用し、既存記載を更新する際は
@@ -92,7 +88,7 @@ PO への質問は **設計判断 (trade-off が実在する方式選択 / spec 
 選択肢 2〜4 個 + 各 trade-off + 推奨 1 つ (先頭、理由 1 行)。Claude の対話セッションでは
 AskUserQuestion をこの用途に限って使ってよい (必要なら preview 付き)。非対話セッションと
 Codex では `## 設計判断依頼` の markdown 選択肢表で等価に出力して停止する。採択結果は
-設計文書 (設計系 PLAN の場合) / PLAN の設計判断節 / ADR に記録する (skill: `skills/design-decision-elicitation.md`)。
+設計文書、GitHub Issue または ADR に記録する (skill: `skills/design-decision-elicitation.md`)。
 
 #### PO 判断への反射的エスカレーション禁止 (PO ルール 2026-08-05)
 
@@ -165,103 +161,17 @@ one-shot 消費 / memory add 必須 / doctor singleton / effort ladder。矛盾�
 grep 0 件だった)。
 
 - `gh issue list --state open` — 起票したまま棚卸しされていない issue を数える。
-  harness.db への issue projection 機構化は `PLAN-L7-437` (blocked) の守備範囲であり、
-  凍結中に先回り実装しない。
 - advisor 発火の spot-check (`.claude/CLAUDE.md` §着手前 advisor 合意形成 のコマンド)。
 - 未 push commit と open PR の確認。
 - **harness.db projection の鮮度** (`ut-tdd db status`)。graph (`graph_nodes` /
-  `dependency_edges`) は PLAN 重複や影響範囲の判定入力であり、**古い projection を正本に
+  `dependency_edges`) は影響範囲の判定入力であり、**古い projection を正本に
   すると「重複なし」「影響なし」という偽の否定証明を出す**。2026-07-28 実例: PLAN-L6-94 と
   PLAN-L7-465 の契約重複を機械が拾えなかった真因は検出方式ではなく projection の鮮度で、
   両 PLAN が `graph_nodes` に存在していなかった (issue #169)。
 
-## PLAN Filing Rules (both runtimes)
+## 設計と作業の正本
 
-### PLAN 凍結: 新規起票・改訂・参照追加の停止 (PO 判断 2026-10-19、#1078 A2 / #1166)
-
-PLAN 機構は撤去する方針 (#1078、進め方の切り替え = issuecomment-6265568869) のため、**撤去が終わるまで
-PLAN への依存をこれ以上増やさない**。この節の規則は、PLAN を作業の正本・契約の置き場・参照先とする
-本ファイルおよび両アダプタの既存の指示すべてに優先する (下の PLAN 起票規律は、撤去までに既存 PLAN を
-触る場合の最低限として残す。rule-drift の marker 文言は変えない)。
-
-- **新規 PLAN の起票と `plan revise` を止める**。
-- **新しい作業の正本は設計文書 (`docs/design/` / `docs/test-design/`) と GitHub Issue** にする。方式判断・
-  契約・受け入れ条件の本文は設計文書に書き、Issue (作業チケット、`docs/governance/github-issue-hierarchy.md` §6) は
-  その path と revision を指すだけにする。新しい PLAN を作って持たせない。
-- **PLAN への参照を新しく足さない**。新規の契約・gate・コード・文書は、PLAN ID や `docs/plans/` 内の
-  実体を要件にせず、Issue または設計文書の節を参照する (例: #848 の `retirement_plan` は PLAN
-  撤去後に成り立たない形のため、Issue / 設計文書参照へ改める — 別 PR で扱う)。
-- **例外**: PLAN 撤去作業そのものに必要な場合に限り、上の 3 項目すべて (起票・`plan revise`・参照追加) に
-  同じ例外を適用する。PR 本文に例外の根拠を書く。
-- **PLAN を宛先とする既存の指示の読み替え**: §運用規律の再締結 1 や §PR スコープ規律 2 などが
-  「PLAN の設計判断節」へ方式を freeze すると書く箇所は、凍結中は宛先を設計文書 (`docs/design/` /
-  `docs/test-design/`) に読み替える (Issue は参照の置き場であり、契約本文を書かない)。工程 (実装前の pair-freeze、改訂の cross-review) は
-  そのまま守る。
-- 既存 PLAN の削除・物理撤去は本節の範囲外 (#1078 の後続段で行う)。
-
-PLAN 起票規律は**両ランタイム共通**であり、片方のアダプタにしか無い状態を作らない
-(2026-07-28 実測: `route_signal` / `generates` / `plan_id` が `AGENTS.md` に 0 件で、
-Codex はこれらの規律を一度も受け取っていなかった)。`rule-drift` が三アダプタ全てに
-`route_signal` / `generates` の記述を要求して fail-close する。
-
-- 新規 PLAN は route certificate (`route_signal` + `route_mode`) を持ち、mode が `kind` を
-  許すこと (SSoT: `src/schema/route-filing.ts`)。
-- **draft PLAN の `generates` に既存ファイルを書かない** (`merged-plan-status` が
-  fail-close する)。宣言は実装 PR の confirm と同時。
-- `requires` は confirmed / completed のみ。draft への依存は `references` へ。
-- `kind=add-impl` は Reverse 対必須。conditional kind は Reverse 対か
-  `backprop_decision: not_required` + 理由 (純修理なら not_required、新契約なら Reverse 対)。
-- falsifiable な claim は根拠となるテスト / コマンドを引用する (`coding ≠ substance`)。
-- **新規の設計系 PLAN (`kind: design` / `add-design`) は本文を 4 項目に絞る** (issue #648 の出血止め、
-  2026-10-06)。正本は下記「設計系 PLAN の本文 4 項目」。両アダプタはここへの pointer だけを持つ。
-
-詳細は `AGENTS.md` §PLAN Rules と `.claude/CLAUDE.md` §PLAN Rules (等価)。
-
-### 設計系 PLAN の本文 4 項目 (issue #648)
-
-新規に起票する `kind: design` / `add-design` の PLAN は、契約本文 (設計判断・trade-off・API / schema /
-アルゴリズム・fail-close 仕様・責務・不変条件) を `docs/design/` (テスト設計なら `docs/test-design/`) の
-文書に置き、PLAN 本文は次の 4 項目だけにする: **上流の設計 revision digest / 引き渡し物 / 検証の対 /
-完了条件**。v4 候補 (`docs/governance/candidates/ut-tdd-concept-v4.0.md` §工程間の契約と工程内の
-チケット、PO 採択 2026-09-30) の「工程間の簡易契約」を先行適用する出血止めであり、設計の本文が PLAN 側に
-溜まり続けて移行 backlog が増えるのを止めるためである。
-
-- **適用範囲**: 本規則の施行後に新規起票する設計系 PLAN だけ。既存 PLAN はこの規則では移行しない
-  (移行は #648 の手順 = 意味分類 → 三者照合 → 移行証跡で別途行う)。
-- **frontmatter は現行要件のまま**: `agent_slots`、`dependencies` (`add-*` は `parent` 必須)、
-  route certificate (`route_signal` + `route_mode`)、confirmed 時の `review_evidence` を従来どおり書く。
-  4 項目化は本文だけの規則であり、新しい gate は設けない (#648 M3 実測: 4 項目の本文は複製 tree の
-  `plan lint` で plan-governance / plan-schedule を通り、阻むのは frontmatter だけだった。4 項目の
-  機械強制は後続 PLAN の範囲)。
-- **設計の契約文を PLAN へ複製しない**。PLAN は設計文書を path と digest で指すだけにし、要約・抜粋・
-  表の写しも置かない (写しは正本とずれる。#648 の分類パイロットでは stale 9 件が見つかり、すべて
-  PLAN 側が古かった)。
-- **上流の設計 revision digest は文書ごとに書く**: 参照する設計文書 1 本につき 1 行、
-  `<path>@<commit>` と、その commit 時点の当該ファイルの blob bytes の sha256 を記録する
-  (`git cat-file blob <commit>:<path> | sha256sum`)。グローバルな receipt chain には繋がない
-  (繋ぐと rechain の律速 #711 が Design 側へ移るだけになる。advisor `claude-fable-5` の条件)。
-
-本文の例 (見出しはこの 4 つ。`## 完了条件` は checklist で書く):
-
-```markdown
-## 上流の設計 revision digest
-
-- `docs/design/harness/<layer-dir>/<topic>.md@<commit>` sha256:<64 hex>
-
-## 引き渡し物
-
-- `docs/design/harness/<layer-dir>/<topic>.md` (本 PLAN で凍結する設計文書)
-- `docs/test-design/harness/<topic>-test-design.md` (対になるテスト設計)
-
-## 検証の対
-
-- 設計 ↔ テスト設計: 上記 2 文書の対 (gate / テストレベル / 検証手法はテスト設計側に書く)
-
-## 完了条件
-
-- [ ] 引き渡し物が上流 digest の revision と整合し、非著者 family の review が PASS
-- [ ] `ut-tdd plan lint` exit 0
-```
+新しい作業の正本は設計文書 (`docs/design/` / `docs/test-design/`) と GitHub Issue とする。Issue から対象の設計文書とその revision を参照する。設計の改訂には pair-freeze と非著者 family の review の規律を適用する。
 
 ## Coding Rules
 
@@ -283,15 +193,14 @@ Codex はこれらの規律を一度も受け取っていなかった)。`rule-d
 - Use Conventional Commits.
 - Stage explicit files only.
 - Keep unrelated user changes out of commits.
-- Push at coherent PLAN / task boundaries when requested.
+- Push at coherent task boundaries when requested.
 - CI is `harness-check`: typecheck, Vitest, Biome lint, and doctor.
 - Review evidence is required before confirmation gates where applicable.
 - PR merge は必ず `ut-tdd pr merge --pr <N>` 経由とし、`gh pr merge` の直叩きで迂回しない。
 - merge の後は、合流した HEAD で CI / doctor / 回帰の安全確認まで行い、確認した HEAD と結果を PR コメントと
   正規のイベント・証跡に残して相手ランタイムと PO に伝わる状態にする。確認結果そのもの (エピソード状態) は
   メモリに書かない。永続的な決定や教訓が得られたときだけ HARNESS メモリへ昇格させる。merge 条件 (draft 解除・review
-  evidence 成立・required CI green・PLAN status gate) を、Green の偽装 (未完成 PLAN の帳尻 confirm、
-  detector の allowlist 追加、base 負債の PR 固有扱い) で満たしたことにしない。依頼に「merge しない」と
+  evidence 成立・required CI green) を、Green の偽装 (detector の allowlist 追加、base 負債の PR 固有扱い) で満たしたことにしない。依頼に「merge しない」と
   明記された PR は、その指示を優先する。
 
 ### 運用規律の再締結 (PO ルール 2026-08-03、両ランタイム共通)
@@ -302,7 +211,7 @@ PR #167、自己 supersede 7 件 #183)。以下を**再締結**する。新規�
 拘束力の再宣言である:
 
 1. **工程**: Forward の pair-freeze を跳ばさない。方式判断 (正本・信頼根・データ形式) は
-   実装前に契約へ freeze し (設計系 PLAN は設計文書へ = §設計系 PLAN の本文 4 項目、それ以外は PLAN の設計判断節へ)、その改訂を review してから実装する (§UT-TDD Workflow、
+   実装前に設計文書へ記録し、その改訂を review してから実装する (§UT-TDD Workflow、
    §設計判断エリシテーション)。**独自方式のその場開発を禁止する** — 契約に無い方式が
    必要になったら実装を止めて契約改訂へ戻る。
 2. **merge**: closing review の PASS verdict 受領前に merge しない (exact-HEAD プロトコル、
@@ -315,9 +224,7 @@ PR #167、自己 supersede 7 件 #183)。以下を**再締結**する。新規�
    (§Shared Guard Discipline)。exit 2 は待つ。別形式での再起動をしない。
 5. **メモリ**: `ut-tdd memory add` 経由のみ。手書き禁止。エピソード状態を書かない
    (§Hybrid 多ランタイム commit 協調)。
-6. **PLAN**: route certificate / generates 所有 / supersedes 双方向 / claim には根拠コマンド
-   (§PLAN Filing Rules)。
-7. **検証**: 基準点は HEAD のみ。共有 tree の transient を計測・帰責しない
+6. **検証**: 基準点は HEAD のみ。共有 tree の transient を計測・帰責しない
    (§引き継ぎ・検証の基準点)。
 
 **違反時の扱い**: 上記から外れた PR / merge / 委譲は、内容の当否に関わらず
@@ -330,10 +237,10 @@ PR 肥大と方式の場当たり発明の再発防止 (実測: PR #219 は D3 �
 receipt 置き場を PR 内で自作した結果、gate / CLI / 保管方式 / audit の複数論点が混入して
 close された)。新規機構は作らず、既存工程の遵守を規律として固定する:
 
-1. **順序契約の厳守**: PLAN が宣言する実装順序 (例: D1→D3→D2) に従い、依存する正本が
+1. **順序契約の厳守**: GitHub Issue に記録した実装順序 (例: D1→D3→D2) に従い、依存する正本が
    閉じる前に下流を着工しない。
 2. **契約 freeze が実装 PR の前提** (pair-freeze の復元): 正本・信頼根・データ形式などの
-   方式判断は実装 PR の中で発明・変更しない。先に契約 (設計系 PLAN は設計文書、それ以外は PLAN の設計判断節) へ方式を freeze し、
+   方式判断は実装 PR の中で発明・変更しない。先に設計文書へ方式を記録し、
    その改訂を cross-review してから実装 PR を出す。実装中に方式変更が必要になったら
    PR を close して契約改訂へ戻る (積み増し禁止)。
 3. **1 PR = 1 論点**: 新規 source_module 1 個 + 対になるテスト + 最小配線まで。
@@ -348,7 +255,7 @@ close された)。新規機構は作らず、既存工程の遵守を規律と�
    `tests/` の内容差分 0 (rename だけ可) でテスト設計にも触れず、commit ごとに full suite を流す。
    直す余地が無いときは PR 本文に「Refactor なし (理由)」と書く。その理由を認める条件と判定者は
    `docs/governance/coding-rules.md` §量・分割・Refactor の目安 を正本とする。大きな構造変更は
-   Refactor Issue (ラベル `refactor`) と設計文書へ回す (PLAN 凍結、#1166)。非著者 reviewer は commit の順と Refactor commit の `tests/` 差分 0 を確かめ、判定を verdict の行頭 `REFACTOR:` 欄 (`commit-ok` / `none-ok` / `not-applicable` / `commit-tests-changed` / `none-rejected`) に必ず書く。実装 PR (`src/` か `scripts/` を変える PR) では、この欄を `ut-tdd pr merge` が機械で確かめる gate は契約済み (欄の形と規則は `docs/design/harness/L6-function-design/merge-gate-refactor-stage.md`) だが未実装であり、実装は #1300 が持つ。実装されるまで、欄の確認は非著者 reviewer と control の手順である。
+   Refactor Issue (ラベル `refactor`) と設計文書へ回す。非著者 reviewer は commit の順と Refactor commit の `tests/` 差分 0 を確かめ、判定を verdict の行頭 `REFACTOR:` 欄 (`commit-ok` / `none-ok` / `not-applicable` / `commit-tests-changed` / `none-rejected`) に必ず書く。実装 PR (`src/` か `scripts/` を変える PR) では、この欄を `ut-tdd pr merge` が機械で確かめる gate は契約済み (欄の形と規則は `docs/design/harness/L6-function-design/merge-gate-refactor-stage.md`) だが未実装であり、実装は #1300 が持つ。実装されるまで、欄の確認は非著者 reviewer と control の手順である。
    手順の正本は `skills/test-driven-development.md`。
 
 6. **WIP 上限 (slot 単位) と共有文書の直列化** (PO 指摘 2026-10-14、2026-10-23 に slot 単位へ改訂): WIP は
@@ -378,11 +285,11 @@ dispatch (same-family verdict は `same_family_reviewer` で拒否) が機械強
    Codex Sol) が FLAG を出したら、**author family が同 PR 内で軽作業を是正** し、**同じ非著者
    reviewer が新 exact head を再検** する。blocking 0 なら author 側 control lane が正規経路
    (`ut-tdd pr merge`) で merge する。close→再出も、契約改訂への差し戻しも、軽作業では行わない。
-2. **軽作業の定義**: FLAG 是正のうち (a) 上位契約 (PLAN 設計判断節 / 設計文書 / test-design の
+2. **軽作業の定義**: FLAG 是正のうち (a) 上位契約 (設計文書 / test-design の
    凍結 oracle) の変更を伴わない、(b) 新規 source_module を追加しない、(c) 是正 3 回以内で
    blocking 0 に収束する、の全てを満たすもの。(c) を超えたら close→分割再出 (§PR スコープ規律 4)。
 3. **差し戻しは契約齟齬だけ**: 上位契約そのものが違うと reviewer が判定した場合は PR 内で直さず、
-   契約改訂 (設計文書 / PLAN 設計判断、pair-freeze) へ戻す。これが設計 owner へ返す唯一の経路であり、
+   契約改訂 (設計文書の pair-freeze) へ戻す。これが設計 owner へ返す唯一の経路であり、
    実装の手直しを返す経路ではない。
 4. **再検の担保**: 再検 packet は author claim・自己評価・前回 verdict を除いて control 側が組む
    (blind packet)。再検は新 exact head に束縛し (receipt の再利用禁止)、反証試行を verdict に残す
@@ -545,13 +452,12 @@ control lane の合図を待つことを基本にせず、止まったら相手�
 - Setup: `ut-tdd setup`
 - Status: `ut-tdd status`
 - Doctor: `ut-tdd doctor`
-- Plan lint: `ut-tdd plan lint`
 - Review: `ut-tdd review --uncommitted`
 - Codex delegation: `ut-tdd codex --role <role> --task "..."`
 - Claude prompt generation: `ut-tdd claude --role <role> --task "..."` (`--execute` なしが dry run)
 - Team run: `ut-tdd team run --definition .ut-tdd/teams/<team>.yaml`
 - Task classification: `ut-tdd task classify --text "..."`
-- Skill suggestion: `ut-tdd skill suggest --plan <path>`
+- Skill suggestion: `ut-tdd skill suggest --text "..."`
 
 When multiple AI runtimes are available, separate creation from judgement. In
 single-runtime modes, record `intra_runtime_subagent` review evidence as the
@@ -731,7 +637,7 @@ esbuild の版の固定 (同じ file)、`.github/workflows/security.yml` の Act
 ## UT-TDD Workflow
 
 - Forward: `plan` -> `pair-freeze` -> `implement` -> `trace-freeze` -> `review` -> `accept`
-- Reverse: `reverse <type> R0` -> `R1` -> `R2` -> `R3` -> `R4` -> Forward merge
+- Reverse: `R0` → `R1` → `R2` → `R3` → `R4` → Forward への合流 (`docs/process/modes/reverse.md`)
 - Scrum / PoC: `S0 backlog` -> `S1 plan` -> `S2 poc` -> `S3 verify` -> `S4 decide`
 - Handover: check `.ut-tdd/handover/CURRENT.json` if present and non-stale.
 

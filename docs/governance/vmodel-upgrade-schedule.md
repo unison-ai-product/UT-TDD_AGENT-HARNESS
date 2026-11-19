@@ -10,12 +10,8 @@ typed_spec_phase_owner: L6
 
 ## 0. 役割
 
-本書は `Vモデル設計ドキュメント_checked.zip` から始まった HARNESS バージョンアップの工程管理表である。
-目的は、上流からの全面見直しを「現在地」「V-pair」「前提」「RAG」「駆動モデルの入口」に分解し、
-`.ut-tdd/harness.db` の `schedule_entries` projection へ宣言的に引き込むことである。
-
-DB は正本ではない。本書、PLAN、設計 doc、test-design が authoring source であり、検出系は本書の現在地と
-`routeFiling` / 駆動モデル設計に従う。検出系の都合で layer、sub_doc、pairing、起票先を創作してはいけない。
+本書は `Vモデル設計ドキュメント_checked.zip` から始まった HARNESS バージョンアップの工程記録である。
+当時の現在地、V-pair、前提、RAG を下表に保持する。現行作業の順序と契約は GitHub Issue と対応する設計文書を参照する。
 
 ## 1. 工程管理表
 
@@ -148,11 +144,10 @@ DB は正本ではない。本書、PLAN、設計 doc、test-design が authorin
 - `rag=green` は当該工程の設計・実装・検証証跡が揃っている状態を示す。
 - `rag=yellow` は工程が正規に進行中、または後続工程が前提待ちであることを示す。
 - `blocked_reason` が空でない行は、検出系が `detector_route_candidates` または feedback surface へ上げる候補になり得る。
-- 本表に載っていないPLANは、後方互換のため PLAN frontmatter から `schedule_entries` fallback を作る。ただし本表に載ったPLANは本表を優先する。
 
 ## 3. 不変条件
 
-- 工程管理表は Workflow 集約の authoring source であり、PLAN frontmatter を暗黙更新しない。
+- 工程表の列と既存の行は、記録の照合に使う形式で保存する。
 - 駆動モデル選択は `routeFiling` / route mode SSoT に従い、本表は現在地と前提を渡すだけに留める。
 - `status=planned` の行は実装完了を意味しない。起票前の位置づけを明示するための計画行である。
 - 本表と projection の齟齬は doctor / detector の finding として扱い、projection 側で silent repair しない。

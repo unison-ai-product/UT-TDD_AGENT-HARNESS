@@ -44,7 +44,7 @@ All 5 reverse types pass through R2 (no skip).
 
 ## When to load this skill
 
-- The `kind=reverse` PLAN has `workflow_phase: R2`.
+- The Reverse Issue has reached R2.
 
 ## Inputs
 
@@ -74,7 +74,7 @@ All 5 reverse types pass through R2 (no skip).
 
 ## Output artifacts
 
-Write to `.ut-tdd/reverse/<plan_id>/`:
+Record  as Reverse evidence and link it in the Issue:
 
 **R2-as-is-design.md** -- human-readable design reconstruction:
 - Module list with responsibilities.
@@ -97,7 +97,6 @@ Before advancing `workflow_phase` to `R3`, verify:
 - [ ] If `has_existing_tests=false`: a note is recorded in `R2-as-is-design.md`
   confirming test absence (feeds `missing_pair_artifacts` in R4).
 - [ ] Structural gaps are listed (not resolved -- resolution is R3/R4).
-- [ ] `ut-tdd plan lint` exits 0 with `workflow_phase: R3`.
 - [ ] `ut-tdd vmodel lint` exits 0 (no new orphan artifacts from reconstruction
   work).
 - [ ] `ut-tdd doctor` exits 0.

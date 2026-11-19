@@ -33,9 +33,7 @@ only. Do not enable hooks that depend on personal legacy runtime paths.
 この一覧は `.claude/settings.json` と機械照合される (`U-RDRIFT-007`)。片側だけを書き換えると
 fail-close するので、hook を足す・変える場合は両方を同時に更新すること。
 
-実行系は **node** である (`package.json` の `utTdd.nodeToolchain.nodeAuthority`)。Bun は
-Node authority is sealed; Bun is retired from hook / CLI / inspection entrypoints.
-(#134 Bun permanent ban)。
+hook・CLI・検査の実行系は Node.js とする (`package.json` の `utTdd.nodeToolchain.nodeAuthority`、#134)。
 
 Historical behavior may be referenced for migration, but implementation must
 live in UT-TDD-owned paths.
@@ -52,52 +50,9 @@ concurrent run fail-fasts with exit 2 and the holder's pid. Rules:
 - Prefer scoped/targeted checks (`--scope toolchain`, direct check functions in
   tests) when you only need a slice.
 
-## PLAN Rules
+## 設計と作業の正本
 
-PLAN 凍結 (新規起票・改訂・参照追加の停止、#1166) の規律は `../CLAUDE.md` §PLAN Filing Rules (PLAN 凍結) を正本とする。
-
-Before creating or updating PLAN files, inspect existing `docs/plans/` entries.
-Prefer extending an existing PLAN over creating an overlapping one.
-
-PLAN requirements:
-
-- `plan_id` is unique and matches the filename.
-- `kind`, `layer`, `status`, `dependencies`, and `review_evidence` match the
-  current schema.
-- Schedule steps show parallel or serial mode.
-- `kind=add-impl` carries the required Reverse pairing.
-- Design / implementation / add-* changes update terminology and L0 glossary
-  where relevant.
-- Review evidence is recorded before asking for confirmation gates.
-- New PLANs carry a route certificate (`route_signal` + `route_mode`), and the
-  mode must allow the `kind` (SSoT: `src/schema/route-filing.ts` — e.g.
-  troubleshoot⇔incident, refactor⇔refactor). `kind` = poc / recovery /
-  troubleshoot also requires an `aim` agent slot.
-- **Draft PLANs must not list already-existing files in `generates`.** A draft
-  PLAN whose declared deliverable already exists in the tree trips
-  `merged-plan-status`. Declare only the
-  PLAN doc itself at filing time; the implementing PR updates `generates`
-  together with the confirm (2026-07-28 lesson: PR #167 went red on this).
-
-New design-kind PLANs (`kind: design` / `add-design`) carry only the 4-item
-body; the contract body lives in `docs/design/` (or `docs/test-design/`). Rule,
-per-document digest format, and example: `../CLAUDE.md` §PLAN Filing Rules
-(設計系 PLAN の本文 4 項目, issue #648).
-
-PLAN claim discipline (errata countermeasure, PLAN-L7-89):
-
-- A falsifiable safety / completeness claim in `review_evidence` or AC — e.g.
-  "blast radius 0", "no false positives", "N green", "fully covered" — must
-  cite the test or command that substantiates it, not be asserted in prose.
-  The mechanical substitute for a prose claim is a real-repo regression test
-  (the gate run against the repo), never a sentence (`coding ≠ substance`).
-- When a confirmed PLAN's claim is later found wrong, do not silently overwrite
-  it: the successor PLAN declares `supersedes: [<old plan_id>]` and the
-  superseded PLAN gets a correction note naming the successor. `doctor
-  plan-supersession` fail-closes if a declared supersede target is missing or
-  lacks the reciprocal back-reference (errata stay bidirectional).
-
-Use `ut-tdd plan lint`, targeted tests, and `ut-tdd doctor`.
+設計文書と GitHub Issue の扱いは `../CLAUDE.md` §設計と作業の正本 に従う。
 
 ## Runtime And Delegation
 
@@ -130,34 +85,23 @@ Opus が orchestration を担当するとき、**設計・実装・修正の方�
 自力で確定できる事実は対象外)。
 
 - 実行: `ut-tdd advisor --decision <kind> --current-model <model> --execute --task "..."`
-  (`--plan <id>` を付けると発火ログが PLAN に紐づく)。技術判断 (implementation /
-  troubleshooting) は `gpt-6.1-sol` 一次、設計・進行判断 (design / progress) と
+  技術判断 (implementation / troubleshooting) は `gpt-6.1-sol` 一次、設計・進行判断 (design / progress) と
   デザイン/UI は `claude-fable-5-2` 一次 (Model / Effort Routing 節、PO 2026-07-29)。
   レーン選択・着手順・優先順位は **progress** であって技術判断ではない。
 - **advisor の回答を鵜呑みにしない**。前提が事実か実測で確かめ、食い違ったら実測を突き返す
   (2026-07-28 実例: doctor 二重実行の方式判断で、memo 共有テストが 1 件でなく 19 件という
   実測を差し戻して初回推奨が撤回された)。
-- 採択結果は設計文書 (設計系 PLAN の場合) / PLAN の設計判断節へ記録する。推奨と異なる決定 (override) をした場合は、
+- 採択結果は対応する設計文書または GitHub Issue へ記録する。推奨と異なる決定 (override) をした場合は、
   その根拠となる実測 (run URL / テスト名 / 計測値) を併記する。
 
-これは**ルールであって機械強制ではない**。fail-close ゲートは作らない (2026-07-28 判断:
-相談 baseline が 16 発火 / 10 PLAN = 841 PLAN 中であり、いまゲート化すると初日でほぼ全作業が
-止まる。未計測のまま機構を建てない)。
-
-遵守は既存の発火ログで随時 spot-check できる (`ut-tdd advisor` は
+これは運用上の規則である。遵守は既存の発火ログで随時 spot-check できる。`ut-tdd advisor` は
 `.ut-tdd/logs/session/advisor-<provider>-<ts>.jsonl` を書き、`projectHookEvents` が
-harness.db の `hook_events` へ投影する。session_id は `advisor-` prefix):
+harness.db の `hook_events` へ投影する。session_id は `advisor-` で始まる。
 
 ```bash
-# 直近の advisor 発火を PLAN 別に数える (EOD close-out で 1 本流す)
-node -e "const fs=require('fs'),d='.ut-tdd/logs/session';let n=0,by={};for(const f of fs.readdirSync(d).filter(x=>x.startsWith('advisor-')))for(const l of fs.readFileSync(d+'/'+f,'utf8').split(/\r?\n/)){if(!l.trim())continue;const o=JSON.parse(l);if(o.event_type==='tool_use'){n++;by[o.plan_id]=(by[o.plan_id]||0)+1}}console.log(n,by)"
+# 既存ログの advisor 発火件数を数える
+node -e "const fs=require('fs'),d='.ut-tdd/logs/session';let n=0;for(const f of fs.readdirSync(d).filter(x=>x.startsWith('advisor-')))for(const l of fs.readFileSync(d+'/'+f,'utf8').split(/\r?\n/)){if(l.trim()&&JSON.parse(l).event_type==='tool_use')n++}console.log(n)"
 ```
-
-**機構化 (telemetry + 不在検知) の起票条件**: 対象は、設計判断節 (設計系 PLAN は対応する設計文書) に 2 案以上の方式と
-trade-off を記録した PLAN とする。spot-check で (a) この対象に該当する直近 20 PLAN の
-全てが advisor 発火ゼロ、または (b) 同じ 20 PLAN 窓で override が実測併記なしに 2 件以上、
-のいずれかを観測したとき。
-それまで `docs/plans/PLAN-L6-96-advisor-consultation-telemetry.md` は条件付き保留とする。
 
 ## 委譲と判断層 (PO ルール 2026-07-28、Claude 固有)
 
@@ -176,11 +120,7 @@ trade-off を記録した PLAN とする。spot-check で (a) この対象に該
 **review は成果物を書いていない family の上位モデルで行う** (attacker/defender 分離):
 
 - Codex が実装 → **Claude** が review。Claude が実装 → **Codex** が review。
-- 証跡は PLAN の `review_evidence[].review_kind=cross_agent` に worker_model /
-  reviewer_model を記録する。doctor の `review-evidence` hard gate が
-  `checkCrossAgentModelPair` で same_provider / model 欠落 / 不明 provider を fail-close
-  で弾く (対象 kind = design / add-design / impl / add-impl、status = confirmed /
-  completed)。
+- closing review の証跡は、対象の PR と同じ head に結び付いた review custody の receipt に残す。
 - 単一 runtime しか使えない場合のみ `intra_runtime_subagent` を記録する
   (cross_agent を僭称しない)。
 - **FLAG 後の軽作業是正は同 PR 内で往復する** (PO ルール 2026-09-14、正本: `../CLAUDE.md`
@@ -330,11 +270,8 @@ UT-TDD imports design concepts from previous framework but current product code 
 TypeScript/Node. Do not describe legacy Python modules or legacy commands as the
 current operating path.
 
-Current cutover evidence:
-
-- migration strategy docs under `docs/migration/`
-- `docs/plans/PLAN-M-01-cutover-backfill.md`
-- `docs/plans/PLAN-L7-44-harness-db-master.md`
+Cutover evidence is recorded in the migration strategy under `docs/migration/`.
+The projection writer and its tests are here.
 - `tests/projection-writer.test.ts`
 - `src/state-db/projection-writer.ts`
 

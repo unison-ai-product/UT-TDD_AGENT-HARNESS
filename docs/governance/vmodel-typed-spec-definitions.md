@@ -17,7 +17,7 @@ typed_spec_phase_owner: L6
 既存の見出し由来 `spec_defs` は後方互換の検索補助として残すが、typed spec の対象は本書の宣言を優先する。
 
 本書は U8 の bootstrap 正本である。最終形では、各定義を所有する artifact の本文直下に fenced YAML の
-`spec:` block を置く。parser は本書だけでなく任意の governance / design / test-design / PLAN 文書の本文 block を読む。
+`spec:` block を置く。parser は本書、governance 文書、設計文書、テスト設計文書の本文 block を読む。
 中央集約 doc は移行の足場であり、所有 artifact への分散配置が進んだ後に縮退できる。
 
 ## 1. 型付き宣言
@@ -39,7 +39,7 @@ spec:
 - `traces_from` は上流 ID、`traces_to` は下流 ID、`tests` は対応する検証 ID を指す。
 - 参照先が同じ `spec.defines` 宇宙に存在しない場合は finding にする。
 - `unit-oracle` / `integration-oracle` / `projection-oracle` などの oracle kind は、上位 spec の `tests` から参照され、oracle 側が `traces_from` を返す検証 leaf である。oracle 自体には追加の `tests` edge を要求しない。
-- HARNESS の ID は `FR-L1-*` / `PLAN-*` / `U-*` 等を含むため、ZIP の `^[A-Z]+-[0-9]+[a-z]?$` をそのまま正本にしない。
+- HARNESS の ID には `FR-L1-*` や `U-*` がある。入力には HARNESS 側の ID 形式を適用する。
 - typed spec は検出を安定化するための設計正本であり、DB projection から本書を書き換えない。
 
 ## 3. 本文・台帳同期
@@ -56,7 +56,6 @@ typed_spec_ledger:
   - spec_id: VMS-004
     ledger_sources:
       - docs/governance/vmodel-typed-spec-definitions.md
-      - docs/plans/PLAN-L6-42-typed-spec-declaration-source.md
     v_phase: L6
   - spec_id: VMS-006
     ledger_sources: [docs/test-design/harness/L7-unit-test-design.md]

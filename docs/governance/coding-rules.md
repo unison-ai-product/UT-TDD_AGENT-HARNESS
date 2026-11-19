@@ -18,7 +18,7 @@ Requirements reference: `docs/governance/ut-tdd-agent-harness-requirements_v1.2.
 coding-rule 文書は workflow step であり、事後の CI note ではない。
 
 - Forward L6: G6/G7 handoff 前に `docs/governance/coding-rules.md` が不変で現在も適用可能か確認する。差分があれば function design delta として更新する。
-- Add-feature: `add-design` PLAN が coding-rule 影響を記録する。`add-impl` は影響が `unchanged` か、この SSoT と対応 U-CODE tests に反映済みの場合だけ開始する。
+- Add-feature: 追加設計に coding-rule への影響を記録する。影響が `unchanged` か、この SSoT と対応する U-CODE tests に反映済みの場合に実装を開始する。
 - Refactor / Retrofit / Recovery / Reverse fullback: 実装言語、lint tool、命名、型付け、error-handling style、generated-code boundary を変える場合は implementation freeze 前にこの SSoT を更新する。
 - Review: reviewer approval 前に `npm run typecheck`、`npm run lint`、`npx vitest run`、`ut-tdd doctor` を green にする。
 
@@ -68,7 +68,7 @@ coding_rules:
 ## ドメイン・構造設計規約 (PLAN-L4-21)
 
 本節は ZIP 94/95 相当の L4 設計契約である。上の `coding_rules` YAML は現行 hard gate の正本であり、本節の
-追加 rule は L6/L7 実装 PLAN で analyzer と oracle を追加してから YAML の hard gate へ昇格する。
+追加 rule は L6 の設計と L7 のテスト設計に従って analyzer と oracle を追加してから YAML の hard gate へ昇格する。
 
 ### 値オブジェクト
 
@@ -90,7 +90,7 @@ coding_rules:
 
 hard gate 化の順序:
 
-1. 既存 repo の実測値を L7 実装 PLAN で記録する。
+1. 既存 repo の実測値を対象 Issue に記録する。
 2. false-positive が出やすい CQS / guard clause は限定 pattern から始める。
 3. 既存超過は silent grandfather にせず、refactor candidate または期限付き例外として記録する。
 4. analyzer 実装と L7 oracle が揃った rule だけ `coding_rules` YAML の hard gate へ昇格する。
@@ -214,7 +214,7 @@ for c in 89f32c1b1 909b26c77; do printf '== %s %s\n' "$(git log -1 --format=%cs 
 - PR をまたぐ重複 (複数の PR に分かれて積もった重複や、既存コードとの重複) は、この条件では扱わない。計測で発火する Refactor チケット (#1304 / #1310) が扱う。
 - 判定者: 条件を満たすかは、成果物を書いていない非著者 family の reviewer が判定する。著者の自己申告は根拠にしない。判定は verdict の `REFACTOR:` 欄に書き、`ut-tdd pr merge` は実装 PR で欄が無いか不合格の値なら merge を拒否する (契約は確定済み、実装は #1300 の実装チケットで入れる)。欄の形と gate の規則は `docs/design/harness/L6-function-design/merge-gate-refactor-stage.md` が持つ (本節の条件は gate が機械で判定するものではなく、gate が見るのは判定の記録である)。
 - 区別: 実装 PR の中の Refactor commit (Green の後の `refactor:`。`CLAUDE.md` §PR スコープ規律 5 と `skills/test-driven-development.md`) と、Refactor mode (独立した作業。`docs/process/modes/refactor.md`) は別のものとして扱う。
-- 大きな構造変更の行き先: PLAN ではなく、Refactor Issue と設計文書とする (PLAN 凍結、#1166)。
+- 大きな構造変更は、Refactor Issue と設計文書に記録する。
 
 ## 機械 surface の言語
 
@@ -243,5 +243,5 @@ token 自体は ASCII のままにする。
 - test helper の引数数は `max-source-params` の上限対象外とする。ただし tests も no-any、suppression comment 禁止、命名規則には従う。
 - fail-open は catch block が明示 state を返す/記録する、または fail-open intent をその場に文書化する場合だけ許可する。silent catch block と rethrow-only catch block は例外ではない。
 - boundary rules は v2 では意図的に最小とする。`lint` は pure、`runtime` は governance checks より下位、`schema` は feature modules より下位に置く。
-- 例外は inline comment で処理しない。先に policy PLAN を追加し、この SSoT と lint tests を同時に更新する。
+- 例外の必要性と適用条件を policy の GitHub Issue に記録し、この SSoT と lint tests を同時に更新する。
 - **変動点外部化 (左肺設計義務、定義 = `docs/design/harness/L5-detailed-design/internal-processing.md` C.7)**: 設計 doc の変動点 (変更・追加が頻出する箇所 = project 差 / 増える集合 / 差し替え実装 / 閾値対応表) は設計時に外部化 (config/registry/policy) し、外部化設計 (何が変わる/機構/固定契約/未知キー fail-close) を doc に内包する。ハードコード→後日 retrofit の発生源を潰す。変動しない箇所の外部化は禁止 (過大外部化 = YAGNI)。他 layer 設計 author も本義務に従う。
