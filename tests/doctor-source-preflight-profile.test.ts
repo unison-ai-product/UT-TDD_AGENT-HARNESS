@@ -5,7 +5,6 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
-  rmSync,
   writeFileSync,
 } from "node:fs";
 import { hostname, tmpdir } from "node:os";
@@ -24,6 +23,7 @@ import {
   selectDoctorCheckDefinitions,
 } from "../src/doctor/check-registry.ts";
 import { nodeDoctorDeps } from "../src/doctor/runtime-state.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 import { headSnapshotRoot } from "./support/workspace-roots.ts";
 
 /**
@@ -90,7 +90,7 @@ const gRun = gReg && outputIds.every((id) => fullIds.includes(id));
 const scratchRoots: string[] = [];
 
 afterAll(() => {
-  for (const root of scratchRoots) rmSync(root, { recursive: true, force: true });
+  for (const root of scratchRoots) removeTestTree(root);
 }, 120_000);
 
 function runDoctorCli(cwd: string, profile: string) {

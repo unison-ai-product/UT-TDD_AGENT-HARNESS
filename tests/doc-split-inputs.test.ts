@@ -10,6 +10,7 @@ import {
   loadPreviousDocSplitBaseline,
   loadRenamedDocs,
 } from "../src/lint/doc-split-inputs.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 
 const L6 = "docs/design/harness/L6-function-design/";
 const L7 = "docs/test-design/harness/";
@@ -71,7 +72,7 @@ function baselineEntry(path: string, lines: number, responsibilities: number | n
 
 function removeRepo(root: string): void {
   // root is only the unique mkdtempSync fixture created by this file.
-  rmSync(root, { recursive: true, force: true });
+  removeTestTree(root);
 }
 
 function hasMessage(result: { messages: string[] }, code: string): boolean {
@@ -282,7 +283,7 @@ describe("doc split gate filesystem and git adapter candidate oracles", () => {
       expect(result.ok).toBe(false);
       expect(hasMessage(result, "doc-split-input-unreadable")).toBe(true);
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
