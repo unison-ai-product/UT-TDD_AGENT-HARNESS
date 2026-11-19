@@ -15,7 +15,7 @@ const compliant = `# A-TEST
 
 | Item | Audit question | Current evidence | Gap / boundary | Next action | Status |
 |---|---|---|---|---|---|
-| workflow-definition | Workflow docs are coherent to L14. | \`docs/process/forward/L08-L14-verification-phase.md\`, \`docs/process/forward/overview.md\`, \`src/lint/roadmap-registry.ts\`, \`tests/roadmap.test.ts\` | none | keep doctor wired | \`closed\` |
+| workflow-definition | Workflow docs are coherent to L14. | \`docs/process/forward/L08-L14-verification-phase.md\`, \`docs/process/forward/overview.md\`, \`src/gate/right-arm-static.ts\`, \`tests/release-consumer-gates.test.ts\`, \`plans-archive-20261102:src/lint/roadmap-registry.ts\`, \`plans-archive-20261102:tests/roadmap.test.ts\` | none | keep doctor wired | \`closed\` |
 | system-foundation | Core gates prove system foundation. | \`src/doctor/index.ts\`, \`tests/doctor.test.ts\`, \`src/lint/runtime-portability.ts\`, \`tests/runtime-portability.test.ts\`, \`package.json\` | none | keep doctor wired | \`closed\` |
 | claude-codex-parity | Claude and Codex both work. | \`AGENTS.md\`, \`CLAUDE.md\`, \`.claude/CLAUDE.md\`, \`src/lint/codex-hook-adapter.ts\`, \`tests/codex-hook-adapter.test.ts\`, \`tests/runtime-hook-entrypoints.test.ts\` | Codex hosted/API tools cannot be repo-hook intercepted | keep hosted/API Codex preflight visible | \`partial\` |
 | clean-distribution-package | Clean package can install. | \`src/setup/index.ts\`, \`tests/setup.test.ts\`, \`tests/distribution-acceptance.test.ts\`, \`docs/templates/adapter/.claude/settings.json\`, \`docs/templates/adapter/.codex/hooks.json\`, \`README.md\`, \`LICENSE\` | signed tarball signature is not published | record signature | \`external_required\` |

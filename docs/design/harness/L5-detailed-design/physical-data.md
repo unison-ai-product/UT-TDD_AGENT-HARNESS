@@ -136,7 +136,6 @@ backup/restoreはcutover DB全体とhead/refs/object digestを同一snapshotと�
 
 | table | primary key | 主な列 | 入力 |
 |---|---|---|---|
-| `plan_registry` | `plan_id` | `kind`, `layer`, `sub_doc`, `drive`, `route_mode`, `status`, `parent`, `updated_at`, `decision_outcome`, `source_hash` | `docs/plans/*.md`, `.ut-tdd/plan_registry/*.json` |
 | `artifact_registry` | `artifact_id` | `artifact_type`, `path`, `pair_artifact`, `status`, `updated_at` | docs/test-design、source catalog、trace state を入力とする。 |
 | `model_runs` | `run_id` (TEXT) | `runtime` (TEXT), `model` (TEXT), `role` (TEXT), `drive` (TEXT), `plan_id` (TEXT), `started_at` (TEXT), `completed_at` (TEXT), `evidence_path` (TEXT), `input_tokens` (INTEGER), `output_tokens` (INTEGER), `cached_input_tokens` (INTEGER), `reasoning_tokens` (INTEGER), `cost_usd` (REAL) | Codex / Claude / worker / reviewer の execution evidence を記録する。token telemetry 5 列 (FR-L1-38、PLAN-L7-57) は review-evidence 由来行で NULL、token-tracker がセッションログから投入した行のみ非 NULL。`cached_input_tokens`/`reasoning_tokens` は runtime により欠ける (Claude=cache_read、Codex=cached_input/reasoning)。`cost_usd` は Claude のみ算出可 (Codex は pricing source 未取得で NULL)。 |
 | `trace_edges` | `edge_id` | `from_artifact`, `to_artifact`, `edge_kind`, `plan_id`, `status` | artifact trace state |
@@ -145,7 +144,9 @@ backup/restoreはcutover DB全体とhead/refs/object digestを同一snapshotと�
 | `gate_runs` | `gate_run_id` | `gate_id`, `plan_id`, `status`, `checked_at`, `evidence_path` | `.ut-tdd/gate_runs/*.json`, CI evidence |
 | spec IR tables | §9.9 | `spec_defs`, `spec_relations`, `document_catalog_entries`, `spec_rag_closure_entries`, `detector_route_candidates` | 仕様 IR / 文書カタログ / spec 閉包 RAG / 起票候補 projection。§2.7 基礎表を正本化せず、詳細は §9.9 で定義する。 |
 
-物理不変条件: `trace_edges` の orphan 0、`coverage.status=fail` の gate fail-close、`findings.status=open` の severity 別 gate 判定、`model_runs.plan_id` と `plan_registry.plan_id` の参照整合を doctor / vmodel lint が検証する。`plan_registry.source_hash` は PLAN markdown 全文の sha256 で、persisted `harness.db` と現在の `docs/plans/*.md` の fingerprint 不一致は `drive-db-registration` hard gate で stale として扱う。ただし `docs/plans/` を撤去した後 (`plan_registry` が 0 件) は、PLAN 由来の統計 (plan 件数・stale fingerprint・drive/workflow/model/skill/hook の `missing_*`・期待 mode) と、`plan_registry` 所属を見る `model_runs` / `skill_*` の orphan 検査を評価しない。`workflow_runs`→`drive_runs` の orphan も、`workflow_runs` が PLAN ID の gate 証跡から作られ `drive_runs` が PLAN ごとに作られるため、同様に評価しない。0 件で残る検査は `missing_db` と mode catalog 写像だけである。分類の正本は `function-spec.md` D.4「PLAN 撤去後の扱い (#1168 A4)」。projection は自動生成だが、検出対象の機械 SSoT として扱い、入力 state との不一致は `findings` に保存する。
+doctor / vmodel lint は `trace_edges` の orphan 0、`coverage.status=fail` の gate fail-close、`findings.status=open` の severity 別 gate 判定を検証する。projection と入力 state の不一致は `findings` に保存する。
+
+S7 で PLAN 用の表と索引を現行の schema registry から外す。登録対象の正本は L6「PLAN 機構退役」§3。既存 DB の表・索引・行は保持し、migrate と rebuild は登録外になった旧表を変更しない。新規投影は旧表を読み書きせず、互換列として持つ `plan_id` には NULL を記録する。
 
 telemetry provenance invariant (PLAN-L7-188): 「fired」「used」「executed」「works」を主張するために使う populated telemetry table は、runtime provenance と deterministic projection を区別する。provenance-enforced mode では、`skill_invocations`、`test_runs`、`guardrail_decisions`、`model_runs` が projection-only row (`runtime_rows=0` かつ `projection_rows>0`) だけで populated されている場合は fail-close する。default doctor は runtime capture 配線まで partial migration state として surface してよいが、verification-strategy close は projection-only telemetry を substance として扱えない。doctor は in-memory rebuild に runtime Claude/Codex session usage を overlay し、JSONL token/cost telemetry から値付き `model_runs` row を project する。deterministic `db rebuild` は source projection のままであり、user runtime log は scan しない。session-log `forced_stop` event は runtime safety decision であり、non-empty `session_id`、`mode=runtime-hook`、session JSONL evidence を持つ `guardrail_decisions` へ project する。通常の `tool_use` event は guardrail telemetry を fabricate してはならない。session-log `Bash (skill)` event は runtime skill suggestion/use telemetry であり、non-empty `session_id` と `source=runtime-hook:skill-suggest` を持つ `skill_invocations` へ project する。generic `Bash (bash)` event は invocation metrics を fabricate しないように ignore する。
 
@@ -269,7 +270,7 @@ backtick の**外側**に丸括弧で付記し、列名の backtick 内容は sc
 | `retry_events` | `retry_event_id` (TEXT) | `plan_id` (TEXT), `workflow` (TEXT), `phase` (TEXT), `attempt_count` (INTEGER), `status` (TEXT), `created_at` (TEXT) | 同一 `plan_id`/`workflow`/`phase` の `workflow_runs` 複数回 attempt を retry/bottleneck signal として集計する (由来: PLAN-L3-05)。 |
 | `improvement_log` | `improvement_log_id` (TEXT) | `source_event_id` (TEXT), `plan_id` (TEXT), `category` (TEXT), `summary` (TEXT), `next_action` (TEXT), `status` (TEXT), `created_at` (TEXT) | `issue_queue`/`retry_events` から self-improvement backlog row を派生させ、feedback loop の closure evidence にする (由来: PLAN-L3-05)。 |
 
-§2.7 の existing table は引き続き必須とする。source ID が存在する場合、new row は既存の `plan_registry`、`artifact_registry`、`model_runs`、`findings`、`gate_runs` を参照する。join key 欠落は silent skip ではなく `findings` row にする。
+§2.7 の登録表を必須とする。source ID が存在する場合は `artifact_registry`、`model_runs`、`findings`、`gate_runs` を参照する。必要な join key が欠けた場合は `findings` に記録する。
 
 ### §9.2 skill/model metrics の定義
 
@@ -294,7 +295,6 @@ DB が保存するのは ID、reason、score、redacted summary のみにする�
 
 必須 index:
 
-- `idx_plan_layer_drive_status(plan_id, layer, drive, status)`
 - `idx_trace_from_to(from_artifact, to_artifact)`
 - `idx_findings_subject_status(subject_id, status, severity)`
 - `idx_hook_session_plan(session_id, plan_id, occurred_at)`
@@ -387,7 +387,7 @@ DB は cross-cutting impact analysis を query 可能にしなければならな
 | `dependency_edges` | `edge_id` | `from_node_id`, `to_node_id`, `edge_kind`, `strength`, `source`, `evidence_path`, `is_expected`, `is_actual`, `indexed_at` | import/reference/test/projection/implementation edge を保存し、design-declared expected edge と observed actual edge を区別する。 |
 | `impact_rules` | `impact_rule_id` | `trigger_edge_kind`, `trigger_node_type`, `required_node_type`, `required_action`, `severity`, `gate`, `enabled` | relation edge を required co-change、review、test、Reverse、diagram-refresh action へ変換する。 |
 | `impact_results` | `impact_result_id` | `change_set_id`, `root_node_id`, `impacted_node_id`, `required_action`, `status`, `reason`, `evidence_path`, `computed_at` | diff/session/PLAN ごとに算出した impact expansion を 1 件として永続化する。 |
-| `artifact_progress` | `artifact_path` | `artifact_type`, `artifact_hash`, `state`, `color`, `linked_test_ids`, `linked_test_paths`, `linked_test_count`, `passed_test_run_ids`, `passed_test_run_count`, `dependency_checked`, `dependency_check_run_id`, `dependency_checked_at`, `dependency_check_source`, `open_dependency_impacts`, `recovery_plan_ids`, `reason`, `indexed_at` | rebuildable な artifact progress color row を永続化する。未検査/open dependency impact は red、実装済みだが未検証または recovery 中は yellow、passing test run に link した artifact は green とする。 |
+| `artifact_progress` | `artifact_path` | `artifact_type`, `artifact_hash`, `state`, `color`, `linked_test_ids`, `linked_test_paths`, `linked_test_count`, `passed_test_run_ids`, `passed_test_run_count`, `dependency_checked`, `dependency_check_run_id`, `dependency_checked_at`, `dependency_check_source`, `open_dependency_impacts`, `recovery_plan_ids`, `reason`, `indexed_at` | rebuildable な artifact progress を永続化する。依存未検査または残存 impact があれば red、依存検査後の未検証は yellow、passing test run に link した artifact は green とする。S7 後は `recovery_plan_ids` を互換列として保持し、新規行は NULL とする。 |
 | `artifact_progress_events` | `artifact_progress_event_id` | `artifact_path`, `artifact_type`, `previous_color`, `color`, `state`, `trigger`, `test_run_ids`, `dependency_check_run_id`, `recovery_plan_ids`, `reason`, `occurred_at` | artifact progress row から派生した workflow trigger 用の rebuildable event view。 |
 | `tool_runs` | `tool_run_id` | `tool_name`, `tool_version`, `command`, `input_scope`, `exit_code`, `started_at`, `completed_at`, `evidence_path` | dependency-cruiser、Knip、Madge、Graphviz、Mermaid、D2 など optional adapter run を記録する。 |
 | `diagram_artifacts` | `diagram_id` | `graph_snapshot_id`, `format`, `path`, `renderer`, `scope`, `created_at`, `evidence_path` | generated Mermaid/DOT/D2/SVG/PNG diagram output を traceable artifact として保存する。 |
@@ -406,10 +406,10 @@ DB は cross-cutting impact analysis を query 可能にしなければならな
 `artifact_progress` color semantics (FR-L1-51 / PLAN-L7-56 / PLAN-REVERSE-56):
 
 - `red`: `dependency_checked = 0`、`open_dependency_impacts > 0`、または changed artifact が impact expansion 上の required design/requirement/test back-propagation を欠く状態。これには「implementation は存在するが L1/L3/L4/L5 registration が欠落する」を含む。
-- `yellow`: implementation または recovery work は存在するが、linked test evidence がない、または linked passing `test_runs` row がない状態。new artifact は dependency と test-run evidence が利用可能になるまで yellow として projection に入る。
+- `yellow`: 依存検査は済んでいるが、linked test evidence または passing `test_runs` 行が無い状態。
 - `green`: `passed_test_run_count > 0`、`passed_test_run_ids` が passing `test_runs` row を特定する、`dependency_checked = 1`、`open_dependency_impacts = 0` を満たす状態。
 - `dependency_check_run_id` / `dependency_checked_at` は dependency state を正当化した relation-impact check を記録する。`dependency_checked=1` は「row がない」ことだけから infer しない。
-- `recovery_plan_ids` は red/yellow artifact を green に戻す active recovery/fullback/refactor PLAN を記録する。active recovery は red impact row を yellow recovering row に変えるが、closure には green test-run evidence と clean dependency impact が必要である。
+- S7 で recovery PLAN の検索を退役する。dependency impact と linked test の検証結果から色を決める。
 - `feedback_events.source_table/source_id/source_color` は red/yellow `artifact_progress` row を workflow trigger input として記録し、recovery/reverse/refactor work を prose handover ではなく DB state から開始できるようにする。
 
 必須 index:
@@ -881,7 +881,7 @@ attemptを加算し、retry可能な`pending`を維持する。
 
 #### S7 で registry から外した表
 
-`github_review_lane_receipts` と `execution_readiness_projection`（および `idx_github_review_lane_subject` / `idx_execution_readiness_state_order`）は、S7 で harness.db の schema registry から外した（`docs/design/harness/L6-function-design/plan-mechanism-retirement.md` §3）。既存 DB の物理表は残るが、どの projection もこれらへ書き込まない。
+L6「PLAN 機構退役」§3 の9表と対応する索引を、S7 で harness.db の schema registry から外す。対象は `plan_registry`、`schedule_entries`、`activation_entries`、`activation_schedule_reviews`、`execution_readiness_projection`、`roadmap_rollups`、`roadmap_band_coverage`、`roadmap_gate_progress`、`github_review_lane_receipts`。既存 DB の物理表・索引・行は保持し、新規投影からの読み書きは退役する。
 
 ### Execution Episode / GitHub配送の目標テーブル（後続降下）
 

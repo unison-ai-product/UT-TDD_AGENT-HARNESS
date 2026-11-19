@@ -290,13 +290,25 @@ describe("CANDIDATE-U-PLANRET-019 frozen v29 migration", () => {
       const before = databaseState(db);
       const result = migrate(db);
       const after = databaseState(db);
+      // v31 の対象表でも、取り除く CHECK 以外の定義・索引・行を引き続き照合する。
+      const expectedObjects = nonTargetState(before).objects.map((object) => {
+        if (object.name !== "document_scale_profile_entries" || typeof object.sql !== "string") {
+          return object;
+        }
+        return {
+          ...object,
+          sql: object.sql.replace(
+            ",\n  CHECK ((NOT (decision = 'defer')) OR (required_plan_id IS NOT NULL))",
+            "",
+          ),
+        };
+      });
       const observation = {
         applied: result.applied,
         toVersion: result.toVersion,
         oldRowsRemoved: tableRows(db, EDGE_TABLE).length === 0,
         unrelatedObjectsUnchanged:
-          JSON.stringify(nonTargetState(after).objects) ===
-          JSON.stringify(nonTargetState(before).objects),
+          JSON.stringify(nonTargetState(after).objects) === JSON.stringify(expectedObjects),
         unrelatedRowsUnchanged:
           JSON.stringify(nonTargetState(after).rows) ===
           JSON.stringify(nonTargetState(before).rows),

@@ -711,25 +711,11 @@ describe("projectTokenUsage + projectModelEvaluations (token efficiency)", () =>
     return root;
   }
 
-  it("aggregates token totals across sources and leaves PLAN-derived success values NULL", () => {
+  it("aggregates token totals across sources and leaves success values NULL", () => {
     const root = makeRoot(true);
     const db = openHarnessDb(":memory:");
     try {
       migrate(db);
-      // success row from review-evidence (no tokens), joined via plan_registry
-      upsertRow(db, {
-        table: "plan_registry",
-        primaryKey: "plan_id",
-        row: {
-          plan_id: "PLAN-X",
-          kind: "impl",
-          layer: "L7",
-          drive: "db",
-          status: "confirmed",
-          updated_at: "",
-          decision_outcome: "",
-        },
-      });
       upsertRow(db, {
         table: "model_runs",
         primaryKey: "run_id",
@@ -739,7 +725,7 @@ describe("projectTokenUsage + projectModelEvaluations (token efficiency)", () =>
           model: "claude-opus-4-8",
           role: "worker",
           drive: "db",
-          plan_id: "PLAN-X",
+          plan_id: null,
           started_at: "",
           completed_at: "",
           evidence_path: "",
@@ -784,19 +770,6 @@ describe("projectTokenUsage + projectModelEvaluations (token efficiency)", () =>
     try {
       migrate(db);
       upsertRow(db, {
-        table: "plan_registry",
-        primaryKey: "plan_id",
-        row: {
-          plan_id: "PLAN-Y",
-          kind: "impl",
-          layer: "L7",
-          drive: "db",
-          status: "completed",
-          updated_at: "",
-          decision_outcome: "",
-        },
-      });
-      upsertRow(db, {
         table: "model_runs",
         primaryKey: "run_id",
         row: {
@@ -805,7 +778,7 @@ describe("projectTokenUsage + projectModelEvaluations (token efficiency)", () =>
           model: "gpt-5.4-codex",
           role: "worker",
           drive: "db",
-          plan_id: "PLAN-Y",
+          plan_id: null,
           started_at: "",
           completed_at: "",
           evidence_path: "",

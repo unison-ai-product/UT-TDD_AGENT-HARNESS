@@ -278,11 +278,6 @@ describe("dependency-drift and regression expansion (PLAN-REVERSE-42)", () => {
     ]);
   });
 
-  it("U-DEPD-004: real repo keeps the state-db dependency on kernel", () => {
-    const result = analyzeDependencyDrift(loadDependencyDriftInput(process.cwd()));
-    expect(result.moduleEdges).toContainEqual({ from: "state-db", to: "kernel" });
-  });
-
   it("U-DEPD-005: real repo module graph has no cycle", () => {
     const result = analyzeDependencyDrift(loadDependencyDriftInput(process.cwd()));
     expect(result.findings.filter((finding) => finding.code === "module-cycle")).toEqual([]);
