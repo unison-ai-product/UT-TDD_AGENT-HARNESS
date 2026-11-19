@@ -6,7 +6,7 @@ import {
   validateG8IntegrationEvidenceManifest,
 } from "../lint/g8-integration-workflow.ts";
 import { readGateAssetText } from "../lint/gate-confirm.ts";
-import { fmValue, REQUIRED_L2_SCREEN_COLUMNS } from "../lint/shared.ts";
+import { fmValue, REQUIRED_L2_SCREEN_COLUMNS, tableCells } from "../lint/shared.ts";
 import { resolveAuthoringSourceAbsolutePath, resolveDesignRoot } from "../shared/design-root.ts";
 import { parseIssueUrl } from "../shared/issue-ref.ts";
 import { designLayerFromPath, loadPairDocs } from "../vmodel/lint.ts";
@@ -196,13 +196,6 @@ function isRecord(value: unknown): value is JsonRecord {
 
 function stringValue(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
-}
-
-export function tableCells(line: string): string[] {
-  return line
-    .split("|")
-    .slice(1, -1)
-    .map((cell) => cell.trim().replace(/\*\*/g, ""));
 }
 
 function parseG8CaseRows(content: string, violations: string[]): CaseRow[] {

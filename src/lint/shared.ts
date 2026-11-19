@@ -69,3 +69,11 @@ export const REQUIRED_L2_SCREEN_COLUMNS = [
   "関連機能",
   "ロール",
 ] as const;
+
+/** markdown 表の 1 行をセルに分ける (太字記号は除く)。 */
+export function tableCells(line: string): string[] {
+  return line
+    .split("|")
+    .slice(1, -1)
+    .map((cell) => cell.trim().replace(/\*\*/g, ""));
+}
