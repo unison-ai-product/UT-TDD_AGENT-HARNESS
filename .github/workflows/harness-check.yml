@@ -16,7 +16,7 @@
 # PLAN-L7-455 (troubleshoot, issue #109) Phase 1: `classify` step (git diff ベース、
 # src/github/change-lane.ts) が doc-only 変更を検出したときだけ重い step
 # (typecheck / db rebuild / 全回帰 vitest / audit quality / full doctor) を skip する。
-# doc-safe allowlist (SSoT: src/github/change-lane.ts DOC_LANE_PREFIXES):
+# doc-safe allowlist (SSoT: src/shared/change-lane.ts DOC_LANE_PREFIXES):
 #   docs/archive/**.md, docs/migration/**.md, docs/reference/**.md, docs/research/**.md
 # 上記 4 tree (非正本の参照 prose) の *.md のみ。正本設計・governance・PLAN
 # (docs/plans/**)・runtime 規則 (root および .claude/ の *.md)・共有 memory

@@ -1,4 +1,4 @@
-import { type ChangeLane, classifyChangeLane } from "../github/change-lane.ts";
+import { type ChangeLane, classifyChangeLane } from "../shared/change-lane.ts";
 
 export const WINDOWS_SHARD_IDS = ["1/3", "2/3", "3/3"] as const;
 const LANE_LEGS = ["linux", "windows-1", "windows-2", "windows-3"] as const;
