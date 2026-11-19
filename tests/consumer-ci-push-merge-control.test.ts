@@ -1,9 +1,10 @@
 import { execFileSync, spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { heavyAfterAll, heavyBeforeAll } from "./support/hook-bounds.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 import { workspaceRead } from "./support/workspace-roots.ts";
 
 type GuardResult = { ok: boolean; findings: Array<{ code: string; evidence: string }> };
@@ -74,7 +75,7 @@ describe("consumer CI push merge control", () => {
   });
 
   heavyAfterAll("teardown", () => {
-    if (fixtureRoot) rmSync(fixtureRoot, { recursive: true, force: true });
+    if (fixtureRoot) removeTestTree(fixtureRoot);
   });
 
   it("precondition: CLI and real multiline merge fixture are available", () => {
