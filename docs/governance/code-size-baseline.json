@@ -62,7 +62,6 @@
   "tests/claude-wake-generation-upgrade.test.ts": { "lines": 503, "functionExcess": null },
   "tests/cli-surface.test.ts": { "lines": 1601, "functionExcess": null },
   "tests/codex-hook-adapter.test.ts": { "lines": 666, "functionExcess": null },
-  "tests/consumer-g1-screen-namespace.test.ts": { "lines": 523, "functionExcess": null },
   "tests/consumer-local-runtime-admission.test.ts": { "lines": 889, "functionExcess": null },
   "tests/consumer-node-runtime-closure-red.test.ts": { "lines": 900, "functionExcess": null },
   "tests/consumer-node-runtime-physical.test.ts": { "lines": 816, "functionExcess": null },
