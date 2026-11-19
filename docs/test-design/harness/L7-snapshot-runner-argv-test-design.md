@@ -48,3 +48,11 @@ runner の起動境界を子プロセス fixture と spawn preload の注入で�
 ## 5. 境界と重複の回避
 
 既存 oracle `U-TESTHYGIENE-045` / `U-TESTHYGIENE-046` は watch 拒否と watch script 不在を所有する。本書の `U-SNAPARG-001` / `U-SNAPARG-002` は help と unknown-option の新契約を所有し、watch を新しい oracle として重ねない。通常互換テストは現在の `assertBatchVitestArgs` の観測を固定する。separator は allowlist 判定だけを省略し、watch を通す迂回路にはしない (control #6513968105)。
+
+## 6. Windows shard のレポート出力先 (Issue #1063)
+
+| ID | 軸 / 入力 | 期待 | 落とす退行 |
+|---|---|---|---|
+| `CANDIDATE-U-SNAPARG-005` | `--outputFile` を最初の `--` より前に置く。空白を含む同じパスを使い、値を別 token にする形式と equals 形式を試す。後ろに置いた両形式も比較する | 前では runner の許可集合で受理し、入力 token を同じ順で渡す。固定版 Vitest の実際の CLI 定義では `outputFile` が同じパスになる。後ろでは separator と tail を保持し、`outputFile` が設定されない | 許可集合からの欠落、値の分割・変更、separator を除去するか後ろの token を option に移す退行 |
+
+runner の透過と Vitest の option 解釈は、それぞれの引数パーサーで観測する。CLI 本体の実行やファイル出力はこの oracle の対象外とする。
