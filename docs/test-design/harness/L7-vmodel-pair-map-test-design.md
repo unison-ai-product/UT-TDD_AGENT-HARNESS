@@ -70,7 +70,7 @@ issue: 1019
 | `docs/design/harness/L5-detailed-design/node-toolchain-provenance-registry-v1.json` | L5 | L8 | (pair_artifact 未宣言) | 文書が無い |
 | `docs/design/harness/L5-detailed-design/physical-data.md` | L5 | L8 | `docs/test-design/harness/L8-integration-test-design.md` : 見出し「§1.4 IT-STATE (physical-data 由来)」(63 行); IT-ASSET-07 (103 行); IT-ASSET-07 (138 行) | 対あり |
 | `docs/design/harness/L5-detailed-design/ui-detail.md` | L5 | L8 | `docs/test-design/harness/L8-integration-test-design.md` : IT-UI-01 (129 行); IT-UI-02 (130 行); IT-UI-03 (131 行) | 対あり |
-| `docs/design/harness/L6-function-design/agent-slots.md` | L6 | L7 | `docs/test-design/harness/L7-unit-test-design.md` : 見出し「§1.9 U-SLOT (agent-slots 由来、PLAN-L7-08 / IMP-050」(169 行); U-FRCOV-004 (613 行); §5 対応表の行 (1021 行) | 対あり |
+| `docs/design/harness/L6-function-design/agent-slots.md` | L6 | L7 | `docs/test-design/harness/L7-agent-slots-test-design.md` : §1.9 U-SLOT / §1.10 U-TEAM。関連する U-FRCOV-004 と §5 の対応表は `docs/test-design/harness/L7-unit-test-design.md` を参照 | 対あり |
 | `docs/design/harness/L6-function-design/backfill-pairing.md` | L6 | L7 | `docs/test-design/harness/L7-unit-test-design.md` : 見出し「§1.11 U-BACKFILL (backfill-pairing lint 由来、IMP-0」(190 行); §5 対応表の行 (1023 行); 「§2 量閉じ一覧 (L6 設計 → U 被覆、孤児チェック)」の項 (794 行) | 対あり |
 | `docs/design/harness/L6-function-design/claude-inbox-explicit-ack.md` | L6 | L7 | `docs/test-design/harness/L7-unit-test-design.md` : 節「Claude inbox 明示 ACK candidate oracle (PL」内の言及 (1725 行) | 対あり |
 | `docs/design/harness/L6-function-design/confirmed-document-placeholder-detection.md` | L6 | L7 | `docs/test-design/harness/L7-unit-test-design.md` : CANDIDATE-U-PH-001..008 (3072 行); CANDIDATE-U-PH-010..024 (3073 行); CANDIDATE-U-PH-025 (3074 行) | 対あり |
