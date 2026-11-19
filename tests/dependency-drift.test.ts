@@ -1,5 +1,5 @@
-import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { loadNodeBanDocuments } from "../src/lint/bun-permanent-ban.ts";
 import {
   analyzeDependencyDrift,
   type DependencyDriftInput,
@@ -7,7 +7,6 @@ import {
   expandRegressionScope,
   loadDependencyDriftInput,
 } from "../src/lint/dependency-drift.ts";
-import { loadToolchainPinDocs } from "../src/lint/toolchain-pin.ts";
 
 const input: DependencyDriftInput = {
   sourceDocs: [
@@ -291,7 +290,7 @@ describe("runtime dependency declaration (Issue #1720)", () => {
       runtimeImport.test(doc.text),
     );
     expect(importers.length).toBeGreaterThan(0);
-    const pkg = JSON.parse(loadToolchainPinDocs(join(import.meta.dirname, "..")).packageJson) as {
+    const pkg = JSON.parse(loadNodeBanDocuments().toolchain.packageJson) as {
       dependencies?: Record<string, string>;
       devDependencies?: Record<string, string>;
     };
