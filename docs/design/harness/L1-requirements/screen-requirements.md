@@ -373,7 +373,7 @@ L3 機能要件 PLAN (PLAN-L3-NN) 起票時、本 screen sub-doc との接続は
 | **画面 ID 引用** | L3 PLAN 本文で対象画面 (PM/HM/GD-NN) を ID 引用する場合、本 §1 で宣言した 15 画面のみ許可 (旧 SCR-NN 体系は §7.3 移行表で廃止確認) | doc-reviewer (BR-08) でレビュー |
 | **L2 carry 接続** | 退役: L3 PLAN が L2 画面設計 sub-doc (`docs/design/harness/L2-screen/*.md`) を `dependencies.requires` に列挙する規約は、PLAN 撤去（#1078）で退役した | L1 → L3 の降下の確認は #1196 の降下検査へ移る |
 | **横断原則 4 件継承** | §3.1 横断原則 (人間主導 + AI 補助 / 詳細データテーブル必須 / AI copy-paste UI / 問題箇所視覚化) は L3 全機能要件で「人間判断点」明示として forward carry (business §3.3.2 CC2 連動) | L3 PLAN review で確認 (CC2 carry) |
-| **G1-trace 継承** | L3 PLAN 起票時、本 sub-doc §5 trace マトリクス R1-R4 検証結果を継承し、L3 FR 追加・拡張時に再検証 (requirements §1.10.H lint ルール) | `ut-tdd plan lint --gate G1-trace` 再実行 |
+| **G1-trace 継承** | L3 の Issue 起票時に本 sub-doc §5 trace マトリクスの R1〜R3 の検証結果を引き継ぎ、L3 FR の追加・拡張時に再検証する (requirements §1.10.H)。L1 → L3 の全件降下は #1196 と L6 の [consumer-trace-gates.md §13](../L6-function-design/consumer-trace-gates.md#13-l1-から-l3-への降下検査-issue-1196) の別契約で、未実装。 | `ut-tdd gate G1` で R1〜R3 を再検証 |
 
 > **L3 起票時の最低 PLAN セット (退役)**: PLAN-L3-01 / L3-02 / L3-03 が screen sub-doc を `requires` に列挙する想定は、上の R4-screen-requires と同じ規約の具体化であり、PLAN 撤去（#1078）で退役した。L1 → L3 の降下の確認は #1196 の降下検査へ移る。
 
