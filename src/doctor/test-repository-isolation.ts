@@ -35,8 +35,7 @@ doctor-test-repository-isolation:1 persistent-db-cleanup-contract:1 memory-clean
 secret-scan-diff:1
 feedback-log:2
 github-repository-policy:3 consumer-ci-guard-red:1 consumer-ci-push-merge-control:1
-gate-run-publish-candidate:3 gate-run-stderr-candidate:1 github-ci-policy:1
-gate-run-publish-boundary-red:1 gate-run-publish-cli-red:1
+gate-run-publish-candidate:3 gate-run-stderr-candidate:1 gate-run-publish-boundary-red:1 gate-run-publish-cli-red:1 github-ci-policy:1
 node-self-host-bootstrap:1 node-slice-admission:3
 global-setup.ts:1 support/workspace-roots.ts:3
 global-setup-fence:1 vitest-snapshot-runner:3 snapshot-runner-argv-candidates:2
