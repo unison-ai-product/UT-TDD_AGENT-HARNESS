@@ -358,7 +358,7 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 
 ### §1.16.1d U-DOCEXPORT (A-126 canonical document export)
 
-> Pair = `function-spec.md` Canonical Document Export Addendum (A-126 / PLAN-L6-34). These oracles cover conversion of concept, requirements, detailed design, PLAN, ADR, and test-design documents into CSV/Markdown/XLSX/PPTX derived artifacts. They do not authorize package installation or source implementation without PLAN-L7-35 TDD Red evidence.
+> Pair = `canonical-document-export.md` Canonical Document Export Addendum (A-126 / PLAN-L6-34). These oracles cover conversion of concept, requirements, detailed design, PLAN, ADR, and test-design documents into CSV/Markdown/XLSX/PPTX derived artifacts. They do not authorize package installation or source implementation without PLAN-L7-35 TDD Red evidence.
 
 | ID | Target | Oracle |
 |---|---|---|
