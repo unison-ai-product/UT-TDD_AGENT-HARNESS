@@ -25,37 +25,16 @@ import {
   loadCompiledRightArmRegistry,
   VMODEL_CONTRACT_PATH,
 } from "../src/vmodel-contract/adapters/yaml-contract-loader.ts";
+import {
+  buildConsumerGateFixtureDocs,
+  type ConsumerGateFixtureOptions,
+} from "./support/consumer-gate-fixture.ts";
 import { describe, expect, heavyAfterAll, it } from "./support/hook-bounds.ts";
 
 const GATE_ASSETS = [
   "docs/governance/gate-design.md",
   "docs/process/gates.md",
   "docs/process/vmodel-contract.yaml",
-] as const;
-
-const CONSUMER_TEMPLATE_SLOTS = [
-  [
-    "docs/templates/vmodel/L1-requirements.md",
-    "docs/design/L1-requirements/functional-requirements.md",
-  ],
-  ["docs/templates/vmodel/L2-screen-list.md", "docs/design/L2-screen/screen-list.md"],
-  [
-    "docs/templates/vmodel/L3-functional-requirements.md",
-    "docs/design/L3-functional/functional-requirements.md",
-  ],
-  ["docs/templates/vmodel/L4-data.md", "docs/design/L4-basic-design/data.md"],
-  ["docs/templates/vmodel/L4-architecture.md", "docs/design/L4-basic-design/architecture.md"],
-  ["docs/templates/vmodel/L4-external-if.md", "docs/design/L4-basic-design/external-if.md"],
-  ["docs/templates/vmodel/L4-function.md", "docs/design/L4-basic-design/function.md"],
-  ["docs/templates/vmodel/L4-ui-standard.md", "docs/design/L4-basic-design/ui-standard.md"],
-  ["docs/templates/vmodel/L4-security.md", "docs/design/L4-basic-design/security.md"],
-  ["docs/templates/vmodel/L5-physical-data.md", "docs/design/L5-detailed-design/physical-data.md"],
-  [
-    "docs/templates/vmodel/L5-module-decomposition.md",
-    "docs/design/L5-detailed-design/module-decomposition.md",
-  ],
-  ["docs/templates/vmodel/L6-function-spec.md", "docs/design/L6-function-design/function-spec.md"],
-  ["docs/templates/vmodel/L7-unit-test-design.md", "docs/test-design/L7-unit-test-design.md"],
 ] as const;
 
 const roots: string[] = [];
@@ -79,139 +58,11 @@ function writeFixtureDoc(root: string, path: string, content: string): void {
   writeFileSync(target, content, "utf8");
 }
 
-// consumer の core 文書の表 (docs/design/harness/L6-function-design/consumer-trace-gates.md §5 / §6)。
-// 表の header 直後に実行を足す。ID は prefix 自由で、harness 形式の ID と harness 専用文書は置かない。
-const CONSUMER_CORE_TABLE_ROWS: Record<string, { header: string; rows: string[] }> = {
-  "docs/design/L1-requirements/functional-requirements.md": {
-    header: "| 要求ID | 要求名 | 要求内容 | 優先度 | 展開先 |",
-    rows: ["| REQ-001 | Consumer goal | Consumer function | P0 | SC-001, FN-001 |"],
-  },
-  "docs/design/L2-screen/screen-list.md": {
-    header: "| 画面ID | 画面名称 | 概要 | 関連機能 | ロール |",
-    rows: ["| SC-001 | Consumer screen | Consumer overview | REQ-001, FN-001 | user |"],
-  },
-  "docs/design/L3-functional/functional-requirements.md": {
-    header: "| 機能ID | 機能名 | 概要 | ロール | トレース元 |",
-    rows: ["| FN-001 | Consumer function | Consumer overview | user | REQ-001 |"],
-  },
-};
-
-function withTableRows(content: string, header: string, rows: string[]): string {
-  const lines = content.split("\n");
-  const at = lines.findIndex((line) => line.trim() === header);
-  if (at < 0) throw new Error(`consumer fixture header not found: ${header}`);
-  // header の次の区切り行の後ろ (placeholder 行の前) に行を挿入する。
-  lines.splice(at + 2, 0, ...rows);
-  return lines.join("\n");
-}
-
-// G11 / G12 / G13 (U-RCDEV-032〜034) の oracle は harness 形式の L1 / L3 文書 (nfr-grade / business-detail など) を
-// consumer layout に置いた fixture を前提にする。G1 / G3 の consumer 分岐 (U-RCDEV-027) はこれを読まないので、
-// U-RCDEV-027 は coreOnly で呼び、この追加分を置かない。
-function writeHarnessShapedConsumerDocs(root: string): void {
+function writeConsumerGateFixture(root: string, options: ConsumerGateFixtureOptions = {}): void {
   const repositoryRoot = process.cwd();
-  const l1Template = readFileSync(
-    join(repositoryRoot, "docs/templates/vmodel/L1-requirements.md"),
-    "utf8",
-  );
-  const l3Template = readFileSync(
-    join(repositoryRoot, "docs/templates/vmodel/L3-functional-requirements.md"),
-    "utf8",
-  );
-  const l1Adapt = () =>
-    l1Template
-      .replace(/^status: .*$/m, "status: confirmed")
-      .replace(/^pair_artifact: .*$/m, `pair_artifact: docs/test-design/L7-unit-test-design.md`)
-      .replace(/^plan: .*$/m, "plan: docs/plans/PLAN-CONSUMER-01.md");
-  const l3Adapt = () =>
-    l3Template
-      .replace(/^status: .*$/m, "status: confirmed")
-      .replace(/^pair_artifact: .*$/m, "pair_artifact: docs/test-design/L7-unit-test-design.md")
-      .replace(/^plan: .*$/m, "plan: docs/plans/PLAN-CONSUMER-01.md");
-  writeFixtureDoc(
-    root,
-    "docs/design/L1-requirements/business-requirements.md",
-    `${l1Adapt()}\n| **BR-01** | Consumer goal |\n`,
-  );
-  writeFixtureDoc(
-    root,
-    "docs/design/L1-requirements/functional-requirements.md",
-    `${l1Adapt()}\n| **FR-L1-01** | Consumer function | P0 |\n`,
-  );
-  writeFixtureDoc(
-    root,
-    "docs/design/L1-requirements/screen-requirements.md",
-    `${l1Adapt()}\n\n## §1 画面一覧\nPM-01\n## §2 次\n### §5.1 業務要求トレース\n| **BR-01** | PM-01 |\n### §5.3 機能要求トレース\n| **FR-L1-01** | PM-01 |\n### §5.4 次\n### §5.5 画面トレース\n| **PM-01** | BR-01 / FR-L1-01 |\n### §5.6 次\n`,
-  );
-  for (const path of ["business-detail.md", "nfr-grade.md"]) {
-    let content = l3Adapt();
-    if (path === "business-detail.md") content += "\n";
-    else {
-      content += `\n${[1, 2, 3, 4, 5, 6, 7, 8, 11, 12, 13, 14, 15, 16, 17].map((n) => `| **NFR-${String(n).padStart(2, "0")}** | covered |`).join("\n")}\n`;
-    }
-    writeFixtureDoc(root, `docs/design/L3-functional/${path}`, content);
-  }
-  writeFixtureDoc(
-    root,
-    "docs/design/L3-functional/functional-requirements.md",
-    `${l3Adapt()}\n### FR-01: Consumer function\n#### AC-FR-01-01\n`,
-  );
-}
-
-function writeConsumerGateFixture(
-  root: string,
-  options: { omitRequiredSlot?: boolean; omitWireframe?: boolean; coreOnly?: boolean } = {},
-): void {
-  const repositoryRoot = process.cwd();
-  for (const [templatePath, targetPath] of CONSUMER_TEMPLATE_SLOTS) {
-    // consumer の core slot (DOC-L2-SCREEN) を欠いた fixture。
-    if (options.omitRequiredSlot && targetPath === "docs/design/L2-screen/screen-list.md") continue;
-    const template = readFileSync(join(repositoryRoot, templatePath), "utf8");
-    const testDesign = targetPath.startsWith("docs/test-design/");
-    const pairArtifact = testDesign ? "docs/design/" : "docs/test-design/L7-unit-test-design.md";
-    let adapted = template
-      .replace(/^status: .*$/m, "status: confirmed")
-      .replace(/^pair_artifact: .*$/m, `pair_artifact: ${pairArtifact}`)
-      .replace(/^plan: .*$/m, "plan: docs/plans/PLAN-CONSUMER-01.md");
-    const core = CONSUMER_CORE_TABLE_ROWS[targetPath];
-    if (core) adapted = withTableRows(adapted, core.header, core.rows);
-    writeFixtureDoc(root, targetPath, adapted);
-  }
-
-  if (!options.coreOnly) writeHarnessShapedConsumerDocs(root);
-
-  const l10 = readFileSync(
-    join(repositoryRoot, "docs/templates/vmodel/L10-ux-validation.md"),
-    "utf8",
-  )
-    .replace(/^status: .*$/m, "status: confirmed")
-    .replace(/^pair_artifact: .*$/m, "pair_artifact: docs/design/L2-screen/")
-    .replace(/^plan: .*$/m, "plan: docs/plans/PLAN-CONSUMER-01.md");
-  writeFixtureDoc(root, "docs/test-design/L10-ux-validation-test-design.md", l10);
-  const l12 = readFileSync(
-    join(repositoryRoot, "docs/templates/vmodel/L12-acceptance-test-design.md"),
-    "utf8",
-  )
-    .replace(/^status: .*$/m, "status: confirmed")
-    .replace(/^pair_artifact: .*$/m, "pair_artifact: docs/design/")
-    .replace(/^plan: .*$/m, "plan: docs/plans/PLAN-CONSUMER-01.md");
-  writeFixtureDoc(
-    root,
-    "docs/test-design/L12-acceptance-test-design.md",
-    options.coreOnly
-      ? withTableRows(
-          l12,
-          "| テストID | 分類 | テスト項目 | 検証内容/手順 | 期待結果 | トレース元 |",
-          ["| AT-001 | 受入 | Consumer acceptance | 手順 | 結果 | REQ-001, SC-001, FN-001 |"],
-        )
-      : `${l12}\n| **AT-FR-01-01** | Consumer acceptance |\n`,
-  );
-  if (!options.omitWireframe) {
-    writeFixtureDoc(
-      root,
-      "docs/design/L2-screen/wireframe.md",
-      "---\nlayer: L2\nstatus: confirmed\npair_artifact: docs/test-design/L10-ux-validation-test-design.md\n---\n# Consumer wireframe\n",
-    );
+  const read = (path: string) => readFileSync(join(repositoryRoot, path), "utf8");
+  for (const [path, content] of Object.entries(buildConsumerGateFixtureDocs(read, options))) {
+    writeFixtureDoc(root, path, content);
   }
 }
 
