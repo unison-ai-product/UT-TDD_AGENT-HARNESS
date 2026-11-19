@@ -27,7 +27,6 @@ const ALLOWED_SCRIPT_WRAPPERS = new Set([
   "scripts/ut-tdd.ps1",
   "scripts/run-vitest-snapshot.ts",
 ]);
-// scripts/ 内の Node build・CI entrypoint はパス単位で登録する。
 const ALLOWED_NODE_SCRIPT_ENTRYPOINTS = new Set([
   "scripts/build-node.mjs",
   "scripts/node-generation-ci.mjs",
@@ -35,6 +34,7 @@ const ALLOWED_NODE_SCRIPT_ENTRYPOINTS = new Set([
   "scripts/pack-canary-acceptance.mjs",
   "scripts/windows-ci-shard-aggregate.mjs",
   "scripts/windows-ci-shard-evidence.mjs",
+  "scripts/windows-ci-shard-partition.mjs",
 ]);
 const VITEST_ENTRYPOINT = /\b(?:vitest\s+run|scripts[\\/]run-vitest-snapshot\.ts)\b/;
 
