@@ -17,7 +17,7 @@ import { digestMaterializedReleaseEntries } from "./release-materializer.ts";
 
 const REVISION = /^[a-f0-9]{40}$/;
 const DIGEST = /^sha256:[a-f0-9]{64}$/;
-const BASE64 = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;
+const BASE64 = /^[A-Za-z0-9+/]*={0,2}$/;
 
 export interface ConsumerRuntimeRelease {
   readonly schema_version: "ut-tdd.consumer-runtime.v1";
@@ -210,7 +210,7 @@ function base64Value(value: unknown, name: string, allowEmpty = false): string {
     throw new ConsumerRuntimeReleaseValidationError(`${name}_required`);
   const text = value;
   if (allowEmpty && text.length === 0) return text;
-  if (!BASE64.test(text) || Buffer.from(text, "base64").toString("base64") !== text)
+  if (text.length % 4 !== 0 || !BASE64.test(text) || Buffer.from(text, "base64").toString("base64") !== text)
     throw new ConsumerRuntimeReleaseValidationError(`${name}_base64_invalid`);
   return text;
 }
