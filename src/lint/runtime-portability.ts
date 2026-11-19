@@ -27,14 +27,14 @@ const ALLOWED_SCRIPT_WRAPPERS = new Set([
   "scripts/ut-tdd.ps1",
   "scripts/run-vitest-snapshot.ts",
 ]);
-// F0b の sealed Node generation は thin wrapper ではなく、レビュー済みの
-// Node-only build entrypoint として scripts/ に置く。その他の script は
-// 引き続き明示的に登録されない限り fail-close する。
-const ALLOWED_BUILD_SCRIPTS = new Set(["scripts/build-node.mjs"]);
-const ALLOWED_CI_SCRIPTS = new Set([
+// scripts/ 内の Node build・CI entrypoint はパス単位で登録する。
+const ALLOWED_NODE_SCRIPT_ENTRYPOINTS = new Set([
+  "scripts/build-node.mjs",
   "scripts/node-generation-ci.mjs",
   "scripts/node-generation-ci-aggregate.mjs",
   "scripts/pack-canary-acceptance.mjs",
+  "scripts/windows-ci-shard-aggregate.mjs",
+  "scripts/windows-ci-shard-evidence.mjs",
 ]);
 const VITEST_ENTRYPOINT = /\b(?:vitest\s+run|scripts[\\/]run-vitest-snapshot\.ts)\b/;
 
@@ -375,8 +375,7 @@ function analyzeRuntimeDoc(doc: RuntimePortabilityDoc): RuntimePortabilityViolat
   if (
     path.startsWith("scripts/") &&
     !ALLOWED_SCRIPT_WRAPPERS.has(path) &&
-    !ALLOWED_BUILD_SCRIPTS.has(path) &&
-    !ALLOWED_CI_SCRIPTS.has(path) &&
+    !ALLOWED_NODE_SCRIPT_ENTRYPOINTS.has(path) &&
     !ALLOWED_GIT_HOOK_ENTRYPOINTS.has(path)
   ) {
     violations.push({
@@ -384,7 +383,7 @@ function analyzeRuntimeDoc(doc: RuntimePortabilityDoc): RuntimePortabilityViolat
       line: 1,
       rule: "script-wrapper-unapproved",
       message:
-        "Only approved Node build entrypoints, thin ut-tdd POSIX/PowerShell wrappers, and tracked git-hooks entrypoints are allowed under scripts/.",
+        "Only approved Node build and CI entrypoints, thin ut-tdd POSIX/PowerShell wrappers, and tracked git-hooks entrypoints are allowed under scripts/.",
     });
   }
   if (path === GIT_HOOK_DISPATCHER_PATH) {

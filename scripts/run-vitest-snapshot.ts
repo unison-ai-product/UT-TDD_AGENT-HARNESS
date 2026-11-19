@@ -317,6 +317,7 @@ const SNAPSHOT_VALUE_OPTIONS = [
   "--shard",
   "--exclude",
   "--pool",
+  "--outputFile",
 ] as const;
 const SNAPSHOT_FLAG_OPTIONS = ["--browser"] as const;
 const SNAPSHOT_ALLOWED_OPTIONS = [

@@ -70,4 +70,28 @@ describe("snapshot runner argv vs pinned Vitest (issue #1247)", () => {
     expect(result.stderr).toBe("");
     expect(JSON.parse(result.stdout)).toEqual([]);
   });
+
+  it("CANDIDATE-U-SNAPARG-005 preserves the report path and its position around --", () => {
+    const outputFile = "C:/CI temp/windows report.json";
+    const forms = [["--outputFile", outputFile], [`--outputFile=${outputFile}`]];
+    const cases = [...forms, ...forms.map((form) => ["--", ...form])];
+    for (const args of cases) expect(parseSnapshotRunnerArgs(args)).toEqual({ kind: "run", args });
+
+    const source = `
+import { parseCLI } from "vitest/node";
+const values = JSON.parse(process.env.UT_PROBE_REPORT_ARGS).map((args) =>
+  parseCLI(["vitest", "run", ...args]).options.outputFile ?? null
+);
+console.log(JSON.stringify(values));
+`;
+    const result = spawnSync(process.execPath, ["--input-type=module", "-e", source], {
+      env: { ...process.env, UT_PROBE_REPORT_ARGS: JSON.stringify(cases) },
+      encoding: "utf8",
+      timeout: 60_000,
+      windowsHide: true,
+    });
+    expect(result.status).toBe(0);
+    expect(result.stderr).toBe("");
+    expect(JSON.parse(result.stdout)).toEqual([outputFile, outputFile, null, null]);
+  });
 });

@@ -23,6 +23,7 @@ const ACCEPTED_OPTION_TOKENS = [
   "--shard",
   "--exclude",
   "--pool",
+  "--outputFile",
   "--browser",
 ];
 interface SupportedArgumentCase {
