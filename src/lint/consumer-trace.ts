@@ -75,13 +75,21 @@ function expandRefs(cell: string, docType: string, violations: string[]): string
     const prefix = start?.[1] ?? "";
     const tail = parts[1] ?? "";
     const end = tail.startsWith(prefix) ? tail.slice(prefix.length) : tail;
-    if (!start || !/^\d+$/.test(end) || Number(end) < Number(start[2])) {
+    const from = Number(start?.[2]);
+    const to = Number(end);
+    if (
+      !start ||
+      !/^\d+$/.test(end) ||
+      !Number.isSafeInteger(from) ||
+      !Number.isSafeInteger(to) ||
+      to < from
+    ) {
       violations.push(`invalid_range:${docType}:${token}`);
       continue;
     }
     const width = (start[2] as string).length;
-    for (let n = Number(start[2]); n <= Number(end); n++) {
-      out.push(`${prefix}${String(n).padStart(width, "0")}`);
+    for (let k = 0; k <= to - from; k++) {
+      out.push(`${prefix}${String(from + k).padStart(width, "0")}`);
     }
   }
   return out;

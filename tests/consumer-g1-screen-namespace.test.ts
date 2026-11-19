@@ -353,6 +353,21 @@ describe("consumer G1 screen namespace (issue #1273)", () => {
     expect(result.totals.screens).toBe(4);
   });
 
+  it("range expansion fail-closes on endpoints beyond the safe integer range (no endless loop)", () => {
+    const token = "F-9007199254740992〜9007199254740992";
+    const root = consumerFixture({
+      requirementRows: [
+        `| REQ-01 | First requirement | details | Must | SC-01〜03, F-01, ${token} |`,
+        "| REQ-02 | Second requirement | details | Must | SC-02, F-02 |",
+        "| REQ-03 | Third requirement | details | Must | SC-03, F-03 |",
+      ],
+    });
+    const { result } = pureAnalyze(root);
+
+    expect(result.ok).toBe(false);
+    expect(result.violations).toContain(`invalid_range:DOC-L1-REQUIREMENTS:${token}`);
+  });
+
   it("CANDIDATE-U-CTRACE-045: keeps the harness screen prefix fixed, including the direct trace map", () => {
     const root = fixtureRoot();
     writeFixtureDoc(
