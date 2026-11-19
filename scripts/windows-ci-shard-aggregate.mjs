@@ -1,3 +1,4 @@
+import "../src/runtime/windows-hide.ts";
 import { readFileSync, readdirSync } from "node:fs";
 import { isAbsolute, join } from "node:path";
 import {

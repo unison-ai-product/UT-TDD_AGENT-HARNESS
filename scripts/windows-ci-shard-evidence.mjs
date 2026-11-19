@@ -1,3 +1,4 @@
+import "../src/runtime/windows-hide.ts";
 import { execFileSync } from "node:child_process";
 import { appendFileSync, readFileSync, writeFileSync } from "node:fs";
 import { isAbsolute, join } from "node:path";
