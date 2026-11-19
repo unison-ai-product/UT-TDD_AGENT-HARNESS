@@ -1,4 +1,3 @@
-import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
@@ -8,6 +7,7 @@ import {
   expandRegressionScope,
   loadDependencyDriftInput,
 } from "../src/lint/dependency-drift.ts";
+import { loadToolchainPinDocs } from "../src/lint/toolchain-pin.ts";
 
 const input: DependencyDriftInput = {
   sourceDocs: [
@@ -285,22 +285,13 @@ describe("dependency-drift and regression expansion (PLAN-REVERSE-42)", () => {
 });
 
 describe("runtime dependency declaration (Issue #1720)", () => {
-  const listTs = (dir: string): string[] =>
-    readdirSync(dir, { withFileTypes: true }).flatMap((entry) =>
-      entry.isDirectory()
-        ? listTs(join(dir, entry.name))
-        : entry.name.endsWith(".ts")
-          ? [join(dir, entry.name)]
-          : [],
-    );
-
   it("U-DEPD-006: typescript imported at runtime by src is declared in dependencies, not devDependencies", () => {
-    const runtimeImport = /^import\s+(?!type)[^;]*?from\s+["']typescript["']/m;
-    const importers = listTs(join(process.cwd(), "src")).filter((path) =>
-      runtimeImport.test(readFileSync(path, "utf8")),
+    const runtimeImport = /^import\s+(?!type)[^;]*?from\s+["']typescript["']/m;
+    const importers = loadDependencyDriftInput().sourceDocs.filter((doc) =>
+      runtimeImport.test(doc.text),
     );
     expect(importers.length).toBeGreaterThan(0);
-    const pkg = JSON.parse(readFileSync(join(process.cwd(), "package.json"), "utf8")) as {
+    const pkg = JSON.parse(loadToolchainPinDocs(join(import.meta.dirname, "..")).packageJson) as {
       dependencies?: Record<string, string>;
       devDependencies?: Record<string, string>;
     };
