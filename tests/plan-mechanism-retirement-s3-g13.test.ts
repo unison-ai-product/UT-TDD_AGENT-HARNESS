@@ -1,8 +1,9 @@
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { evaluateStaticGate } from "../src/gate/static.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 
 const roots: string[] = [];
 
@@ -165,7 +166,7 @@ function makeSmokeMandatory(root: string): void {
 }
 
 afterEach(() => {
-  for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
+  for (const root of roots.splice(0)) removeTestTree(root);
 });
 
 describe("CANDIDATE-U-PLANRET-002 right-arm G13 evidence", () => {

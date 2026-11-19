@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { evaluateStaticGate } from "../src/gate/static.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 
 const roots: string[] = [];
 
@@ -157,7 +158,7 @@ function expectL0CharterDocTypeIdCitationViolation(messages: readonly string[]):
 }
 
 afterEach(() => {
-  for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
+  for (const root of roots.splice(0)) removeTestTree(root);
 });
 
 describe("consumer G14 L0 charter doc_type_id (U-RCDEV-035)", () => {

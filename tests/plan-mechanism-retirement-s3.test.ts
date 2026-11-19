@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -13,6 +13,7 @@ import {
 import { documentDeltaDecisionDigest } from "../src/document-disposition/domain/replay-document-deltas.ts";
 import { evaluateStaticGate } from "../src/gate/static.ts";
 import { parseIssueUrl } from "../src/shared/issue-ref.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 
 const fixtureRoots: string[] = [];
 
@@ -247,7 +248,7 @@ describe("PLAN mechanism retirement S3 Red", () => {
   });
 
   afterEach(() => {
-    for (const root of fixtureRoots.splice(0)) rmSync(root, { recursive: true, force: true });
+    for (const root of fixtureRoots.splice(0)) removeTestTree(root);
   });
   it("CANDIDATE-U-PLANRET-005(a): normalizes Issue-backed defer", () => {
     const result = normalizeDocumentApplicability({
