@@ -2695,17 +2695,17 @@ Linux には `doctor` と DB 系テストがあり、shard すると doctor sing
 
 ### 固定費と期待時間
 
-shard ごとに固定費がかかる (snapshot 作成 約 23 秒、`npm ci` 約 28 秒、db rebuild 約 36 秒、seal / fingerprint /
-cleanup 約 21 秒で合計約 110 秒。typecheck 約 14 秒と workflow 側 db rebuild 約 36 秒も shard ごと)。
+各 shard の固定費は snapshot 約23秒、npm ci 約28秒、DB rebuild 約36秒、seal / fingerprint / cleanup 約21秒で計約110秒。型検査約14秒と workflow の DB rebuild 約36秒を足すと計約160秒。
+Vitest の約1,330秒を3分割した均等値は約443秒で、偏り1.3倍を見込むと最大約575秒。job 全体は従来の約1,521〜1,567秒から約600〜750秒を見込む。固定費は runner 3台分かかる。
 
-| 項目 | 現状 | 3 shard 後の見積り |
-| --- | --- | --- |
-| vitest 本体 | 約 1330 秒 | 約 1330 / 3 ≒ 443 秒 (偏り 1.3 倍想定で最大約 575 秒) |
-| 固定費 + typecheck | 約 160 秒 | 約 160 秒 (並列のため増えない) |
-| job wall time | 約 1521〜1567 秒 | 約 600〜750 秒 (10〜12.5 分) |
-
-見積りは Issue #1063 の実測からの逆算であり、実装 PR の exact HEAD の run で測り直して置き換える
-(未計測値を達成値として書かない)。runner 時間 (課金) は約 3 倍の固定費を払うため、wall time と引き換えに増える。
+012 の計測入口は `node scripts/windows-ci-shard-measurement.mjs --pr <n> --head <sha>`。GitHub は読み取りだけに使い、取得した機械証跡を純粋関数 `admitWindowsShardMeasurement(input: WindowsShardMeasurementInput)` (`src/github/windows-ci-shard-measurement.ts`) に渡す。
+入力は `subject` (PR HEAD と tree)、`before` (固定3 run・attempt の job/step 証跡)、`after` (required check、run/attempt、Windows 3 job/step と snapshot source)。取得前後の PR HEAD は指定 SHA と一致させる。
+before は `.github/workflows/harness-check.yml` の main push 成功 run `38694546173`・`38692344625`・`38690207164` の各 attempt 1。各 run で成功した `harness-check-windows` の step 8 `test — Windows full 回帰 (vitest run, windows leg)` の開始・終了から秒数3件を算出し、代表値は中央値とする。
+after の起点は PR HEAD の required `harness-check` の成功した一意の check。選択できなければ拒否する。その check の run・集約 job ID、同 ID の Actions job API の `run_attempt`、同じ attempt の workflow・job 一覧を照合する。run・集約・Windows 各 job の HEAD と成功を要求する。
+`harness-check-windows (1/3)`〜`harness-check-windows (3/3)` の各 job で成功した回帰 step を上記の名前で1件に特定し、応答の step 番号でログに束縛する。ログ内の当該 step の snapshot source は3件とも同じ Git commit とし、PR HEAD 自身か PR HEAD を親に持つ検証用 merge commit で、tree が PR HEAD と同一の場合だけ受理する。
+after の比較値は3回帰 step の最初の開始から最後の終了までの秒数。shard 個別の秒数も出力し、最大値は偏りの診断に使う。この比較に job 全体や workflow 全体の待ちは含めない。
+成功結果は `{ok: true, beforeSeconds, beforeMedianSeconds, afterElapsedSeconds, shardSeconds}`。証跡の欠落・曖昧・不正は `measurement_evidence_invalid`、ID・attempt・HEAD・tree の不一致は `measurement_binding_mismatch`、未成功は `measurement_not_successful` として拒否する。
+時刻は GitHub が報告した UTC の有効な開始・終了 (終了 > 開始) に限る。CLI は結果の JSON と exit 0 (成功) / 1 (拒否) を返し、自己申告の時間・暫定見積り・別実行の値は受け付けない。
 
 ### 採らない案
 
