@@ -10,6 +10,7 @@ import {
 } from "../src/lint/privacy-scan.ts";
 import { loadDiffPrivacyUnits, loadTreePrivacyUnits } from "../src/lint/privacy-scan-inputs.ts";
 import { heavyAfterAll, heavyBeforeAll } from "./support/hook-bounds.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 
 // Keep the synthetic address out of the source text: tree mode also scans tests/.
 const P = ["s".repeat(65), "@", "mail-provider.jp"].join("");
@@ -89,7 +90,7 @@ heavyBeforeAll("git", () => {
 });
 
 heavyAfterAll("teardown", () => {
-  if (scratchRoot) rmSync(scratchRoot, { recursive: true, force: true });
+  if (scratchRoot) removeTestTree(scratchRoot);
 });
 
 describe("privacy scan diff hunk parsing", () => {
