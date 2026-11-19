@@ -1,12 +1,5 @@
 import { execFileSync, spawnSync } from "node:child_process";
-import {
-  chmodSync,
-  cpSync,
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  writeFileSync,
-} from "node:fs";
+import { chmodSync, cpSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { hostname, tmpdir } from "node:os";
 import { join, relative, resolve } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
