@@ -128,13 +128,11 @@ function writeHarnessShapedConsumerDocs(root: string): void {
       .replace(/^status: .*$/m, "status: confirmed")
       .replace(/^pair_artifact: .*$/m, "pair_artifact: docs/test-design/L7-unit-test-design.md")
       .replace(/^plan: .*$/m, "plan: docs/plans/PLAN-CONSUMER-01.md");
-  {
-    writeFixtureDoc(
-      root,
-      "docs/design/L1-requirements/business-requirements.md",
-      `${l1Adapt()}\n| **BR-01** | Consumer goal |\n`,
-    );
-  }
+  writeFixtureDoc(
+    root,
+    "docs/design/L1-requirements/business-requirements.md",
+    `${l1Adapt()}\n| **BR-01** | Consumer goal |\n`,
+  );
   writeFixtureDoc(
     root,
     "docs/design/L1-requirements/functional-requirements.md",
@@ -204,7 +202,7 @@ function writeConsumerGateFixture(
       l12,
       "| テストID | 分類 | テスト項目 | 検証内容/手順 | 期待結果 | トレース元 |",
       ["| AT-001 | 受入 | Consumer acceptance | 手順 | 結果 | REQ-001, SC-001, FN-001 |"],
-    )}\n| **AT-FR-01-01** | Consumer acceptance |\n`,
+    )}${options.coreOnly ? "" : "\n| **AT-FR-01-01** | Consumer acceptance |"}\n`,
   );
   if (!options.omitWireframe) {
     writeFixtureDoc(
@@ -1336,7 +1334,7 @@ describe("PR-G0 release-consumer gates", () => {
   // main に consumer 分岐が無い間は Red。G1 は #1314 の Green、G3 は G3 の consumer 分岐の Green で `it` へ戻す。
   it.fails("U-RCDEV-027: G1 passes on the consumer core documents with a free-prefix ID", () => {
     const root = fixtureRoot();
-    writeConsumerGateFixture(root);
+    writeConsumerGateFixture(root, { coreOnly: true });
 
     const result = evaluateStaticGate({ gate: "G1", repoRoot: root });
     const messages = result.messages.join("\n");
@@ -1351,7 +1349,7 @@ describe("PR-G0 release-consumer gates", () => {
 
   it.fails("U-RCDEV-027: G3 passes on the consumer core documents without harness-only docs", () => {
     const root = fixtureRoot();
-    writeConsumerGateFixture(root);
+    writeConsumerGateFixture(root, { coreOnly: true });
 
     const result = evaluateStaticGate({ gate: "G3", repoRoot: root });
     const messages = result.messages.join("\n");
@@ -1366,7 +1364,7 @@ describe("PR-G0 release-consumer gates", () => {
 
   it("U-RCDEV-027: G2 and G4-G6 stay applicable and pass on the consumer fixture", () => {
     const root = fixtureRoot();
-    writeConsumerGateFixture(root);
+    writeConsumerGateFixture(root, { coreOnly: true });
 
     const results = ["G2", "G4", "G5", "G6"].map((gate) =>
       evaluateStaticGate({ gate, repoRoot: root }),
@@ -1380,7 +1378,7 @@ describe("PR-G0 release-consumer gates", () => {
 
   it.fails("U-RCDEV-027: reports the missing required consumer slot, not could-not-run", () => {
     const root = fixtureRoot();
-    writeConsumerGateFixture(root, { omitRequiredSlot: true });
+    writeConsumerGateFixture(root, { omitRequiredSlot: true, coreOnly: true });
 
     const result = evaluateStaticGate({ gate: "G1", repoRoot: root });
     const messages = result.messages.join("\n");
@@ -1393,7 +1391,7 @@ describe("PR-G0 release-consumer gates", () => {
 
   it("U-RCDEV-027: rejects a consumer fixture without its L2-to-L10 wireframe pair", () => {
     const root = fixtureRoot();
-    writeConsumerGateFixture(root, { omitWireframe: true });
+    writeConsumerGateFixture(root, { omitWireframe: true, coreOnly: true });
 
     const result = evaluateStaticGate({ gate: "G2", repoRoot: root });
     const messages = result.messages.join("\n");
