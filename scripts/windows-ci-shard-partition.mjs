@@ -94,7 +94,7 @@ function loadSelection(api, job, shard, binding) {
   };
 }
 
-function expectedFiles(api, snapshot, workflowHead) {
+function readSnapshotBlobs(api, snapshot, workflowHead) {
   const commit = api.json(`commits/${snapshot}`);
   if (
     commit.sha !== snapshot ||
@@ -107,7 +107,11 @@ function expectedFiles(api, snapshot, workflowHead) {
   const { tree, truncated, sha } = api.json(`git/trees/${treeSha}?recursive=1`);
   if (truncated || sha !== treeSha || !Array.isArray(tree))
     throw new Error("incomplete snapshot tree");
-  const tracked = tree.filter((entry) => entry.type === "blob");
+  return tree.filter((entry) => entry.type === "blob");
+}
+
+function expectedFiles(api, snapshot, workflowHead) {
+  const tracked = readSnapshotBlobs(api, snapshot, workflowHead);
   const packageFile = tracked.find((entry) => entry.path === "package.json");
   if (!SHA.test(packageFile?.sha)) throw new Error("missing snapshot package.json");
   const blob = api.json(`git/blobs/${packageFile.sha}`);

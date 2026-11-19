@@ -87,14 +87,14 @@ interface WindowsRegressionWindow {
   completedAt: number;
 }
 
-export function readWindowsShardSnapshot(
+function regressionStepLines(
   log: string,
   { startedAt, completedAt }: WindowsRegressionWindow,
-): { source: string; files: string[] } {
+): string[] {
   if (!Number.isFinite(startedAt) || !Number.isFinite(completedAt) || completedAt <= startedAt) {
     throw new Error("invalid Windows regression step timestamps");
   }
-  const stepLines = stripVTControlCharacters(log)
+  return stripVTControlCharacters(log)
     .split(/\r?\n/)
     .flatMap((line) => {
       const separator = line.indexOf(" ");
@@ -103,6 +103,13 @@ export function readWindowsShardSnapshot(
         ? [line.slice(separator + 1)]
         : [];
     });
+}
+
+export function readWindowsShardSnapshot(
+  log: string,
+  bounds: WindowsRegressionWindow,
+): { source: string; files: string[] } {
+  const stepLines = regressionStepLines(log, bounds);
   const sourceIndices = stepLines.flatMap((line, index) =>
     /^snapshot source: git commit [a-f0-9]{40}$/.test(line) ? [index] : [],
   );
