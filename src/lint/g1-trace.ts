@@ -1,5 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
-import { resolveAuthoringSourceAbsolutePath } from "../shared/design-root.ts";
+import { join } from "node:path";
+import { resolveAuthoringSourceAbsolutePath, resolveDesignRoot } from "../shared/design-root.ts";
+import { analyzeConsumerG1Trace } from "./consumer-trace.ts";
 import type { LintResult } from "./lint-result.ts";
 
 export interface G1TraceDocs {
@@ -160,6 +162,13 @@ export function g1TraceMessages(result: G1TraceResult): string[] {
 }
 
 export function lintG1Trace(repoRoot: string): LintResult {
+  if (resolveDesignRoot(repoRoot) !== "docs/design/harness") {
+    const result = analyzeConsumerG1Trace((path) => {
+      const absolute = join(repoRoot, path);
+      return existsSync(absolute) ? readFileSync(absolute, "utf8") : undefined;
+    });
+    return { ok: result.ok, messages: result.messages };
+  }
   try {
     const result = analyzeG1Trace(loadG1TraceDocs(repoRoot));
     return { ok: g1TraceOk(result), messages: g1TraceMessages(result) };

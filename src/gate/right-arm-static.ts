@@ -190,7 +190,13 @@ const REQUIRED_G14_HEADINGS = [
   "#### 第7章 サポート・SLA保守",
   "#### 第8章 運用引継ぎ(ハンドオーバー)",
 ] as const;
-const REQUIRED_L2_SCREEN_COLUMNS = ["画面ID", "画面名称", "概要", "関連機能", "ロール"] as const;
+export const REQUIRED_L2_SCREEN_COLUMNS = [
+  "画面ID",
+  "画面名称",
+  "概要",
+  "関連機能",
+  "ロール",
+] as const;
 function isRecord(value: unknown): value is JsonRecord {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -199,7 +205,7 @@ function stringValue(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
 }
 
-function tableCells(line: string): string[] {
+export function tableCells(line: string): string[] {
   return line
     .split("|")
     .slice(1, -1)
