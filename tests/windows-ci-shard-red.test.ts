@@ -193,6 +193,22 @@ describe("Issue #1063 Windows leg 3 shard contract (登録 + Red)", () => {
     });
   }
 
+  it("U-CISHARD-010: rejects a shard argument on the Linux regression step", () => {
+    const workflow = mutated((candidate) => {
+      const step = job(candidate, "harness-check-linux").steps?.find(
+        (entry) => entry.name === "test — 全回帰 (vitest run)",
+      );
+      if (step?.run !== "npm run test") throw new Error("fixture must contain the Linux test step");
+      step.run = "npm run test -- --shard=1/3";
+    });
+    expect(
+      addedBy(workflow).some(
+        ({ reason, detail }) =>
+          reason === "missing_runtime_leg" && detail.includes("harness-check-linux.steps"),
+      ),
+    ).toBe(true);
+  });
+
   describe("CANDIDATE-U-CISHARD-005: aggregate keeps requiring every runtime leg", () => {
     const windowsGuard = `test "${EXPR_OPEN}needs.${WINDOWS}.result${EXPR_CLOSE}" = "success"`;
     const aggregateRun = (w: Workflow): Step => {
