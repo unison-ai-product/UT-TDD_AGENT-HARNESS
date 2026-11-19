@@ -218,8 +218,9 @@ interface WalkContext {
 }
 
 function walkFiles(dir: string, ctx: WalkContext): void {
-  for (const name of readdirSync(dir)) {
-    const full = join(dir, name);
+  for (const entry of readdirSync(dir, { recursive: true, withFileTypes: true })) {
+    if (entry.isDirectory()) continue;
+    const full = join(entry.parentPath, entry.name);
     let st: ReturnType<typeof statSync>;
     try {
       st = statSync(full);
@@ -232,11 +233,12 @@ function walkFiles(dir: string, ctx: WalkContext): void {
       // turns the gate red.
       continue;
     }
+    // recursive readdir does not follow symlinked directories; the former walker did (statSync).
     if (st.isDirectory()) {
       walkFiles(full, ctx);
       continue;
     }
-    if (!ctx.extensions.some((ext) => name.endsWith(ext))) continue;
+    if (!ctx.extensions.some((ext) => entry.name.endsWith(ext))) continue;
     ctx.acc.push(readArtifact(full, relative(ctx.repoRoot, full)));
   }
 }
