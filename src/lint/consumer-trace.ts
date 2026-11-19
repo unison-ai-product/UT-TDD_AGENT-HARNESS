@@ -75,7 +75,7 @@ function expandRefs(cell: string, docType: string, violations: string[]): string
     const start = parts.length === 2 ? parts[0]?.match(/^(.*?)(\d+)$/) : null;
     const prefix = start?.[1] ?? "";
     const tail = parts[1] ?? "";
-    const end = tail.startsWith(prefix) ? tail.slice(prefix.length) : "";
+    const end = tail.startsWith(prefix) ? tail.slice(prefix.length) : tail;
     if (!start || !/^\d+$/.test(end) || Number(end) < Number(start[2])) {
       violations.push(`invalid_range:${docType}:${token}`);
       continue;
