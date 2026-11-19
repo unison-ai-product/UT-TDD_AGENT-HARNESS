@@ -12,7 +12,7 @@ updated: 2026-08-31
 
 ## Pair and boundary
 
-対になる契約は `docs/design/harness/L6-function-design/function-spec.md` の Windows CI 節である。これは Issue #490 の
+対になる契約は`docs/plans/PLAN-L7-526-windows-ci-single-snapshot.md`である。これはIssue #490の
 docs-only pair-freezeであり、実装PRがRed testを追加してGreen化するまでcandidateを正式`U-*`へ
 昇格させない。既存 `test:fast` / `test:cli` の意味論をtest側で独立に読み、productionの新しい
 統合scriptやworkflowをそのまま期待値として再利用しない。
