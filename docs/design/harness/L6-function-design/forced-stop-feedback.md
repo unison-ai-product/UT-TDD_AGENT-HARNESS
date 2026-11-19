@@ -4,7 +4,7 @@ artifact_type: design_doc
 status: confirmed
 sub_doc: function-spec
 artifact_role: topic_forced_stop_feedback
-pair_artifact: docs/test-design/harness/L7-unit-test-design.md
+pair_artifact: docs/test-design/harness/L7-forced-stop-feedback-test-design.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 next_pair_freeze: L7
 issue: 1360
@@ -14,7 +14,7 @@ issue: 1360
 
 <!--
 ① 設計 (L6 機能設計) — forced-stop フィードバック機能。
-PLAN: PLAN-L6-04-forced-stop-feedback (add-design)。pair (③): docs/test-design/harness/L7-unit-test-design.md §1.6 U-FSF を対応先とする。
+PLAN: PLAN-L6-04-forced-stop-feedback (add-design)。pair (③): docs/test-design/harness/L7-forced-stop-feedback-test-design.md §1.6 U-FSF を対応先とする。
 実装 (②): src/runtime/forced-stop.ts + src/runtime/session-log.ts 拡張 + src/cli (ut-tdd feedback classify) (PLAN-L7-02-forced-stop-feedback, add-impl)。
 土台: session-log (session-log.md)。Recovery 接続: concept §2.5 / §2.6.1 (後段 Reverse で forced_stop signal 正本化)。
 -->
@@ -105,11 +105,11 @@ session-log と同じ **fail-OPEN** (検出・記録は常に exit 0、ワーク
 - フィードバックログ: `.ut-tdd/logs/feedback/<plan_id>.jsonl` (gitignored, **durable** = プロセス再起動を超えてローカル永続・git 非追跡, **是正のみ**)。`plan_id=null` は書かない。
 - `.gitignore` は既存 `.ut-tdd/logs/` で被覆済 (session-log で追加済)
 
-## §3 ③ 単体テスト設計 (pair) — L7-unit-test-design.md §1.6
+## §3 ③ 単体テスト設計 (pair) — L7-forced-stop-feedback-test-design.md §1.6
 
 U-FSF-001 (`detectDanglingTurn` 純粋性/dangling 判定) / U-FSF-002 (`recordForcedStop` fail-open/本文非掲載) / U-FSF-003 (`classifyFeedback` mock + 失敗時 feedback 倒し) / U-FSF-004 (`recordFeedback` feedback のみ/mistake no-op/plan_id=null skip/内容キー idempotent/sanitize) / U-FSF-005 (`pendingRecoveryProposals` フィルタ/不正行スキップ) / U-FSF-006 (`emitClassifyRequest` pmo-haiku 契約) / U-FSF-007 (`scanDanglingStops` dangling のみ記録/idempotent/current 除外/fail-open)。
 
-> **freeze の使い分け**: **G6 (機能設計凍結)** で ①(本書) ⇔ ③(L7-unit-test-design.md §1.6 U-FSF) の pair 宣言を確定。**G7** で ①⇔②⇔③⇔④ の 4-artifact 双方向 trace を凍結。PLAN frontmatter `next_pair_freeze: L7` は「次に pair freeze を行う層境界 = L6/L7」を指す (session-log PLAN-L6-03 と同形)。
+> **freeze の使い分け**: **G6 (機能設計凍結)** で ①(本書) ⇔ ③(L7-forced-stop-feedback-test-design.md §1.6 U-FSF) の pair 宣言を確定。**G7** で ①⇔②⇔③⇔④ の 4-artifact 双方向 trace を凍結。PLAN frontmatter `next_pair_freeze: L7` は「次に pair freeze を行う層境界 = L6/L7」を指す (session-log PLAN-L6-03 と同形)。
 
 ## §4 fail-open 設計 (session-log / agent-guard との関係)
 
