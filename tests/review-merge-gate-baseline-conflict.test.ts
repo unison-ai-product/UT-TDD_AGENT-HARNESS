@@ -24,6 +24,7 @@ import { registerPrMergeCommands } from "../src/cli/pr-merge.ts";
 import { BASELINE_GATES, evaluateBaselineConflict } from "../src/feedback/baseline-conflict.ts";
 import { type GhPrMergePorts, runPrMerge } from "../src/feedback/review-merge-gate.ts";
 import { heavyAfterAll, heavyBeforeAll } from "./support/hook-bounds.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 
 const now = "2026-10-28T01:00:00.000Z";
 
@@ -176,7 +177,7 @@ heavyBeforeAll("git", () => {
 });
 
 heavyAfterAll("teardown", () => {
-  if (templateDir) rmSync(templateDir, { recursive: true, force: true });
+  if (templateDir) removeTestTree(templateDir);
 });
 
 /** 土台を複製した isolated fixture。work の origin/main は取り込むまで古いまま。 */
@@ -304,7 +305,7 @@ function withFixture(plan: Plan, body: (fx: Fixture) => void | Promise<void>) {
     try {
       await body(fx);
     } finally {
-      rmSync(fx.base, { recursive: true, force: true });
+      removeTestTree(fx.base);
     }
   };
 }
