@@ -89,12 +89,11 @@ describe("loadLintWiringInput (live repo regression fence)", () => {
     expect(r.staleDeferred).toEqual([]);
     expect(r.deferred).toEqual([
       "backfill-pairing",
-      "consumer-trace",
       "forward-convergence",
       "scrum-reverse",
       "tool-adapter",
       "windows-ci-shard-admission",
-      // #1741 Red の stub だけの保留登録 (#1282 の consumer-trace と同じ扱い)。Green で配線して撤去する。
+      // #1741 Red の stub だけの保留登録。Green で配線して撤去する。
       "zero-trust-download",
       "zero-trust-download-inputs",
     ]);
