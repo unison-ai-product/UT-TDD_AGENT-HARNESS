@@ -4,7 +4,7 @@
 - **Date**: 2026-05-27
 - **正本**: 本書がリポジトリ配置の **canonical 正本**。`requirements_v1.2 §9.1`（Phase 0 存在チェック）と `CLAUDE.md` のディレクトリ節は本書を参照する。
 - **前提**: ADR-001（TypeScript/Node。Bun migration debtは#487でsealed済み。source snapshotは概念のみ）/ ADR-005（配布 = GitHub-pull、Web UI = 中央・全 project 横断、plugin = 補助チャネル）/ V-model 4 artifact（concept v3.1 §2.3）。
-- **要件同期 (済)**: `docs/process/` (A) / `src/web/` は **requirements_v1.2 §9.1 Phase 0-A 存在チェックツリーに反映済**。canonical ツリーの全ディレクトリは実体 (`.gitkeep`) 作成済 (構成は要件定義で確定するため一括実体化)。各 `[予定]` ディレクトリは **ディレクトリ実体化済 / 中身 (機能・doc) は後続 PLAN で起こす** の意。`src/web/` も実体化済 (Phase 0-A 対象化は後続 PLAN)。
+- **要件同期 (済)**: `docs/process/` (A) / `src/web/` は **requirements_v1.2 §9.1 Phase 0-A 存在チェックツリーに反映済**。`[予定]` のディレクトリの機能と文書は、対応する GitHub Issue と設計文書に従って追加する。
 - **本 repo の位置づけ (ADR-005)**: 本 repo は **harness engine repo（= 配布の単一真実）**。各 project は本 repo を **git dependency（tag-pin）で pull** し、`ut-tdd setup` が adapter を投影する。下記 canonical ツリーは **engine repo の構成**。consume 側 project への投影レイアウトは §9 を参照。
 
 ## 1. canonical ツリー
@@ -25,7 +25,7 @@ UT-TDD-agent-harness/
 ├── tsconfig.json                 # TypeScript strict
 ├── vitest.config.ts              # Vitest coverage reporter config (G7 coverage-summary evidence)
 ├── .jscpd.json                   # 重複コードの advisory 計測 (jscpd) の設定。結果は code-health workflow の summary だけ
-├── ut-tdd.project.json           # PLAN asset用の追跡済みrepository identity正本
+├── ut-tdd.project.json           # 追跡済みのリポジトリ識別情報
 ├── .gitattributes                # 改行正規化 (eol=lf、*.ps1 は crlf)
 ├── .editorconfig                 # editor/agent shared whitespace and newline defaults
 ├── .gitignore
@@ -33,7 +33,6 @@ UT-TDD-agent-harness/
 ├── src/                          # ★ harness TS core (実装 = ② 実装コード)
 │   ├── cli.ts                    #   エントリ (commander)
 │   ├── schema/                   #   zod 単一正本 (enum / 契約。drift を型で抑止)
-│   ├── plan/                     #   plan lint / validator
 │   ├── vmodel/                   #   V-model 4 artifact trace
 │   ├── runtime/                  #   mode 検出 (standalone/claude-only/codex-only/hybrid) / orchestration
 │   ├── doctor/                   #   統合検証 / 横断検出
@@ -60,8 +59,7 @@ UT-TDD-agent-harness/
 │   ├── research/                 # [予定] Research mode 成果 (research-memo。ADR は adr/、§2 参照)
 │   ├── reference/                # 横断参照資料 (正本外、ai-agent-harness-directory-reference.md)
 │   ├── skills/                   # [予定] UT-TDD 正本化 skill doc
-│   ├── plans/                    # PLAN-NNN-slug.md (実装計画)
-│   ├── templates/                # PLAN / prompt / state テンプレ
+│   ├── templates/                # 設計・検証・prompt・state のテンプレ
 │   ├── migration/                # legacy source → UT-TDD 再設計資料 (旧 porting-map 等。code-port 部は ADR-001 で superseded)
 │   ├── handover/                 # セッション handover
 │   ├── memory/                   # 運用メモ
@@ -69,8 +67,8 @@ UT-TDD-agent-harness/
 │
 ├── .claude/                      # Claude Code runtime / hook policy
 │   ├── CLAUDE.md                 #   runtime / hook 方針
-│   ├── settings.json             #   現状 hooks:{} の安全設定
-│   ├── agents/                   #   subagent 定義 (code-reviewer 等)
+│   ├── settings.json             #   Claude Code の hook 設定
+│   ├── commands/                 #   Claude Code の作業コマンド
 │   └── hooks/                    #   hook script
 │
 ├── .ut-tdd/                      # ★ UT-TDD runtime state + 監査証跡 (state 系 gitignored / 証跡系 tracked、§5)
@@ -89,13 +87,13 @@ UT-TDD-agent-harness/
 └── legacy local state            # gitignored、正本にしない
 ```
 
-`★` = 配置ルールが特に重要な領域。`[予定]` = **ディレクトリ実体 (`.gitkeep`) は作成済、中身 (機能コード・doc・workflow) は後続 PLAN で起こす**。構成 (どのディレクトリを置くか) は要件定義で確定するため一括実体化する。
+`★` は配置ルールが特に重要な領域を示す。`[予定]` の機能、文書、workflow は対応する GitHub Issue と設計文書で範囲を確定する。
 
 ## 2. 配置ルール (どこに何を置くか)
 
 | 対象 | 置き場 | ルール |
 |------|--------|--------|
-| harness TS core (機能) | `src/<domain>/` | **機能の home**。domain 別 (cli/schema/plan/vmodel/runtime/doctor/web)。新機能はどの domain 配下かを要件 (L3) で確定してから追加。**bash / Python を core に置かない** (ADR-001) |
+| harness TS core (機能) | `src/<domain>/` | **機能の home**。domain 別 (cli/schema/vmodel/runtime/doctor/web)。新機能はどの domain 配下かを要件 (L3) で確定してから追加。**bash / Python を core に置かない** (ADR-001) |
 | 工程 / 駆動モデル定義 | `docs/process/` | **工程(L0-L14)定義 + 駆動モデル(Forward/Scrum/Reverse/Recovery/Add-feature/Retrofit/Refactor/Research)正本**。「どの工程/駆動を増やすか」は要件 (L3) で決め本 dir に置く (本 session の発端 gap を解消)。既存 `docs/governance/recovery-workflow.md` は **`docs/process/modes/recovery.md` へ統合完了 (2026-06-04、IMP-060)** = recovery 正本は `docs/process/modes/recovery.md`。recovery-workflow.md は superseded (historical、冒頭 banner) |
 | 中央 Web UI service | `src/web/` | [予定] 全 project 横断の管理 UI (15 画面、GitHub backbone、ADR-005 D2)。backend 配置・通信境界は L2 設計 (ADR-003 §IMP-031 参照) |
 | テストコード | `tests/` | vitest、`*.test.ts`、src を mirror |
@@ -104,7 +102,7 @@ UT-TDD-agent-harness/
 | enum / 契約 | `src/schema/` | **zod 単一正本**。enum を複数箇所に再定義しない (drift 防止、requirements §1.10 F) |
 | 現行正本 doc | `docs/governance/` | concept v3.1 / requirements v1.2 / README / extraction-plan / 本書 |
 | 決定記録 | `docs/adr/` | `ADR-NNN-slug.md` |
-| 実装計画 | `docs/plans/` | `PLAN-NNN-slug.md`。superseded は `status: archived`。撤去前の全文は §11 のアーカイブ tag が保持する |
+| 作業の目的・順序・完了条件 | GitHub Issue | 対象の設計文書と revision を参照する。撤去前の作業記録は §11 のアーカイブ tag で参照できる |
 | 移行資料 | `docs/migration/` | source capability reference。code-port 計画は ADR-001 で superseded |
 | runtime state | `.ut-tdd/` (state/cache/logs/handover CURRENT/tmp/local*) | generated。**docs 目的で追跡しない** (CLAUDE.md 禁止事項) |
 | 監査証跡 | `.ut-tdd/audit/*.md` / `.ut-tdd/audit/reports/*.md` / `.ut-tdd/evidence/` / `.ut-tdd/handover/provider/` | **tracked** (PO 決定 2026-06-10、A-128 F-1)。audit = A-NNN 監査記録、evidence = 正規化 JSON (secret/PII/raw transcript 禁止)。runtime state と区別する |
@@ -141,14 +139,14 @@ UT-TDD-agent-harness/
 
 ## 4. 命名規約
 
-- PLAN: `docs/plans/PLAN-NNN-slug.md` / ADR: `docs/adr/ADR-NNN-slug.md`
+- ADR: `docs/adr/ADR-NNN-slug.md`
 - TS source: `src/<domain>/<name>.ts` / test: `tests/<name>.test.ts`
 - テスト設計: `docs/test-design/<feature>/<...>-test-design.md`
 - ファイル名は英語（日本語ファイル名は Windows 文字化け回避のため禁止）
 
 ## 5. tracked / gitignored の境界
 
-- **gitignored**: `node_modules/` `dist/` `*.tsbuildinfo` `coverage/` / `.ut-tdd/` runtime state (state/cache/logs/tmp/handover CURRENT.*・*.bak/audit *.jsonl・escalation_state.json、local*) / legacy local state / `__pycache__` / `docs/plans/*.lock` / `CLAUDE.local.md` `AGENTS.override.md` `.claude/settings.local.json` / secret 系 (`.env*` `*.key` `*.pem` `credentials.json`)
+- **gitignored**: `node_modules/` `dist/` `*.tsbuildinfo` `coverage/` / `.ut-tdd/` runtime state (state/cache/logs/tmp/handover CURRENT.*・*.bak/audit *.jsonl・escalation_state.json、local*) / legacy local state / `__pycache__` / `CLAUDE.local.md` `AGENTS.override.md` `.claude/settings.local.json` / secret 系 (`.env*` `*.key` `*.pem` `credentials.json`)
 - **tracked（F0a移行時点）**: `src/` `tests/` `docs/` (archive 含む) `scripts/` `package.json` `package-lock.json` `.node-version` `tsconfig.json` `tsconfig.node.json` `vitest.config.ts` `.gitattributes` `.editorconfig` / **監査証跡** `.ut-tdd/audit/*.md` `.ut-tdd/audit/reports/*.md` `.ut-tdd/evidence/` `.ut-tdd/handover/provider/` / **参照資料** `docs/reference/`。`package-lock.json`と`.node-version`はNode candidate custody正本、`tsconfig.node.json`はF0b compiled ESM入力正本。`bun.lock`はtarget sealed時 (#487) に撤去済み。
 
 ## 6. 境界
@@ -164,7 +162,7 @@ UT-TDD-agent-harness/
 - `.ut-tdd/` **runtime state** (state/cache/logs/tmp/handover CURRENT/local*) を docs 目的で Git 追跡しない。**監査証跡** (`audit/*.md` / `audit/reports/*.md` / `evidence/` / `handover/provider/`) は例外として tracked (§5、A-128 F-1)。
 - source process reference を工程定義の正本として参照しない (正本 = `docs/process/`)。
 - 日本語ファイル名を使わない。
-- **`[予定]` ディレクトリの中身を後続 PLAN 不在のまま実装しない**: ディレクトリ実体 (`.gitkeep`) は構成確定として一括作成済だが、中身 (機能コード・doc・workflow。特に `src/web/`) は対応 PLAN が確定してから起こす。`.gitkeep` があることを実装許可と誤読しない。
+- **`[予定]` の実装条件**: 対応する GitHub Issue と設計文書で範囲を確定してから、機能コード、文書、workflow を追加する。
 
 ## 8. config 最小化方針 (root の散らかり防止)
 

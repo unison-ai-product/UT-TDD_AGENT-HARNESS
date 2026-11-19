@@ -48,7 +48,7 @@ implementation it exercises provides zero design signal and weaker oracle value
 
 ## When to load this skill
 
-- Crossing pair-freeze into L7 implementation for any Forward or Add-feature PLAN.
+- Crossing pair-freeze into L7 implementation for any Forward or Add-feature Issue.
 - A Refactor Issue (with its design document) must re-confirm regression coverage before touching source.
 - A Reverse back-fill requires test-first evidence for an existing code path.
 - `ut-tdd doctor` or `ut-tdd review --uncommitted` flags a missing test or a
@@ -69,15 +69,14 @@ the base and head path sets and does not see commits, so the order is a review r
 If there is nothing to refactor, say "Refactor なし" with the reason in the PR body; do not skip
 silently. The conditions that justify "Refactor なし" and who judges them are defined in
 `docs/governance/coding-rules.md` §量・分割・Refactor の目安 (the canonical source). Large structural
-changes go to a Refactor Issue (label `refactor`) and a design document, and the code-simplify skill
-(PLAN is frozen, #1166).
+changes go to a Refactor Issue (label `refactor`) and a design document, and the code-simplify skill.
 The non-author reviewer checks the commit order and that the Refactor commits leave `tests/`
 content unchanged.
 
 ### 1. Red — write the failing test first
 
 - Derive the test contract from the L6 unit-test design doc paired with the
-  PLAN. The L6 doc must exist and be readable before any test is written.
+  Issue. The L6 doc must exist and be readable before any test is written.
 - Write one `describe` / `it` block in `tests/` that exercises a single
   behaviour. Run `npm run test` and confirm the test **fails** (Red).
 - If the test passes before any source change it is either a vacuous assertion
@@ -109,9 +108,9 @@ content unchanged.
 
 - [ ] Each new test file maps to an L6 unit-test design entry in
   `docs/test-design/`.
-- [ ] PLAN `review_evidence` contains a reference to the failing-commit SHA.
+- [ ] PR review evidence contains a reference to the failing-commit SHA.
 - [ ] `npm run test` exits 0 with no `.skip` or `.todo` left open without a
-  PLAN-linked rationale.
+  Issue-linked rationale.
 - [ ] `npm run typecheck` exits 0.
 - [ ] `npm run lint` exits 0 (Biome check — format + lint, not `biome lint` alone).
 - [ ] `ut-tdd doctor` exits 0.

@@ -43,12 +43,10 @@ DB は正本ではない。本書を `activation_entries` へ投影し、工程�
 - `scope_status=deferred` は延期対象であり、`defer_reason` を必須とする。
 - `scope_status=out_of_scope` は適用除外であり、`defer_reason` を必須とする。
 - `enabled=false` の行は自動起票・自動適用の対象ではない。検索と検出には残し、人間が延期理由を確認できるようにする。
-- 本書の `plan_id` は工程管理表の `plan_id` と join される。工程表に存在しない行は `activation-schedule-missing` finding にする。
 
 ## 3. 不変条件
 
-- profile は Workflow 集約の authoring source であり、PLAN frontmatter を暗黙更新しない。
-- 検出系は本書と工程管理表の join を読む。検出系の都合で `scope_status`、`target_version`、延期理由を創作しない。
+- 表は当時の version-up wave の記録として保存する。現行作業の対象と延期理由は、該当する GitHub Issue と設計文書を参照する。
 - `target_version` は ZIP 由来の wave 識別子であり、ファイル hash や外部 release 番号の代替ではない。
 - `activation_schedule_reviews` は read-model であり、正本ではない。
 

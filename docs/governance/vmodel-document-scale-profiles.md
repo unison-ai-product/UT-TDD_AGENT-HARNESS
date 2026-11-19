@@ -76,9 +76,9 @@ profile や skip reason を暗黙生成してはいけない。
 - `decision=adopt` は当該 profile で文書を採用する。
 - `decision=conditional` は capability / product selection の判定で採用または skip を決める。
 - `decision=skip` は未採用ではなく、理由付きの意図的 skip である。
-- `decision=defer` は該当文書を silent omission にせず、`required_plan_id` へ設計責任を接続する。
+- `decision=defer` は延期として記録し、設計責任と再開条件を対応する GitHub Issue に残す。
 - `decision=skip|defer|conditional` は `reason` を必須にする。
-- `required_plan_id` が入る行は、対応する PLAN が存在しない場合に検出対象にする。
+- 表の `required_plan_id` は既存の入力形式に残る列である。`document_scale_profile_entries` の投影はこの値を NULL として保存する。参照先を解決するための列ではない。
 - `status_override` と `detail_override` は profile 判定の結果であり、catalog の `default_status` を上書きする正本ではない。
 - size profileとproduct profileは直交合成する。単一`profile_rank`で相互排他にせず、resolverがaxis別default+overrideを決定論的に適用する。
 - 8 profile definition自体もDB projection対象とし、decision rowだけをprofile masterの代用にしない。
@@ -89,8 +89,7 @@ profile や skip reason を暗黙生成してはいけない。
 
 ## 4. 不変条件
 
-- 本書は DocumentCatalog 集約の profile 判定正本であり、version-up wave の対象PLANを制御する
-  `vmodel-activation-profiles.md` とは混同しない。
+- 本書は DocumentCatalog 集約の profile 判定正本である。過去の version-up wave は `vmodel-activation-profiles.md` に記録されている。
 - `document_scale_profile_reviews` は read-model であり、正本ではない。
 - 検出系は catalog/profile/review の join 結果を読む。検出都合で採用判定、skip reason、詳細度を創作しない。
 - product-select 文書は、採用・条件付き・skip・延期のどれであっても理由を DB から検索できる状態にする。

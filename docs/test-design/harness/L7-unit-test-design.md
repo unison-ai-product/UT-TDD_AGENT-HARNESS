@@ -379,19 +379,7 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 
 ### §1.16.1e U-DEPD / U-REGEXP (dependency-drift + regression expansion)
 
-> Pair = `function-spec.md` dependency-drift rule (ADR-002/IMP-032) + roadmap G-L7.D. These oracles close the former doctor scaffold stub by replacing fixed text with pure import-graph lint and regression-scope expansion.
-
-| ID | Target | Oracle |
-|---|---|---|
-| U-DEPD-001 | `analyzeDependencyDrift` allowed graph | allowed source module imports normalize to deterministic module edges and OK messages. |
-| U-DEPD-002 | disallowed dependency | reverse dependency such as runtime -> lint returns `disallowed-module-dependency` finding. |
-| U-DEPD-003 | cycle detection | cyclic module imports return deterministic `module-cycle` finding. |
-| U-DEPD-005 | full real repository module graph | `lint`は`DbIntrospectionPort`を所有しstate-db実装へ逆依存しない。全module cycleが0。 |
-| U-DEPD-006 | runtime dependency declaration (Issue #1720) | `src/`が実行時importする`typescript`は`dependencies`に`5.9.3`で宣言され、`devDependencies`には残らない。 |
-| U-REGEXP-001 | `expandRegressionScope` affected modules | changed source module expands to direct tests and reverse-dependent module tests. |
-| U-REGEXP-002 | missing coverage | changed source module without direct test coverage returns `missing-regression-test` finding instead of silent fallback. |
-
-> **Status (PLAN-REVERSE-42, 2026-06-11)**: U-DEPD-001..003 and U-REGEXP-001..002 are green in `tests/dependency-drift.test.ts` against `src/lint/dependency-drift.ts`. `doctor` now surfaces `dependency-drift` / `regression-expansion` and no longer emits the scaffold stub.
+U-DEPD / U-REGEXP の oracle は `docs/test-design/harness/L7-dependency-drift-test-design.md` へ移した (issue #1720、doc-split baseline を上げないための分割)。
 
 ### §1.16.1e.1 U-DOMAIN (engine-swap domain / port / SQLite adapter)
 
