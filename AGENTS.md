@@ -16,10 +16,10 @@ Separation of responsibilities:
 (`CLAUDE.md` / `.claude/CLAUDE.md` と同一)。
 
 ただし成果物はそれぞれの規約に従う: コード/識別子/commit message は従来どおり、ファイル名は
-英語 (文字化け回避)、技術用語・コマンド・PLAN ID・パスは原語のまま埋め込んでよい (無理に和訳しない)。
+英語 (文字化け回避)、技術用語・コマンド・Issue ID・パスは原語のまま埋め込んでよい (無理に和訳しない)。
 
-**ドキュメント本文 (`docs/` 配下の PLAN / ADR / design / test-design / governance 等) は日本語で書く**
-(PO ルール、2026-06-30。Claude / Codex 両ランタイム共通)。コード・識別子・コマンド・PLAN ID・パスは
+**ドキュメント本文 (`docs/` 配下の ADR / design / test-design / governance 等) は日本語で書く**
+(PO ルール、2026-06-30。Claude / Codex 両ランタイム共通)。コード・識別子・コマンド・Issue ID・パスは
 英語/原語のまま。Windows 文字化けは UTF-8 化 (`.editorconfig` charset=utf-8 / `.gitattributes` eol=lf) と
 `readability` gate (mojibake fail-close) で防ぐ前提であり、**文字化け回避を理由に doc を英語化しない**。
 
@@ -29,8 +29,7 @@ PO への質問は **設計判断 (trade-off が実在する方式選択 / spec 
 進捗確認・実行許可・自力で確定できる事実は聞かない (可逆作業は進める)。聞き方は
 `docs/governance/design-decision-elicitation.md` の共通フォーマットに従う。Codex には
 構造化質問ツールが無いため、`## 設計判断依頼` 見出し + 選択肢表 (案 / 得るもの / 失うもの、
-推奨を先頭に「(推奨)」+ 理由 1 行) の markdown を出力して停止する。採択結果は設計文書
-(設計系 PLAN の場合) / PLAN の設計判断節 / ADR に記録する (skill: `skills/design-decision-elicitation.md`)。
+推奨を先頭に「(推奨)」+ 理由 1 行) の markdown を出力して停止する。採択結果は設計文書、GitHub Issue または ADR に記録する (skill: `skills/design-decision-elicitation.md`)。
 
 ## Core Reads
 
@@ -38,10 +37,9 @@ For work in this repository, read the repository-owned sources below and follow
 their workflow.
 
 - `CLAUDE.md` - **shared project rules for both runtimes** (rule placement
-  convention, PLAN filing rules, EOD close-out, model/effort routing). Rules that
+  convention, design and issue workflow, EOD close-out, model/effort routing). Rules that
   hold for both Codex and Claude live there and are not duplicated here, so this
-  file is not self-sufficient — read it (added 2026-07-28, after measuring that
-  the PLAN filing rules had never reached this adapter).
+  file is not self-sufficient — read it.
 - `docs/governance/ut-tdd-agent-harness-concept_v3.1.md` - concept for internal rollout
 - `docs/governance/ut-tdd-agent-harness-requirements_v1.2.md` - requirements and acceptance criteria
 - `docs/governance/ut-tdd-agent-harness-extraction-plan_v0.1.md` - extraction / cutover plan from the source snapshot
@@ -94,7 +92,7 @@ execute, verify, and make gate decisions in `codex-only` or `standalone` modes.
 ## UT-TDD Workflow
 
 - Forward: `plan` -> `pair-freeze` -> `implement` -> `trace-freeze` -> `review` -> `accept`
-- Reverse: `reverse <type> R0` -> `R1` -> `R2` -> `R3` -> `R4` -> Forward merge
+- Reverse: `R0` → `R1` → `R2` → `R3` → `R4` → Forward への合流 (`docs/process/modes/reverse.md`)
 - Scrum / PoC: `S0 backlog` -> `S1 plan` -> `S2 poc` -> `S3 verify` -> `S4 decide`
 - Additive change: preserve existing design and add deltas through `add-design`
   / `add-impl`.
@@ -118,8 +116,8 @@ Canonical commands:
 - Codex execution: `ut-tdd codex --role <role> --task "..."`
 - Claude prompt generation: `ut-tdd claude --role <role> --task "..."` (without `--execute` it is a dry run)
 - Team delegation: `ut-tdd team run --definition .ut-tdd/teams/<team>.yaml`
-- Task classification: `ut-tdd task classify --text "..."` / `ut-tdd task estimate --plan <path>`
-- Skill recommendation: `ut-tdd skill suggest --plan <path>`
+- Task classification: `ut-tdd task classify --text "..."`
+- Skill recommendation: `ut-tdd skill suggest --text "..."`
 - Review packet: `ut-tdd review --uncommitted`
 - Handover: `ut-tdd handover`
 - Status: `ut-tdd status`
@@ -302,56 +300,9 @@ calls.
   inspect its output and perform any Pack repo commit / push as a separate,
   human-reviewed step.
 
-## PLAN Rules
+## 設計と作業の正本
 
-PLAN 凍結 (新規起票・改訂・参照追加の停止、#1166) の規律は `CLAUDE.md` §PLAN Filing Rules (PLAN 凍結) を正本とする。
-
-These filing rules previously existed only in `.claude/CLAUDE.md`, so this
-runtime never received them (measured 2026-07-28: `route_signal` / `generates` /
-`plan_id` appeared 0 times in this file). They are shared workflow, not
-Claude-specific, and `rule-drift` now fail-closes if an adapter drops them.
-
-Before creating or updating PLAN files, inspect existing `docs/plans/` entries
-and prefer extending an existing PLAN over creating an overlapping one.
-
-- `plan_id` is unique and matches the filename.
-- `kind`, `layer`, `status`, `dependencies`, and `review_evidence` match the
-  current schema. Schedule steps show parallel or serial mode.
-- New PLANs carry a route certificate (`route_signal` + `route_mode`), and the
-  mode must allow the `kind` (SSoT: `src/schema/route-filing.ts` — e.g.
-  troubleshoot⇔incident, refactor⇔refactor, add-design/add-impl⇔add-feature).
-  `kind` = poc / recovery / troubleshoot also requires an `aim` agent slot.
-- `kind=add-impl` carries the required Reverse pairing (`backfill-pairing`
-  fail-closes without it). A conditional kind (troubleshoot / recovery /
-  refactor / retrofit) needs either a Reverse pair or
-  `backprop_decision: not_required` with a reason of at least 10 characters.
-  Rule of thumb: pure repair of existing spec → `not_required`; adding a new
-  contract (constraint, fail-close condition, physical parameter) → Reverse pair.
-- **Draft PLANs must not list already-existing files in `generates`.** A draft
-  PLAN whose declared deliverable already exists in the tree trips
-  `merged-plan-status`. Declare only the PLAN
-  doc itself at filing time; the implementing PR updates `generates` together
-  with the confirm (2026-07-28 lesson: PR #167 went red on exactly this).
-- `requires` may only point at confirmed / completed PLANs. A dependency on a
-  draft PLAN belongs in `references`, with the ordering expressed in Schedule.
-- A falsifiable safety / completeness claim in `review_evidence` or AC — "blast
-  radius 0", "no false positives", "N green" — must cite the test or command
-  that substantiates it. The mechanical substitute for a prose claim is a
-  real-repo regression test, never a sentence (`coding ≠ substance`,
-  PLAN-L7-89).
-- When a confirmed PLAN's claim is later found wrong, do not overwrite it: the
-  successor declares `supersedes: [<old plan_id>]` and the superseded PLAN gets
-  a correction note naming the successor (`doctor plan-supersession` requires
-  the back-reference).
-- New design-kind PLANs (`kind: design` / `add-design`) keep the contract body in
-  `docs/design/` (or `docs/test-design/`) and carry only the 4-item body. The
-  rule, per-document digest format, and example live in `CLAUDE.md`
-  §PLAN Filing Rules (設計系 PLAN の本文 4 項目, issue #648); do not restate them here.
-- PLAN files are LF-only.
-
-Verify with `ut-tdd plan lint` plus the targeted doctor checks
-(`plan-governance`, `merged-plan-status`, `plan-artifact-existence`, `backfill`)
-before pushing.
+設計文書と GitHub Issue の扱いは `CLAUDE.md` §設計と作業の正本 に従う。
 
 ## Editing Rules
 

@@ -11,15 +11,15 @@ typed_spec_phase_owner: L4
 ## 1. 状態
 
 本台帳は初期inventoryであり、163件を意図的に`pending_review`で開始する。target候補の存在は正しさの証明ではない。
-PLAN-L4-27に従い、意味契約、実装、test/evidenceを検収した後だけ状態を更新する。
+対応する設計文書、実装、テスト結果を照合した後に状態を更新する。
 
 ## 2. 自己適合評価
 
-| `item_id` | `source_ref` | `applicability_review` | `target_candidate` | `state` | `evidence_refs` | `debt_plan_id` |
+| `item_id` | `source_ref` | `applicability_review` | `target_candidate` | `state` | `evidence_refs` | `debt_issue` |
 |---|---|---|---|---|---|---|
 | `qa_checklist` | `ZIP-DOC-109` | `core_review` | `artifact_path:docs/process/gates.md` | `pending_review` |  |  |
 | `refactoring` | `ZIP-DOC-108` | `core_review` | `artifact_path:docs/process/modes/refactor.md` | `pending_review` |  |  |
-| `kikaku` | `ZIP-DOC-001` | `core_review` | `plan_alias:PLAN-L0-01-vmodel-harness-upgrade-charter` | `pending_review` |  |  |
+| `kikaku` | `ZIP-DOC-001` | `core_review` | `artifact_path:docs/design/harness/L0-planning/charter.md` | `pending_review` |  |  |
 | `youkyu` | `ZIP-DOC-002` | `core_review` | `artifact_family:docs/design/harness/L1-requirements/` | `pending_review` |  |  |
 | `poc` | `ZIP-DOC-053` | `core_review` | `artifact_family:docs/process/modes/` | `pending_review` |  |  |
 | `youken` | `ZIP-DOC-003` | `core_review` | `artifact_family:docs/design/harness/L3-functional/` | `pending_review` |  |  |
@@ -147,7 +147,7 @@ PLAN-L4-27に従い、意味契約、実装、test/evidenceを検収した後だ
 | `nfr_grid` | `ZIP-DOC-058` | `core_review` | `artifact_path:docs/design/harness/L1-requirements/nfr.md` | `pending_review` |  |  |
 | `perf_design` | `ZIP-DOC-069` | `core_review` | `artifact_path:docs/design/harness/L1-requirements/nfr.md` | `pending_review` |  |  |
 | `model_gov` | `ZIP-DOC-070` | `core_review` | `artifact_path:docs/design/harness/L4-basic-design/architecture.md` | `pending_review` |  |  |
-| `sys_plan` | `ZIP-DOC-071` | `core_review` | `plan_alias:PLAN-L0-01-vmodel-harness-upgrade-charter` | `pending_review` |  |  |
+| `sys_plan` | `ZIP-DOC-071` | `core_review` | `artifact_path:docs/design/harness/L0-planning/charter.md` | `pending_review` |  |  |
 | `fe_design` | `ZIP-DOC-072` | `profile_review` | `artifact_path:docs/design/harness/L4-basic-design/ui-standard.md` | `pending_review` |  |  |
 | `browser_responsive` | `ZIP-DOC-073` | `profile_review` | `target_slot:DOC-L4-UI-STANDARD` | `pending_review` |  |  |
 | `web_perf` | `ZIP-DOC-074` | `profile_review` | `target_slot:DOC-L4-UI-STANDARD` | `pending_review` |  |  |
@@ -185,5 +185,5 @@ PLAN-L4-27に従い、意味契約、実装、test/evidenceを検収した後だ
 
 - 163 item exactly once、初期状態は全件`pending_review`でありcoverage greenへ含めない。
 - `verified`にはdesign、implementation、test/evidenceの参照を必須とする。
-- `partial|gap`には存在するdebt PLAN IDを必須とする。
+- `partial|gap` の行は、残作業を追跡する GitHub Issue を参照する。
 - profile/非適用判断は理由とowner reviewを必須とする。

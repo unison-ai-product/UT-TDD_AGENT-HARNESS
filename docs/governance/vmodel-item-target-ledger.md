@@ -17,7 +17,7 @@ baseline_revision: checked-zip-2026-07-10
 
 ## 2. item target判断台帳
 
-来歴: 全163行はもともと`plan_id`に`PLAN-L7-417-source-disposition-profile-projection`を記録していた。PLAN-L7-417はアーカイブ対象(#1165)であり、`plan_id`は`vmodel_item_target_edges.plan_id`のFK(`plan_registry`)を介してPLAN撤去を阻むため、`—`(未設定)へ置換した(#1168)。現状は全行`pending_review`で`defer`行は無く、`plan_id`は判断に使われていない。
+全163行は `pending_review` である。延期を決めた行には Issue URL を記録し、同じ行に対象と判断理由を残す。
 
 | edge_id | item_id | 項目名 | category_id | source_ref | source_digest | target_status | target_kind | target_ref | 判断理由 | issue |
 |---|---|---|---|---|---|---|---|---|---|---|

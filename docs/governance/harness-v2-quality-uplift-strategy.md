@@ -83,7 +83,7 @@
 - L7-329 (L6 設計 6 本) = add-design (guardrail/github は PO 先行レビュー)
 - L7-331/334 (小粒) = impl のまま or add-impl 昇格
 - L7-335〜338 (gate 新設) = add-design + add-impl 対 (Reverse pairing 必須)
-- L7-332/333/339〜341 (リファクタ) = refactor (route_signal=code_smell、Codex 先例 L7-312/314 型)
+- L7-332/333/339〜341 (リファクタ) = refactor (当時の起票理由はコードスメル、Codex 先例 L7-312/314 型)
 
 ## §5 着手順の推奨 (PO への提案)
 
