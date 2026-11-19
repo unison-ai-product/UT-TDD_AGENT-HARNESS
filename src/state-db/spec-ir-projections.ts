@@ -740,7 +740,7 @@ export function parseDocumentScaleProfileEntries(
         detail_override: row.detail_override ?? "",
         status_override: row.status_override ?? "",
         reason: row.reason ?? "",
-        required_plan_id: row.required_plan_id || null,
+        required_plan_id: null,
         row_digest: profileEntryDigest(row),
         source_path: source.path,
         indexed_at: indexedAt,
