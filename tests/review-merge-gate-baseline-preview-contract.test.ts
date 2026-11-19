@@ -5,7 +5,6 @@ import {
   mkdtempSync,
   readFileSync,
   realpathSync,
-  rmSync,
   writeFileSync,
 } from "node:fs";
 import { basename, dirname, join } from "node:path";
@@ -24,6 +23,7 @@ import {
   TARGET,
   worktreePaths,
 } from "./fixtures/baseline-recompute-fixture.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 
 function startPreviewWorker(repoRoot: string, headSha: string, barrierRoot: string, id: string) {
   const entry = 'await import("./tests/fixtures/baseline-preview-concurrent-worker.ts");';
@@ -250,12 +250,12 @@ describe.sequential("review merge gate baseline preview contract (Issue #1559)",
       await Promise.all(workers.map(({ done }) => done));
       try {
         if (barrierRoot && existsSync(barrierRoot)) {
-          rmSync(barrierRoot, { recursive: true, force: true });
+          removeTestTree(barrierRoot);
         }
       } finally {
         try {
           if (previewParentCreated && previewParent && existsSync(previewParent)) {
-            rmSync(previewParent, { recursive: true, force: true });
+            removeTestTree(previewParent);
           }
         } finally {
           cleanFixture(testFixture);

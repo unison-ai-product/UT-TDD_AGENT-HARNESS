@@ -1,8 +1,9 @@
-import { cpSync, mkdtempSync, rmSync } from "node:fs";
+import { cpSync, mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { heavyAfterAll, heavyBeforeAll } from "./hook-bounds.ts";
 import { ensureTrackedProjectIdentity } from "./project-identity-fixture.ts";
+import { removeTestTree } from "./temp-tree.ts";
 
 /**
  * Seeds one tracked git repo (build) and hands out an identical, isolated copy
@@ -24,7 +25,7 @@ export function seedFixtureTemplate(repositoryIdentity: string, prefix: string) 
       return root;
     },
     dispose(): void {
-      if (template !== undefined) rmSync(template, { recursive: true, force: true });
+      if (template !== undefined) removeTestTree(template);
       template = undefined;
     },
   };
