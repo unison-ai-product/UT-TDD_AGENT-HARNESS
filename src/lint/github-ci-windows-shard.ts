@@ -1,4 +1,6 @@
 // Issue #1063: Windows leg の vitest 3 shard 契約 (function-spec.md「Windows leg の vitest 3 shard 契約」決定 2)。
+import { WINDOWS_SHARD_IDS } from "./windows-ci-shard-admission.ts";
+
 export const WINDOWS_SHARD_TEST_COMMAND = [
   "npm run test:windows -- --shard=$",
   "{{ matrix.shard }}",
@@ -6,7 +8,7 @@ export const WINDOWS_SHARD_TEST_COMMAND = [
 
 const WINDOWS_SHARD_STRATEGY = JSON.stringify({
   "fail-fast": false,
-  matrix: { shard: ["1/3", "2/3", "3/3"] },
+  matrix: { shard: WINDOWS_SHARD_IDS },
 });
 
 /** runtime leg の job キー集合と strategy の違反。strategy は harness-check-windows だけが持つ。 */
