@@ -99,7 +99,7 @@ oracle は workflow YAML、`package.json`、policy manifest をそれぞれ構�
 | `U-CISHARD-014` | 集約への入力で、claimed `doc` と再計算 `full` が食い違う、doc lane に Windows shard 証跡が存在する、または lane 証跡の run / attempt / HEAD が異なる | 集約は変更ファイルから独立に再計算し、分類と shard 証跡が矛盾する入力および別実行の lane 証跡を拒否する。判定不能・新種 path の `full` へのフォールバックは `tests/change-lane.test.ts` で確認済み。 |
 | `CANDIDATE-U-CISHARD-009` | `test:windows` の除外集合から 1 件落とす、shard 引数が runner で vitest へ透過されず全件実行になる | 実際の回帰 step が出力した3 shard の選択集合は、ファイル全体の skip を含めて独立算出した `W` と一致し、互いに素である。`admitWindowsShardPartition` が、除外の欠落による余剰と shard 引数欠落による重複を拒否する。 |
 | `U-CISHARD-010` | Linux leg に matrix を加えるか、回帰コマンドに `--shard` を足す | Linux leg は決定 3 の lane 証跡の生成・upload を追加し、既存の回帰コマンドと strategy 禁止を維持する。`tests/windows-ci-shard-red.test.ts` の候補004が Linux の strategy 追加を拒否し、対応する回帰テストがコマンドの shard 指定を `missing_runtime_leg` で拒否する。 |
-| `CANDIDATE-U-CISHARD-012` | PR HEAD に対応しない check、run、attempt、job、step、snapshot tree の差し替え、時刻欠落や自己申告の数値 | required `harness-check` の job から実行回を特定し、before の固定3 run と、PR HEAD に tree が一致する after の3回帰 step を照合する。照合済みの開始・終了からのみ before 秒数・中央値と after 全体経過秒数を導く。 |
+| `U-CISHARD-012` | PR HEAD に対応しない check、run、attempt、job、step、snapshot tree の差し替え、時刻欠落や自己申告の数値 | required `harness-check` の job から実行回を特定し、before の固定3 run と、PR HEAD に tree が一致する after の3回帰 step を照合する。照合済みの開始・終了からのみ before 秒数・中央値と after 全体経過秒数を導く。 |
 
 ### 必須チェック名の運用証跡 (旧候補011)
 
