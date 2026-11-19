@@ -12,8 +12,9 @@ updated: 2026-08-31
 
 ## Pair and boundary
 
-対になる契約は`docs/plans/PLAN-L7-526-windows-ci-single-snapshot.md`である。これはIssue #490の
-docs-only pair-freezeであり、実装PRがRed testを追加してGreen化するまでcandidateを正式`U-*`へ
+設計文書には #490 の契約が存在せず、`CANDIDATE-CI490-001`〜`CANDIDATE-CI490-008` の対の正本は
+[Issue #490](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/490) である。
+これは Issue #490 の docs-only pair-freeze であり、実装PRがRed testを追加してGreen化するまでcandidateを正式`U-*`へ
 昇格させない。既存 `test:fast` / `test:cli` の意味論をtest側で独立に読み、productionの新しい
 統合scriptやworkflowをそのまま期待値として再利用しない。
 
