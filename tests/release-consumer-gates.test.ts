@@ -1281,7 +1281,7 @@ describe("PR-G0 release-consumer gates", () => {
     expect(bundledGateMessage()).toContain("G1=consumer override");
   });
 
-  // U-RCDEV-027 (consumer-trace-gates.md §9.1): G1 / G3 / 欠落 slot は main に consumer 分岐が無く Red (it.fails)。
+  // U-RCDEV-027 (consumer-trace-gates.md §9.1): G1 / 欠落 slot は consumer 分岐で Green。G3 は consumer 分岐が未実装のため Red (it.fails、Refs #972)。
   // test-design の (v) を gate 別に分けたのは、G1 (#1314) と G3 の consumer 分岐が別 PR で入り、Red を個別に外すため。
   const coreGate = (
     gate: string,
@@ -1293,7 +1293,7 @@ describe("PR-G0 release-consumer gates", () => {
     return { result, messages: result.messages.join("\n") };
   };
 
-  it.fails("U-RCDEV-027: G1 passes on the consumer core documents with a free-prefix ID", () => {
+  it("U-RCDEV-027: G1 passes on the consumer core documents with a free-prefix ID", () => {
     const { result, messages } = coreGate("G1");
     expect(result).toMatchObject({ applicable: true, passed: true });
     expect(messages).toContain(
@@ -1319,7 +1319,7 @@ describe("PR-G0 release-consumer gates", () => {
     expect(results.flatMap((result) => result.messages).join("\n")).not.toContain("could not run");
   });
 
-  it.fails("U-RCDEV-027: reports the missing required consumer slot, not could-not-run", () => {
+  it("U-RCDEV-027: reports the missing required consumer slot, not could-not-run", () => {
     const { result, messages } = coreGate("G1", { omitRequiredSlot: true });
     expect(result).toMatchObject({ applicable: true, passed: false });
     expect(messages).toContain("missing_core_doc:DOC-L2-SCREEN");
