@@ -60,3 +60,12 @@ export function importedSourceModule(fromPath: string, specifier: string): strin
   if (resolvedParts.length === 2) return basename(resolvedParts[1], ".ts");
   return resolvedParts[1] ?? null;
 }
+
+/** L2 画面一覧表の必須列。G10 (right-arm-static) と consumer の G1-trace が共有する。 */
+export const REQUIRED_L2_SCREEN_COLUMNS = [
+  "画面ID",
+  "画面名称",
+  "概要",
+  "関連機能",
+  "ロール",
+] as const;

@@ -1,5 +1,5 @@
-import { REQUIRED_L2_SCREEN_COLUMNS, tableCells } from "../gate/right-arm-static.ts";
-import { fmValue } from "./shared.ts";
+import { tableCells } from "../gate/right-arm-static.ts";
+import { fmValue, REQUIRED_L2_SCREEN_COLUMNS } from "./shared.ts";
 
 export type ConsumerTraceReader = (relativePath: string) => string | undefined;
 

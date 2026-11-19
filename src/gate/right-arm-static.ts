@@ -6,7 +6,7 @@ import {
   validateG8IntegrationEvidenceManifest,
 } from "../lint/g8-integration-workflow.ts";
 import { readGateAssetText } from "../lint/gate-confirm.ts";
-import { fmValue } from "../lint/shared.ts";
+import { fmValue, REQUIRED_L2_SCREEN_COLUMNS } from "../lint/shared.ts";
 import { resolveAuthoringSourceAbsolutePath, resolveDesignRoot } from "../shared/design-root.ts";
 import { parseIssueUrl } from "../shared/issue-ref.ts";
 import { designLayerFromPath, loadPairDocs } from "../vmodel/lint.ts";
@@ -189,13 +189,6 @@ const REQUIRED_G14_HEADINGS = [
   "#### 第6章 技術的負債管理",
   "#### 第7章 サポート・SLA保守",
   "#### 第8章 運用引継ぎ(ハンドオーバー)",
-] as const;
-export const REQUIRED_L2_SCREEN_COLUMNS = [
-  "画面ID",
-  "画面名称",
-  "概要",
-  "関連機能",
-  "ロール",
 ] as const;
 function isRecord(value: unknown): value is JsonRecord {
   return typeof value === "object" && value !== null && !Array.isArray(value);
