@@ -18,13 +18,6 @@ import {
   evaluateStaticGate,
   readCoverageSummary,
 } from "../src/gate/static.ts";
-import {
-  analyzeG1Trace,
-  g1TraceMessages,
-  g1TraceOk,
-  loadG1TraceDocs,
-} from "../src/lint/g1-trace.ts";
-import { analyzeG3Trace, g3TraceMessages, g3TraceOk, loadDocs } from "../src/lint/g3-trace.ts";
 import { loadGateConfirmDocs, parseGateStatuses } from "../src/lint/gate-confirm.ts";
 import { buildNodeGeneration } from "../src/runtime/node-bootstrap.ts";
 import type { PairDoc } from "../src/vmodel/lint.ts";
@@ -86,70 +79,51 @@ function writeFixtureDoc(root: string, path: string, content: string): void {
   writeFileSync(target, content, "utf8");
 }
 
+// consumer の core 文書の表 (docs/design/harness/L6-function-design/consumer-trace-gates.md §5 / §6)。
+// 表の header 直後に実行を足す。ID は prefix 自由で、harness 形式の ID と harness 専用文書は置かない。
+const CONSUMER_CORE_TABLE_ROWS: Record<string, { header: string; rows: string[] }> = {
+  "docs/design/L1-requirements/functional-requirements.md": {
+    header: "| 要求ID | 要求名 | 要求内容 | 優先度 | 展開先 |",
+    rows: ["| REQ-001 | Consumer goal | Consumer function | P0 | SC-001, FN-001 |"],
+  },
+  "docs/design/L2-screen/screen-list.md": {
+    header: "| 画面ID | 画面名称 | 概要 | 関連機能 | ロール |",
+    rows: ["| SC-001 | Consumer screen | Consumer overview | REQ-001, FN-001 | user |"],
+  },
+  "docs/design/L3-functional/functional-requirements.md": {
+    header: "| 機能ID | 機能名 | 概要 | ロール | トレース元 |",
+    rows: ["| FN-001 | Consumer function | Consumer overview | user | REQ-001 |"],
+  },
+};
+
+function withTableRows(content: string, header: string, rows: string[]): string {
+  const lines = content.split("\n");
+  const at = lines.findIndex((line) => line.trim() === header);
+  if (at < 0) throw new Error(`consumer fixture header not found: ${header}`);
+  // header の次の区切り行の後ろ (placeholder 行の前) に行を挿入する。
+  lines.splice(at + 2, 0, ...rows);
+  return lines.join("\n");
+}
+
 function writeConsumerGateFixture(
   root: string,
   options: { omitRequiredSlot?: boolean; omitWireframe?: boolean } = {},
 ): void {
   const repositoryRoot = process.cwd();
   for (const [templatePath, targetPath] of CONSUMER_TEMPLATE_SLOTS) {
+    // consumer の core slot (DOC-L2-SCREEN) を欠いた fixture。
+    if (options.omitRequiredSlot && targetPath === "docs/design/L2-screen/screen-list.md") continue;
     const template = readFileSync(join(repositoryRoot, templatePath), "utf8");
     const testDesign = targetPath.startsWith("docs/test-design/");
     const pairArtifact = testDesign ? "docs/design/" : "docs/test-design/L7-unit-test-design.md";
-    const adapted = template
+    let adapted = template
       .replace(/^status: .*$/m, "status: confirmed")
       .replace(/^pair_artifact: .*$/m, `pair_artifact: ${pairArtifact}`)
       .replace(/^plan: .*$/m, "plan: docs/plans/PLAN-CONSUMER-01.md");
+    const core = CONSUMER_CORE_TABLE_ROWS[targetPath];
+    if (core) adapted = withTableRows(adapted, core.header, core.rows);
     writeFixtureDoc(root, targetPath, adapted);
   }
-
-  const l1Template = readFileSync(
-    join(repositoryRoot, "docs/templates/vmodel/L1-requirements.md"),
-    "utf8",
-  );
-  const l3Template = readFileSync(
-    join(repositoryRoot, "docs/templates/vmodel/L3-functional-requirements.md"),
-    "utf8",
-  );
-  const l1Adapt = () =>
-    l1Template
-      .replace(/^status: .*$/m, "status: confirmed")
-      .replace(/^pair_artifact: .*$/m, `pair_artifact: docs/test-design/L7-unit-test-design.md`)
-      .replace(/^plan: .*$/m, "plan: docs/plans/PLAN-CONSUMER-01.md");
-  const l3Adapt = () =>
-    l3Template
-      .replace(/^status: .*$/m, "status: confirmed")
-      .replace(/^pair_artifact: .*$/m, "pair_artifact: docs/test-design/L7-unit-test-design.md")
-      .replace(/^plan: .*$/m, "plan: docs/plans/PLAN-CONSUMER-01.md");
-  if (!options.omitRequiredSlot) {
-    writeFixtureDoc(
-      root,
-      "docs/design/L1-requirements/business-requirements.md",
-      `${l1Adapt()}\n| **BR-01** | Consumer goal |\n`,
-    );
-  }
-  writeFixtureDoc(
-    root,
-    "docs/design/L1-requirements/functional-requirements.md",
-    `${l1Adapt()}\n| **FR-L1-01** | Consumer function | P0 |\n`,
-  );
-  writeFixtureDoc(
-    root,
-    "docs/design/L1-requirements/screen-requirements.md",
-    `${l1Adapt()}\n\n## §1 画面一覧\nPM-01\n## §2 次\n### §5.1 業務要求トレース\n| **BR-01** | PM-01 |\n### §5.3 機能要求トレース\n| **FR-L1-01** | PM-01 |\n### §5.4 次\n### §5.5 画面トレース\n| **PM-01** | BR-01 / FR-L1-01 |\n### §5.6 次\n`,
-  );
-  for (const path of ["business-detail.md", "nfr-grade.md"]) {
-    let content = l3Adapt();
-    if (path === "business-detail.md") content += "\n";
-    else {
-      content += `\n${[1, 2, 3, 4, 5, 6, 7, 8, 11, 12, 13, 14, 15, 16, 17].map((n) => `| **NFR-${String(n).padStart(2, "0")}** | covered |`).join("\n")}\n`;
-    }
-    writeFixtureDoc(root, `docs/design/L3-functional/${path}`, content);
-  }
-  writeFixtureDoc(
-    root,
-    "docs/design/L3-functional/functional-requirements.md",
-    `${l3Adapt()}\n### FR-01: Consumer function\n#### AC-FR-01-01\n`,
-  );
 
   const l10 = readFileSync(
     join(repositoryRoot, "docs/templates/vmodel/L10-ux-validation.md"),
@@ -169,7 +143,9 @@ function writeConsumerGateFixture(
   writeFixtureDoc(
     root,
     "docs/test-design/L12-acceptance-test-design.md",
-    `${l12}\n| **AT-FR-01-01** | Consumer acceptance |\n`,
+    withTableRows(l12, "| テストID | 分類 | テスト項目 | 検証内容/手順 | 期待結果 | トレース元 |", [
+      "| AT-001 | 受入 | Consumer acceptance | 手順 | 結果 | REQ-001, SC-001, FN-001 |",
+    ]),
   );
   if (!options.omitWireframe) {
     writeFixtureDoc(
@@ -1297,32 +1273,53 @@ describe("PR-G0 release-consumer gates", () => {
     expect(bundledGateMessage()).toContain("G1=consumer override");
   });
 
-  it("U-RCDEV-027: evaluates consumer G1-G6 fixture with non-empty bidirectional traces", () => {
+  // U-RCDEV-027 (v) の G1 / G3 は consumer 分岐 (consumer-trace-gates.md §3.2 / §9.1) で判定する。
+  // main に consumer 分岐が無い間は Red。G1 は #1314 の Green、G3 は G3 の consumer 分岐の Green で `it` へ戻す。
+  it.fails("U-RCDEV-027: G1 passes on the consumer core documents with a free-prefix ID", () => {
     const root = fixtureRoot();
     writeConsumerGateFixture(root);
 
-    const g1Trace = analyzeG1Trace(loadG1TraceDocs(root));
-    const g3Trace = analyzeG3Trace(loadDocs(root));
-    expect(g1TraceOk(g1Trace)).toBe(true);
-    expect(g1Trace.totals.business).toBeGreaterThan(0);
-    expect(g1Trace.totals.screen).toBeGreaterThan(0);
-    expect(g1Trace.totals.p0Fr).toBeGreaterThan(0);
-    expect(g3TraceOk(g3Trace)).toBe(true);
-    expect(g3Trace.totals).toMatchObject({ frL1: 1, l3Fr: 1, ac: 1, at: 1, l1Nfr: 15, l3Nfr: 15 });
+    const result = evaluateStaticGate({ gate: "G1", repoRoot: root });
+    const messages = result.messages.join("\n");
 
-    const results = ["G1", "G2", "G3", "G4", "G5", "G6"].map((gate) =>
+    expect(result).toMatchObject({ applicable: true, passed: true });
+    expect(messages).toContain(
+      "g1-trace - OK (consumer column trace: requirements=1, screens=1, functions=1)",
+    );
+    expect(messages).not.toContain("could not run");
+    expect(messages).not.toContain("required doc not created");
+  });
+
+  it.fails("U-RCDEV-027: G3 passes on the consumer core documents without harness-only docs", () => {
+    const root = fixtureRoot();
+    writeConsumerGateFixture(root);
+
+    const result = evaluateStaticGate({ gate: "G3", repoRoot: root });
+    const messages = result.messages.join("\n");
+
+    expect(result).toMatchObject({ applicable: true, passed: true });
+    expect(messages).toContain(
+      "g3-trace - OK (consumer column trace: requirements=1, functions=1, tests=1)",
+    );
+    expect(messages).not.toContain("could not run");
+    expect(messages).not.toContain("required doc not created");
+  });
+
+  it("U-RCDEV-027: G2 and G4-G6 stay applicable and pass on the consumer fixture", () => {
+    const root = fixtureRoot();
+    writeConsumerGateFixture(root);
+
+    const results = ["G2", "G4", "G5", "G6"].map((gate) =>
       evaluateStaticGate({ gate, repoRoot: root }),
     );
     expect(results.map(({ gate, applicable }) => [gate, applicable])).toEqual(
-      ["G1", "G2", "G3", "G4", "G5", "G6"].map((gate) => [gate, true]),
+      ["G2", "G4", "G5", "G6"].map((gate) => [gate, true]),
     );
     expect(results.every((result) => result.passed)).toBe(true);
     expect(results.flatMap((result) => result.messages).join("\n")).not.toContain("could not run");
-    expect(g1TraceMessages(g1Trace).join("\n")).toContain("business=1");
-    expect(g3TraceMessages(g3Trace).join("\n")).toContain("frL1=1, l3Fr=1, ac=1, at=1");
   });
 
-  it("U-RCDEV-027: reports the missing required consumer slot, not could-not-run", () => {
+  it.fails("U-RCDEV-027: reports the missing required consumer slot, not could-not-run", () => {
     const root = fixtureRoot();
     writeConsumerGateFixture(root, { omitRequiredSlot: true });
 
@@ -1330,9 +1327,8 @@ describe("PR-G0 release-consumer gates", () => {
     const messages = result.messages.join("\n");
 
     expect(result).toMatchObject({ applicable: true, passed: false });
-    expect(messages).toContain(
-      "required doc not created: docs/design/harness/L1-requirements/business-requirements.md",
-    );
+    expect(messages).toContain("missing_core_doc:DOC-L2-SCREEN");
+    expect(messages).not.toContain("business-requirements");
     expect(messages).not.toContain("could not run");
   });
 
