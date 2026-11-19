@@ -135,7 +135,8 @@ function readCoreDoc(doc: CoreDoc, reader: ConsumerTraceReader, violations: stri
   return read;
 }
 
-function checkRefs(doc: CoreDoc, read: ReadDoc, targets: Set<string>, violations: string[]): void {
+function checkRefs(doc: CoreDoc, read: ReadDoc, targets: Set<string>): string[] {
+  const violations: string[] = [];
   for (const row of read.rows) {
     if (row.rawTokens === 0) {
       violations.push(`missing_reference:${doc.docType}:${row.id}:${doc.refColumn}`);
@@ -146,6 +147,7 @@ function checkRefs(doc: CoreDoc, read: ReadDoc, targets: Set<string>, violations
       }
     }
   }
+  return violations;
 }
 
 /** consumer 分岐の G1-trace (§3.2、§6〜§8、§14)。画面 ID は L2 表の宣言の集合から取る。 */
@@ -163,8 +165,8 @@ export function analyzeConsumerG1Trace(reader: ConsumerTraceReader): ConsumerTra
       found.push(`empty_required_set:${doc.docType}:${doc.idColumn}`);
     }
   }
-  checkRefs(L1, l1, new Set([...l2.ids, ...l3.ids]), found);
-  checkRefs(L2, l2, new Set([...l1.ids, ...l3.ids]), found);
+  found.push(...checkRefs(L1, l1, new Set([...l2.ids, ...l3.ids])));
+  found.push(...checkRefs(L2, l2, new Set([...l1.ids, ...l3.ids])));
   const violations = [...new Set(found)].sort();
   const totals = { requirements: l1.ids.size, screens: l2.ids.size, functions: l3.ids.size };
   const ok = violations.length === 0;
