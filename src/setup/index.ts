@@ -26,6 +26,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { basename, dirname, join, relative, resolve, sep } from "node:path";
+import { GH_COMMAND_TIMEOUT_MS, ghCommandEnv } from "../github/gh-command.ts";
 import { ensureDir } from "../shared/fs.ts";
 import {
   applyBranchProtection as applyBranchProtectionImpl,
@@ -629,7 +630,7 @@ const MERGEABLE_ADAPTER_DOCS = new Set(["AGENTS.md", "CLAUDE.md", join(".claude"
  * gh 不在/未認証/権限不足 → unknown/null。token は読まない (gh 認証状態に委譲)。
  */
 export function detectProjectScale(deps: SetupDeps): ProjectScale {
-  const hasCodeowners = readNonEmpty(deps, join(deps.repoRoot, CODEOWNERS_TARGET));
+  const hasCodeowners = Boolean(deps.readText(join(deps.repoRoot, CODEOWNERS_TARGET))?.trim());
   let ownerType: ProjectScale["ownerType"] = "unknown";
   let collaborators: number | null = null;
   let hasBranchProtection: boolean | null = null;
@@ -1128,16 +1129,13 @@ function makeRuntimeTreeWritable(path: string): void {
 
 // ── node 実 deps (real I/O / gh / confirm / templates) ──────────────────────
 
-function readNonEmpty(deps: SetupDeps, path: string): boolean {
-  const t = deps.readText(path);
-  return t !== null && t.trim().length > 0;
-}
-
 /** gh CLI 実行。失敗 (不在/未認証/非0) は {ok:false}。token は扱わない (gh 認証に委譲)。 */
 export function nodeGh(args: string[]): { ok: boolean; stdout: string } {
   try {
     const stdout = execFileSync("gh", args, {
       encoding: "utf8",
+      timeout: GH_COMMAND_TIMEOUT_MS,
+      env: ghCommandEnv(process.env),
       stdio: ["ignore", "pipe", "ignore"],
     });
     return { ok: true, stdout };

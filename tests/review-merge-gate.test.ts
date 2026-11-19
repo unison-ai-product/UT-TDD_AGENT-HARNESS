@@ -972,8 +972,8 @@ describe("D2-B PR merge gate", () => {
     expect(result.headSha).toBe(head);
     expect(result.evaluatedHeadSha).toBe(otherHead);
     const calls: unknown[][] = [];
-    const mergeExec = ((...args: unknown[]) => {
-      calls.push(args);
+    const mergeExec = ((command: unknown, args: unknown, options: { stdio: unknown }) => {
+      calls.push([command, args, { stdio: options.stdio }]);
       return "";
     }) as never;
     createGhPrMergePorts({ execFileSync: mergeExec }).mergePullRequest(465, head);

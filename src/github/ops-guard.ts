@@ -1,4 +1,4 @@
-import { releaseArtifactFileNames } from "../setup/distribution.ts";
+import { releaseArtifactFileNames } from "./release-artifact-names.ts";
 
 export type GithubOpsGuardCode =
   | "poc-no-main-merge"
