@@ -9,7 +9,6 @@ import {
   readdirSync,
   readFileSync,
   rmdirSync,
-  rmSync,
   statSync,
   symlinkSync,
   unlinkSync,
@@ -19,6 +18,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { buildNodeGeneration } from "../src/runtime/node-bootstrap.ts";
 import { describe, expect, heavyAfterAll, heavyBeforeAll, it } from "./support/hook-bounds.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 
 interface RequiredTemplateExpectation {
   readonly docTypeId: string;
@@ -166,7 +166,7 @@ function restoreWritable(path: string): void {
 
 function removeTestDirectory(path: string): void {
   restoreWritable(path);
-  rmSync(path, { recursive: true, force: true });
+  removeTestTree(path);
 }
 
 function createFixtureLink(target: string, path: string, kind: "file" | "directory"): void {
