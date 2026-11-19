@@ -122,6 +122,10 @@ function writeConsumerGateFixture(
       .replace(/^plan: .*$/m, "plan: docs/plans/PLAN-CONSUMER-01.md");
     const core = CONSUMER_CORE_TABLE_ROWS[targetPath];
     if (core) adapted = withTableRows(adapted, core.header, core.rows);
+    // G11 / G12 / G13 (U-RCDEV-032〜034) の oracle が参照する L3 の FR-01 / AC-FR-01-01。G1 / G3 の consumer 分岐は読まない。
+    if (targetPath === "docs/design/L3-functional/functional-requirements.md") {
+      adapted += "\n### FR-01: Consumer function\n#### AC-FR-01-01\n";
+    }
     writeFixtureDoc(root, targetPath, adapted);
   }
 
@@ -145,7 +149,7 @@ function writeConsumerGateFixture(
     "docs/test-design/L12-acceptance-test-design.md",
     withTableRows(l12, "| テストID | 分類 | テスト項目 | 検証内容/手順 | 期待結果 | トレース元 |", [
       "| AT-001 | 受入 | Consumer acceptance | 手順 | 結果 | REQ-001, SC-001, FN-001 |",
-    ]),
+    ]) + "\n| **AT-FR-01-01** | Consumer acceptance |\n",
   );
   if (!options.omitWireframe) {
     writeFixtureDoc(
