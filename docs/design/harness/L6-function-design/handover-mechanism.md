@@ -4,7 +4,7 @@ artifact_type: design_doc
 status: confirmed
 sub_doc: function-spec
 artifact_role: topic_handover_mechanism
-pair_artifact: docs/test-design/harness/L7-unit-test-design.md
+pair_artifact: docs/test-design/harness/L7-handover-test-design.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 next_pair_freeze: L7
 issue: 1360
@@ -14,7 +14,7 @@ issue: 1360
 
 <!--
 ① 設計 (L6 機能設計) — handover 記録機構 (session-log PLAN digest → handover 生成 + plan_id 活性化)。
-PLAN: PLAN-L6-06-handover-mechanism (add-design)。pair (③): docs/test-design/harness/L7-unit-test-design.md §1.8 U-HOVER を対応先とする。
+PLAN: PLAN-L6-06-handover-mechanism (add-design)。pair (③): docs/test-design/harness/L7-handover-test-design.md §1.8 U-HOVER を対応先とする。
 実装 (②): src/handover/index.ts + src/cli (ut-tdd handover / ut-tdd plan use) + src/runtime/session-log.ts 限定 amendment (PLAN-L7-04-handover-mechanism, add-impl, 後続)。
 土台思想: src/runtime/session-log.ts (純関数分離 / sanitize / never-throw) + src/setup/index.ts (deps 注入 / dry-run 非破壊 / state SSoT) を踏襲。
 上位整合: 要件 §6.8.5 (PLAN 完了時 handover 必須) / §6.8.6 (進捗 3 層 = state DB + log + handover、digest=結節点) / §5.3 pre-push stale (後段 Reverse で back-fill + CURRENT.md/.json 表記不整合是正)。
@@ -279,7 +279,7 @@ telemetry lifecycle に責務を絞る。
 
 ## §3 ③ 単体テスト設計とのペア (G6 pair freeze 対象)
 
-generates pair: `docs/test-design/harness/L7-unit-test-design.md` §1.8 **U-HOVER-001〜002 / 005 / 007** + **U-HOVER-011〜012** (IMP-078 gap) + **U-HOVER-013** (A-138 ITEM-4 同日累積 slim) + **U-HOVER-014** (PLAN-L7-83 累積上限化 `boundSameDayEntries`) + §1.5 **U-SLOG-006b** (generic git HEAD `headCommit` capture) + §1.8.1 **U-MEMORY-001〜004 / U-MEMORY-019** (共有 memory write/load/projection/secret/surface/service境界) + **U-SCHEDULE-LIVE-004** (固定4段 digest)。旧 `U-SCHEDULE-LIVE-002` の工程 live state は L7 の検証履歴を参照する。本書 §2.3 の generic pointer / stale / orchestration 関数 + §2.7 の品質増分関数 (checkHandoverBypass/countHandoverEntries/latestSessionId) + §2.6 の slimSummary / boundSameDayEntries + §2.9 の memory surface + §2.10 の live digest を被覆。marker stale / reconcile と PLAN schedule selection / session digest classification は S7 で退役する。trace は G7 で双方向凍結。
+generates pair: `docs/test-design/harness/L7-handover-test-design.md` §1.8 **U-HOVER-001〜002 / 005 / 007** + **U-HOVER-011〜012** (IMP-078 gap)。検証履歴は **U-HOVER-013** (A-138 ITEM-4 同日累積 slim) と **U-HOVER-014** (PLAN-L7-83 累積上限化 `boundSameDayEntries`) を参照する。関連 oracle は `docs/test-design/harness/L7-unit-test-design.md` §1.5 **U-SLOG-006b** (generic git HEAD `headCommit` capture) + §1.8.1 **U-MEMORY-001〜004 / U-MEMORY-019** (共有 memory write/load/projection/secret/surface/service境界) + **U-SCHEDULE-LIVE-004** (固定4段 digest)。旧 `U-SCHEDULE-LIVE-002` の工程 live state は L7 の検証履歴を参照する。本書 §2.3 の generic pointer / stale / orchestration 関数 + §2.7 の品質増分関数 (checkHandoverBypass/countHandoverEntries/latestSessionId) + §2.6 の slimSummary / boundSameDayEntries + §2.9 の memory surface + §2.10 の live digest を被覆。marker stale / reconcile と PLAN schedule selection / session digest classification は S7 で退役する。trace は G7 で双方向凍結。
 
 ## §4 carry / 次工程
 
