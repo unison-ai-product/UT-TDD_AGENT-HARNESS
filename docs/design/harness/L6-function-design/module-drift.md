@@ -4,7 +4,7 @@ artifact_type: design_doc
 status: confirmed
 sub_doc: function-spec
 artifact_role: topic_module_drift
-pair_artifact: docs/test-design/harness/L7-unit-test-design.md
+pair_artifact: docs/test-design/harness/L7-module-drift-test-design.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 next_pair_freeze: L7
 created: 2026-06-08
@@ -15,7 +15,7 @@ issue: 1360
 
 # module-drift lint — 機能設計 (① / PLAN-L6-15、IMP-075)
 
-> **V-pair**: `pair_artifact = L7-unit-test-design.md §1.16` (L6↔L7)。DbC 契約から単体テスト oracle (U-MDRIFT-*) を導出。
+> **V-pair**: `pair_artifact = L7-module-drift-test-design.md §1.16` (L6↔L7)。DbC 契約から単体テスト oracle (U-MDRIFT-*) を導出。
 
 ## §0 スコープ
 
