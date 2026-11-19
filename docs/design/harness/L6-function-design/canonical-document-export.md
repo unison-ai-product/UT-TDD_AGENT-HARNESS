@@ -4,7 +4,7 @@ artifact_type: design_doc
 status: confirmed
 sub_doc: function-spec
 artifact_role: topic_canonical_document_export
-pair_artifact: docs/test-design/harness/L7-unit-test-design.md
+pair_artifact: docs/test-design/harness/L7-canonical-document-export-test-design.md
 next_pair_freeze: L7
 issue: 1032
 ---
