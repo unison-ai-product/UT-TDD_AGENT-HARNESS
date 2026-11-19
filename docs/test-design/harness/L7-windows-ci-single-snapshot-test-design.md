@@ -12,7 +12,7 @@ updated: 2026-08-31
 
 ## Pair and boundary
 
-対になる契約は`docs/plans/PLAN-L7-526-windows-ci-single-snapshot.md`である。これはIssue #490の
+対になる契約は `docs/design/harness/L6-function-design/function-spec.md` の Windows CI 節である。これは Issue #490 の
 docs-only pair-freezeであり、実装PRがRed testを追加してGreen化するまでcandidateを正式`U-*`へ
 昇格させない。既存 `test:fast` / `test:cli` の意味論をtest側で独立に読み、productionの新しい
 統合scriptやworkflowをそのまま期待値として再利用しない。
@@ -23,14 +23,13 @@ docs-only pair-freezeであり、実装PRがRed testを追加してGreen化す�
 
 ## Canonical set model
 
-`F`は現行`test:fast`のrunner argv（#1430 の後は 7 exclude）、`C`は現行`test:cli`の明示3 path、期待集合は
-`W = F ∪ C`である。`test:fast`と`test:cli`の両方を入力として残し、pathはstable normalized
-repo-relative formへしてdeduplicateする。`W`は次の4 excludeを持つ1 runner argvへ正規化される。#1430 で`tests/review-green-command-projection.test.ts`をテストごと退役させるので、それまでの5 excludeから外す (退役の PR で`test:fast`・`test:db`・`test:windows`と同時に外す)。
+`F` は検証する checkout の `test:fast` の選択集合、`C` は同 checkout の `test:cli` の明示3ファイル、期待集合は
+`W = F ∪ C` である。`test:fast` と `test:cli` から独立算出し、repo 相対の POSIX path に正規化して重複を除く。
+現行の `test:windows` は次の3件を除外する。
 
 ```text
 tests/db-projection-ingestion.test.ts
 tests/doctor.test.ts
-tests/drive-db-registration.test.ts
 tests/projection-writer.test.ts
 ```
 
@@ -42,7 +41,7 @@ CLI/hook実発火 (`cli-surface`、`distribution-acceptance`、`runtime-hook-ent
 | Candidate | Stimulus / mutation | 独立oracle |
 | --- | --- | --- |
 | `CANDIDATE-CI490-001` | `package.json`から`test:fast`を削除・空化・別runnerへ変更。別caseで`test:cli`を同様に変更 | 両scriptが存在し、各scriptから独立に`F`/`C`を再構成できること。片方の欠落・縮退はfail-closeでRed。 |
-| `CANDIDATE-CI490-002` | `test:windows`の4 excludeから1つ削除、未知pathを1つ追加、またはCLI 3 pathのうち1つをexcludeへ戻す | 新scriptの選択集合が独立算出した`F ∪ C`とbyte-stable normalized setで一致すること。各1軸mutationをRed。 |
+| `CANDIDATE-CI490-002` | `test:windows` の除外から1つ削除、未知pathを1つ追加、またはCLI 3 pathのうち1つをexcludeへ戻す | 新scriptの選択集合が独立算出した`F ∪ C`とbyte-stable normalized setで一致すること。各1軸mutationをRed。 |
 | `CANDIDATE-CI490-003` | Windows full laneを`npm run test:fast` + `npm run test:cli`の2 stepへ戻す、統合scriptを2回呼ぶ、または2本のrunner argvをworkflowへ戻す | Windows runtime step manifestのsnapshot runner invocation countが正常系でexactly 1。`test:fast`/`test:cli`の直接呼出し、2本目、raw `vitest`はRed。 |
 | `CANDIDATE-CI490-004` | `test:windows`をraw `vitest`、detachedでないrunner、linked/shared clone、junction、hardlink、cache経路へ置換 | invocationは`node scripts/run-vitest-snapshot.ts`を通り、sealed execution/reference/fingerprint lifecycleを保持する。既存snapshot custody oracleと結合し、bypassを受理しない。 |
 | `CANDIDATE-CI490-005` | Windows stepからtypecheckまたはtoolchain doctorを削除・lane条件を変更。Linux legを削除・full testをskip | `src/lint/github-ci-policy.ts`のordered manifest、full/doc条件、doctor/typecheck presenceが違反を返す。Windows classify不能はfullへ倒れる。 |
@@ -97,7 +96,7 @@ oracle は workflow YAML、`package.json`、policy manifest をそれぞれ構�
 | `CANDIDATE-U-CISHARD-008` | full lane で shard 件数 `[10,0,10]` (合計は正、1 つが 0)、全 shard 0 件、負数・非整数の件数を成功扱いにする | 各 shard の実行ファイル数がそれぞれ正の整数であることを要求し、混在 0 を含む全 mutant を拒否する。 |
 | `CANDIDATE-U-CISHARD-013` | (正常系) doc lane の run で Windows shard 証跡が無く、`lane=doc` 証跡が同一 run / attempt / HEAD に束縛され、再計算 lane も `doc` | 集約は `source-doc-lane` doctor の成功を前提に、同じ実行に属する lane 証跡を照合し、Windows shard 証跡の省略を許す。分類単体は `tests/change-lane.test.ts` で確認済み。 |
 | `CANDIDATE-U-CISHARD-014` | 集約への入力で、claimed `doc` と再計算 `full` が食い違う、doc lane に Windows shard 証跡が存在する、または lane 証跡の run / attempt / HEAD が異なる | 集約は変更ファイルから独立に再計算し、分類と shard 証跡が矛盾する入力および別実行の lane 証跡を拒否する。判定不能・新種 path の `full` へのフォールバックは `tests/change-lane.test.ts` で確認済み。 |
-| `CANDIDATE-U-CISHARD-009` | `test:windows` の除外集合から 1 件落とす、shard 引数が runner で vitest へ透過されず全件実行になる | `vitest list --shard=i/3` (i=1..3) の和集合が独立算出した `W` と一致し、shard 同士が互いに素であること。runner が `--shard` を透過する (全件実行へ退行しない) こと。 |
+| `CANDIDATE-U-CISHARD-009` | `test:windows` の除外集合から 1 件落とす、shard 引数が runner で vitest へ透過されず全件実行になる | 実際の回帰 step が出力した3 shard の選択集合は、ファイル全体の skip を含めて独立算出した `W` と一致し、互いに素である。`admitWindowsShardPartition` が、除外の欠落による余剰と shard 引数欠落による重複を拒否する。 |
 | `U-CISHARD-010` | Linux leg に matrix を加えるか、回帰コマンドに `--shard` を足す | Linux leg は決定 3 の lane 証跡の生成・upload を追加し、既存の回帰コマンドと strategy 禁止を維持する。`tests/windows-ci-shard-red.test.ts` の候補004が Linux の strategy 追加を拒否し、対応する回帰テストがコマンドの shard 指定を `missing_runtime_leg` で拒否する。 |
 | `CANDIDATE-U-CISHARD-012` | 実装 PR が before/after 計測を未計測値・別 HEAD で埋める | before は main run `38694546173` / `38692344625` / `38690207164`、after は実装 PR exact HEAD の required run に束縛し、run / job / step identity 欠落と prose だけの短縮主張を拒否する (`CANDIDATE-CI490-008` と同形式)。 |
 

@@ -2676,16 +2676,16 @@ script は過去 attempt 照合に、純粋関数は証跡の判定に `classify
 
 ### 決定 5: shard の分割単位と等価性
 
-- 分割は vitest 組み込みの `--shard=i/3` を使う。ファイルを手で割り当てる方式は、テスト追加のたびに
-  割当表を保守する必要があり、drift 源になるため採らない。
-- `W` (既存の `test:windows` の選択集合、PLAN-L7-526) の 3 shard の和は `W` に一致し、shard 同士は
-  互いに素である。これは `vitest list --shard=i/3` の結果で機械的に確かめる。
-- snapshot runner (`scripts/run-vitest-snapshot.ts`) は shard ごとに別 runner 上で 1 回ずつ起動する。
-  sealed execution snapshot、foreign-write fence、reference fingerprint、test-repository-isolation と
-  global-setup の fence は shard ごとに従来どおり成立する (runner を共有しない)。`--shard` は runner の
-  引数として vitest へ透過される必要があり、透過されず全件実行になる退行は Red にする。
-- shard の偏りは vitest の既定 sequencer 次第である。最大ファイル (`memory-legacy-archive` 約 489 秒) は
-  Issue #1063 項目 1 で縮める前提とし、本契約は偏りの補正 (手動分割) を含めない。
+- Vitest 組み込みの `--shard=i/3` を使う。手動の割当表は持たず、sealed snapshot runner は従来の fence を保ち、別 runner で shard ごとに 1 回実行する。
+- 009 の検証入口は `node scripts/windows-ci-shard-partition.mjs --run <id> --attempt <n>`。同じ実行回の成功した full lane の Windows 3 job の外側 Vitest 結果を読む。
+- 各 job の回帰 step から同じ `snapshot source: git commit` を取得し、default reporter の結果行から選択済みファイルを列挙する。
+  ファイル全体の skip も含める。step・source・一覧の欠落、または `Test Files` の総数と結果行の件数が異なる場合は拒否する。
+- 期待集合 W はその checkout の追跡テストから `test:fast` の除外を引き、`test:cli` の明示ファイルを戻して作る。`test:windows` の argv と shard の観測値は期待側に使わない。
+- 純粋関数 `admitWindowsShardPartition(expectedFiles, selections)` (`src/github/windows-ci-shard-partition.ts`) に、期待 path 配列と `{shard, files}` の配列を渡す。path は repo 相対の POSIX 表記で比較する。
+- shard が 1/3〜3/3 各 1 個、パスが各 1 回、和集合が W と一致する場合だけ成功する。
+  結果は `{ok, missing, unexpected, duplicates, invalidShards}`。CLI は JSON を出力し、失敗・証跡不明は非 0。
+- 別の `vitest list` 実行は設けず、本番と同じ runner の結果で `--shard` の透過と全件実行への退行を確かめる。決定 3 の `file_count` は assertion 実行済みの件数なので、選択集合の代用にしない。
+- shard の偏りは既定 sequencer に委ねる。最大ファイルの最適化は #1063 項目 1 で扱う。
 
 ### 決定 6: Linux は shard しない
 
