@@ -10,8 +10,6 @@ import {
 // Issue #1063: Windows leg の vitest 3 shard 契約 (function-spec.md「Windows leg の vitest 3 shard 契約」)。
 // 各 oracle は「契約に沿った 3 shard workflow (COMPLIANT)」に変異を 1 つだけ足し、
 // 変異が policy の判定を変えること (COMPLIANT に無い violation が増えること) を 1 条件として確かめる。
-// 今日の policy は strategy を持つ Windows leg 自体を拒否するため、「違反が 1 件以上ある」だけでは
-// 別条件で偶然通る。そこで COMPLIANT との差分で見る。
 
 type Step = Record<string, unknown> & { name?: string; run?: string; if?: string };
 type Job = Record<string, unknown> & { steps?: Step[]; strategy?: Record<string, unknown> };
@@ -21,7 +19,7 @@ const WINDOWS = "harness-check-windows";
 const TEST_STEP = "test — Windows full 回帰 (vitest run, windows leg)";
 const EXPR_OPEN = "$" + "{{ ";
 const EXPR_CLOSE = " }}";
-const SHARD_COMMAND = `npm run test:windows -- --shard=${EXPR_OPEN}matrix.shard${EXPR_CLOSE}`;
+const SHARD_ARGUMENT = `--shard=${EXPR_OPEN}matrix.shard${EXPR_CLOSE}`;
 const SOURCE = readFileSync(".github/workflows/harness-check.yml", "utf8");
 
 function baseWorkflow(): Workflow {
@@ -46,8 +44,13 @@ function compliantWorkflow(): Workflow {
     "fail-fast": false,
     matrix: { shard: ["1/3", "2/3", "3/3"] },
   };
-  testStep(workflow).run = SHARD_COMMAND;
   return workflow;
+}
+
+function changeTestCommand(workflow: Workflow, previous: string, replacement: string): void {
+  const step = testStep(workflow);
+  if (!step.run?.includes(previous)) throw new Error(`fixture must contain ${previous}`);
+  step.run = step.run.replace(previous, replacement);
 }
 
 function mutated(mutator: (workflow: Workflow) => unknown): Workflow {
@@ -155,20 +158,14 @@ describe("Issue #1063 Windows leg 3 shard contract (登録 + Red)", () => {
   });
 
   redMutants("CANDIDATE-U-CISHARD-003", [
-    ["test step without --shard", (w) => (testStep(w).run = "npm run test:windows")],
-    ["fixed --shard=1/3", (w) => (testStep(w).run = "npm run test:windows -- --shard=1/3")],
-    [
-      "--shard with a space separator",
-      (w) => (testStep(w).run = SHARD_COMMAND.replace("--shard=", "--shard ")),
-    ],
+    ["test step without --shard", (w) => changeTestCommand(w, SHARD_ARGUMENT, "")],
+    ["fixed --shard=1/3", (w) => changeTestCommand(w, SHARD_ARGUMENT, "--shard=1/3")],
+    ["--shard with a space separator", (w) => changeTestCommand(w, "--shard=", "--shard ")],
   ]);
 
   it("CANDIDATE-U-CISHARD-003: keeps rejecting raw vitest in place of the sealed runner", () => {
     const added = addedBy(
-      mutated(
-        (w) =>
-          (testStep(w).run = SHARD_COMMAND.replace("npm run test:windows --", "npx vitest run")),
-      ),
+      mutated((w) => changeTestCommand(w, "npm run test:windows --", "npx vitest run")),
     );
     expect(added.length).toBeGreaterThan(0);
   });
@@ -207,6 +204,24 @@ describe("Issue #1063 Windows leg 3 shard contract (登録 + Red)", () => {
           reason === "missing_runtime_leg" && detail.includes("harness-check-linux.steps"),
       ),
     ).toBe(true);
+  });
+
+  it("requires the Windows evidence upload on every full shard", () => {
+    const workflow = mutated((candidate) => {
+      const windows = job(candidate, WINDOWS);
+      windows.steps = windows.steps?.filter(({ name }) => name !== "upload Windows shard evidence");
+    });
+    expect(addedReasons(workflow)).toContain("missing_runtime_leg");
+  });
+
+  it("requires the aggregate to download shard evidence before admission", () => {
+    const workflow = mutated((candidate) => {
+      const steps = job(candidate, "harness-check").steps ?? [];
+      const download = steps.findIndex(({ name }) => name === "download Windows shard evidence");
+      if (download < 0) throw new Error("fixture must contain the Windows evidence download");
+      steps.push(...steps.splice(download, 1));
+    });
+    expect(addedReasons(workflow)).toContain("missing_aggregate_result_guard");
   });
 
   describe("CANDIDATE-U-CISHARD-005: aggregate keeps requiring every runtime leg", () => {
