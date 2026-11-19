@@ -32,7 +32,7 @@ runner は Vitest の option 定義を introspect せず、次の明示的な集
 |---|---|---|
 | 値を取る | `-t`, `--testNamePattern` | `--option value` と `--option=value` の両方を受理する |
 | 値を取る | `--reporter`, `--maxWorkers`, `--shard` | `--option value` と `--option=value` の両方を受理する |
-| 値を取る | `--exclude`, `--pool` | `--option value` と `--option=value` の両方を受理する |
+| 値を取る | `--exclude`, `--pool`, `--outputFile` | `--option value` と `--option=value` の両方を受理する |
 | 値を取らない | `--browser` | bare token のみ受理する |
 
 `--minWorkers` は Vitest 4 で CLI option から削除された (固定版 4.1.12 は `Unknown option --minWorkers` で拒否する)。このため受理集合に含めず、runner は §2.5 の未知 option として自ら拒否する (`--minWorkers=1` と `--minWorkers 1` の両形式)。Vitest 4 に同じ意図の option は無く、worker 数の上限は `--maxWorkers` だけで指定する。拒否の理由は §2.5 の既存の `unknown-option` であり、別の拒否経路は設けない。
@@ -48,6 +48,7 @@ runner の help として `--help` または `-h` を指定したときは、usa
 ### 2.3 test path と separator
 
 - `-` で始まらない argv token は test path として扱い、token をそのまま Vitest に渡す。
+- 出力先を指定する `--outputFile` は最初の `--` より前に置く。後ろに置いた token はそのまま渡り、固定 Vitest では位置引数として扱われ、出力先は設定されない。
 - 最初の `--` と、それより後ろの全 token は wrapper の allowlist 判定対象外とし、`--` 自体を含めて順序・内容を変えず Vitest に渡す。これは allowlist に無い Vitest option を指定する明示的な escape hatch である。
 
 ### 2.4 batch-only の watch 拒否
@@ -62,7 +63,7 @@ snapshot runner は batch-only であり、`-w`、`--watch`、`--watch=<value>` 
 
 ## 3. 許可集合の根拠と更新条件
 
-現行 caller の確認対象は package scripts (`--exclude`)、Windows shard (`--shard`)、test-design の直接実行 (`-t` / `--reporter` / `--pool`)、verification profile (`--browser`) である。利用中の option が漏れている場合、または Vitest を更新して option が削除・改名された場合は、その caller と値の有無を確認してから本書と L7 の明示集合へ追加する。Vitest の内部 option 定義を自動的に許可集合へ取り込まない。
+現行 caller の確認対象は package scripts (`--exclude`)、Windows shard (`--shard` / `--outputFile`、Issue #1063)、test-design の直接実行 (`-t` / `--reporter` / `--pool`)、verification profile (`--browser`) である。利用中の option が漏れている場合、または Vitest を更新して option が削除・改名された場合は、その caller と値の有無を確認してから本書と L7 の明示集合へ追加する。Vitest の内部 option 定義を自動的に許可集合へ取り込まない。
 
 ## 4. 不変条件
 
