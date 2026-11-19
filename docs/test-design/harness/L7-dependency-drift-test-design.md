@@ -25,6 +25,7 @@ issue: 1720
 | U-DEPD-002 | disallowed dependency | reverse dependency such as runtime -> lint returns `disallowed-module-dependency` finding. |
 | U-DEPD-003 | cycle detection | cyclic module imports return deterministic `module-cycle` finding. |
 | U-DEPD-005 | full real repository module graph | `lint`は`DbIntrospectionPort`を所有しstate-db実装へ逆依存しない。全module cycleが0。 |
+| U-DEPD-006 | runtime dependency declaration (Issue #1720) | `src/`が実行時importする`typescript`は`dependencies`に`5.9.3`で宣言され、`devDependencies`には残らない。 |
 | U-REGEXP-001 | `expandRegressionScope` affected modules | changed source module expands to direct tests and reverse-dependent module tests. |
 | U-REGEXP-002 | missing coverage | changed source module without direct test coverage returns `missing-regression-test` finding instead of silent fallback. |
 
