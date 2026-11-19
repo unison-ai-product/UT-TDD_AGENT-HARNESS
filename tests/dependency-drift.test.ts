@@ -290,7 +290,9 @@ describe("runtime dependency declaration (Issue #1720)", () => {
       runtimeImport.test(doc.text),
     );
     expect(importers.length).toBeGreaterThan(0);
-    const pkg = JSON.parse(loadNodeBanDocuments().toolchain.packageJson) as {
+    const packageJson = loadNodeBanDocuments().toolchain.packageJson;
+    expect(packageJson).not.toBeNull();
+    const pkg = JSON.parse(packageJson ?? "") as {
       dependencies?: Record<string, string>;
       devDependencies?: Record<string, string>;
     };
