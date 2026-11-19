@@ -172,14 +172,21 @@ describe("consumer runtime release base64 validation on large input (Issue #1565
   it("U-PACKRT-016: keeps the canonical round-trip and strict format rules", () => {
     const valid = paddedControlManifest(4_000);
     expect(controlManifestError(valid)).toBeUndefined();
-    for (const bad of [
-      `${valid.slice(0, -1)}`,
-      `${valid}=`,
-      valid.replace(/.$/, "-"),
-      `${valid.slice(0, -2)}AB`,
-    ]) {
+    // 正当な control manifest (3001 byte、末尾 `==`) の最後の有効文字だけを、未使用の下位 4 bit だけが違う文字に変える。
+    // decode した bytes は同じで、正規表現も通るが、round-trip (re-encode) が元の文字列に戻らない。
+    const json = JSON.stringify(manifest);
+    const padded = Buffer.from(json + " ".repeat(3001 - json.length), "utf8").toString("base64");
+    expect(padded.endsWith("==")).toBe(true);
+    const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    const nonCanonical = `${padded.slice(0, -3)}${alphabet[alphabet.indexOf(padded.at(-3) as string) ^ 1]}==`;
+    expect(Buffer.from(nonCanonical, "base64").equals(Buffer.from(padded, "base64"))).toBe(true);
+    expect(Buffer.from(nonCanonical, "base64").toString("base64")).not.toBe(nonCanonical);
+    for (const bad of [nonCanonical, valid.slice(0, -1), `${valid}=`, valid.replace(/.$/, "-")]) {
       const error = controlManifestError(bad);
       expect(error, bad.slice(-6)).toBeInstanceOf(ConsumerRuntimeReleaseValidationError);
+      expect((error as Error).message, bad.slice(-6)).toContain(
+        "control_manifest_base64_base64_invalid",
+      );
     }
   });
 
