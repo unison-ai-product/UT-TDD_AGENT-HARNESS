@@ -4,7 +4,7 @@ artifact_type: design_doc
 status: confirmed
 sub_doc: function-spec
 artifact_role: topic_agent_slots
-pair_artifact: docs/test-design/harness/L7-unit-test-design.md
+pair_artifact: docs/test-design/harness/L7-agent-slots-test-design.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 next_pair_freeze: L7
 issue: 1360
@@ -12,7 +12,7 @@ issue: 1360
 <!--
 ① 設計 (L6 機能設計) — agent-slots 機構 (subagent/team-member の fire→release 状態記録 + 並列上限助言 + stale 検知)。
 PLAN: IMP-050 (Layer-2 オーケストレーション移植、add-feature)。
-pair (③) は docs/test-design/harness/L7-unit-test-design.md §1.9 U-SLOT / §1.10 U-TEAM を指す。
+pair (③) は docs/test-design/harness/L7-agent-slots-test-design.md §1.9 U-SLOT / §1.10 U-TEAM を指す。
 実装 (②): src/runtime/agent-slots.ts + src/schema/team.ts。
 参照元: vendor source snapshot の agent slot / team runner 挙動。
 ADR-001 準拠: 旧 Python コードを port せず TypeScript (Node) で全面再実装。SQLite 非採用。
@@ -165,7 +165,7 @@ Type/pseudocode の内容:
 
 ## §3 テスト指針 (V-pair)
 
-generates pair: `docs/test-design/harness/L7-unit-test-design.md` **§1.9 U-SLOT-001〜008** / **§1.10 U-TEAM-001〜003**。本書 §2.3 の全関数を被覆 (孤児 0)。trace は G7 で双方向凍結。
+generates pair: `docs/test-design/harness/L7-agent-slots-test-design.md` **§1.9 U-SLOT-001〜008** / **§1.10 U-TEAM-001〜003**。本書 §2.3 の全関数を被覆 (孤児 0)。trace は G7 で双方向凍結。
 
 | U-ID | 対象関数 | 観点 |
 |------|----------|------|
