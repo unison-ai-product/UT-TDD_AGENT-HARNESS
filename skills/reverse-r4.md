@@ -85,7 +85,9 @@ RGC after R4.
 
 ## Output artifacts
 
-Record  as Reverse evidence and link it in the Issue:
+Save `R4-gap-register.yaml` in `.ut-tdd/reverse/<issue-number>/`. Use the
+Reverse Issue number for `<issue-number>` and record the artifact by
+filename in that Issue.
 
 **R4-gap-register.yaml**:
 ```yaml

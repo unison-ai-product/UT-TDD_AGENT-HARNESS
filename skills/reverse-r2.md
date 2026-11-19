@@ -74,7 +74,10 @@ All 5 reverse types pass through R2 (no skip).
 
 ## Output artifacts
 
-Record  as Reverse evidence and link it in the Issue:
+Save `R2-as-is-design.md` and, when `has_existing_tests=true`,
+`R2-as-is-test-design.md` in `.ut-tdd/reverse/<issue-number>/`. Use the
+Reverse Issue number for `<issue-number>` and record both applicable
+artifacts by filename in that Issue.
 
 **R2-as-is-design.md** -- human-readable design reconstruction:
 - Module list with responsibilities.
