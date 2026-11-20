@@ -70,7 +70,7 @@ PO の必達条件 (2026-11-20): 新しいプロジェクトや新しい PC で�
 ## 5. DbC
 
 - **Pre**: 入力は §4 の option だけ。C1 は Pack checkout の HEAD で作業木は clean。C1 の tree に `release/manifest.yaml` が無い。`--previous` の blob が妥当な v2 manifest。`--tag` は canary の tag。
-- **Post (成功)**: Pack checkout に `release/manifest.yaml` が 1 file だけ増え、C1 → C2 の差分は `release/manifest.yaml` の追加 1 件になる。内容は `parsePublicationManifest` を通り、`channels.stable` と既存の `releases` (順序と record の bytes) が `--previous` と同一で、`channels.canary` は新しい release を指す。
+- **Post (成功)**: Pack checkout に `release/manifest.yaml` が 1 file だけ増え、C1 → C2 の差分は `release/manifest.yaml` の追加 1 件になる。内容は `parsePublicationManifest` を通り、`channels.stable` と既存の `releases` (順序と、各 record の値と key の順序) が `--previous` と同一で、表記の bytes は §3 の 7 の `stringify` で書き直すので一致を求めない (previous は compact JSON、C2 は block YAML のことがある)。`channels.canary` は新しい release を指す。
 - **Post (失敗)**: Pack checkout の working tree、index、`release/` の有無、`.git` の ref が呼び出し前と同一 (何も書かない)。書き込みは検証が全て済んだ最後の 1 回だけで、`release/` の作成も書き込み直前に行う。書き込みの段で失敗したとき (一時ファイルの open・書き込み・close、link のどれでも) は、**この呼び出しが作ったものだけ**を片付ける。片付けるのは、作った一時ファイルと、この呼び出しが新しく作って空のまま残った `release/` である。呼び出し前から在った `release/`・`release/manifest.yaml`・ほかの実行が作ったファイルには触れない。片付けにも失敗したときは `c2_write_failed` の detail に残った path を出す。
 - **Invariant**: 決定性。同じ (C1 の Git object、`--previous` の blob、`--tag` の channel) からは、時刻・環境・実行回数に依らず byte 同一の出力になる。`git add` / `commit` / `push` / tag 作成 / network を行わない。`release/` の外へ書かない (package の `consumer_runtime_release_diff_outside_release` と同じ境界)。`--previous` と C1 の内容を変更しない。既存の `release/manifest.yaml` は上書きしない (`wx`)。
 
