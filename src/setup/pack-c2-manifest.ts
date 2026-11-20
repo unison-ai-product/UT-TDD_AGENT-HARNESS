@@ -307,8 +307,9 @@ async function generateC2Manifest(options: C2Options) {
   if (!tag.includes("-canary.")) return failure("c2_tag_not_canary");
   const repository = realDirectory(resolvePackRoot(options.packRoot));
   if (!repository) return failure("c2_option_invalid");
-  const topLevel = checkoutGit(repository, "rev-parse", "--show-toplevel")?.toString().trimEnd();
-  if (!topLevel || realDirectory(topLevel) !== repository) return failure("c2_option_invalid");
+  // An empty Git prefix identifies the checkout root regardless of Windows drive casing.
+  const location = checkoutGit(repository, "rev-parse", "--is-inside-work-tree", "--show-prefix");
+  if (location?.toString().trimEnd() !== "true") return failure("c2_option_invalid");
   if (checkoutGit(repository, "rev-parse", "HEAD")?.toString().trim() !== c1)
     return failure("c2_c1_not_head");
   const dirty = checkoutGit(repository, "status", "--porcelain=v1", "--untracked-files=all");

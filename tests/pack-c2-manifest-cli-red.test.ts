@@ -204,7 +204,15 @@ describe("Pack C2 manifest command candidate oracles", () => {
       scenario.previous ?? previous,
     ];
     if (!scenario.text) args.push("--json");
-    if (scenario.rootOption) args.push("--pack-root", root);
+    if (scenario.rootOption) {
+      const packRoot =
+        process.platform === "win32"
+          ? git(root, "rev-parse", "--show-toplevel").replace(/^[a-z](?=:)/i, (drive) =>
+              drive === drive.toUpperCase() ? drive.toLowerCase() : drive.toUpperCase(),
+            )
+          : root;
+      args.push("--pack-root", packRoot);
+    }
     const trace = join(scratch, `${scenario.key}-git.jsonl`);
     const recordGit = scenario.key === "success" || scenario.key === "tag-exists";
     const result = run(
