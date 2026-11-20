@@ -113,7 +113,8 @@ function readCoreDoc(doc: CoreDoc, reader: ConsumerTraceReader, violations: stri
     violations.push(`missing_core_doc:${doc.docType}`);
     return none;
   }
-  if (fmValue(content, "doc_type_id") !== doc.docType) {
+  const frontmatter = content.match(/^---\r?\n([\s\S]*?)\r?\n---/)?.[1] ?? "";
+  if (fmValue(frontmatter, "doc_type_id") !== doc.docType) {
     violations.push(`doc_type_mismatch:${doc.docType}`);
     return none;
   }

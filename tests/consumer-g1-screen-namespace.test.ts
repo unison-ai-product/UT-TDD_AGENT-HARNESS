@@ -29,7 +29,7 @@ vi.mock("node:fs", async (importOriginal) => {
   };
 });
 
-import { existsSync, mkdtempSync, readFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { evaluateStaticGate } from "../src/gate/static.ts";
@@ -401,6 +401,17 @@ describe("consumer G1 screen namespace (issue #1273)", () => {
       "invalid_range:DOC-L1-REQUIREMENTS:SC-0〜9007199254740990",
       "invalid_range:DOC-L1-REQUIREMENTS:SC-0〜9007199254740991",
     ]);
+  });
+
+  it("doc_type_id outside the frontmatter does not identify the document (Sol r3, #1855)", () => {
+    const root = consumerFixture();
+    const l2 = join(root, "docs/design/L2-screen/screen-list.md");
+    const body = readFileSync(l2, "utf8").replace(/^doc_type_id:.*\r?\n/m, "");
+    writeFileSync(l2, `${body}\n${"```"}yaml\ndoc_type_id: DOC-L2-SCREEN\n${"```"}\n`);
+    const { result } = pureAnalyze(root);
+
+    expect(result.ok).toBe(false);
+    expect(result.violations).toContain("doc_type_mismatch:DOC-L2-SCREEN");
   });
 
   it("CANDIDATE-U-CTRACE-054: endpoints beyond the safe integer range are invalid_range", () => {
