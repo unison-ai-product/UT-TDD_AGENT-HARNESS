@@ -15,7 +15,7 @@ issue: 1894
 
 対になる設計文書は `docs/design/harness/L6-function-design/pack-publication-audit-wiring.md` である。共有の
 `docs/test-design/harness/L7-unit-test-design.md` には行を足さない (shared file の直列化規律)。本書が
-oracle の正本であり、`CANDIDATE-U-PKAUD-001`〜`012` を候補として宣言する。昇格・実装は別 PR である。
+oracle の正本であり、`CANDIDATE-U-PKAUD-001`〜`013` を候補として宣言する。昇格・実装は別 PR である。
 Red は `it.fails` で先に入れ、Green で `it` に戻す (設計書保護 gate)。
 
 ## 2. 候補の oracle
@@ -28,7 +28,7 @@ Red は `it.fails` で先に入れ、Green で `it` に戻す (設計書保護 g
 | `CANDIDATE-U-PKAUD-001` | 正しい C1 (artifact + ビルド入力複数) と C2 (`release/manifest.yaml` だけを足す) で `package` を実行する | 成功。JSON の `publicationAudit.status === "attested"`、`c1` / `c2` は source binding の SHA と一致、`entryCount` / `buildInputCount` が実数と一致する。5 asset が書かれる | 照合を呼ばない / 結果を出力へ出さない |
 | `CANDIDATE-U-PKAUD-002` | 001 の C1 に、期待集合に無い `100644` の file (私有の file を模した path、`release/` の外) を 1 件だけ足し、C2 はその C1 の上に `release/manifest.yaml` だけを足す (C2 は extra を継承する。`diff_outside_release` の検査は通る。`release/` の中の extra は 003 が扱う) | exit 1、`error: pack_publication_audit_commit_entries_mismatch`、`details` に `{ category: "extra", path }`。`installDependencies` は 0 回、`outDir` は空 | 照合を asset の書き込みの後ろに置く / extra を許す (期待を「C2 の全 entry」へ緩める) |
 | `CANDIDATE-U-PKAUD-003` | 001 の C2 に `release/manifest.yaml` 以外の `release/notes.md` を足す (`release/` の外は変えない。既存の `diff_outside_release` の検査は通る) | 002 と同じ拒否 (`extra`、path は `release/notes.md`)。asset は作られない | 期待集合へ `release/` 配下の glob を足す |
-| `CANDIDATE-U-PKAUD-004` | C1 の artifact の blob を 1 byte だけ変える (manifest の `contentDigest` は元のまま。path / mode は同じ) | `error: pack_publication_audit_plan_commit_entry_mismatch` (設計 §3.3: 計画の構築が先に落とす)。観測は呼ばれない。asset は作られない | bytes の照合を path だけにする / 計画の失敗を握りつぶして観測へ進む |
+| `CANDIDATE-U-PKAUD-004` | C1 の artifact のうち、変換を通らない file (`package.json` 以外) の blob を 1 byte だけ変える (manifest の `contentDigest` は元のまま。path / mode は同じ。C2 は C1 の上に `release/manifest.yaml` だけを足す) | `error: pack_publication_audit_plan_commit_entry_mismatch` (設計 §3.3: 計画の構築が先に落とす)。観測は呼ばれない。asset は作られない | bytes の照合を path だけにする / 計画の失敗を握りつぶして観測へ進む |
 | `CANDIDATE-U-PKAUD-005` | C1 の artifact 1 件の mode を manifest の `mode` と変える (`100644` と `100755`。bytes は同一) | 004 と同じ拒否 (mode の不一致)。asset は作られない | mode を照合から外す |
 | `CANDIDATE-U-PKAUD-006` | C1 に mode `120000` の entry を 1 件足し (path は期待集合の外、`release/` の外)、C2 はそれを継承する (002 と同じ作り方) | `pack_publication_audit_commit_entries_mismatch`。観測が entry を作らずに拒否する (`details` の分類は `extra`) | `120000` を `100644` として扱う / 観測で捨てて素通りさせる |
 | `CANDIDATE-U-PKAUD-007` | C2 の tree の object を読めなくする (loose object を削除した clone。SHA の解決は先に済む) | exit 1、`error: pack_publication_audit_observation_unavailable`、`publicationAudit.status === "indeterminate"`。asset は作られず、再試行しない | `indeterminate` を通す / 観測の例外を握りつぶして `attested` にする |
@@ -37,6 +37,7 @@ Red は `it.fails` で先に入れ、Green で `it` に戻す (設計書保護 g
 | `CANDIDATE-U-PKAUD-010` | 002 (C1 に extra を足して C2 が継承する作り方) の失敗の JSON の形 | `ok: false`、`error`、`publicationAudit.{status,c1,c2,details}` のみ。`details` は `category` (4 分類) と `path` だけで、bytes・digest・file の内容・secret の文字列を含まない | 失敗の出力へ bytes / digest を出す |
 | `CANDIDATE-U-PKAUD-011` | SHA の束縛: 観測が `git` に渡す引数を、`git` を包む spy で記録する | `ls-tree` の revision 引数は固定した C2 の 40 桁 SHA だけ。`cat-file --batch` の標準入力は、その `ls-tree` の出力から取った blob の OID だけで、行ごとに 1 対 1 に対応する。spy は argv と標準入力の両方を記録し、この対応を確かめる。どちらにも tag・branch・`HEAD` の名前を含まない。照合の後に tag を別の commit へ動かしても結果は変わらない | 観測が ref 名を再解決する (照合と公開の SHA がずれる) |
 | `CANDIDATE-U-PKAUD-012` | **L12 受入 (手動 + 記録)**: canary.7 と同じ形の C1 (ビルド入力 52 件を含む) と C2 で、`docs/reference/pack-release-runbook.md` の手順だけで `package` を実行する。次に C1 へ私有の file を足した C2 でも実行する | 前者は `attested` で 5 asset の sha256 が独立の再計算と一致する。後者は `commit_entries_mismatch` で止まり、asset が無い。結果を #1894 / #1879 のコメントに残す | 手順書に照合の読み方が無い / 人の手で照合を飛ばせる経路が残る |
+| `CANDIDATE-U-PKAUD-013` | 正規化で消える変異: C1 の `package.json` の末尾に空白を 1 byte 足す (manifest の `contentDigest` は元のまま。C2 は C1 の上に `release/manifest.yaml` だけを足す) | 計画の構築は通り (materializer の `JSON.parse` / `JSON.stringify` で差分が消える)、観測が生の blob の違いを捕まえて `error: pack_publication_audit_commit_entries_mismatch`、`details` に `{ category: "content", path: "package.json" }`。`installDependencies` は 0 回、`outDir` は空 | 観測で読んだ bytes を正規化してから比べる / 期待を C1 の生の blob から作る (sealed の bytes と比べない) |
 
 ## 3. 範囲と実行
 

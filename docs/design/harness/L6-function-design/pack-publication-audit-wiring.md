@@ -9,7 +9,7 @@ related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 issue: 1894
 ---
 
-> **L6 contract marker**: `observePackPublication({ repoRoot, c1, c2 }) => PackPublicationObservation` (固定した C2 の 40 桁 SHA の Git tree を `git ls-tree -r -z` と `git cat-file` だけで読み、path / mode / size / digest / bytes の entry の列を返す。`src/setup/pack-publication-observe.ts` に置く) と、`packageConsumerRuntimeRelease` (`src/cli/distribution.ts`) の中での `buildPackPublicationStagingPlan` → `auditPackPublication` の呼び出しは unit-test-granularity contract である (未実装の目標契約。関数名は実装で変えてよいが、契約の意味は変えない)。pre: `c1` / `c2` は `resolveConsumerRuntimeReleaseSourceBinding` が返した SHA で、観測は ref 名・index・working tree を読まない。post: `status: "attested"` のときだけ `package` は asset を書き出す。`partial_publication` / `indeterminate` / 計画の preflight 失敗では、`installDependencies` も asset の stage も実行せず、`outDir` は空のままである。invariant: 公開の照合は `package` を通らずに済ませる経路を持たない (canary.7 の再発の防止)。oracle は `docs/test-design/harness/L7-pack-publication-audit-wiring-test-design.md` の `CANDIDATE-U-PKAUD-001`〜`012` が固定する (正式 ID `U-PKAUD-*` への昇格は、src を含まない昇格 PR で行う)。
+> **L6 contract marker**: `observePackPublication({ repoRoot, c1, c2 }) => PackPublicationObservation` (固定した C2 の 40 桁 SHA の Git tree を `git ls-tree -r -z` と `git cat-file` だけで読み、path / mode / size / digest / bytes の entry の列を返す。`src/setup/pack-publication-observe.ts` に置く) と、`packageConsumerRuntimeRelease` (`src/cli/distribution.ts`) の中での `buildPackPublicationStagingPlan` → `auditPackPublication` の呼び出しは unit-test-granularity contract である (未実装の目標契約。関数名は実装で変えてよいが、契約の意味は変えない)。pre: `c1` / `c2` は `resolveConsumerRuntimeReleaseSourceBinding` が返した SHA で、観測は ref 名・index・working tree を読まない。post: `status: "attested"` のときだけ `package` は asset を書き出す。`partial_publication` / `indeterminate` / 計画の preflight 失敗では、`installDependencies` も asset の stage も実行せず、`outDir` は空のままである。invariant: 公開の照合は `package` を通らずに済ませる経路を持たない (canary.7 の再発の防止)。oracle は `docs/test-design/harness/L7-pack-publication-audit-wiring-test-design.md` の `CANDIDATE-U-PKAUD-001`〜`013` が固定する (正式 ID `U-PKAUD-*` への昇格は、src を含まない昇格 PR で行う)。
 
 # 公開前の Pack の照合を `package` に配線する方式 (Issue #1894)
 
@@ -44,7 +44,8 @@ C2 の生成 (#1885、`pack-c2-manifest.md`。PR #1886 が未 merge) とは独�
    計画には、C2 の `release/manifest.yaml` の bytes (`git cat-file blob <C2>:release/manifest.yaml`) と、そこから解釈した manifest、`tarResolution.entries` から作る sealed entry を渡す。
    ビルド入力は、C1 の tree を `selectPackBuildInputs` に通した `paths` の **C1 の blob** を `{ path, bytes }` で `packCommitEntries` に渡す (照合側は選択しない)。期待 bytes を C1 の blob とすることは、`pack-build-inputs.md` §5.1 の「`package` の照合での期待 bytes」で改訂済みである (source commit との一致はこの照合の保証に含めない。§9)。
    計画の構築が `invalid_manifest` / `v1_read_only` / `unknown_release` / `control_manifest_mismatch` / `commit_entry_mismatch` などで失敗したときは、観測に進まず止める (§4)。
-   したがって、C1 の blob が manifest の `contentDigest` / `mode` と違う場合は、計画の構築の段階の `commit_entry_mismatch` で落ちる。
+   計画は C1 から materializer (`resolveReleaseArtifacts`) が作った sealed entry を使うので、C1 の blob の変異のうち**正規化で消えないもの** (変換を通らない artifact の bytes など) は、計画の構築の段階の `commit_entry_mismatch` で落ちる。
+   **正規化で消える変異** (`package.json` の末尾の空白など、`transformCleanDistributionArtifact` の `JSON.parse` / `JSON.stringify` で元に戻るもの) は計画を通る。これは観測が捕まえる: 観測は C2 の tree の生の blob を読み、期待 (sealed の bytes) と違うので `commit_entries_mismatch` になる (§4、`details` は `content`)。どちらの経路でも asset は作られない。
 4. **観測 (`observePackPublication`)**: 固定した **C2 の SHA** の tree を、次の 2 つの Git コマンドだけで読む。
    - `git ls-tree -r -z --full-tree <C2>`: 全 entry の mode と blob oid と path。
    - `git cat-file --batch`: 各 blob の bytes。標準入力には、直前の `ls-tree` の出力から取った blob の OID だけを 1 行に 1 つ渡す (commit の SHA や ref 名は渡さない)。OID は bytes を取り出すためだけに使い、size と `sha256:` digest は取り出した bytes から計算する。
@@ -103,7 +104,7 @@ C2 の生成 (#1885、`pack-c2-manifest.md`。PR #1886 が未 merge) とは独�
 
 ## 8. oracle
 
-`CANDIDATE-U-PKAUD-001..012` (`docs/test-design/harness/L7-pack-publication-audit-wiring-test-design.md`。共有の `L7-unit-test-design.md` には足さない)。012 は L12 の受入である。
+`CANDIDATE-U-PKAUD-001..013` (`docs/test-design/harness/L7-pack-publication-audit-wiring-test-design.md`。共有の `L7-unit-test-design.md` には足さない)。012 は L12 の受入である。
 unit の oracle は一時 Git repo (C1 / C2 を実際に commit する) と `installDependencies` の spy を使い、ネットワークを使わない。
 
 ## 9. 範囲外
