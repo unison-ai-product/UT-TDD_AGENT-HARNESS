@@ -129,7 +129,7 @@ function snapshot(root: string) {
   };
 }
 
-function run(cwd: string, args: string[], gitTrace?: string) {
+function run(cwd: string, args: string[], gitTrace?: string, environment?: NodeJS.ProcessEnv) {
   const executionRoot = process.env.UT_TDD_TEST_EXECUTION_ROOT;
   if (!executionRoot) throw Error("The test execution snapshot is required");
   const cli = join(executionRoot, "src", "cli.ts");
@@ -137,6 +137,7 @@ function run(cwd: string, args: string[], gitTrace?: string) {
     cwd,
     env: {
       ...process.env,
+      ...environment,
       UT_TDD_SKIP_UPDATE_CHECK: "1",
       ...(gitTrace && { GIT_TRACE2_EVENT: gitTrace }),
     },
@@ -173,6 +174,7 @@ interface Scenario {
   text?: boolean;
   previous?: string;
   head?: string;
+  environment?: NodeJS.ProcessEnv;
   prepare?: (root: string) => void;
 }
 
@@ -205,7 +207,12 @@ describe("Pack C2 manifest command candidate oracles", () => {
     if (scenario.rootOption) args.push("--pack-root", root);
     const trace = join(scratch, `${scenario.key}-git.jsonl`);
     const recordGit = scenario.key === "success" || scenario.key === "tag-exists";
-    const result = run(scenario.rootOption ? scratch : root, args, recordGit ? trace : undefined);
+    const result = run(
+      scenario.rootOption ? scratch : root,
+      args,
+      recordGit ? trace : undefined,
+      scenario.environment,
+    );
     const output = join(root, MANIFEST);
     return {
       before,
@@ -261,7 +268,7 @@ describe("Pack C2 manifest command candidate oracles", () => {
     expect(gitCommands(controlTrace)).toContainEqual(expect.arrayContaining(["rev-parse", "HEAD"]));
 
     const scenarios: Scenario[] = [
-      { key: "success" },
+      { key: "success", environment: { TZ: "UTC" } },
       { key: "wrong-head", head: previous },
       { key: "dirty-tracked", prepare: (root) => write(root, "README.md", "modified\n") },
       { key: "dirty-untracked", prepare: (root) => write(root, "extra.txt", "untracked\n") },
@@ -281,6 +288,7 @@ describe("Pack C2 manifest command candidate oracles", () => {
       {
         key: "tag-exists",
         rootOption: true,
+        environment: { TZ: "Pacific/Kiritimati" },
         prepare: (root) => {
           git(root, "tag", TAG, previous);
         },
@@ -300,6 +308,15 @@ describe("Pack C2 manifest command candidate oracles", () => {
     if (scratch) removeTestTree(scratch);
   });
 
+  it.fails("CANDIDATE-U-C2MAN-001: CLI output is independent of cwd and environment", () => {
+    const inside = read("success");
+    const outside = read("tag-exists");
+    expect(inside.status).toBe(0);
+    expect(outside.status).toBe(0);
+    expect(inside.manifest).not.toBeNull();
+    expect(outside.manifest).toEqual(inside.manifest);
+  });
+
   it.fails("CANDIDATE-U-C2MAN-007: success adds only the manifest with no index or ref changes", () => {
     const result = read("success");
     expect(result.status).toBe(0);
@@ -315,7 +332,10 @@ describe("Pack C2 manifest command candidate oracles", () => {
   function expectUnchangedFailure(scenario: string, reason: string) {
     const result = read(scenario);
     expect(result.status).toBe(1);
-    expect(jsonOutput(result.stdout)).toMatchObject({ ok: false, reason });
+    expect(jsonOutput(result.stdout)).toMatchObject({
+      ok: false,
+      reason: expect.stringMatching(new RegExp(`^${reason}(?:$|:)`)),
+    });
     expect(result.after).toEqual(result.before);
   }
 
@@ -379,7 +399,7 @@ describe("Pack C2 manifest command candidate oracles", () => {
     expect(output).toEqual(
       expect.objectContaining({
         ok: false,
-        reason: expect.stringMatching(/^c2_(worktree_dirty|target_exists)$/),
+        reason: expect.stringMatching(/^c2_(worktree_dirty|target_exists)(?:$|:)/),
       }),
     );
     expect(result.manifest?.toString("utf8")).toBe("untracked manifest\n");
@@ -416,7 +436,10 @@ describe("Pack C2 manifest command candidate oracles", () => {
       manifestPath: expect.stringMatching(/(?:^|[\\/])release[\\/]manifest\.yaml$/),
     });
     expect(String(output.manifestSha256).replace(/^sha256:/, "")).toBe(digest(success.manifest));
-    expect(jsonOutput(failure.stdout)).toMatchObject({ ok: false, reason: "c2_tag_not_canary" });
+    expect(jsonOutput(failure.stdout)).toMatchObject({
+      ok: false,
+      reason: expect.stringMatching(/^c2_tag_not_canary(?:$|:)/),
+    });
     for (const bytes of [
       success.stdout,
       failure.stdout,

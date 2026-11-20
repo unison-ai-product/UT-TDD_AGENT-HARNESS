@@ -27,6 +27,19 @@ releases:
         size: 11
         contentDigest: sha256:e1e5120c529c576c09b255e2878d1d7565d165b88761f2cba34cbec3a444a069
     releaseRecordDigest: sha256:430b2dcc86c2ba60c6acef3bbaba9f41b0e7d2d72556f00cce5e54260675788b
+  rel-sha256:ccea107d71593a1a81ec07c3cb0402fabff8056a7c6c9122f33c364fd1bc25a9:
+    releaseRecordDigest: sha256:e943a830d7cf3e2e1c5749dcaf2249c44c6de5b0c8b946673857f8135317566b
+    materializerVersion: "1"
+    artifactSourceCommit: cccccccccccccccccccccccccccccccccccccccc
+    artifactSetDigest: sha256:a5e3388c4ed59ef9ac2e2a3314b06c1474ca8156c7d7ecd1fe0a73cd3667df2b
+    artifactInventoryDigest: sha256:b08da0a43d5c18aba5c11ff10b62374964f5a515fb0edb955f8fe0b0f037c69f
+    releaseAssetInventoryDigest: sha256:2f21d2bae1377518ee27c2f34bc6e191c0891220cbbe6ecd8f1ea0e8b2951bed
+    artifacts:
+      - sourcePath: README.md
+        destinationPath: README.md
+        mode: "100644"
+        size: 21
+        contentDigest: sha256:bf3e79ddf6b7ab375b03723ebcfa47b4df5401f06e8938dcc51417a5350acbd1
   rel-sha256:3ad5b5d470c04bc4077ab597c0156d65f398391c46502fa4470a5612ffc0eb40:
     materializerVersion: "1"
     artifactSourceCommit: "1111111111111111111111111111111111111111"

@@ -20,6 +20,7 @@ function previousManifest() {
   for (const [commit, content] of [
     ["aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", Buffer.from("old canary\n")],
     ["bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", Buffer.from("old stable\n")],
+    ["cccccccccccccccccccccccccccccccccccccccc", Buffer.from("old retained release\n")],
   ] as const) {
     const artifacts: PublicationArtifact[] = [
       {
@@ -40,10 +41,10 @@ function previousManifest() {
       releaseAssetInventoryDigest: sha256(Buffer.from(`assets:${commit}`)),
       artifacts,
     };
-    releases[releaseId] = {
-      ...record,
-      releaseRecordDigest: deriveReleaseRecordDigest(record),
-    };
+    const releaseRecordDigest = deriveReleaseRecordDigest(record);
+    releases[releaseId] = commit.startsWith("c")
+      ? { releaseRecordDigest, ...record }
+      : { ...record, releaseRecordDigest };
   }
   const [canary, stable] = Object.keys(releases);
   return {
