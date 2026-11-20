@@ -1281,7 +1281,7 @@ describe("PR-G0 release-consumer gates", () => {
     expect(bundledGateMessage()).toContain("G1=consumer override");
   });
 
-  // U-RCDEV-027 (consumer-trace-gates.md §9.1): G1 / G3 / 欠落 slot は main に consumer 分岐が無く Red (it.fails)。
+  // U-RCDEV-027: G1 / G3 は consumer core 文書で動き、必須 slot の欠落は fail-close する。
   // test-design の (v) を gate 別に分けたのは、G1 (#1314) と G3 の consumer 分岐が別 PR で入り、Red を個別に外すため。
   const coreGate = (
     gate: string,
@@ -1302,7 +1302,7 @@ describe("PR-G0 release-consumer gates", () => {
     expect(messages).not.toMatch(/could not run|required doc not created/);
   });
 
-  it.fails("U-RCDEV-027: G3 passes on the consumer core documents without harness-only docs", () => {
+  it("U-RCDEV-027: G3 passes on the consumer core documents without harness-only docs", () => {
     const { result, messages } = coreGate("G3");
     expect(result).toMatchObject({ applicable: true, passed: true });
     expect(messages).toContain(

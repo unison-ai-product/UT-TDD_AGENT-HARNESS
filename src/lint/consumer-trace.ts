@@ -2,14 +2,12 @@ import { fmValue, REQUIRED_L2_SCREEN_COLUMNS, tableCells } from "./shared.ts";
 
 export type ConsumerTraceReader = (relativePath: string) => string | undefined;
 
-export interface ConsumerTraceResult {
+export interface ConsumerTraceResult<
+  Totals = { requirements: number; screens: number; functions: number },
+> {
   branch: "consumer";
   violations: string[];
-  totals: {
-    requirements: number;
-    screens: number;
-    functions: number;
-  };
+  totals: Totals;
   ok: boolean;
   messages: string[];
 }
@@ -57,6 +55,15 @@ const L3: CoreDoc = {
   idColumn: "機能ID",
   refColumn: "トレース元",
   checkRefs: false,
+};
+const L12: CoreDoc = {
+  docType: "DOC-L12-ACCEPTANCE",
+  path: "docs/test-design/L12-acceptance-test-design.md",
+  heading: "#### 第3章 テストケース一覧",
+  columns: ["テストID", "分類", "テスト項目", "検証内容/手順", "期待結果", "トレース元"],
+  idColumn: "テストID",
+  refColumn: "トレース元",
+  checkRefs: true,
 };
 
 const REF_SEPARATOR = /[,、/・\s]+/;
@@ -206,6 +213,42 @@ export function analyzeConsumerG1Trace(reader: ConsumerTraceReader): ConsumerTra
       ok
         ? `g1-trace - OK (consumer column trace: ${detail})`
         : `g1-trace - violation (consumer column trace): ${violations.join("; ")}`,
+    ],
+  };
+}
+
+/** consumer 分岐の G3-trace (§3、§5〜§8、§15)。L1/L2 は T4 の参照先として読む。 */
+export function analyzeConsumerG3Trace(
+  reader: ConsumerTraceReader,
+): ConsumerTraceResult<{ requirements: number; functions: number; tests: number }> {
+  const found: string[] = [];
+  const l1 = readCoreDoc({ ...L1, checkRefs: false }, reader, found);
+  const l2 = readCoreDoc({ ...L2, checkRefs: false }, reader, found);
+  const l3 = readCoreDoc({ ...L3, checkRefs: true }, reader, found);
+  const l12 = readCoreDoc(L12, reader, found);
+  for (const [doc, read] of [
+    [L1, l1],
+    [L3, l3],
+  ] as const) {
+    if (read.tableRead && read.ids.size === 0) {
+      found.push(`empty_required_set:${doc.docType}:${doc.idColumn}`);
+    }
+  }
+  found.push(...checkRefs(L3, l3, l1.ids));
+  found.push(...checkRefs(L12, l12, new Set([...l1.ids, ...l2.ids, ...l3.ids])));
+  const violations = found.sort();
+  const totals = { requirements: l1.ids.size, functions: l3.ids.size, tests: l12.ids.size };
+  const ok = violations.length === 0;
+  const detail = `requirements=${totals.requirements}, functions=${totals.functions}, tests=${totals.tests}`;
+  return {
+    branch: "consumer",
+    violations,
+    totals,
+    ok,
+    messages: [
+      ok
+        ? `g3-trace - OK (consumer column trace: ${detail})`
+        : `g3-trace - violation (consumer column trace): ${violations.join("; ")}`,
     ],
   };
 }
