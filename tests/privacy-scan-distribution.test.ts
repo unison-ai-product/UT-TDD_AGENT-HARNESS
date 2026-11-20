@@ -43,6 +43,7 @@ const TAG = "v0.0.0-test";
 
 let authorRoot = "";
 let scratchRoot = "";
+let cleanArtifactMaterializations = 0;
 
 function git(cwd: string, args: string[], env: NodeJS.ProcessEnv = process.env): string {
   return execFileSync("git", args, { cwd, encoding: "utf8", env, windowsHide: true }).trim();
@@ -138,6 +139,7 @@ function cleanSource(
       cpSync(from, to, { recursive: true });
     }
   }
+  cleanArtifactMaterializations++;
   const readme = join(root, "README.md");
   writeFileSync(readme, `${readFileSync(readme, "utf8")}\n${readmeSuffix}\n`, "utf8");
   for (const [path, text] of Object.entries(extra)) write(root, path, text);
@@ -187,10 +189,22 @@ heavyAfterAll(["teardown", 120000], () => {
   if (scratchRoot) removeTestTree(scratchRoot);
 }); // afterAll >10s on Windows (file 479s, hook unmeasured), bounded per #1063
 
-describe("privacy scan candidate oracles (distribution)", () => {
+describe("Pack privacy distribution source fixtures", () => {
+  let emailSource: string;
+  let plainSource: string;
+  let denySource: string;
+  let materializationCount: number;
+
+  heavyBeforeAll("pack", () => {
+    const before = cleanArtifactMaterializations;
+    emailSource = cleanSource("d-email", P);
+    plainSource = cleanSource("d-plain", "plain line");
+    denySource = cleanSource("d-deny", `mentions ${D}`);
+    materializationCount = cleanArtifactMaterializations - before;
+  });
+
   it("U-PRIVSCAN-014: distribution stops before writing when the Pack scan fails", () => {
     const denyHome = makeHome("d-home", `${D}\n`);
-    const emailSource = cleanSource("d-email", P);
     const packDir = join(scratchRoot, "d-pack");
     mkdirSync(packDir, { recursive: true });
     const sync = runDistribution(emailSource, denyHome, [
@@ -222,7 +236,6 @@ describe("privacy scan candidate oracles (distribution)", () => {
     expect(existsSync(join(releaseDir, `${TAG}.tar.gz`))).toBe(false);
     expect(privacyJson(pkg.stdout)?.ok).toBe(false);
 
-    const plainSource = cleanSource("d-plain", "plain line");
     const absentHome = makeHome("d-absent", null);
     for (const command of [
       ["sync-pack", "--repo-dir", packDir],
@@ -245,7 +258,6 @@ describe("privacy scan candidate oracles (distribution)", () => {
     expect(privacyJson(empty.stdout)?.findings).toContainEqual(
       expect.objectContaining({ kind: "privacy-denylist-unavailable", reason: "empty" }),
     );
-    const denySource = cleanSource("d-deny", `mentions ${D}`);
     const deny = runDistribution(denySource, denyHome, [
       "sync-pack",
       "--repo-dir",
@@ -284,6 +296,12 @@ describe("privacy scan candidate oracles (distribution)", () => {
     expect(kinds(privacyJson(baselined.stdout))).toContain("privacy-email-hit");
   }, 600_000);
 
+  it.fails("U-PRIVSCAN-014: materializes the common Clean Pack artifacts once", () => {
+    expect(materializationCount).toBe(1);
+  });
+});
+
+describe("privacy scan candidate oracles (distribution)", () => {
   describe("U-PRIVSCAN-018: never leaks denylist contents into output, evidence, or source", () => {
     // L7 018: each of the 8 runs (2 denylist states x 2 commands x json on/off) is its own
     // test with its own timeout, so one slow spawn cannot starve the rest.
