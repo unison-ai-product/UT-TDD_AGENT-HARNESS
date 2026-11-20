@@ -78,8 +78,8 @@ node src/cli.ts distribution sync-pack --repo-dir <Pack の checkout> --tag <v0.
    commit message の末尾に、固定した source の SHA を `Source-Commit: <40 桁の SHA>` の trailer として書きます。
 2. **C2** は、C1 の上に `release/` だけを変える commit です (`release/manifest.yaml`、release の control manifest)。
    `package` は、C2 が `release/` の外を変えていると `consumer_runtime_release_diff_outside_release` で止まります。
-   [未自動] manifest の生成は、正規の materializer (`src/setup/release-materializer.ts` の `materializeReleaseArtifacts` を使う producer 経路) を呼びます。
-   tar の inventory を手で書かないでください。
+   [未自動 #1885] manifest を生成する CLI がまだありません。`src/setup/release-materializer.ts` の `materializeReleaseArtifacts` は、候補の bytes と digest を返すだけです。v2 manifest の inventory、release ID、asset inventory digest、record digest の導出と、既存の stable を保ったまま canary を更新する処理は、#1885 でコマンドにします。
+   **#1885 が merge するまで、この手順は手順書だけでは再現できません。その間は公開しません。** tar の inventory を手で書かないでください。
 3. Pack に PR を出し、Pack の CI を green にします。Draft の間は公開しません。
 4. 公開に使う tag は C2 に付けます。tag は書き換えません (取り消せないため)。
 
@@ -87,10 +87,11 @@ node src/cli.ts distribution sync-pack --repo-dir <Pack の checkout> --tag <v0.
 
 [自動] 5 asset の生成。[未自動 #1882] ビルド入力の欠落の検査 (Green 後は理由コードで止まります)。
 
-Pack の checkout を clean にし、**空の出力先**を指定します。
+Pack の checkout を clean にし、**空の出力先**を指定します。依存は source の clone にだけ入っているので、**cwd を Pack の checkout に置き、source の CLI を絶対 path で呼びます** (Pack の checkout には `node_modules` がありません)。
 
 ```bash
-node src/cli.ts distribution package --tag <v0.2.0-canary.N> --out <空の directory> --json
+cd <Pack の checkout>
+node <source の clone の絶対 path>/src/cli.ts distribution package --tag <v0.2.0-canary.N> --out <空の directory> --json
 ```
 
 - 出力先が空でないと止まります。home 配下の作業は拒否されます。
@@ -103,7 +104,7 @@ node src/cli.ts distribution package --tag <v0.2.0-canary.N> --out <空の direc
 
 1. PowerShell の `Get-FileHash -Algorithm SHA256 <file>` (または `sha256sum`) で、5 asset の sha256 を計算します。producer の JSON と一致することを確かめます。
 2. `.sha256` の sidecar の中身が、対応する asset の計算値と一致することを確かめます。
-3. 別の checkout (または別の PC) で同じ C1 / C2 から producer を再実行し、5 asset の sha256 が一致することを確かめます (再現性の確認)。
+3. 別の checkout (または別の PC) で同じ C1 / C2 から producer を再実行し、5 asset の sha256 が一致することを確かめます (再現性の確認)。呼び方は §5 と同じで、cwd を別の Pack の checkout に置き、source の CLI を絶対 path で呼びます。
 4. 結果 (SHA と 5 つの sha256) を、公開 Issue のコメントに残します。
 
 ## 7. 公開する (prerelease)
