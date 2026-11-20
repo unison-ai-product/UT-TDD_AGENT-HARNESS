@@ -19,7 +19,7 @@ issue: 1721
 
 - 比較の関数は、値を渡すだけの純粋なテストにする。一時 dir も環境変数も使わない。
 - `newestVersioned` は `existsSync` に依存する。一時 dir に空の file を作って「存在する候補」を作り、作らない path を「存在しない候補」にする。開発 repository の `.ut-tdd/`・`harness.db`・OneDrive を操作しない。
-- A の関数は現在 module の外に出ていない。置き換えの PR では、テストできる形 (export する adapter か、`resolveClaudeCommand` の入口) を、その PR の契約として L6 に足してから Red を書く。
+- A の関数は現在 module の外に出ていない。L6 §3.0 の契約に従い、`compareLenientVersion` (現在の `compareVersion` の改名) と `newestVersioned` を `src/runtime/adapter.ts` から export して直接呼ぶ。`parseVersion` は公開せず、`resolveClaudeNativeCommand` 経由の間接テストにもしない (0 と正が二値でしか見えず、符号を検証できないため)。
 - 期待は、置き換え**前**の実装で先に通ることを確かめる (特性化テスト)。置き換え後も同じテストが通ることが、挙動を保った証拠になる。全件が置き換え前に通る。置き換えで意図して変える挙動は無い (契約 L6 §5)。
 
 ## 3. 候補の oracle
