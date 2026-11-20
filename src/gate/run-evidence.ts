@@ -61,6 +61,11 @@ export interface WrittenGateRunEvidence {
   path: string;
 }
 
+interface GateRunPublishBoundary {
+  beforeLink?: (stagedPath: string, finalPath: string) => void;
+  link?: (stagedPath: string, finalPath: string) => void;
+}
+
 function compactSlug(value: string): string {
   return (
     value
@@ -110,23 +115,30 @@ export function buildGateRunEvidence(input: GateRunEvidenceInput): GateRunEviden
   };
 }
 
-export function writeGateRunEvidence(input: GateRunEvidenceInput): WrittenGateRunEvidence {
-  const evidence = buildGateRunEvidence(input);
-  const dir = gateRunEvidenceDir(input.repoRoot);
-  ensureDir(dir, { recursive: true });
+function assertGateRunIdAvailable(dir: string, gateRunId: string): void {
   const existingFiles = readdirSync(dir).filter((name) => name.endsWith(".json"));
   for (const name of existingFiles) {
     const existingPath = join(dir, name);
     const existing = JSON.parse(readFileSync(existingPath, "utf8")) as {
       gate_run_id?: unknown;
     };
-    if (existing.gate_run_id === evidence.gate_run_id) {
-      const error = Object.assign(new Error("gate run evidence ID already exists"), {
+    if (existing.gate_run_id === gateRunId) {
+      const error = Object.assign(new Error("EEXIST: gate run evidence ID already exists"), {
         code: "EEXIST",
       });
       throw error;
     }
   }
+}
+
+export function writeGateRunEvidence(
+  input: GateRunEvidenceInput,
+  boundary?: GateRunPublishBoundary,
+): WrittenGateRunEvidence {
+  const evidence = buildGateRunEvidence(input);
+  const dir = gateRunEvidenceDir(input.repoRoot);
+  ensureDir(dir, { recursive: true });
+  assertGateRunIdAvailable(dir, evidence.gate_run_id);
 
   const evidenceIdDigest = createHash("sha256").update(evidence.gate_run_id, "utf8").digest("hex");
   const absolutePath = join(dir, `${evidenceIdDigest}.json`);
@@ -135,7 +147,9 @@ export function writeGateRunEvidence(input: GateRunEvidenceInput): WrittenGateRu
     encoding: "utf8",
     flag: "wx",
   });
-  linkSync(temporaryPath, absolutePath);
+  boundary?.beforeLink?.(temporaryPath, absolutePath);
+  const link = boundary?.link ?? linkSync;
+  link(temporaryPath, absolutePath);
   try {
     unlinkSync(temporaryPath);
   } catch {

@@ -7,24 +7,12 @@ import { createInterface } from "node:readline";
 import {
   buildGateRunEvidence,
   type GateRunEvidence,
-  type GateRunEvidenceInput,
   type WrittenGateRunEvidence,
   writeGateRunEvidence,
 } from "../src/gate/run-evidence.ts";
 import { collectGateRunEvidenceProjection } from "../src/state-db/gate-run-evidence-projection.ts";
 import { describe, expect, heavyAfterAll, heavyBeforeAll, it } from "./support/hook-bounds.ts";
 import { removeTestTree } from "./support/temp-tree.ts";
-
-type Boundary = {
-  beforeLink?: (staged: string, final: string) => void;
-  link?: (staged: string, final: string) => void;
-};
-// The L6 contract defines the second parameter. The process fixture verifies
-// its absence on the current writer without adding a production stub.
-const write = writeGateRunEvidence as (
-  input: GateRunEvidenceInput,
-  boundary?: Boundary,
-) => WrittenGateRunEvidence;
 
 const input = {
   gateId: "G0.5",
@@ -142,7 +130,7 @@ describe("gate-run evidence writer publication boundaries", () => {
     let successful: WrittenGateRunEvidence | undefined;
     let thrown: unknown;
     try {
-      successful = write(unsupportedInput, {
+      successful = writeGateRunEvidence(unsupportedInput, {
         link(staged, final) {
           injectedLinkCalls++;
           inspectStaging(unsupported, staged, final, buildGateRunEvidence(unsupportedInput));
@@ -164,7 +152,7 @@ describe("gate-run evidence writer publication boundaries", () => {
     const before = fixture();
     const beforeInput = { ...input, repoRoot: before };
     let observedFinal: string | undefined;
-    const written = write(beforeInput, {
+    const written = writeGateRunEvidence(beforeInput, {
       beforeLink(staged, final) {
         beforeLinkCalls++;
         inspectStaging(before, staged, final, buildGateRunEvidence(beforeInput));
@@ -180,15 +168,15 @@ describe("gate-run evidence writer publication boundaries", () => {
     for (const root of roots) removeTestTree(root);
   });
 
-  it.fails("U-GATEPUB-002: calls the injected hard link exactly once", () => {
+  it("U-GATEPUB-002: calls the injected hard link exactly once", () => {
     expect(injectedLinkCalls).toBe(1);
   });
 
-  it.fails("U-GATEPUB-003: observes the complete staging JSON before the hard link", () => {
+  it("U-GATEPUB-003: observes the complete staging JSON before the hard link", () => {
     expect(beforeLinkCalls).toBe(1);
   });
 
-  it.fails("U-GATEPUB-004: terminates the writer before link and projects only retry", () => {
+  it("U-GATEPUB-004: terminates the writer before link and projects only retry", () => {
     expect(crashResult).toBe("killed-before-link-and-retried");
   });
 });
