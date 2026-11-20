@@ -9,7 +9,7 @@ related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 issue: 1894
 ---
 
-> **L6 contract marker**: `observePackPublication({ repoRoot, c1, c2 }) => PackPublicationObservation` (固定した C2 の 40 桁 SHA の Git tree を `git ls-tree -r -z` と `git cat-file` だけで読み、path / mode / size / digest / bytes の entry の列を返す。`src/setup/pack-publication-observe.ts` に置く) と、`packageConsumerRuntimeRelease` (`src/cli/distribution.ts`) の中での `buildPackPublicationStagingPlan` → `auditPackPublication` の呼び出しは unit-test-granularity contract である (未実装の目標契約。関数名は実装で変えてよいが、契約の意味は変えない)。pre: `c1` / `c2` は `resolveConsumerRuntimeReleaseSourceBinding` が返した SHA で、観測は ref 名・index・working tree を読まない。post: `status: "attested"` のときだけ `package` は asset を書き出す。`partial_publication` / `indeterminate` / 計画の preflight 失敗では、`installDependencies` も asset の stage も実行せず、`outDir` は空のままである。invariant: 公開の照合は `package` を通らずに済ませる経路を持たない (canary.7 の再発の防止)。oracle は `docs/test-design/harness/L7-pack-publication-audit-wiring-test-design.md` の `CANDIDATE-U-PKAUD-001`〜`013` が固定する (正式 ID `U-PKAUD-*` への昇格は、src を含まない昇格 PR で行う)。
+> **L6 contract marker**: `observePackPublication({ repoRoot, c1, c2 }) => PackPublicationObservation` (固定した C2 の 40 桁 SHA の Git tree を `git ls-tree -r -z` と `git cat-file` だけで読み、path / mode / size / digest / bytes の entry の列を返す。`src/setup/pack-publication-observe.ts` に置く) と、`packageConsumerRuntimeRelease` (`src/cli/distribution.ts`) の中での `buildPackPublicationStagingPlan` → `auditPackPublication` の呼び出しは unit-test-granularity contract である (未実装の目標契約。関数名は実装で変えてよいが、契約の意味は変えない)。pre: `c1` / `c2` は `resolveConsumerRuntimeReleaseSourceBinding` が返した SHA で、観測は ref 名・index・working tree を読まない。post: `status: "attested"` のときだけ `package` は asset を書き出す。`partial_publication` / `indeterminate` / 計画の preflight 失敗では、`installDependencies` も asset の stage も実行せず、`outDir` は空のままである。invariant: 公開の照合は `package` を通らずに済ませる経路を持たない (canary.7 の再発の防止)。oracle は `docs/test-design/harness/L7-pack-publication-audit-wiring-test-design.md` の `CANDIDATE-U-PKAUD-001`〜`014` が固定する (正式 ID `U-PKAUD-*` への昇格は、src を含まない昇格 PR で行う)。
 
 # 公開前の Pack の照合を `package` に配線する方式 (Issue #1894)
 
@@ -54,6 +54,8 @@ C2 の生成 (#1885、`pack-c2-manifest.md`。PR #1886 が未 merge) とは独�
    観測した entry は path を UTF-8 のバイト順で並べる。`kind` は、path が期待集合の `control-manifest` / `build-input` に当たればその種別、それ以外は `artifact` とする。
    期待に無い path は `artifact` と観測され、path の不一致で拒否される (`exactCommitEntries`)。
 5. **観測の mode**: `100644` / `100755` 以外 (`120000` symlink、`160000` submodule) を見つけたら、観測は entry を作らず `commit_entries_mismatch` と等価の拒否を返す (`PackPublicationCommitEntry` の型は 2 つの mode しか持てないため。symlink の拒否は `pack-exec-mode.md` §4.3 の (d) と同じ向き)。
+   **到達する経路**: C1 にある `120000` / `160000` は、観測より前に `resolveReleaseArtifacts` (`src/setup/release-artifact-resolver.ts`) が C1 の tree を読んで `invalid_artifact` で拒否する。`package` は既存の理由 (`distribution package tar materialization failed: invalid_artifact`) で止まり、asset は作られない。この理由は照合の理由コードへ写像しない (既存の拒否をそのまま使う)。
+   観測の mode の拒否に到達するのは、C2 で `release/` の中に足された `120000` / `160000` だけである (`diff_outside_release` は通り、materializer は C1 しか読まない)。
 6. **release asset の観測**: 公開前は release asset が存在しない。観測した C2 の artifact entry の bytes から `buildPackPublicationAssets` で tarball と checksum を再計算した値を `releaseAssets` として渡す。
    期待側 (`tarResolution` 由来) とは別の bytes の入力で導くので、C1 の blob が期待と違えば asset の不一致としても検出できる。
 7. **fail-close**: `status` が `attested` でなければ、`ConsumerRuntimeReleaseProducerError` を `pack_publication_audit_<reason>` の理由コードで投げる。`indeterminate` (`observation_unavailable`) も止める (再試行しない。観測できないものを「通った」と見なさない)。
@@ -104,7 +106,7 @@ C2 の生成 (#1885、`pack-c2-manifest.md`。PR #1886 が未 merge) とは独�
 
 ## 8. oracle
 
-`CANDIDATE-U-PKAUD-001..013` (`docs/test-design/harness/L7-pack-publication-audit-wiring-test-design.md`。共有の `L7-unit-test-design.md` には足さない)。012 は L12 の受入である。
+`CANDIDATE-U-PKAUD-001..014` (`docs/test-design/harness/L7-pack-publication-audit-wiring-test-design.md`。共有の `L7-unit-test-design.md` には足さない)。012 は L12 の受入である。
 unit の oracle は一時 Git repo (C1 / C2 を実際に commit する) と `installDependencies` の spy を使い、ネットワークを使わない。
 
 ## 9. 範囲外
