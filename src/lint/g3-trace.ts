@@ -4,9 +4,10 @@
  * pmo-sonnet 手動 matrix (A-47) の機械強制化、PO 指摘「機能一覧やドメインチェックのテストが走るべき」反映。
  */
 import { existsSync, readFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { resolveAuthoringSourceAbsolutePath } from "../shared/design-root.ts";
+import { resolveAuthoringSourceAbsolutePath, resolveDesignRoot } from "../shared/design-root.ts";
+import { analyzeConsumerG3Trace } from "./consumer-trace.ts";
 import type { LintResult } from "./lint-result.ts";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -251,6 +252,13 @@ export function analyzeG3Trace(docs?: DocSource): G3TraceResult {
 }
 
 export function lintG3Trace(repoRoot: string): LintResult {
+  if (resolveDesignRoot(repoRoot) !== "docs/design/harness") {
+    const { ok, messages } = analyzeConsumerG3Trace((relativePath) => {
+      const absolute = join(repoRoot, relativePath);
+      return existsSync(absolute) ? readFileSync(absolute, "utf-8") : undefined;
+    });
+    return { ok, messages };
+  }
   try {
     const result = analyzeG3Trace(loadDocs(repoRoot));
     return { ok: g3TraceOk(result), messages: g3TraceMessages(result) };
