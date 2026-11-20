@@ -64,6 +64,7 @@ export interface WrittenGateRunEvidence {
 interface GateRunPublishBoundary {
   beforeLink?: (stagedPath: string, finalPath: string) => void;
   link?: (stagedPath: string, finalPath: string) => void;
+  pathDigest?: (gateRunId: string) => string;
 }
 
 function compactSlug(value: string): string {
@@ -81,6 +82,16 @@ function shortHash(value: string): string {
 
 export function gateRunEvidenceDir(repoRoot: string): string {
   return join(repoRoot, ".ut-tdd", "gate_runs");
+}
+
+export function gateRunEvidenceFilename(
+  gateRunId: string,
+  pathDigest?: (gateRunId: string) => string,
+): string {
+  const digest = pathDigest
+    ? pathDigest(gateRunId)
+    : createHash("sha256").update(gateRunId, "utf8").digest("hex");
+  return `${digest}.json`;
 }
 
 export function buildGateRunEvidence(input: GateRunEvidenceInput): GateRunEvidence {
@@ -140,8 +151,10 @@ export function writeGateRunEvidence(
   ensureDir(dir, { recursive: true });
   assertGateRunIdAvailable(dir, evidence.gate_run_id);
 
-  const evidenceIdDigest = createHash("sha256").update(evidence.gate_run_id, "utf8").digest("hex");
-  const absolutePath = join(dir, `${evidenceIdDigest}.json`);
+  const absolutePath = join(
+    dir,
+    gateRunEvidenceFilename(evidence.gate_run_id, boundary?.pathDigest),
+  );
   const temporaryPath = join(dir, `.tmp-${randomUUID()}`);
   writeFileSync(temporaryPath, `${JSON.stringify(evidence, null, 2)}\n`, {
     encoding: "utf8",
