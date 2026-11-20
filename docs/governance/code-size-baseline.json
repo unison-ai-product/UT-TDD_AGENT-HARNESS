@@ -70,7 +70,7 @@
   "tests/db-projection-coverage.test.ts": { "lines": 561, "functionExcess": null },
   "tests/ddd-tdd-rules.test.ts": { "lines": 509, "functionExcess": null },
   "tests/design-protection.test.ts": { "lines": 830, "functionExcess": null },
-  "tests/distribution-acceptance.test.ts": { "lines": 942, "functionExcess": null },
+  "tests/distribution-acceptance.test.ts": { "lines": 923, "functionExcess": null },
   "tests/doctor.test.ts": { "lines": 2081, "functionExcess": null },
   "tests/forward-escape-issue-contract.test.ts": { "lines": 816, "functionExcess": null },
   "tests/forward/evidence-policy.test.ts": { "lines": 570, "functionExcess": null },
