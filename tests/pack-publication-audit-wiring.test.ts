@@ -49,7 +49,7 @@ import { heavyAfterAll, heavyBeforeAll } from "./support/hook-bounds.ts";
 import { useSyntheticPrivacyHome } from "./support/privacy-denylist-home.ts";
 import { removeTestTree } from "./support/temp-tree.ts";
 
-// Red (issue #1894): CANDIDATE-U-PKAUD-001..011 を it.fails で登録する。
+// Red (issue #1894): CANDIDATE-U-PKAUD-001..011 と 013 を it.fails で登録する。
 // 012 は L12 の手動受入 (CI の対象外) なので、ここには登録しない (省略)。
 // 契約: docs/design/harness/L6-function-design/pack-publication-audit-wiring.md
 // oracle: docs/test-design/harness/L7-pack-publication-audit-wiring-test-design.md
@@ -491,6 +491,18 @@ describe("CANDIDATE-U-PKAUD package の公開照合の配線", () => {
     const second = observePackPublication({ repoRoot: fx.root, c1: fx.c1, c2: fx.c2 });
     expect(second).toEqual(first);
     expect(first.status).toBe("observed");
+  });
+
+  it.fails("CANDIDATE-U-PKAUD-013: package.json の末尾の空白は計画を通り、観測が生の blob の違いを content として拒否する", async () => {
+    const pkg = baseEntries
+      .find((entry) => entry.path === "package.json")
+      ?.content.toString("utf8");
+    const run = await attempt(makeCase((root) => write(root, "package.json", `${pkg} `)));
+    expectRejected(run, "pack_publication_audit_commit_entries_mismatch");
+    expect(run.error?.publicationAudit?.details).toContainEqual({
+      category: "content",
+      path: "package.json",
+    });
   });
 
   // CANDIDATE-U-PKAUD-012 は L12 の手動受入 (canary.7 形の 52 件 + 実機) で CI の対象外のため、ここには登録しない。
