@@ -1,7 +1,7 @@
 ---
 layer: L6
 artifact_type: design_doc
-status: draft
+status: confirmed
 sub_doc: function-spec
 artifact_role: topic_pack_build_inputs
 pair_artifact: docs/test-design/harness/L7-pack-build-inputs-test-design.md
@@ -93,7 +93,7 @@ export function selectPackBuildInputs(
 
 - Pre: 入力は tracked path の一覧のみ。選択は読み取りだけで、file を書かない。
 - Post: `ok: true` のとき、返る path は全て tree に在り、固定 3 件とテンプレート 1 件以上を含む。`ok: false` のとき、`reasons` は欠けた全ての固定 file と、必要ならテンプレート空の理由を含む。
-- Invariant (単一の正本): 固定 file の path 文字列とテンプレート規則は `src/setup/pack-build-inputs.ts` にだけ在る。`src/` の他の module と `tests/support/` は同じ literal を持たない。
+- Invariant (単一の正本): ビルド入力を**選ぶ**規則 (固定 3 件の一覧とテンプレート規則) は `src/setup/pack-build-inputs.ts` にだけ在る。`sync-pack` / `package` / `tests/support/` は、ビルド入力を選ぶために独自の一覧や規則を持たず、この関数を呼ぶ。入力の**中身を読む**ための既存の参照 (例: `src/runtime/node-bootstrap.ts` の provenance の検証と読込み、`src/setup/vmodel-template-writer.ts` の catalog の読込み) は選択の重複ではないので対象外とする。
 - Invariant (非破壊): ビルド入力の検査が失敗した `sync-pack` は `repoDir` を変えず、`package` は `outDir` に何も書かない。
 - Invariant (artifact と別): `plan.artifactPaths`、release manifest、tar inventory は本契約の前後で変わらない。
 - Invariant (出力の語彙): 出力は理由コード、path、件数だけ。`nextCommands` は引き続き `git add` / `commit` / `push` を実行しない (`localGitMutationExecuted: false`)。

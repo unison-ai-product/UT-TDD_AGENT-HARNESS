@@ -4,7 +4,7 @@ layer: L7
 executed_at_layer: L7
 artifact_type: test_design
 pair_artifact: docs/design/harness/L6-function-design/pack-build-inputs.md
-status: draft
+status: confirmed
 updated: 2026-11-20
 issue: 1882
 ---
@@ -34,7 +34,7 @@ Red は `it.fails` で先に入れ、Green で `it` に戻す (設計書保護 g
 | `CANDIDATE-U-PKBIN-007` | `sync-pack` の成功。`repoDir` は空の clone | ビルド入力が source と bytes 同一で `repoDir` の同じ相対 path に在る。`nextCommands` の `git add` pathspec に全て含まれる。`pack.buildInputs.count/paths` が evidence に在る。`copiedArtifacts` と `exportPlan.artifactPaths` に増減が無い | 変換 (`transformCleanDistributionArtifact`) を通す / artifact へ混ぜる |
 | `CANDIDATE-U-PKBIN-008` | `sync-pack --prune-local`。`repoDir` に前回のビルド入力と、一覧に無い stale file がある | ビルド入力は消えない (上書きされ、`unmanagedExistingPaths` にも出ない)。stale file だけが prune される (canary.8 の ENOENT の退行) | ビルド入力を保護集合に入れない |
 | `CANDIDATE-U-PKBIN-009` | `package`。C1 の snapshot に、ビルド入力が 1 件欠ける (C1 / C2 の構造は正しい) | `installDependencies` を呼ぶ前に `ConsumerRuntimeReleaseProducerError("pack_build_input_*")` で止まり、`outDir` に何も書かれない。ENOENT / `node-bootstrap-*-missing` ではない | 検査を install / build の後ろに置く |
-| `CANDIDATE-U-PKBIN-010` | 単一の正本 (静的検査): `tests/support/pack-internal-canary.ts` と `src/` の `src/setup/pack-build-inputs.ts` 以外の module に、固定 3 件の path 文字列とテンプレート接頭辞の literal が無い。helper は `selectPackBuildInputs` を import する | literal が 0 件。`sync-pack` / `package` / helper が同じ関数を呼ぶ | helper または `sync-pack` に path の literal を戻す |
+| `CANDIDATE-U-PKBIN-010` | 単一の正本 (静的検査): ビルド入力を選ぶ経路 (`sync-pack` / `package` の実装と `tests/support/pack-internal-canary.ts`) に、ビルド入力を選ぶための独自の path の一覧やテンプレート接頭辞の規則が無い。中身を読むための既存の参照 (`src/runtime/node-bootstrap.ts`、`src/setup/vmodel-template-writer.ts`) は対象外。helper は `selectPackBuildInputs` を import する | 選択経路に独自の一覧が 0 件。`sync-pack` / `package` / helper が同じ関数を呼ぶ | helper または `sync-pack` に path の literal を戻す |
 | `CANDIDATE-U-PKBIN-011` | ビルド入力のうち 1 file の内容に denylist の entry が一致する (denylist は `provided`。他は全て清潔) | `sync-pack` と `package` のどちらも書き出し前に `privacy-denylist-hit` で止まる。出力に一致した文字列を含まない | ビルド入力を scan の入力から外す |
 | `CANDIDATE-U-PKBIN-012` | **L12 受入 (手動 + 記録)**: 新しい clone と何も入っていない作業 directory で、`docs/reference/pack-release-runbook.md` の手順だけで 5 asset を作る | 5 asset の sha256 が、独立に再計算した値と一致する。producer が、人手で足したビルド入力を必要としない | 手順書が前提を欠く (denylist、Node の pin、ビルド入力) |
 

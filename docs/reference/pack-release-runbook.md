@@ -78,7 +78,11 @@ node src/cli.ts distribution sync-pack --repo-dir <Pack の checkout> --tag <v0.
    commit message の末尾に、固定した source の SHA を `Source-Commit: <40 桁の SHA>` の trailer として書きます。
 2. **C2** は、C1 の上に `release/` だけを変える commit です (`release/manifest.yaml`、release の control manifest)。
    `package` は、C2 が `release/` の外を変えていると `consumer_runtime_release_diff_outside_release` で止まります。
-   [未自動 #1885] manifest を生成する CLI がまだありません。`src/setup/release-materializer.ts` の `materializeReleaseArtifacts` は、候補の bytes と digest を返すだけです。v2 manifest の inventory、release ID、asset inventory digest、record digest の導出と、既存の stable を保ったまま canary を更新する処理は、#1885 でコマンドにします。
+   C2 は、#1885 のサブコマンドで作ります (契約は `docs/design/harness/L6-function-design/pack-c2-manifest.md`)。Pack の checkout を cwd にして、次の 1 行を実行し、`release/manifest.yaml` だけを commit します。
+   ```bash
+   node <source の clone の絶対 path>/src/cli.ts distribution c2-manifest --c1 <C1 の SHA> --tag <v0.2.0-canary.N> --previous <Pack main の SHA> --json
+   ```
+   [未自動 #1885] このサブコマンドは、まだ実装されていません。`src/setup/release-materializer.ts` の `materializeReleaseArtifacts` は、候補の bytes と digest を返すだけです。v2 manifest の inventory、release ID、asset inventory digest、record digest の導出と、既存の stable を保ったまま canary を更新する処理は、#1885 でコマンドにします。
    **#1885 が merge するまで、この手順は手順書だけでは再現できません。その間は公開しません。** tar の inventory を手で書かないでください。
 3. Pack に PR を出し、Pack の CI を green にします。Draft の間は公開しません。
 4. 公開に使う tag は C2 に付けます。tag は書き換えません (取り消せないため)。
