@@ -229,7 +229,7 @@ describe("consumer G3-trace document absence (issue #972)", () => {
     expect(withExtras.gate).toEqual(withExtras.helper.messages);
   });
 
-  it.fails("CANDIDATE-U-CTRACE-046: four consumer docs satisfy both trace entry points", () => {
+  it.fails("U-CTRACE-046: four consumer docs satisfy both trace entry points", () => {
     expect(base.helper).toEqual(SUCCESS);
     expect(base.gate).toEqual(SUCCESS.messages);
     expect(base.analyzer.result).toEqual({
@@ -240,7 +240,7 @@ describe("consumer G3-trace document absence (issue #972)", () => {
     });
   });
 
-  it.fails("CANDIDATE-U-CTRACE-047: irrelevant harness-only docs are never requested", () => {
+  it.fails("U-CTRACE-047: irrelevant harness-only docs are never requested", () => {
     expect(withExtras.helper).toEqual(SUCCESS);
     expect(withExtras.gate).toEqual(SUCCESS.messages);
     expect(withExtras.analyzer.result).toEqual(base.analyzer.result);
@@ -252,7 +252,7 @@ describe("consumer G3-trace document absence (issue #972)", () => {
     ).toEqual([]);
   });
 
-  it.fails.each(partialCases)("CANDIDATE-U-CTRACE-048: omitting $path reports exact reasons", ({
+  it.fails.each(partialCases)("U-CTRACE-048: omitting $path reports exact reasons", ({
     path,
     reasons,
     totals,
@@ -264,9 +264,7 @@ describe("consumer G3-trace document absence (issue #972)", () => {
     });
   });
 
-  it.fails.each(
-    multipleCases,
-  )("CANDIDATE-U-CTRACE-049: $label reports all missing documents in order", ({
+  it.fails.each(multipleCases)("U-CTRACE-049: $label reports all missing documents in order", ({
     label,
     reasons,
   }) => {
@@ -275,7 +273,7 @@ describe("consumer G3-trace document absence (issue #972)", () => {
 
   it.each(
     HARNESS_PATHS,
-  )("CANDIDATE-U-CTRACE-050: harness G3 retains its missing-doc diagnostic for %s", (path) => {
+  )("U-CTRACE-050: harness G3 retains its missing-doc diagnostic for %s", (path) => {
     expect(lintG3Trace(fixtureHarness(path))).toEqual({
       ok: false,
       messages: [
@@ -284,7 +282,7 @@ describe("consumer G3-trace document absence (issue #972)", () => {
     });
   });
 
-  it("CANDIDATE-U-CTRACE-050: harness G3 retains its success with and without L2", () => {
+  it("U-CTRACE-050: harness G3 retains its success with and without L2", () => {
     const withL2 = fixtureHarness();
     writeFixtureDoc(withL2, "docs/design/harness/L2-screen/screen-list.md", "optional L2\n");
     const withoutL2 = lintG3Trace(fixtureHarness());
