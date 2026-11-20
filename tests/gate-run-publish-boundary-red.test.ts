@@ -5,10 +5,10 @@ import { existsSync, linkSync, mkdtempSync, readdirSync, readFileSync } from "no
 import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import { createInterface } from "node:readline";
-import * as gateRunEvidenceModule from "../src/gate/run-evidence.ts";
 import {
   buildGateRunEvidence,
   type GateRunEvidence,
+  gateRunEvidenceFilename,
   type WrittenGateRunEvidence,
   writeGateRunEvidence,
 } from "../src/gate/run-evidence.ts";
@@ -248,15 +248,12 @@ describe("gate-run evidence writer publication boundaries", () => {
     expect(crashResult).toBe("killed-before-link-and-retried");
   });
 
-  it.fails("U-GATEPUB-005: same digest is rejected by the second native hard link", () => {
+  it("U-GATEPUB-005: same digest is rejected by the second native hard link", () => {
     expect(collision.actual).toEqual(collision.expected);
   });
 
-  it.fails("U-GATEPUB-006: hashes the original UTF-8 gate run ID bytes", () => {
-    const filename: unknown = Reflect.get(gateRunEvidenceModule, "gateRunEvidenceFilename");
-    if (typeof filename !== "function")
-      throw new Error("gateRunEvidenceFilename export is missing");
-    expect(filename("gate-run:検証:e\u0301:\u{1f9ea}")).toBe(
+  it("U-GATEPUB-006: hashes the original UTF-8 gate run ID bytes", () => {
+    expect(gateRunEvidenceFilename("gate-run:検証:e\u0301:\u{1f9ea}")).toBe(
       "5bff08e59947329c0a591b9ed978b639d57bb707a218c32b02e7f9c7144b1790.json",
     );
   });
