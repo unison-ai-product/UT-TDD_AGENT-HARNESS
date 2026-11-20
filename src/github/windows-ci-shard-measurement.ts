@@ -135,6 +135,8 @@ export function admitWindowsShardMeasurement(
 ): WindowsShardMeasurementResult {
   const { subject, before, after } = input;
   if (
+    !subject ||
+    !after?.snapshot ||
     !Number.isSafeInteger(subject.pr) ||
     subject.pr < 1 ||
     !validSha(subject.requestedHeadSha) ||
@@ -268,7 +270,7 @@ export function admitWindowsShardMeasurement(
   if (snapshot.treeSha !== subject.treeSha) return MISMATCH;
   if (
     snapshot.commitSha !== subject.requestedHeadSha &&
-    !snapshot.parentShas.includes(subject.requestedHeadSha)
+    (snapshot.parentShas.length < 2 || !snapshot.parentShas.includes(subject.requestedHeadSha))
   ) {
     return MISMATCH;
   }

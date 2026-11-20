@@ -237,7 +237,13 @@ const bindingMismatches: Mutation[] = [
   [
     "a snapshot without the PR head as a parent",
     (i) => {
-      i.after.snapshot.parentShas = [BASE];
+      i.after.snapshot.parentShas = [BASE, "603f806c80b8daaa907731410e4dacb3e9876c8e"];
+    },
+  ],
+  [
+    "a single-parent snapshot different from the PR head",
+    (i) => {
+      i.after.snapshot.parentShas = [HEAD];
     },
   ],
   [
