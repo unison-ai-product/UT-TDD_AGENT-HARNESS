@@ -1,9 +1,11 @@
 import { spawn, spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { once } from "node:events";
-import { existsSync, mkdtempSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, linkSync, mkdtempSync, readdirSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import { createInterface } from "node:readline";
+import * as gateRunEvidenceModule from "../src/gate/run-evidence.ts";
 import {
   buildGateRunEvidence,
   type GateRunEvidence,
@@ -47,6 +49,69 @@ function inspectStaging(root: string, staged: string, final: string, evidence: G
   const bytes = readFileSync(staged, "utf8");
   expect(JSON.parse(bytes)).toEqual(evidence);
   return bytes;
+}
+
+function observeDigestCollision(root: string) {
+  const firstInput = { ...input, repoRoot: root };
+  const secondInput = { ...firstInput, checkedAt: "2026-11-19T10:01:00.000Z" };
+  const firstId = buildGateRunEvidence(firstInput).gate_run_id;
+  const secondId = buildGateRunEvidence(secondInput).gate_run_id;
+  const digest = createHash("sha256").update(firstId, "utf8").digest("hex");
+  const filename = `${digest}.json`;
+  const digestInputs: string[] = [];
+  const linkTargets: string[] = [];
+  let nativeLinkError: unknown;
+  const boundary = {
+    pathDigest(gateRunId: string) {
+      digestInputs.push(gateRunId);
+      return digest;
+    },
+    link(stagedPath: string, finalPath: string) {
+      linkTargets.push(finalPath);
+      try {
+        linkSync(stagedPath, finalPath);
+      } catch (error) {
+        nativeLinkError = error;
+        throw error;
+      }
+    },
+  };
+
+  expect(secondId).not.toBe(firstId);
+  const first = writeGateRunEvidence(firstInput, boundary);
+  const firstFinal = join(root, first.path);
+  expect(first.evidence.gate_run_id).toBe(firstId);
+  expect(basename(firstFinal)).toBe(filename);
+  assertPublished(root, first);
+  const firstBytes = readFileSync(firstFinal, "utf8");
+
+  let secondResult: "published" | "EEXIST" = "published";
+  try {
+    const second = writeGateRunEvidence(secondInput, boundary);
+    expect(second.evidence.gate_run_id).toBe(secondId);
+    expect(JSON.parse(readFileSync(join(root, second.path), "utf8"))).toEqual(second.evidence);
+  } catch (error) {
+    if (
+      error !== nativeLinkError ||
+      !(error instanceof Error) ||
+      !("code" in error) ||
+      error.code !== "EEXIST"
+    ) {
+      throw error;
+    }
+    secondResult = "EEXIST";
+  }
+  expect(linkTargets).toHaveLength(2);
+  expect(readFileSync(firstFinal, "utf8")).toBe(firstBytes);
+  return {
+    actual: { digestInputs, linkTargets, secondResult, finalNames: finals(root) },
+    expected: {
+      digestInputs: [firstId, secondId],
+      linkTargets: [firstFinal, firstFinal],
+      secondResult: "EEXIST",
+      finalNames: [filename],
+    },
+  };
 }
 
 type ChildReport =
@@ -114,6 +179,7 @@ describe("gate-run evidence writer publication boundaries", () => {
   let injectedLinkCalls = 0;
   let beforeLinkCalls = 0;
   let crashResult: Awaited<ReturnType<typeof runCrashFixture>>;
+  let collision: ReturnType<typeof observeDigestCollision>;
   function fixture() {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-gate-writer-publish-"));
     roots.push(root);
@@ -123,6 +189,8 @@ describe("gate-run evidence writer publication boundaries", () => {
   heavyBeforeAll("db", async () => {
     const control = fixture();
     assertPublished(control, writeGateRunEvidence({ ...input, repoRoot: control }));
+
+    collision = observeDigestCollision(fixture());
 
     const unsupported = fixture();
     const injected = Object.assign(new Error("fixture ENOTSUP"), { code: "ENOTSUP" });
@@ -178,5 +246,18 @@ describe("gate-run evidence writer publication boundaries", () => {
 
   it("U-GATEPUB-004: terminates the writer before link and projects only retry", () => {
     expect(crashResult).toBe("killed-before-link-and-retried");
+  });
+
+  it.fails("CANDIDATE-U-GATEPUB-005: same digest is rejected by the second native hard link", () => {
+    expect(collision.actual).toEqual(collision.expected);
+  });
+
+  it.fails("CANDIDATE-U-GATEPUB-006: hashes the original UTF-8 gate run ID bytes", () => {
+    const filename: unknown = Reflect.get(gateRunEvidenceModule, "gateRunEvidenceFilename");
+    if (typeof filename !== "function")
+      throw new Error("gateRunEvidenceFilename export is missing");
+    expect(filename("gate-run:検証:e\u0301:\u{1f9ea}")).toBe(
+      "5bff08e59947329c0a591b9ed978b639d57bb707a218c32b02e7f9c7144b1790.json",
+    );
   });
 });
