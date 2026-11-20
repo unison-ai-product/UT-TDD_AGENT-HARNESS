@@ -160,7 +160,6 @@ function tagReleaseManifest(root: string): void {
   git(root, ["tag", TAG]);
 }
 
-/** Clones the seed, then creates the case-specific artifact and release-manifest commits. */
 function cleanSourceFromSeed(label: string, seedRoot: string, readmeSuffix: string): string {
   if (!seedRoot) return cleanSource(label, readmeSuffix);
   const root = join(scratchRoot, label);
@@ -396,6 +395,7 @@ describe("privacy scan candidate oracles (distribution)", () => {
         (["sync-pack", "package"] as const).map((command) => ({ state, json, command })),
       ),
     );
+
     it.each(cases)("$state denylist, $command, json=$json", ({ state, json, command }) => {
       const args =
         command === "sync-pack"
