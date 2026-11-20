@@ -25,7 +25,8 @@ issue: 1452
 | `CANDIDATE-U-VITASSERT-002` | 正常に返る `it.fails` と、本当に対象が throw する `it.fails`。前者は期待した失敗が起きないという理由で FAIL、後者は PASS。各結果を個別に照合する。 | global `requireAssertions` を有効化し、前者も PASS にする。反転を外して後者を FAIL にする。 |
 | `CANDIDATE-U-VITASSERT-003` | import した `expect` で検証する通常テスト、`context.expect` で検証する通常テスト、`context.expect` を取得して早期に戻る通常テスト。最初の 2 件は PASS、最後は assertion 0 件で FAIL。 | import した `expect` だけで検査する。local `expect` を使う正当なテストを拒否する。 |
 | `CANDIDATE-U-VITASSERT-004` | helper 経由の matcher は PASS。parameterized テストを 2 ケース実行し、matcher を呼ぶ方だけが PASS。元から throw する通常テストは元の診断で FAIL。 | callback の文字列で検査する。ケース間で数を共有する。例外を 0 件診断に置き換える。 |
-| `CANDIDATE-U-VITASSERT-005` | 1 回目の試行で matcher が失敗し、retry が assertion を呼ばずに正常終了する通常テストは FAIL。skip・todo は既存 reporter の状態を維持する。 | 前の試行の呼び出し数を retry に持ち越す。未実行テストを失敗に変換する。 |
+| `CANDIDATE-U-VITASSERT-005` | 1 回目の試行で `context.expect` の matcher が失敗し、retry は assertion を呼ばず正常終了する。reporter は retry の 0 件を診断し FAIL。skip・todo は既存の状態を維持する。 | 前の試行の呼び出し数を retry に持ち越す。未実行テストを失敗に変換する。 |
+| `CANDIDATE-U-VITASSERT-006` | `beforeEach` だけが assertion を呼ぶ通常テストは 0 件で FAIL。並行する 2 ケースを Promise で同期し、0 件のケースが待機中に別ケースが import した `expect` を呼ぶ。0 件のケースだけが 0 件で FAIL する。 | セットアップ用 hook や、別ケースの共有カウンター増分で 0 件を合格させる。 |
 
 ## 3. 導入の確認
 

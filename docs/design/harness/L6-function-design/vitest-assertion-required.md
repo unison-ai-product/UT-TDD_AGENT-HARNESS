@@ -10,7 +10,7 @@ next_pair_freeze: L7
 issue: 1452
 ---
 
-> **L6 contract marker**: `evaluateAssertionCount(expectedFailure, callbackOutcome, assertionCalls) => "keep" | "reject_zero_assertions"` は、Vitest の実行境界で適用する判定契約である。名前と実装境界は設計上の表記であり、公開 API を追加しない。候補 oracle `CANDIDATE-U-VITASSERT-001`〜`005` は対応する L7 が固定する。
+> **L6 contract marker**: `evaluateAssertionCount(expectedFailure, callbackOutcome, assertionCalls) => "keep" | "reject_zero_assertions"` は、Vitest の実行境界で適用する判定契約である。名前と実装境界は設計上の表記であり、公開 API を追加しない。候補 oracle `CANDIDATE-U-VITASSERT-001`〜`006` は対応する L7 が固定する。
 
 # Vitest の assertion 必須化 (Issue #1452)
 
@@ -20,7 +20,7 @@ issue: 1452
 | --- | --- |
 | Pre | 実行済みのテストについて、期待失敗フラグ、callback の結果、現在の試行に帰属する Vitest の呼び出し数を受け取る。 |
 | Post | 通常テストが正常終了し、呼び出し数が 0 のときだけ `reject_zero_assertions` を返す。それ以外は `keep` として元の結果を保つ。 |
-| Invariant | 別のテストや前の試行の呼び出し数を参照しない。Vitest が行う `it.fails` の反転を維持する。 |
+| Invariant | 呼び出し数は当該 callback とその helper に帰属する分に限る。セットアップ用 hook、前の試行、同時に実行する別テストの呼び出しは含めない。Vitest が行う `it.fails` の反転を維持する。 |
 
 実行対象になった通常のテストが正常終了したとき、Vitest が当該実行に帰属させた assertion 呼び出し数を調べる。0 件なら、対象テストの失敗としてファイル・テスト名と理由を通常の reporter に出し、CLI を非 0 で終了する。1 件以上なら既存の結果に従う。テスト自身が失敗した場合は元の診断を保持する。skip・todo は対象外。parameterized テストは各実行、retry は各試行の状態を用いる。
 
@@ -42,5 +42,7 @@ A を推奨する。正式な有効化の前に、候補を確認し、実際に
 ## 3. 現行の測定
 
 2026-11-20、Windows の Vitest 4.1.12 で CLI の JSON reporter を比較した。既定では、通常の 0 件は PASS、正常終了した `it.fails` は FAIL、実際に例外を投げた `it.fails` は PASS。`requireAssertions: true` では順に FAIL、PASS、PASS だった。`expect(value)` 単独は両設定で PASS した。
+
+独立 fixture の runner 試作では、callback 前後の global / local カウンター差で通常の 0 件を拒否し、retry やセットアップ用 hook の計数も持ち越さなかった。一方、2 ケースを並行実行すると、先に開始した 0 件のケースが後から走った別ケースの global assertion を数えて合格した。共有カウンターとの差分だけでは、テスト単位の帰属を保証できない。
 
 スキャン時の main `70cd5e296a018d3f09fc46d0235eacf8cae76f25` で、追跡された `.test.ts` 370 ファイルを TypeScript AST で確認した。通常の `it`・`test`・`heavyIt` の callback 宣言 3,982 件中 32 件で本体の直接の `expect` 呼び出しが見つからなかった。helper 経由で検証する宣言も含む。期待失敗の宣言は 183 件だった。parameterized 宣言は 1 件として集計した。32 件は点検対象の候補であり、実行時の 0 件の件数は導入前に確定する。
