@@ -214,7 +214,7 @@ describe("consumer G1 screen namespace (issue #1273)", () => {
     expect(screenTraceCalls(requestedPaths)).toEqual([]);
   });
 
-  it.fails("CANDIDATE-U-CTRACE-042: uses consumer columns and never reads harness business/screen docs", () => {
+  it("CANDIDATE-U-CTRACE-042: uses consumer columns and never reads harness business/screen docs", () => {
     const observed = observeFixture(fixtures.fixture042, () => lintG1Trace(fixtures.fixture042));
     const gate = evaluateStaticGate({ gate: "G1", repoRoot: fixtures.fixture042 });
     const expected =
@@ -234,7 +234,7 @@ describe("consumer G1 screen namespace (issue #1273)", () => {
     expect(screenTraceCalls(observed.paths)).toEqual([]);
   });
 
-  it.fails("CANDIDATE-U-CTRACE-043(a): empty L2 declaration does not fall back to harness screen docs", () => {
+  it("CANDIDATE-U-CTRACE-043(a): empty L2 declaration does not fall back to harness screen docs", () => {
     const result = lintG1Trace(fixtures.fixture043a);
     const reasons = consumerTraceReasons(result.messages);
 
@@ -261,7 +261,7 @@ describe("consumer G1 screen namespace (issue #1273)", () => {
     );
   });
 
-  it.fails("CANDIDATE-U-CTRACE-043(b): empty declaration ignores fixed-prefix labels outside the L2 table", () => {
+  it("CANDIDATE-U-CTRACE-043(b): empty declaration ignores fixed-prefix labels outside the L2 table", () => {
     const result = lintG1Trace(fixtures.fixture043b);
     const reasons = consumerTraceReasons(result.messages);
 
@@ -288,7 +288,7 @@ describe("consumer G1 screen namespace (issue #1273)", () => {
     );
   });
 
-  it.fails("CANDIDATE-U-CTRACE-044(a): SC-001 is not equal to declared SC-01", () => {
+  it("CANDIDATE-U-CTRACE-044(a): SC-001 is not equal to declared SC-01", () => {
     const result = lintG1Trace(fixtures.fixture044["SC-001"]);
     const reasons = consumerTraceReasons(result.messages);
     expect(result.ok).toBe(false);
@@ -302,7 +302,7 @@ describe("consumer G1 screen namespace (issue #1273)", () => {
     );
   });
 
-  it.fails("CANDIDATE-U-CTRACE-044(b): sc-01 is not equal to declared SC-01", () => {
+  it("CANDIDATE-U-CTRACE-044(b): sc-01 is not equal to declared SC-01", () => {
     const result = lintG1Trace(fixtures.fixture044["sc-01"]);
     const reasons = consumerTraceReasons(result.messages);
     expect(result.ok).toBe(false);
@@ -316,7 +316,7 @@ describe("consumer G1 screen namespace (issue #1273)", () => {
     );
   });
 
-  it.fails("CANDIDATE-U-CTRACE-044(c): fullwidth ＳＣ-01 is not equal to declared SC-01", () => {
+  it("CANDIDATE-U-CTRACE-044(c): fullwidth ＳＣ-01 is not equal to declared SC-01", () => {
     const result = lintG1Trace(fixtures.fixture044["ＳＣ-01"]);
     const reasons = consumerTraceReasons(result.messages);
     expect(result.ok).toBe(false);
@@ -337,7 +337,7 @@ describe("consumer G1 screen namespace (issue #1273)", () => {
     expect(screenCounts).toEqual([3, 3, 3]);
   });
 
-  it.fails("CANDIDATE-U-CTRACE-044(d): permits a second declared screen prefix", () => {
+  it("CANDIDATE-U-CTRACE-044(d): permits a second declared screen prefix", () => {
     const result = lintG1Trace(fixtures.fixture044d);
 
     expect(result.ok).toBe(true);

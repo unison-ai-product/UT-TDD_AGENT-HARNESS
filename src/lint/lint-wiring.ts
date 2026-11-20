@@ -33,8 +33,6 @@ export const RUNTIME_ENTRYPOINTS = ["src/cli.ts"] as const;
 export const DEFERRED_LINTS: Record<string, string> = {
   "backfill-pairing":
     "#1358でruntime guard退役。凍結済み合成oracleとL14 evidenceのためlibraryとして残す。完全退役は#1379",
-  "consumer-trace":
-    "analyzer (analyzeConsumerG1Trace) は実装済み。lintG1Trace への配線とこの保留登録の撤去は #1314 の後続 PR で行う。",
   "forward-convergence":
     "#1358でruntime guard退役。凍結済み合成oracleとL14 evidenceのためlibraryとして残す。完全退役は#1379",
   "scrum-reverse":
