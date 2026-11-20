@@ -9,6 +9,7 @@ import {
   type GithubWorkflowDoc,
   loadGithubCiPolicyDocs,
 } from "../src/lint/github-ci-policy.ts";
+import { renderConsumerNodeWrapper } from "../src/setup/consumer-node-runtime.ts";
 import { runSetup, type SetupDeps } from "../src/setup/index.ts";
 import { BUILTIN_GITHUB_TEMPLATES } from "../src/setup/templates.ts";
 import { heavyAfterAll, heavyBeforeAll } from "./support/hook-bounds.ts";
@@ -152,6 +153,37 @@ function runBashIn(cwd: string, command: string) {
     { cwd, encoding: "utf8" },
   );
 }
+
+it("Pack workflow agrees with the inactive consumer launcher contract", () => {
+  const template = readFileSync(
+    join(HEAD_SNAPSHOT_ROOT, "docs", "templates", "github", "common", "pack-harness-check.yml"),
+    "utf8",
+  );
+  const smoke = allSteps(parseWorkflow(template)).find((step) =>
+    step.run?.includes("node .ut-tdd/bin/ut-tdd.mjs doctor --setup-smoke"),
+  )?.run;
+  if (!smoke) throw new Error("Pack workflow has no inactive launcher smoke step");
+
+  const root = mkdtempSync(join(tmpdir(), "ut-tdd-pack-launcher-smoke-"));
+  try {
+    const bin = join(root, ".ut-tdd", "bin");
+    mkdirSync(bin, { recursive: true });
+    const launcher = join(bin, "ut-tdd.mjs");
+    writeFileSync(launcher, renderConsumerNodeWrapper());
+
+    const current = runBashIn(root, smoke);
+    expect(current.error).toBeUndefined();
+    expect(current.status, current.stdout + current.stderr).toBe(0);
+    expect(current.stdout).toMatch(/^consumer_runtime_absent: .+ setup --worktree /);
+
+    writeFileSync(launcher, 'console.error("consumer_runtime_absent"); process.exit(78);\n');
+    const legacy = runBashIn(root, smoke);
+    expect(legacy.error).toBeUndefined();
+    expect(legacy.status).toBe(1);
+  } finally {
+    removeTestTree(root);
+  }
+});
 
 const LEGACY_GUARD_RUN = [
   "printf '%s\\n' \"$PR_BODY\" > .ut-tdd-pr-body.txt",
