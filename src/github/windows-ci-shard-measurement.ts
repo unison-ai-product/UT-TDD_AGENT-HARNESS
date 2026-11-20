@@ -130,36 +130,11 @@ function stepDuration(step: RegressionStep): number | null {
   return (completed - started) / 1000;
 }
 
-export function admitWindowsShardMeasurement(
-  input: WindowsShardMeasurementInput,
-): WindowsShardMeasurementResult {
-  const { subject, before, after } = input;
-  if (
-    !subject ||
-    !after?.snapshot ||
-    !Number.isSafeInteger(subject.pr) ||
-    subject.pr < 1 ||
-    !validSha(subject.requestedHeadSha) ||
-    !validSha(subject.headBeforeSha) ||
-    !validSha(subject.headAfterSha) ||
-    !validSha(subject.treeSha) ||
-    !Array.isArray(before) ||
-    before.length !== WINDOWS_SHARD_MEASUREMENT_BEFORE_RUNS.length ||
-    !Array.isArray(after.requiredChecks) ||
-    after.requiredChecks.length !== 1 ||
-    !Array.isArray(after.windowsJobs) ||
-    after.windowsJobs.length !== 3 ||
-    !Array.isArray(after.snapshot.parentShas)
-  ) {
-    return INVALID;
-  }
-  if (
-    subject.requestedHeadSha !== subject.headBeforeSha ||
-    subject.requestedHeadSha !== subject.headAfterSha
-  ) {
-    return MISMATCH;
-  }
+type RejectedMeasurement = Extract<WindowsShardMeasurementResult, { ok: false }>;
 
+function measureBefore(
+  before: WindowsShardMeasurementInput["before"],
+): number[] | RejectedMeasurement {
   const beforeSeconds: number[] = [];
   for (const [index, expected] of WINDOWS_SHARD_MEASUREMENT_BEFORE_RUNS.entries()) {
     const evidence = before[index];
@@ -195,9 +170,15 @@ export function admitWindowsShardMeasurement(
     if (seconds === null) return INVALID;
     beforeSeconds.push(seconds);
   }
+  return beforeSeconds;
+}
 
+function checkAggregateBinding(
+  after: WindowsShardMeasurementInput["after"],
+  requestedHeadSha: string,
+): RejectedMeasurement | null {
   const [check] = after.requiredChecks;
-  const { run, aggregateJob, aggregateAttemptJob, windowsJobs, snapshot } = after;
+  const { run, aggregateJob, aggregateAttemptJob, snapshot } = after;
   if (
     !validId(check.id) ||
     !validId(check.runId) ||
@@ -216,12 +197,12 @@ export function admitWindowsShardMeasurement(
   if (
     check.name !== "harness-check" ||
     check.app !== "github-actions" ||
-    check.headSha !== subject.requestedHeadSha ||
+    check.headSha !== requestedHeadSha ||
     check.runId !== run.id ||
     check.id !== check.jobId ||
     check.jobId !== aggregateJob.id ||
     run.workflowPath !== WINDOWS_SHARD_MEASUREMENT_WORKFLOW_PATH ||
-    run.headSha !== subject.requestedHeadSha ||
+    run.headSha !== requestedHeadSha ||
     aggregateJob.name !== "harness-check" ||
     aggregateJob.runId !== run.id ||
     aggregateJob.headSha !== run.headSha ||
@@ -237,8 +218,50 @@ export function admitWindowsShardMeasurement(
   ) {
     return MISMATCH;
   }
+  return null;
+}
+
+export function admitWindowsShardMeasurement(
+  input: WindowsShardMeasurementInput,
+): WindowsShardMeasurementResult {
+  const { subject, before, after } = input;
+  if (
+    !subject ||
+    !after?.snapshot ||
+    !Number.isSafeInteger(subject.pr) ||
+    subject.pr < 1 ||
+    !validSha(subject.requestedHeadSha) ||
+    !validSha(subject.headBeforeSha) ||
+    !validSha(subject.headAfterSha) ||
+    !validSha(subject.treeSha) ||
+    !Array.isArray(before) ||
+    before.length !== WINDOWS_SHARD_MEASUREMENT_BEFORE_RUNS.length ||
+    !Array.isArray(after.requiredChecks) ||
+    after.requiredChecks.length !== 1 ||
+    !Array.isArray(after.windowsJobs) ||
+    after.windowsJobs.length !== 3 ||
+    !Array.isArray(after.snapshot.parentShas)
+  ) {
+    return INVALID;
+  }
+  if (
+    subject.requestedHeadSha !== subject.headBeforeSha ||
+    subject.requestedHeadSha !== subject.headAfterSha
+  ) {
+    return MISMATCH;
+  }
+
+  const beforeSeconds = measureBefore(before);
+  if (!Array.isArray(beforeSeconds)) return beforeSeconds;
+
+  const aggregateError = checkAggregateBinding(after, subject.requestedHeadSha);
+  if (aggregateError) return aggregateError;
+  const [check] = after.requiredChecks;
+  const { run, aggregateJob, aggregateAttemptJob, windowsJobs, snapshot } = after;
 
   const shardSeconds: number[] = [];
+  let earliestStart = Infinity;
+  let latestEnd = -Infinity;
   const seenJobs = new Set<string>();
   const sortedJobs = [...windowsJobs].sort((left, right) =>
     left.job.name.localeCompare(right.job.name),
@@ -263,9 +286,12 @@ export function admitWindowsShardMeasurement(
       return MISMATCH;
     }
     seenJobs.add(job.id);
-    const seconds = stepDuration(step);
-    if (seconds === null) return INVALID;
-    shardSeconds.push(seconds);
+    const start = parseMeasurementTimestamp(step.startedAt);
+    const end = parseMeasurementTimestamp(step.completedAt);
+    if (start === null || end === null || end <= start) return INVALID;
+    earliestStart = Math.min(earliestStart, start);
+    latestEnd = Math.max(latestEnd, end);
+    shardSeconds.push((end - start) / 1000);
   }
   if (snapshot.treeSha !== subject.treeSha) return MISMATCH;
   if (
@@ -295,12 +321,6 @@ export function admitWindowsShardMeasurement(
 
   const orderedBefore = [...beforeSeconds].sort((a, b) => a - b);
   const beforeMedianSeconds = orderedBefore[1];
-  const earliestStart = Math.min(
-    ...windowsJobs.map(({ step }) => parseMeasurementTimestamp(step.startedAt)!),
-  );
-  const latestEnd = Math.max(
-    ...windowsJobs.map(({ step }) => parseMeasurementTimestamp(step.completedAt)!),
-  );
   return {
     ok: true,
     beforeSeconds,
