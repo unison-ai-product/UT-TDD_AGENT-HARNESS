@@ -1,6 +1,7 @@
 import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, readdirSync } from "node:fs";
 import { join, win32 } from "node:path";
+import { compare } from "semver";
 import { modelOverrideSchema, reasoningEffortSchema } from "../schema/team.ts";
 import {
   ADAPTER_AVAILABLE_MESSAGE,
@@ -162,16 +163,31 @@ function parseVersion(version: string): number[] {
   });
 }
 
-/** Numeric semver comparison; negative means `a` is older. Missing parts are 0. */
-export function compareLenientVersion(a: string, b: string): number {
-  const left = parseVersion(a);
-  const right = parseVersion(b);
+/** Compare numeric parts from `from` on; missing parts are 0, a shared `Infinity` ends the comparison at 0. */
+function compareParts(left: number[], right: number[], from: number): number {
   const length = Math.max(left.length, right.length);
-  for (let index = 0; index < length; index++) {
-    const diff = (left[index] ?? 0) - (right[index] ?? 0);
+  for (let index = from; index < length; index++) {
+    const l = left[index] ?? 0;
+    const r = right[index] ?? 0;
+    const diff = l - r;
+    if (Number.isNaN(diff)) return 0;
     if (diff !== 0) return diff;
   }
   return 0;
+}
+
+/**
+ * Numeric semver comparison; negative means `a` is older. Missing parts are 0.
+ * The first three parts go through `semver.compare` when all are safe integers;
+ * otherwise (and for 4th+ parts) the numeric comparison is used.
+ */
+export function compareLenientVersion(a: string, b: string): number {
+  const left = parseVersion(a);
+  const right = parseVersion(b);
+  const core = (parts: number[]) => [0, 1, 2].map((index) => parts[index] ?? 0);
+  const [leftCore, rightCore] = [core(left), core(right)];
+  if (![...leftCore, ...rightCore].every(Number.isSafeInteger)) return compareParts(left, right, 0);
+  return compare(leftCore.join("."), rightCore.join(".")) || compareParts(left, right, 3);
 }
 
 /**
