@@ -128,7 +128,7 @@ for (const approved of [true, false]) {
         for (const root of roots) removeTestTree(root);
       });
 
-      it.fails("U-GATEPUB-001: identifies a duplicate ID as EEXIST", () => {
+      it("U-GATEPUB-001: identifies a duplicate ID as EEXIST", () => {
         expect(duplicateWarning).toContain("EEXIST");
       });
 

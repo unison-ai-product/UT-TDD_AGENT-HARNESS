@@ -61,6 +61,11 @@ export interface WrittenGateRunEvidence {
   path: string;
 }
 
+interface GateRunPublishBoundary {
+  beforeLink?: (stagedPath: string, finalPath: string) => void;
+  link?: (stagedPath: string, finalPath: string) => void;
+}
+
 function compactSlug(value: string): string {
   return (
     value
@@ -110,7 +115,10 @@ export function buildGateRunEvidence(input: GateRunEvidenceInput): GateRunEviden
   };
 }
 
-export function writeGateRunEvidence(input: GateRunEvidenceInput): WrittenGateRunEvidence {
+export function writeGateRunEvidence(
+  input: GateRunEvidenceInput,
+  boundary?: GateRunPublishBoundary,
+): WrittenGateRunEvidence {
   const evidence = buildGateRunEvidence(input);
   const dir = gateRunEvidenceDir(input.repoRoot);
   ensureDir(dir, { recursive: true });
@@ -121,7 +129,7 @@ export function writeGateRunEvidence(input: GateRunEvidenceInput): WrittenGateRu
       gate_run_id?: unknown;
     };
     if (existing.gate_run_id === evidence.gate_run_id) {
-      const error = Object.assign(new Error("gate run evidence ID already exists"), {
+      const error = Object.assign(new Error("EEXIST: gate run evidence ID already exists"), {
         code: "EEXIST",
       });
       throw error;
@@ -135,7 +143,9 @@ export function writeGateRunEvidence(input: GateRunEvidenceInput): WrittenGateRu
     encoding: "utf8",
     flag: "wx",
   });
-  linkSync(temporaryPath, absolutePath);
+  boundary?.beforeLink?.(temporaryPath, absolutePath);
+  const link = boundary?.link ?? linkSync;
+  link(temporaryPath, absolutePath);
   try {
     unlinkSync(temporaryPath);
   } catch {
