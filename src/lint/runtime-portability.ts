@@ -35,6 +35,7 @@ const ALLOWED_NODE_SCRIPT_ENTRYPOINTS = new Set([
   "scripts/windows-ci-shard-aggregate.mjs",
   "scripts/windows-ci-shard-evidence.mjs",
   "scripts/windows-ci-shard-partition.mjs",
+  "scripts/windows-ci-shard-measurement.mjs",
 ]);
 const VITEST_ENTRYPOINT = /\b(?:vitest\s+run|scripts[\\/]run-vitest-snapshot\.ts)\b/;
 

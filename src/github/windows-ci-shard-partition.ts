@@ -105,13 +105,27 @@ function regressionStepLines(
     });
 }
 
+const SNAPSHOT_SOURCE = /^snapshot source: git commit ([a-f0-9]{40})$/;
+
+export function readWindowsRegressionSnapshotSource(
+  log: string,
+  bounds: WindowsRegressionWindow,
+): string {
+  const sources = regressionStepLines(log, bounds).flatMap((line) => {
+    const match = SNAPSHOT_SOURCE.exec(line);
+    return match ? [match[1]] : [];
+  });
+  if (sources.length !== 1) throw new Error("missing or ambiguous regression snapshot source");
+  return sources[0];
+}
+
 export function readWindowsShardSnapshot(
   log: string,
   bounds: WindowsRegressionWindow,
 ): { source: string; files: string[] } {
   const stepLines = regressionStepLines(log, bounds);
   const sourceIndices = stepLines.flatMap((line, index) =>
-    /^snapshot source: git commit [a-f0-9]{40}$/.test(line) ? [index] : [],
+    SNAPSHOT_SOURCE.test(line) ? [index] : [],
   );
   const summaryIndices = stepLines.flatMap((line, index) =>
     /^\s*Test Files\s/.test(line) ? [index] : [],
