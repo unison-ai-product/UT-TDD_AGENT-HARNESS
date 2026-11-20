@@ -396,7 +396,6 @@ describe("privacy scan candidate oracles (distribution)", () => {
         (["sync-pack", "package"] as const).map((command) => ({ state, json, command })),
       ),
     );
-
     it.each(cases)("$state denylist, $command, json=$json", ({ state, json, command }) => {
       const args =
         command === "sync-pack"
