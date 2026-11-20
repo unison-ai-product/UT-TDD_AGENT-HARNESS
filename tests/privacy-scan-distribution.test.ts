@@ -160,8 +160,8 @@ function tagReleaseManifest(root: string): void {
   git(root, ["tag", TAG]);
 }
 
-/** Clones the seed, then creates the case-specific artifact and release-manifest commits. */
 function cleanSourceFromSeed(label: string, seedRoot: string, readmeSuffix: string): string {
+  if (!seedRoot) return cleanSource(label, readmeSuffix);
   const root = join(scratchRoot, label);
   sharedCloneRoots.push(root);
   git(scratchRoot, [
@@ -435,7 +435,7 @@ describe("privacy scan candidate oracles (distribution)", () => {
     hitPath,
   }) => {
     const home = makeHome(`r-home-${label}`, `${D}\n`);
-    const source = cleanSource(`r-source-${label}`, "plain line");
+    const source = cleanSourceFromSeed(`r-source-${label}`, sharedSeedRoot, "plain line");
     write(source, hitPath, "plain\n");
     git(source, ["add", "--", hitPath]);
     git(source, ["commit", "-q", "-m", "hit path"]);
@@ -456,7 +456,7 @@ describe("privacy scan candidate oracles (distribution)", () => {
     for (const text of [result.stdout, result.stderr, ...evidence]) {
       expect(text).not.toContain(D);
     }
-  }, 400_000);
+  }, 180_000);
 
   // #1454 r3 (L6 §8 / §12): both scans always run, and once the privacy scan rejects, the secret
   // scan's path is masked as well. The file below is hit by both scans at once.
