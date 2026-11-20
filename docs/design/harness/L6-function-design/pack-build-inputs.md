@@ -101,6 +101,10 @@ export function selectPackBuildInputs(
 - **責務**: 期待集合を作るのは `packCommitEntries` (`src/setup/pack-publication-staging.ts`) である。呼び出し側が、固定した source commit の `git ls-tree -r` を `selectPackBuildInputs` に通し、
   その `paths` の blob を `git cat-file` で読んだ `{ path, bytes }` の列を渡す。`packCommitEntries` は選択をしない (選択の正本は 1 つ)。`ok: false` (§4) のときは、期待集合を作らず公開を止める。
   期待集合の外の entry を 1 件でも観測すれば、従来どおり拒否する。
+- **`package` の照合での期待 bytes (#1894 で改訂)**: `package` は source repo を読まない (§5)。そのため `package` の中の照合 (`pack-publication-audit-wiring.md`) では、ビルド入力の期待 bytes を **C1 の blob** とする。
+  この照合が保証するのは、path・mode・extra・欠落の完全一致と、C1 と C2 の間で bytes が変わっていないことである。ビルド入力の bytes が source commit の blob と一致することは保証しない。
+  source commit との一致は `sync-pack` が bytes を変えずに copy すること (`CANDIDATE-U-PKBIN-007`) が保証する。`sync-pack` の後、C1 の commit の前に人がビルド入力を書き換える場合は、どちらでも検出できない (残余リスク)。
+  上の「bytes は固定した source commit の blob と一致する」は `sync-pack` の出力についての規則であり、`package` の照合の oracle ではない。`CANDIDATE-U-PKBIN-013` の「source commit の blob と一致」は、fixture の C1 を source から作るときの前提として読む。
 - **公開物は変えない**: ビルド入力は公開 tar と manifest の `artifacts[]` に入らない (§2.2)。増えるのは C1 の期待集合だけである。
 - **実測 (本書の根拠)**: 現行の `packCommitEntries` (`pack-publication-staging.ts:223-256`) は `release.artifacts` と control manifest だけから期待集合を作る。
   `auditPackPublication` の呼び出し元は `src/` に無く (テストだけ)、`exactCommitEntries` に実 C1 を読ませる配線は未実装である (`pack-exec-mode.md` §4.3 の「公開の必須条件」)。

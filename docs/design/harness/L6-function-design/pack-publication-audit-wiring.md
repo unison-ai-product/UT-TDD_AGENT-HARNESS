@@ -42,7 +42,7 @@ C2 の生成 (#1885、`pack-c2-manifest.md`。PR #1886 が未 merge) とは独�
 2. **別サブコマンドを足さない理由**: 案 A は呼び忘れに弱い。照合を `package` に畳めば、5 asset を作る全ての経路が照合を通る (最小実装)。単独で試したいときは、`package` を空の `--out` で実行する (失敗しても `outDir` は空のまま残る)。
 3. **期待集合の作り方と順序**: 先に計画を作り (`buildPackPublicationStagingPlan`)、その後に観測して照合する (`auditPackPublication`)。
    計画には、C2 の `release/manifest.yaml` の bytes (`git cat-file blob <C2>:release/manifest.yaml`) と、そこから解釈した manifest、`tarResolution.entries` から作る sealed entry を渡す。
-   ビルド入力は、`pack-build-inputs.md` §5.1 に従い、C1 の tree を `selectPackBuildInputs` に通した `paths` の blob を `{ path, bytes }` で `packCommitEntries` に渡す (照合側は選択しない)。
+   ビルド入力は、C1 の tree を `selectPackBuildInputs` に通した `paths` の **C1 の blob** を `{ path, bytes }` で `packCommitEntries` に渡す (照合側は選択しない)。期待 bytes を C1 の blob とすることは、`pack-build-inputs.md` §5.1 の「`package` の照合での期待 bytes」で改訂済みである (source commit との一致はこの照合の保証に含めない。§9)。
    計画の構築が `invalid_manifest` / `v1_read_only` / `unknown_release` / `control_manifest_mismatch` / `commit_entry_mismatch` などで失敗したときは、観測に進まず止める (§4)。
    したがって、C1 の blob が manifest の `contentDigest` / `mode` と違う場合は、計画の構築の段階の `commit_entry_mismatch` で落ちる。
 4. **観測 (`observePackPublication`)**: 固定した **C2 の SHA** の tree を、次の 2 つの Git コマンドだけで読む。
@@ -109,4 +109,5 @@ unit の oracle は一時 Git repo (C1 / C2 を実際に commit する) と `ins
 ## 9. 範囲外
 
 照合の期待集合の定義 (`pack-build-inputs.md` §5.1)、C1 の mode の独立照合 (`pack-exec-mode.md` §4.3)、C2 の生成 (#1885)、公開 (`gh release`) の自動化、`gh release` の後の asset 一覧の照合 (本書は公開前だけを扱う)。
-ビルド入力の bytes が **source commit** の blob と一致することは、Pack の checkout に source が無い `package` では確かめない。`sync-pack` が bytes を変えずに copy する契約 (`pack-build-inputs.md` §5) に委ね、`package` の照合は C1 の blob を期待とする (path・mode・extra・欠落の検出が目的)。
+ビルド入力の bytes が **source commit** の blob と一致することは、Pack の checkout に source が無い `package` では確かめない。`sync-pack` が bytes を変えずに copy する契約 (`pack-build-inputs.md` §5、`CANDIDATE-U-PKBIN-007`) に委ね、`package` の照合は C1 の blob を期待とする (path・mode・extra・欠落と、C1 と C2 の間の bytes の不変の検出が目的)。この保証の範囲は `pack-build-inputs.md` §5.1 で改訂済みである。
+`sync-pack` の後、C1 の commit の前に人がビルド入力を書き換えた場合は、この照合では検出できない (残余リスク。source commit の blob と照らす手順は後続の issue で扱う)。
