@@ -11,7 +11,7 @@ issue: 1873
 
 # GitHub CI の Node の版の参照を .node-version に集約する (Issue #1873)
 
-> **L6 contract marker**: `github-ci-policy` の期待 step (`commonSteps` / `harnessAggregateSteps`、`github-ci-windows-shard.ts` の aggregate step、`attestation_runtime`) の `actions/setup-node` の `with` は unit-test-granularity contract である。oracle は `docs/test-design/harness/L7-github-ci-node-version-file-test-design.md` の `CANDIDATE-U-CIPOL-042`〜`048` が固定する。
+> **L6 contract marker**: `analyzeGithubCiPolicy(docs) => GithubCiPolicyResult` (`src/lint/github-ci-policy.ts`) の期待 step (`commonSteps` / `harnessAggregateSteps`、`github-ci-windows-shard.ts` の aggregate step、`attestation_runtime`) の `actions/setup-node` の `with` は unit-test-granularity contract である。pre: `docs` は source workflow・`review-attestation`・Pack template・consumer template の読込み結果。post: setup-node の `with` が §1 の形でない doc ごとに、既存の step 不一致の違反を返す。invariant: 版の正本は `.node-version` の 1 つで、consumer template の literal は `NODE_TOOLCHAIN_POLICY.nodeVersion` と完全一致する。oracle は `docs/test-design/harness/L7-github-ci-node-version-file-test-design.md` の `CANDIDATE-U-CIPOL-042`〜`048` が固定する。
 
 L5 `internal-processing.md` の「Node toolchain authority」節の項目 2 (source workflow pin) の持ち方だけを、この文書で改める。L5 の他の項目 (版の正本の検査、封印) は変えない。L5 の文書は doc-split の上限にあるので、改訂はこの文書に置く。
 
