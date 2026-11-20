@@ -45,7 +45,7 @@ stable と canary が別 release を指す既存 v2 manifest を `--previous` �
 | `CANDIDATE-U-C2MAN-016` | `derivePackPublicationAssets` が失敗を返す注入 (各 error) | `c2_assets_failed` (detail に error) で拒否し、何も書かない | asset の失敗時に仮値の digest で続ける |
 | `CANDIDATE-U-C2MAN-017` | 組み立てた manifest が `parsePublicationManifest` に落ちる注入 (digest を 1 つ壊す) | `c2_manifest_invalid` で拒否し、何も書かない (書く前の自己検証) | 自己検証を書き込みの後に回す / 省く |
 | `CANDIDATE-U-C2MAN-018` | 導出した releaseId が previous の `releases` に既に在る (同じ C1 の再登録) | `c2_release_already_registered` で拒否し、何も書かない | 既存 record を黙って置き換える |
-| `CANDIDATE-U-C2MAN-019` | `release/manifest.yaml` が既に作業木に在る (C1 には無い。untracked) / 書き込みを失敗させる注入 | (既存) `c2_worktree_dirty` か `c2_target_exists` で拒否し既存の bytes が不変。(書き込み失敗) `c2_write_failed` で、新規に作った `release/` を残さない | `wx` を `w` にして上書きする。失敗時に空の `release/` を残す |
+| `CANDIDATE-U-C2MAN-019` | `release/manifest.yaml` が既に作業木に在る (C1 には無い。untracked) / 書き込みを失敗させる注入 | (既存) `c2_worktree_dirty` か `c2_target_exists` で拒否し既存の bytes が不変。(書き込み失敗) 故障を (a) 一時ファイルの open の前、(b) 一時ファイルを作った後の書き込み・close、(c) link の 3 か所に注入する。どれも `c2_write_failed` で、この呼び出しが作った一時ファイルと、新しく作った空の `release/` が残らない。呼び出し前から在った `release/` と、別の実行が置いたファイル (同じ dir の別名のファイル) は残る | `wx` を `w` にして上書きする。失敗時に空の `release/` や一時ファイルを残す。片付けで呼び出し前から在った `release/` や他のファイルを消す |
 | `CANDIDATE-U-C2MAN-020` | CLI の配線: 成功と失敗を `--json` 有無で実行する。出力 bytes は UTF-8、BOM なし、LF | 成功は exit 0 と契約の JSON (`ok` / `releaseId` / `channel: "canary"` / `artifactCount` / `manifestSha256`)、失敗は exit 1 と `{ ok: false, reason }`。`manifestSha256` が書かれた file の SHA-256 と一致する。サブコマンドが `distribution c2-manifest` として登録されている | 失敗でも exit 0 にする。reason を出さない。CRLF / BOM を付ける |
 
 ## 3. 実装 PR の受け入れ基準

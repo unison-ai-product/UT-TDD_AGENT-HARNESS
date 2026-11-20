@@ -49,7 +49,7 @@ PO の必達条件 (2026-11-20): 新しいプロジェクトや新しい PC で�
 4. `resolved.entries` の順を保ち、`artifacts[] = { sourcePath: entry.path, destinationPath: entry.path, mode: entry.mode, size: entry.content.length, contentDigest: digestConsumerRuntimeBytes(entry.content) }` を作る (`digestConsumerRuntimeBytes` は `src/setup/consumer-node-runtime.ts`)。各 path が C1 の tracked path で、mode が `100644` / `100755` であることを照合する。
 5. `releaseId = deriveReleaseId("1", c1, resolved.digest)` → `derivePackPublicationAssets({ release: { releaseId, artifacts }, entries })` (`entries` は同じ metadata に `content` を足したもの。`src/setup/pack-publication-assets.ts`) → `deriveArtifactInventoryDigest(artifacts)`。`releaseAssetInventoryDigest` は `derivePackPublicationAssets` の成功結果の `value.releaseAssetInventoryDigest` を使う。
 6. `record = { materializerVersion: "1", artifactSourceCommit: c1, artifactSetDigest: resolved.digest, artifactInventoryDigest, releaseAssetInventoryDigest, artifacts }` を作り、`releaseRecordDigest = deriveReleaseRecordDigest(record)` を足して `releases[releaseId]` の末尾に追加する。既存 release の順序と record は変えず、`channels.canary` だけを `releaseId` にする (`channels.stable` と `channelOrder` は不変)。
-7. `stringify(next)` (`yaml`、既定 option) → `parsePublicationManifest(parse(bytes))` の成功を確かめる → UTF-8 (BOM なし、LF) の bytes を `release/manifest.yaml` へ `wx` で書く。
+7. `stringify(next)` (`yaml`、既定 option) → `parsePublicationManifest(parse(bytes))` の成功を確かめる → UTF-8 (BOM なし、LF) の bytes を、同じ `release/` の中の一時ファイル (`.manifest.yaml.tmp-<乱数>`、`wx`) に書いて閉じ、`linkSync` で `release/manifest.yaml` に結ぶ (既存があれば `EEXIST` で失敗し、上書きしない)。結んだら一時ファイルを消す。
 
 ## 4. サブコマンド
 
@@ -71,7 +71,7 @@ PO の必達条件 (2026-11-20): 新しいプロジェクトや新しい PC で�
 
 - **Pre**: 入力は §4 の option だけ。C1 は Pack checkout の HEAD で作業木は clean。C1 の tree に `release/manifest.yaml` が無い。`--previous` の blob が妥当な v2 manifest。`--tag` は canary の tag。
 - **Post (成功)**: Pack checkout に `release/manifest.yaml` が 1 file だけ増え、C1 → C2 の差分は `release/manifest.yaml` の追加 1 件になる。内容は `parsePublicationManifest` を通り、`channels.stable` と既存の `releases` (順序と record の bytes) が `--previous` と同一で、`channels.canary` は新しい release を指す。
-- **Post (失敗)**: Pack checkout の working tree、index、`release/` の有無、`.git` の ref が呼び出し前と同一 (何も書かない)。書き込みは検証が全て済んだ最後の 1 回だけで、`release/` の作成も書き込み直前に行う。
+- **Post (失敗)**: Pack checkout の working tree、index、`release/` の有無、`.git` の ref が呼び出し前と同一 (何も書かない)。書き込みは検証が全て済んだ最後の 1 回だけで、`release/` の作成も書き込み直前に行う。書き込みの段で失敗したとき (一時ファイルの open・書き込み・close、link のどれでも) は、**この呼び出しが作ったものだけ**を片付ける。片付けるのは、作った一時ファイルと、この呼び出しが新しく作って空のまま残った `release/` である。呼び出し前から在った `release/`・`release/manifest.yaml`・ほかの実行が作ったファイルには触れない。片付けにも失敗したときは `c2_write_failed` の detail に残った path を出す。
 - **Invariant**: 決定性。同じ (C1 の Git object、`--previous` の blob、`--tag` の channel) からは、時刻・環境・実行回数に依らず byte 同一の出力になる。`git add` / `commit` / `push` / tag 作成 / network を行わない。`release/` の外へ書かない (package の `consumer_runtime_release_diff_outside_release` と同じ境界)。`--previous` と C1 の内容を変更しない。既存の `release/manifest.yaml` は上書きしない (`wx`)。
 
 ## 6. oracle と手順書
