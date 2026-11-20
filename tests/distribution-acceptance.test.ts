@@ -828,8 +828,17 @@ describe("U-OIDBASE-009 packaged default baseline authority", () => {
         cwd: packGitRoot,
         encoding: "utf8",
       }).trim();
+      const releaseBase = {
+        materializerVersion: "1",
+        artifactSourceCommit,
+        artifactSetDigest: materialized.digest,
+        artifactInventoryDigest: deriveArtifactInventoryDigest(artifacts),
+        releaseAssetInventoryDigest: `sha256:${"0".repeat(64)}`,
+      };
       const release = {
+        ...releaseBase,
         releaseId: deriveReleaseId("1", artifactSourceCommit, materialized.digest),
+        releaseRecordDigest: deriveReleaseRecordDigest(releaseBase),
         artifacts,
       };
       const packed = derivePackPublicationAssets({ release, entries: publicationEntries });
