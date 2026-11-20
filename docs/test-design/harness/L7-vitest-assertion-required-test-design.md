@@ -4,7 +4,7 @@ layer: L7
 executed_at_layer: L7
 artifact_type: test_design
 pair_artifact: docs/design/harness/L6-function-design/vitest-assertion-required.md
-status: draft
+status: confirmed
 updated: 2026-11-20
 issue: 1452
 ---
@@ -12,6 +12,8 @@ issue: 1452
 # Vitest の assertion 必須化テスト設計 (Issue #1452)
 
 ## 1. 検証方法
+
+上位の判定契約は `docs/design/harness/L6-function-design/vitest-assertion-required.md`。ここでは、実行設定から reporter と CLI 終了までを一続きで確かめる。
 
 一時ディレクトリに独立した Vitest fixture を作り、開発リポジトリと同じ実行設定を通す。CLI を子プロセスで実行して JSON reporter の個別の状態・理由と終了コードを取る。失敗すべき fixture は同じ invocation の成功 fixture と組み合わせ、実行起動・収集・reporter の正常系を確認する。収集前の設定エラー、タイムアウト、テストの未実行で oracle を通過させない。
 

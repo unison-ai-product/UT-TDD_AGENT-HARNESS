@@ -1,7 +1,7 @@
 ---
 layer: L6
 artifact_type: design_doc
-status: draft
+status: confirmed
 sub_doc: function-spec
 artifact_role: topic_vitest_assertion_required
 pair_artifact: docs/test-design/harness/L7-vitest-assertion-required-test-design.md
@@ -10,11 +10,17 @@ next_pair_freeze: L7
 issue: 1452
 ---
 
-> **L6 contract marker**: #1452 は、正常終了した通常の Vitest テストを assertion 呼び出し 0 件で合格させない。`it.fails` の成否判定を維持する。検証条件は対応する L7 に置く。
+> **L6 contract marker**: `evaluateAssertionCount(expectedFailure, callbackOutcome, assertionCalls) => "keep" | "reject_zero_assertions"` は、Vitest の実行境界で適用する判定契約である。名前と実装境界は設計上の表記であり、公開 API を追加しない。候補 oracle `CANDIDATE-U-VITASSERT-001`〜`005` は対応する L7 が固定する。
 
 # Vitest の assertion 必須化 (Issue #1452)
 
 ## 1. 判定
+
+| 条件 | 契約 |
+| --- | --- |
+| Pre | 実行済みのテストについて、期待失敗フラグ、callback の結果、現在の試行に帰属する Vitest の呼び出し数を受け取る。 |
+| Post | 通常テストが正常終了し、呼び出し数が 0 のときだけ `reject_zero_assertions` を返す。それ以外は `keep` として元の結果を保つ。 |
+| Invariant | 別のテストや前の試行の呼び出し数を参照しない。Vitest が行う `it.fails` の反転を維持する。 |
 
 実行対象になった通常のテストが正常終了したとき、Vitest が当該実行に帰属させた assertion 呼び出し数を調べる。0 件なら、対象テストの失敗としてファイル・テスト名と理由を通常の reporter に出し、CLI を非 0 で終了する。1 件以上なら既存の結果に従う。テスト自身が失敗した場合は元の診断を保持する。skip・todo は対象外。parameterized テストは各実行、retry は各試行の状態を用いる。
 
