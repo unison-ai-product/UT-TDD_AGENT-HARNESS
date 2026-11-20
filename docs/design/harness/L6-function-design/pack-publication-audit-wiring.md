@@ -47,7 +47,7 @@ C2 の生成 (#1885、`pack-c2-manifest.md`。PR #1886 が未 merge) とは独�
    したがって、C1 の blob が manifest の `contentDigest` / `mode` と違う場合は、計画の構築の段階の `commit_entry_mismatch` で落ちる。
 4. **観測 (`observePackPublication`)**: 固定した **C2 の SHA** の tree を、次の 2 つの Git コマンドだけで読む。
    - `git ls-tree -r -z --full-tree <C2>`: 全 entry の mode と blob oid と path。
-   - `git cat-file --batch`: 各 blob の bytes (size と `sha256:` digest は bytes から計算する。oid は使わない)。
+   - `git cat-file --batch`: 各 blob の bytes。標準入力には、直前の `ls-tree` の出力から取った blob の OID だけを 1 行に 1 つ渡す (commit の SHA や ref 名は渡さない)。OID は bytes を取り出すためだけに使い、size と `sha256:` digest は取り出した bytes から計算する。
    C2 の tree は C1 の tree に `release/` の変更を足したものなので、C1 の全 entry と `release/manifest.yaml` を 1 回の観測で得る。
    観測は ref 名 (tag・branch・`HEAD`)・index (`git ls-files`)・working tree を読まない (読むと、期待を作った SHA と違うものを観測しうる)。
    観測した entry は path を UTF-8 のバイト順で並べる。`kind` は、path が期待集合の `control-manifest` / `build-input` に当たればその種別、それ以外は `artifact` とする。

@@ -35,7 +35,7 @@ Red は `it.fails` で先に入れ、Green で `it` に戻す (設計書保護 g
 | `CANDIDATE-U-PKAUD-008` | 観測の独立: working tree に未追跡の extra file と、index に staged だけの extra file があり、C2 の tree は正しい | `attested` (C2 の tree だけが観測の対象)。逆に C2 の tree だけに extra があり working tree が清潔なら、002 と同じ拒否 | 観測に `git ls-files` / working tree の readdir を使う |
 | `CANDIDATE-U-PKAUD-009` | C1 のビルド入力を 1 件欠かす (C2 は正しい) | `error` は `pack_build_input_*` (設計 §3.1 の順序。照合の理由コードにならない)。`installDependencies` は 0 回 | 照合をビルド入力の検査より前に置き、理由を上書きする |
 | `CANDIDATE-U-PKAUD-010` | 002 の失敗の JSON の形 | `ok: false`、`error`、`publicationAudit.{status,c1,c2,details}` のみ。`details` は `category` (4 分類) と `path` だけで、bytes・digest・file の内容・secret の文字列を含まない | 失敗の出力へ bytes / digest を出す |
-| `CANDIDATE-U-PKAUD-011` | SHA の束縛: 観測が `git` に渡す引数を、`git` を包む spy で記録する | `ls-tree` / `cat-file` の引数は C2 の 40 桁 SHA だけ。tag・branch・`HEAD` の名前を含まない。照合の後に tag を別の commit へ動かしても結果は変わらない | 観測が ref 名を再解決する (照合と公開の SHA がずれる) |
+| `CANDIDATE-U-PKAUD-011` | SHA の束縛: 観測が `git` に渡す引数を、`git` を包む spy で記録する | `ls-tree` の revision 引数は固定した C2 の 40 桁 SHA だけ。`cat-file --batch` の標準入力は、その `ls-tree` の出力から取った blob の OID だけで、行ごとに 1 対 1 に対応する。spy は argv と標準入力の両方を記録し、この対応を確かめる。どちらにも tag・branch・`HEAD` の名前を含まない。照合の後に tag を別の commit へ動かしても結果は変わらない | 観測が ref 名を再解決する (照合と公開の SHA がずれる) |
 | `CANDIDATE-U-PKAUD-012` | **L12 受入 (手動 + 記録)**: canary.7 と同じ形の C1 (ビルド入力 52 件を含む) と C2 で、`docs/reference/pack-release-runbook.md` の手順だけで `package` を実行する。次に C1 へ私有の file を足した C2 でも実行する | 前者は `attested` で 5 asset の sha256 が独立の再計算と一致する。後者は `commit_entries_mismatch` で止まり、asset が無い。結果を #1894 / #1879 のコメントに残す | 手順書に照合の読み方が無い / 人の手で照合を飛ばせる経路が残る |
 
 ## 3. 範囲と実行
