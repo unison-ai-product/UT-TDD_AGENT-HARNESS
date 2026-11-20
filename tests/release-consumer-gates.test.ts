@@ -1293,7 +1293,7 @@ describe("PR-G0 release-consumer gates", () => {
     return { result, messages: result.messages.join("\n") };
   };
 
-  it.fails("U-RCDEV-027: G1 passes on the consumer core documents with a free-prefix ID", () => {
+  it("U-RCDEV-027: G1 passes on the consumer core documents with a free-prefix ID", () => {
     const { result, messages } = coreGate("G1");
     expect(result).toMatchObject({ applicable: true, passed: true });
     expect(messages).toContain(
@@ -1319,7 +1319,7 @@ describe("PR-G0 release-consumer gates", () => {
     expect(results.flatMap((result) => result.messages).join("\n")).not.toContain("could not run");
   });
 
-  it.fails("U-RCDEV-027: reports the missing required consumer slot, not could-not-run", () => {
+  it("U-RCDEV-027: reports the missing required consumer slot, not could-not-run", () => {
     const { result, messages } = coreGate("G1", { omitRequiredSlot: true });
     expect(result).toMatchObject({ applicable: true, passed: false });
     expect(messages).toContain("missing_core_doc:DOC-L2-SCREEN");
