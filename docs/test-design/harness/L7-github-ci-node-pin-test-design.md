@@ -35,7 +35,7 @@ workflow 修正を意味しない。対応する `it.fails` は候補引用か�
 
 ## 3. 版の参照を `.node-version` へ集約する候補 oracle (Issue #1873)
 
-正本は `docs/design/harness/L5-detailed-design/internal-processing.md` の「Node toolchain authority」節の項目 9 である。
+正本は `docs/design/harness/L6-function-design/github-ci-node-version-file.md` である (L5 `internal-processing.md` の「Node toolchain authority」節の項目 2 の source workflow pin の持ち方を改める)。
 source workflow と Pack template は `node-version-file: .node-version` を要求し、consumer template は literal を保って
 `NODE_TOOLCHAIN_POLICY.nodeVersion` との一致を要求する。`U-CIPOL-040` / `U-CIPOL-041` は「pin が `24.22.3` と一致する」
 比較であり、Green で「`node-version-file: .node-version` を持つ」比較へ読み替える（版の値の一致は `toolchain-pin` の
