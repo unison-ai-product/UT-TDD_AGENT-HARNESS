@@ -43,6 +43,8 @@ const TAG = "v0.0.0-test";
 
 let authorRoot = "";
 let scratchRoot = "";
+let sharedSeedRoot = "";
+const sharedCloneRoots: string[] = [];
 let cleanArtifactMaterializations = 0;
 
 function git(cwd: string, args: string[], env: NodeJS.ProcessEnv = process.env): string {
@@ -116,17 +118,8 @@ function releaseManifest(artifactSourceCommit: string): Record<string, unknown> 
   };
 }
 
-/**
- * Copies the clean Pack artifact set of the execution snapshot into a temp git repository.
- * The artifacts are commit c1; c2 adds a release manifest bound to c1 and carries TAG, so
- * `package` scans the tag snapshot (L6 §2 / §11) and `sync-pack` scans the HEAD tree.
- */
-function cleanSource(
-  label: string,
-  readmeSuffix: string,
-  extra: Record<string, string> = {},
-): string {
-  const root = join(scratchRoot, label);
+/** Materializes and commits the clean Pack artifacts, with optional case inputs. */
+function commitCleanArtifacts(root: string, prepare?: () => void): void {
   const sourcePaths = git(authorRoot, ["ls-files"]).split(/\r?\n/).filter(Boolean);
   const plan = buildCleanDistributionPlan({ paths: sourcePaths, sourceTag: TAG });
   for (const rel of plan.artifactPaths) {
@@ -140,21 +133,81 @@ function cleanSource(
     }
   }
   cleanArtifactMaterializations++;
-  const readme = join(root, "README.md");
-  writeFileSync(readme, `${readFileSync(readme, "utf8")}\n${readmeSuffix}\n`, "utf8");
-  for (const [path, text] of Object.entries(extra)) write(root, path, text);
+  prepare?.();
   git(root, ["init", "-q", "-b", "main"]);
   git(root, ["config", "core.autocrlf", "false"]);
+  configureFixtureIdentity(root);
+  git(root, ["add", "-A"]);
+  git(root, ["commit", "-q", "-m", "clean artifacts"]);
+}
+
+function configureFixtureIdentity(root: string): void {
   git(root, ["config", "user.email", mail("test", "example.invalid")]);
   git(root, ["config", "user.name", "Privacy Scan Test"]);
   git(root, ["config", "commit.gpgsign", "false"]);
-  git(root, ["add", "-A"]);
-  git(root, ["commit", "-q", "-m", "clean artifacts"]);
+}
+
+function appendFixtureReadme(root: string, readmeSuffix: string): void {
+  const readme = join(root, "README.md");
+  writeFileSync(readme, `${readFileSync(readme, "utf8")}\n${readmeSuffix}\n`, "utf8");
+}
+
+function tagReleaseManifest(root: string): void {
   const artifactSource = git(root, ["rev-parse", "HEAD"]);
   write(root, "release/manifest.yaml", stringify(releaseManifest(artifactSource)));
   git(root, ["add", "--", "release/manifest.yaml"]);
   git(root, ["commit", "-q", "-m", "release manifest"]);
   git(root, ["tag", TAG]);
+}
+
+/** Clones the seed, then creates the case-specific artifact and release-manifest commits. */
+function cleanSourceFromSeed(label: string, seedRoot: string, readmeSuffix: string): string {
+  const root = join(scratchRoot, label);
+  sharedCloneRoots.push(root);
+  git(scratchRoot, [
+    "clone",
+    "--quiet",
+    "--shared",
+    "--no-tags",
+    "-c",
+    "core.autocrlf=false",
+    seedRoot,
+    root,
+  ]);
+  configureFixtureIdentity(root);
+  appendFixtureReadme(root, readmeSuffix);
+  git(root, ["add", "--", "README.md"]);
+  git(root, ["commit", "-q", "-m", "case artifact"]);
+  tagReleaseManifest(root);
+  return root;
+}
+
+function sourceGitState(root: string) {
+  const [head, releaseTag] = git(root, ["rev-parse", "HEAD", `${TAG}^{commit}`]).split(/\r?\n/);
+  return {
+    head,
+    releaseTag,
+    status: git(root, ["status", "--porcelain=v1", "--untracked-files=all"]),
+    diff: git(root, ["diff", "--no-ext-diff", "--binary", "HEAD", "--"]),
+  };
+}
+
+/**
+ * Copies the clean Pack artifact set of the execution snapshot into a temp git repository.
+ * The artifacts are commit c1; c2 adds a release manifest bound to c1 and carries TAG, so
+ * `package` scans the tag snapshot (L6 §2 / §11) and `sync-pack` scans the HEAD tree.
+ */
+function cleanSource(
+  label: string,
+  readmeSuffix: string,
+  extra: Record<string, string> = {},
+): string {
+  const root = join(scratchRoot, label);
+  commitCleanArtifacts(root, () => {
+    appendFixtureReadme(root, readmeSuffix);
+    for (const [path, text] of Object.entries(extra)) write(root, path, text);
+  });
+  tagReleaseManifest(root);
   return root;
 }
 
@@ -186,6 +239,9 @@ beforeAll(() => {
 });
 
 heavyAfterAll(["teardown", 120000], () => {
+  // Borrowing clones need the seed's object store until they are removed.
+  for (const root of sharedCloneRoots) removeTestTree(root);
+  if (sharedSeedRoot) removeTestTree(sharedSeedRoot);
   if (scratchRoot) removeTestTree(scratchRoot);
 }); // afterAll >10s on Windows (file 479s, hook unmeasured), bounded per #1063
 
@@ -197,9 +253,11 @@ describe("Pack privacy distribution source fixtures", () => {
 
   heavyBeforeAll("pack", () => {
     const before = cleanArtifactMaterializations;
-    emailSource = cleanSource("d-email", P);
-    plainSource = cleanSource("d-plain", "plain line");
-    denySource = cleanSource("d-deny", `mentions ${D}`);
+    sharedSeedRoot = join(scratchRoot, "d-seed");
+    commitCleanArtifacts(sharedSeedRoot);
+    emailSource = cleanSourceFromSeed("d-email", sharedSeedRoot, P);
+    plainSource = cleanSourceFromSeed("d-plain", sharedSeedRoot, "plain line");
+    denySource = cleanSourceFromSeed("d-deny", sharedSeedRoot, `mentions ${D}`);
     materializationCount = cleanArtifactMaterializations - before;
   });
 
@@ -283,9 +341,18 @@ describe("Pack privacy distribution source fixtures", () => {
       "--json",
     ]);
     expect(stage.status).toBe(0);
+    const emailTagBefore = git(emailSource, ["rev-parse", `${TAG}^{commit}`]);
+    const plainStateBefore = sourceGitState(plainSource);
+    const denyStateBefore = sourceGitState(denySource);
+    expect(
+      new Set([emailTagBefore, plainStateBefore.releaseTag, denyStateBefore.releaseTag]).size,
+    ).toBe(3);
     write(emailSource, BASELINE_PATH, '["README.md"]\n');
     git(emailSource, ["add", "--", BASELINE_PATH]);
     git(emailSource, ["commit", "-q", "-m", "baseline"]);
+    expect(git(emailSource, ["rev-parse", `${TAG}^{commit}`])).toBe(emailTagBefore);
+    expect(sourceGitState(plainSource)).toEqual(plainStateBefore);
+    expect(sourceGitState(denySource)).toEqual(denyStateBefore);
     const baselined = runDistribution(emailSource, denyHome, [
       "sync-pack",
       "--repo-dir",
@@ -296,7 +363,7 @@ describe("Pack privacy distribution source fixtures", () => {
     expect(kinds(privacyJson(baselined.stdout))).toContain("privacy-email-hit");
   }, 600_000);
 
-  it.fails("U-PRIVSCAN-014: materializes the common Clean Pack artifacts once", () => {
+  it("U-PRIVSCAN-014: materializes the common Clean Pack artifacts once", () => {
     expect(materializationCount).toBe(1);
   });
 });
