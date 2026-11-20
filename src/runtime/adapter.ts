@@ -145,7 +145,7 @@ function newestExisting(paths: string[]): string | null {
 }
 
 /** Native binary candidate with a source-specific extracted version (A-137 #6). */
-interface VersionedCandidate {
+export interface VersionedCandidate {
   path: string;
   version: string;
 }
@@ -163,7 +163,7 @@ function parseVersion(version: string): number[] {
 }
 
 /** Numeric semver comparison; negative means `a` is older. Missing parts are 0. */
-function compareVersion(a: string, b: string): number {
+export function compareLenientVersion(a: string, b: string): number {
   const left = parseVersion(a);
   const right = parseVersion(b);
   const length = Math.max(left.length, right.length);
@@ -179,12 +179,12 @@ function compareVersion(a: string, b: string): number {
  * Lexicographic sort misorders `1.10.0` and `1.9.0`, and mixed-source paths
  * can otherwise dominate comparison. Equal versions keep the earlier source.
  */
-function newestVersioned(candidates: VersionedCandidate[]): string | null {
+export function newestVersioned(candidates: VersionedCandidate[]): string | null {
   const existing = candidates.filter((candidate) => existsSync(candidate.path));
   if (existing.length === 0) return null;
   let best = existing[0];
   for (const candidate of existing.slice(1)) {
-    if (compareVersion(candidate.version, best.version) > 0) best = candidate;
+    if (compareLenientVersion(candidate.version, best.version) > 0) best = candidate;
   }
   return best.path;
 }
