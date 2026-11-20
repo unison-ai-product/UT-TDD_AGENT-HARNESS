@@ -97,7 +97,7 @@ PLAN は凍結中 (#1166) のため、方式判断はここへ置く。
    - **extra の扱い**: C1 に期待 path の集合に無い entry が在るとき、mode `100755` と `120000` は上の (c) (d) で本照合が落とす。
      mode `100644` の extra は本照合の責務外とする。`exactCommitEntries` が期待と観測の entry 数の一致
      (`pack-publication-staging.ts:261`) と index ごとの path の一致 (`:268`) を要求するため、extra は既存の audit が
-     `commit_entries_mismatch` で拒否する (`:378-379`)。ただし control manifest の sidecar (`release/manifest.yaml`、
+     `commit_entries_mismatch` で拒否する (`:378-379`)。期待集合へビルド入力 (Issue #1882) を加える改訂は `pack-build-inputs.md` §5.1 が持つ。ただし control manifest の sidecar (`release/manifest.yaml`、
      mode `100644`、`pack-publication-staging.ts:14`、`:240-248`) は期待 entry の一部であり、extra として扱わない。
    - **公開の必須条件 (実装 PR の受け入れ基準、本 PR では実装しない)**: mode 照合は本契約の新しい gate だが、extra `100644` や bytes 改変は
      既存機構の `auditPackPublication` (`src/setup/pack-publication-staging.ts:366-390`) に委ねる。この関数は注入された `observe` の値を
