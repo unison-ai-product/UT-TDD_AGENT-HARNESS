@@ -10,7 +10,7 @@ next_pair_freeze: L7
 issue: 971
 ---
 
-> **L6 contract marker**: G1-trace / G3-trace の consumer 分岐 (`analyzeConsumerG1Trace(reader) => ConsumerTraceResult` / `analyzeConsumerG3Trace(reader) => ConsumerTraceResult`、出力の形は §8) は unit-test-granularity contract である。DbC pre/post/invariant は §10 にまとめる。oracle の索引は共有の `docs/test-design/harness/L7-unit-test-design.md` (§consumer trace gate) に置き、詳細 (CANDIDATE-U-CTRACE-001〜050、§14 の画面 ID の名前空間は 042〜045、§15 の G3-trace の文書不在時の縮退は 046〜050) は専用の `docs/test-design/harness/L7-consumer-trace-gates-test-design.md` が固定する。
+> **L6 contract marker**: G1-trace / G3-trace の consumer 分岐 (`analyzeConsumerG1Trace(reader) => ConsumerTraceResult` / `analyzeConsumerG3Trace(reader) => ConsumerTraceResult`、出力の形は §8) は unit-test-granularity contract である。DbC pre/post/invariant は §10 にまとめる。oracle の索引は共有の `docs/test-design/harness/L7-unit-test-design.md` (§consumer trace gate) に置き、詳細 (CANDIDATE-U-CTRACE-001〜055、§14 の画面 ID の名前空間は 042〜045、§15 の G3-trace の文書不在時の縮退は 046〜050、§6.3 の範囲の展開の上限は 051〜055) は専用の `docs/test-design/harness/L7-consumer-trace-gates-test-design.md` が固定する。
 
 # consumer trace gate (G1-trace / G3-trace の consumer 分岐) — 関数設計 (issue #971 / #972 / #880)
 
@@ -117,7 +117,11 @@ ID は prefix を仮定せずに、表の列から取る。表は `doc_type_id` 
 - 範囲表記 `X〜Y` / `X～Y` を展開する。先例は `src/lint/g3-trace.ts:116` の `extractL3CarryFrL1Ids` (`FR-L1-21〜35` を 21〜35 に展開) である。consumer では prefix を仮定しないので、次のように一般化する。
   - `X` を「末尾の数字列 `d` とそれより前の prefix `p`」に分ける。`Y` は数字列だけ、または同じ prefix `p` を持つ ID とする。
   - `d` から `Y` の数字までを展開し、各値を `d` の桁数で 0 埋めする (`SC-001〜012` は `SC-001`〜`SC-012`)。g3-trace の `padStart(2, "0")` (`src/lint/g3-trace.ts:124`) は harness の 2 桁 ID 専用であり、consumer 分岐では使わない。
-  - `X` に数字列が無い、prefix が違う、終わりが始まりより小さい場合は、理由 `invalid_range:<doc_type_id>:<token>` を返す。
+  - 次のいずれかの場合は、理由 `invalid_range:<doc_type_id>:<token>` を返す (新しい理由の種類は足さない)。(1) `X` に数字列が無い。(2) prefix が違う。(3) 終わりが始まりより小さい。(4) 展開の件数が `MAX_RANGE_EXPANSION` (下記) を超える。(5) 始まりか終わりの数字列が安全整数 (`Number.isSafeInteger`) を超える。
+  - **展開の件数の上限 (#971、PR #1847 の review 指摘)**: 1 つの範囲の展開の件数の上限は、名前つきの定数 `MAX_RANGE_EXPANSION = 1000` の 1 個とする。件数は `Y − d + 1` (`d` と `Y` は数値化した始まりと終わり) の算術で求め、**展開の前に判定する**。ループの実行や配列の確保の後で判定しない。(5) の判定は数値化の前に行い、安全整数を超える数字列は件数の算術へ渡さない。ちょうど 1000 件は展開し、1001 件は `invalid_range` とする。
+  - **根拠**: consumer のテンプレートの ID は 3 桁 (`SC-001`) で、名前空間は最大 999 件である。実際の文書の範囲は数十件程度である (Pack#10 の例は `SC-01〜16`)。参照先の集合より件数が多い範囲は、鳩の巣原理で必ず dangling を含むので、上限で弾いても、通るはずの文書は赤にならない。**限界**: 1 つの名前空間の参照先が 1000 件を超える consumer では、1000 件を超える範囲を正当に書けない。その場合は範囲を分けて書く。
+  - **同じ行のほかの token と行の扱い**: 上限を超えた範囲 (4)(5) は、(1)〜(3) の `invalid_range` と同じ扱いにする。範囲の token は placeholder ではないので token として数え、`invalid_range` 1 件だけを返し、展開しない。同じ行のほかの token は通常どおり照合し、dangling なら個別に `dangling_reference` を返す。範囲の token だけの行は、token が 0 個ではないので `missing_reference` を返さない。
+  - **理由の総数の上限**: 範囲の token 1 個につき返す理由は `invalid_range` の 1 件だけである。展開が成功した範囲の token は、展開した各 ID について §7.1 の照合の理由を返す。件数が上限以下なので、範囲の token 1 個から返る理由は最大でも `MAX_RANGE_EXPANSION` 件である。したがって理由の総数は、範囲の token の数 × `MAX_RANGE_EXPANSION` 以下で、入力の大きさに線形である。
 
 ## 7. trace 規則と空集合 (B2 / C1)
 
@@ -187,6 +191,7 @@ consumer 分岐の analyzer は次を返す。対応する trace helper が既�
 | post (読み取り) | consumer 分岐は §5 の 4 文書 (G1 は L1 / L2 / L3、G3 は 4 つ全て) だけを要求する。harness 専用の文書を要求しない |
 | post (fail-close) | core 文書の欠落、`doc_type_id` の不一致、表の欠落、範囲表記の不正、必須集合の空は、いずれも `ok=false` |
 | post (trace) | §7.1 の各規則の違反 1 件 (token 1 個または参照 0 個の行 1 件) につき理由 1 件 |
+| invariant (停止性と資源の上限、§6.3) | 範囲 1 つの展開の件数は `MAX_RANGE_EXPANSION` (1000) 以下である。件数の判定は `Y − d + 1` の算術で、展開 (ループ・配列の確保) の前に行う。数字列が安全整数を超える範囲は数値化した算術に入れず `invalid_range` を返す。巨大な範囲 (`SC-0〜9007199254740991`) でも有限の時間と資源で終わり、理由の総数は範囲の token の数 × `MAX_RANGE_EXPANSION` 以下である |
 | invariant (prefix 非依存) | ID の抽出と照合は prefix に依存しない。ID の文字列を変えても、列の位置関係が同じなら結果は変わらない |
 | invariant (入口の一致) | 同じ repo に対して、trace helper と public gate の trace-filtered messages は一致する。helper の `ok` は fixture の期待値で確かめ、aggregate gate の `passed` と比較しない |
 | invariant (読み取り専用) | lint は文書を書き換えない |
