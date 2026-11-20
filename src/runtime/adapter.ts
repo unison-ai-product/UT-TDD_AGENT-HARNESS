@@ -169,9 +169,9 @@ function compareParts(left: number[], right: number[], from: number): number {
   for (let index = from; index < length; index++) {
     const l = left[index] ?? 0;
     const r = right[index] ?? 0;
-    if (l === r) continue;
-    if (Number.isNaN(l - r)) return 0;
-    return l - r;
+    const diff = l - r;
+    if (Number.isNaN(diff)) return 0;
+    if (diff !== 0) return diff;
   }
   return 0;
 }
