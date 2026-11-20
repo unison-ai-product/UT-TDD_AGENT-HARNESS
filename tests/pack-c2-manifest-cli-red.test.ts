@@ -308,7 +308,7 @@ describe("Pack C2 manifest command candidate oracles", () => {
     if (scratch) removeTestTree(scratch);
   });
 
-  it.fails("U-C2MAN-001: CLI output is independent of cwd and environment", () => {
+  it("U-C2MAN-001: CLI output is independent of cwd and environment", () => {
     const inside = read("success");
     const outside = read("tag-exists");
     expect(inside.status).toBe(0);
@@ -317,7 +317,7 @@ describe("Pack C2 manifest command candidate oracles", () => {
     expect(outside.manifest).toEqual(inside.manifest);
   });
 
-  it.fails("U-C2MAN-007: success adds only the manifest with no index or ref changes", () => {
+  it("U-C2MAN-007: success adds only the manifest with no index or ref changes", () => {
     const result = read("success");
     expect(result.status).toBe(0);
     expect(result.manifest).not.toBeNull();
@@ -339,19 +339,19 @@ describe("Pack C2 manifest command candidate oracles", () => {
     expect(result.after).toEqual(result.before);
   }
 
-  it.fails("U-C2MAN-008: rejects a C1 that is not the current HEAD", () => {
+  it("U-C2MAN-008: rejects a C1 that is not the current HEAD", () => {
     expectUnchangedFailure("wrong-head", "c2_c1_not_head");
   });
 
-  it.fails.each(["dirty-tracked", "dirty-untracked"])("U-C2MAN-009: rejects %s", (scenario) => {
+  it.each(["dirty-tracked", "dirty-untracked"])("U-C2MAN-009: rejects %s", (scenario) => {
     expectUnchangedFailure(scenario, "c2_worktree_dirty");
   });
 
-  it.fails("U-C2MAN-010: rejects a manifest tracked in C1", () => {
+  it("U-C2MAN-010: rejects a manifest tracked in C1", () => {
     expectUnchangedFailure("tracked-manifest", "c2_manifest_present_in_c1");
   });
 
-  it.fails.each([
+  it.each([
     ["previous-unavailable", "c2_previous_unavailable"],
     ["previous-invalid", "c2_previous_invalid"],
     ["previous-v1", "c2_previous_invalid"],
@@ -361,7 +361,7 @@ describe("Pack C2 manifest command candidate oracles", () => {
       expect(read(scenario).stdout.toString()).toContain("v1_read_only");
   });
 
-  it.fails.each([
+  it.each([
     ["stable-tag", "c2_tag_not_canary"],
     ["invalid-tag", "c2_option_invalid"],
     ["tag-with-space", "c2_option_invalid"],
@@ -369,7 +369,7 @@ describe("Pack C2 manifest command candidate oracles", () => {
     expectUnchangedFailure(scenario, reason);
   });
 
-  it.fails("U-C2MAN-013: tag presence or an explicit Pack root does not change the bytes", () => {
+  it("U-C2MAN-013: tag presence or an explicit Pack root does not change the bytes", () => {
     const absent = read("success");
     const present = read("tag-exists");
     expect(absent.before.refs).not.toContain(`refs/tags/${TAG}`);
@@ -389,7 +389,7 @@ describe("Pack C2 manifest command candidate oracles", () => {
     }
   });
 
-  it.fails("U-C2MAN-019: preserves an untracked manifest", () => {
+  it("U-C2MAN-019: preserves an untracked manifest", () => {
     const result = read("target-exists");
     expect(result.status).toBe(1);
     const output = jsonOutput(result.stdout);
@@ -403,7 +403,7 @@ describe("Pack C2 manifest command candidate oracles", () => {
     expect(result.after).toEqual(result.before);
   });
 
-  it.fails("U-C2MAN-020: wires success and failure output for JSON and text callers", () => {
+  it("U-C2MAN-020: wires success and failure output for JSON and text callers", () => {
     const success = read("success");
     const failure = read("stable-tag");
     const textSuccess = read("text-success");
