@@ -47,7 +47,9 @@ describe("B: parseSemver / latestReleaseTag (特性化)", () => {
     const permute = (xs: string[]): string[][] =>
       xs.length <= 1
         ? [xs]
-        : xs.flatMap((x, i) => permute([...xs.slice(0, i), ...xs.slice(i + 1)]).map((r) => [x, ...r]));
+        : xs.flatMap((x, i) =>
+            permute([...xs.slice(0, i), ...xs.slice(i + 1)]).map((r) => [x, ...r]),
+          );
     const all = permute(tags);
     expect(all.length).toBe(120);
     for (const p of all) expect(latestReleaseTag(p)).toBe("v1.0.0");
