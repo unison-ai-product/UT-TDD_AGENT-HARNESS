@@ -51,6 +51,8 @@ let authorRoot = "";
 let scratchRoot = "";
 let seedRoot = "";
 let seedBuildInputs: string[] = [];
+// seed に入れた artifact の基準集合 (ビルド入力を足す前の plan から独立に取る)。
+let seedArtifactPaths: string[] = [];
 const privacyHome = useSyntheticPrivacyHome();
 
 function git(cwd: string, args: string[]): string {
@@ -80,6 +82,7 @@ function fixtureBuildInputPaths(): string[] {
 function commitSeed(root: string): void {
   const sourcePaths = git(authorRoot, ["ls-files"]).split(/\r?\n/).filter(Boolean);
   const plan = buildCleanDistributionPlan({ paths: sourcePaths, sourceTag: TAG });
+  seedArtifactPaths = [...plan.artifactPaths].sort();
   for (const rel of plan.artifactPaths) {
     const from = join(authorRoot, cleanDistributionSourcePath(rel, sourcePaths));
     const to = join(root, rel);
@@ -268,10 +271,17 @@ describe("CANDIDATE-U-PKBIN sync-pack / package wiring", () => {
     expect(result.status).toBe(0);
     const paths = [...seedBuildInputs].sort();
     const artifactPaths = (pick(json, "export", "artifactPaths") as string[] | undefined) ?? [];
-    for (const rel of paths) {
-      if (artifactPaths.includes(rel)) continue; // artifact と重なる path は変換後 bytes (§2.2、比べない)
+    // artifact の集合と件数は基準と一致する (ビルド入力の混入を許さない)。
+    expect([...artifactPaths].sort()).toEqual(seedArtifactPaths);
+    // artifact と重なる path は変換後 bytes を出荷する (§2.2) ので bytes 同一の対象外。重なりは基準から求める。
+    const overlap = paths.filter((rel) => seedArtifactPaths.includes(rel));
+    const pureBuildInputs = paths.filter((rel) => !seedArtifactPaths.includes(rel));
+    expect(pureBuildInputs.length).toBeGreaterThan(0);
+    for (const rel of pureBuildInputs) {
+      expect(artifactPaths).not.toContain(rel);
       expect(readFileSync(join(packDir, rel)).equals(readFileSync(join(source, rel)))).toBe(true);
     }
+    for (const rel of overlap) expect(existsSync(join(packDir, rel))).toBe(true);
     const nextCommands =
       (pick(json, "pack", "nextCommands") as string[] | undefined)?.join("\n") ?? "";
     for (const rel of paths) expect(nextCommands).toContain(rel);
@@ -279,10 +289,7 @@ describe("CANDIDATE-U-PKBIN sync-pack / package wiring", () => {
     expect(
       [...((pick(json, "pack", "buildInputs", "paths") as string[] | undefined) ?? [])].sort(),
     ).toEqual(paths);
-    expect(pick(json, "pack", "copiedArtifacts")).toBe(artifactPaths.length);
-    expect(
-      artifactPaths.filter((rel) => seedBuildInputs.includes(rel) && !artifactPaths.includes(rel)),
-    ).toEqual([]);
+    expect(pick(json, "pack", "copiedArtifacts")).toBe(seedArtifactPaths.length);
   });
 
   it.fails("CANDIDATE-U-PKBIN-008: --prune-local はビルド入力を消さず、一覧に無い stale file だけを消す", () => {
