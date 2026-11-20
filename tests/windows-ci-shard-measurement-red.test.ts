@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   admitWindowsShardMeasurement,
+  parseMeasurementTimestamp,
   type WindowsShardMeasurementFailure,
   type WindowsShardMeasurementInput,
 } from "../src/github/windows-ci-shard-measurement.ts";
@@ -236,7 +237,13 @@ const bindingMismatches: Mutation[] = [
   [
     "a snapshot without the PR head as a parent",
     (i) => {
-      i.after.snapshot.parentShas = [BASE];
+      i.after.snapshot.parentShas = [BASE, "603f806c80b8daaa907731410e4dacb3e9876c8e"];
+    },
+  ],
+  [
+    "a single-parent snapshot different from the PR head",
+    (i) => {
+      i.after.snapshot.parentShas = [HEAD];
     },
   ],
   [
@@ -312,6 +319,12 @@ const invalidEvidence: Mutation[] = [
     },
   ],
   [
+    "a normalized invalid UTC calendar date",
+    (i) => {
+      i.after.windowsJobs[0].step.completedAt = "2026-02-30T10:51:06Z";
+    },
+  ],
+  [
     "an empty timing interval",
     (i) => {
       i.after.windowsJobs[0].step.completedAt = i.after.windowsJobs[0].step.startedAt;
@@ -349,7 +362,7 @@ describe("U-CISHARD-012: Windows shard measurement evidence", () => {
     expect(staggered[2].completedAt > staggered[0].completedAt).toBe(true);
   });
 
-  it.fails("U-CISHARD-012: calculates the fixed before median and the live after interval", () => {
+  it("U-CISHARD-012: calculates the fixed before median and the live after interval", () => {
     expect(admitWindowsShardMeasurement(fixture())).toEqual({
       ok: true,
       beforeSeconds: [1453, 1429, 1465],
@@ -359,8 +372,10 @@ describe("U-CISHARD-012: Windows shard measurement evidence", () => {
     });
   });
 
-  it.fails("U-CISHARD-012: uses different shards for the earliest start and latest end", () => {
-    expect(admitWindowsShardMeasurement(staggeredFixture())).toEqual({
+  it("U-CISHARD-012: uses different shards for the earliest start and latest end", () => {
+    const evidence = staggeredFixture();
+    evidence.subject.pr = 1852;
+    expect(admitWindowsShardMeasurement(evidence)).toEqual({
       ok: true,
       beforeSeconds: [1453, 1429, 1465],
       beforeMedianSeconds: 1453,
@@ -369,7 +384,7 @@ describe("U-CISHARD-012: Windows shard measurement evidence", () => {
     });
   });
 
-  it.fails("U-CISHARD-012: admits the PR head itself as the common snapshot", () => {
+  it("U-CISHARD-012: admits the PR head itself as the common snapshot", () => {
     const evidence = fixture();
     evidence.after.snapshot = {
       commitSha: HEAD,
@@ -383,15 +398,22 @@ describe("U-CISHARD-012: Windows shard measurement evidence", () => {
     });
   });
 
-  it.fails.each(bindingMismatches)("U-CISHARD-012: refuses %s", (_label, edit) => {
+  it.each(bindingMismatches)("U-CISHARD-012: refuses %s", (_label, edit) => {
     assertRejected(edit, "measurement_binding_mismatch");
   });
 
-  it.fails.each(failedEvidence)("U-CISHARD-012: rejects %s as unsuccessful", (_label, edit) => {
+  it.each(failedEvidence)("U-CISHARD-012: rejects %s as unsuccessful", (_label, edit) => {
     assertRejected(edit, "measurement_not_successful");
   });
 
   it.each(invalidEvidence)("U-CISHARD-012: rejects %s as invalid evidence", (_label, edit) => {
     assertRejected(edit, "measurement_evidence_invalid");
   });
+
+  it.each([
+    "2026-02-30T10:51:06Z",
+    "2026-11-19T24:00:00Z",
+    "2026-11-19T10:60:00Z",
+  ])("rejects a normalized or out-of-range UTC timestamp: %s", (value) =>
+    expect(parseMeasurementTimestamp(value)).toBeNull());
 });
