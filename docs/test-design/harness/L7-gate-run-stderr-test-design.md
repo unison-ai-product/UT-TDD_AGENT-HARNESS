@@ -24,11 +24,11 @@ issue: 1359
 
 `U-GATE-009` に残る4項目を、対になる L6 §3 に従って独立に検証する。各ケースは固有の一時ディレクトリを使い、既存の公開結果やプロセスと分離する。
 
-| 候補 ID | fixture と前提の確認 | 意図する oracle |
+| U-ID | fixture と前提の確認 | 意図する oracle |
 |---|---|---|
-| `CANDIDATE-U-GATEPUB-001` | 通常の `gate G0.5` の passed と failed の対照実行を取る。L6 §3.2 の preload で既存 ID 検出と link 時の衝突を別々に起こす。それぞれ一致 final の読み取りと staging/link の未到達、または実 link の呼び出し1回と `EEXIST` を記録で確認する。 | human-readable の stderr と JSON の既存警告欄に `EEXIST` が出る。各対照と verdict / exit が一致し、JSON の証跡は `null`。既存 final の bytes は変わらない。 |
-| `CANDIDATE-U-GATEPUB-002` | 直接 writer の `boundary.link` と、L6 §3.2 の CLI preload の2経路で固定の `ENOTSUP` を注入する。各経路で path と1回の発火を記録し、対照では通常の hard link で公開できることを確認する。 | 直接 writer では注入エラーの伝播を確認する。CLI は対照の verdict / exit を維持し、既存の警告経路を使う。失敗した実行の final はどちらも作られない。 |
-| `CANDIDATE-U-GATEPUB-003` | `beforeLink` を1回だけ受け、callback の実行中に指定された path を参照する。 | `.tmp-*` が指定ディレクトリに実在し、その JSON が今回の `gate_run_id` と完成した証跡を含む。final はまだ存在せず、callback が戻った後の実 hard link で final が1件できる。 |
-| `CANDIDATE-U-GATEPUB-004` | 専用子プロセスを `beforeLink` 内で待機させる。親は通知の受信、temp の完成 JSON と final の不在を確認してからその子だけを強制終了し、終了を観測する。 | 強制終了後も当該 ID の final が存在しない。別プロセスの retry は新しい ID で final を1件作る。旧 temp の path と bytes が維持され、実際の投影 reader に含まれるのは retry の final だけである。 |
+| `U-GATEPUB-001` | 通常の `gate G0.5` の passed と failed の対照実行を取る。L6 §3.2 の preload で既存 ID 検出と link 時の衝突を別々に起こす。それぞれ一致 final の読み取りと staging/link の未到達、または実 link の呼び出し1回と `EEXIST` を記録で確認する。 | human-readable の stderr と JSON の既存警告欄に `EEXIST` が出る。各対照と verdict / exit が一致し、JSON の証跡は `null`。既存 final の bytes は変わらない。 |
+| `U-GATEPUB-002` | 直接 writer の `boundary.link` と、L6 §3.2 の CLI preload の2経路で固定の `ENOTSUP` を注入する。各経路で path と1回の発火を記録し、対照では通常の hard link で公開できることを確認する。 | 直接 writer では注入エラーの伝播を確認する。CLI は対照の verdict / exit を維持し、既存の警告経路を使う。失敗した実行の final はどちらも作られない。 |
+| `U-GATEPUB-003` | `beforeLink` を1回だけ受け、callback の実行中に指定された path を参照する。 | `.tmp-*` が指定ディレクトリに実在し、その JSON が今回の `gate_run_id` と完成した証跡を含む。final はまだ存在せず、callback が戻った後の実 hard link で final が1件できる。 |
+| `U-GATEPUB-004` | 専用子プロセスを `beforeLink` 内で待機させる。親は通知の受信、temp の完成 JSON と final の不在を確認してからその子だけを強制終了し、終了を観測する。 | 強制終了後も当該 ID の final が存在しない。別プロセスの retry は新しい ID で final を1件作る。旧 temp の path と bytes が維持され、実際の投影 reader に含まれるのは retry の final だけである。 |
 
-Red では、起動・fixture 作成・対照実行を独立に確認し、環境エラーや単なる待機時間切れで期待失敗が成立しないようにする。注入点への到達・発火は、テスト用の記録と成果物の両方で判定する。強制終了の通知や終了待ちには期限を設け、期限切れを crash の証拠にしない。後続 Red で各候補 ID を引用する。
+Red では、起動・fixture 作成・対照実行を独立に確認し、環境エラーや単なる待機時間切れで期待失敗が成立しないようにする。注入点への到達・発火は、テスト用の記録と成果物の両方で判定する。強制終了の通知や終了待ちには期限を設け、期限切れを crash の証拠にしない。Red テストは各正式 ID を引用する。

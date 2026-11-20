@@ -128,11 +128,11 @@ for (const approved of [true, false]) {
         for (const root of roots) removeTestTree(root);
       });
 
-      it.fails("CANDIDATE-U-GATEPUB-001: identifies a duplicate ID as EEXIST", () => {
+      it.fails("U-GATEPUB-001: identifies a duplicate ID as EEXIST", () => {
         expect(duplicateWarning).toContain("EEXIST");
       });
 
-      it("CANDIDATE-U-GATEPUB-001: reports native link EEXIST and preserves the contender", () => {
+      it("U-GATEPUB-001: reports native link EEXIST and preserves the contender", () => {
         const occupied = execute("occupied");
         expect(assertLink(occupied, "EEXIST")).toBe(assertSeedIsPreserved(occupied));
         expect(occupied.gateWarning).toContain(warning);
@@ -140,7 +140,7 @@ for (const approved of [true, false]) {
         expect(occupied.evidence).toBe(json ? null : false);
       }, 45_000);
 
-      it("CANDIDATE-U-GATEPUB-002: reports ENOTSUP without publishing a fallback final", () => {
+      it("U-GATEPUB-002: reports ENOTSUP without publishing a fallback final", () => {
         const failed = execute("unsupported");
         const final = assertLink(failed, "ENOTSUP");
         expect(existsSync(final)).toBe(false);

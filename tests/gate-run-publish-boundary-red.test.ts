@@ -180,15 +180,15 @@ describe("gate-run evidence writer publication boundaries", () => {
     for (const root of roots) removeTestTree(root);
   });
 
-  it.fails("CANDIDATE-U-GATEPUB-002: calls the injected hard link exactly once", () => {
+  it.fails("U-GATEPUB-002: calls the injected hard link exactly once", () => {
     expect(injectedLinkCalls).toBe(1);
   });
 
-  it.fails("CANDIDATE-U-GATEPUB-003: observes the complete staging JSON before the hard link", () => {
+  it.fails("U-GATEPUB-003: observes the complete staging JSON before the hard link", () => {
     expect(beforeLinkCalls).toBe(1);
   });
 
-  it.fails("CANDIDATE-U-GATEPUB-004: terminates the writer before link and projects only retry", () => {
+  it.fails("U-GATEPUB-004: terminates the writer before link and projects only retry", () => {
     expect(crashResult).toBe("killed-before-link-and-retried");
   });
 });
