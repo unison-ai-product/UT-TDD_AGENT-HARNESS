@@ -9,7 +9,7 @@ related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 issue: 1882
 ---
 
-> **L6 contract marker**: `selectPackBuildInputs(treePaths, exists?) => PackBuildInputSelection` (tagged source の Git tree の path 一覧から Pack のビルド入力を選ぶ純粋関数。`src/setup/pack-build-inputs.ts` に置く) は unit-test-granularity contract である (未実装の目標契約。関数名は実装で変えてよいが、契約の意味は変えない)。pre: `treePaths` は `git ls-tree -r` 相当の tracked path (index を読まない)。post: 固定の 3 file と V-model テンプレート (§3) が全て tree に在るときだけ `ok: true` とその path の昇順の一覧を返し、1 件でも欠ければ書き出し前に止める理由コード (§4) を返す。invariant: ビルド入力の選択規則は repo 全体でこの 1 関数だけが持ち、`sync-pack` / `package` / テストの補助は同じ関数を呼ぶ。oracle は `docs/test-design/harness/L7-pack-build-inputs-test-design.md` の `CANDIDATE-U-PKBIN-001`〜`012` が固定する (正式 ID `U-PKBIN-*` への昇格は、src を含まない昇格 PR で行う)。
+> **L6 contract marker**: `selectPackBuildInputs(treePaths, exists?) => PackBuildInputSelection` (tagged source の Git tree の path 一覧から Pack のビルド入力を選ぶ純粋関数。`src/setup/pack-build-inputs.ts` に置く) は unit-test-granularity contract である (未実装の目標契約。関数名は実装で変えてよいが、契約の意味は変えない)。pre: `treePaths` は `git ls-tree -r` 相当の tracked path (index を読まない)。post: 固定の 3 file と V-model テンプレート (§3) が全て tree に在るときだけ `ok: true` とその path の昇順の一覧を返し、1 件でも欠ければ書き出し前に止める理由コード (§4) を返す。invariant: ビルド入力の選択規則は repo 全体でこの 1 関数だけが持ち、`sync-pack` / `package` / テストの補助は同じ関数を呼ぶ。oracle は `docs/test-design/harness/L7-pack-build-inputs-test-design.md` の `CANDIDATE-U-PKBIN-001`〜`017` が固定する (正式 ID `U-PKBIN-*` への昇格は、src を含まない昇格 PR で行う)。
 
 # Pack のビルド入力の一覧と検査 (Issue #1882)
 
@@ -35,7 +35,7 @@ oracle の正本として別 PR で行う。PLAN は凍結中 (#1166) のため�
    artifact の一覧 (`buildCleanDistributionPlan`) とは別の概念なので同居させない。module は定数 2 個と関数 1 個だけにする
    (層・class・registry を足さない、最小実装原則)。
 2. **ビルド入力は Pack の artifact ではない**。`buildCleanDistributionPlan` の `artifactPaths`、release manifest の inventory、公開 tar には入れない
-   (入れると公開物が変わり、既存の契約に触れる)。C1 に置くだけで、`package` が snapshot から読む。同じ path が artifact にも入っている場合は 1 回だけ copy する。
+   (入れると公開物が変わり、既存の契約に触れる)。C1 に置くだけで、`package` が snapshot から読む。同じ path が artifact にも入っている場合は artifact を優先して 1 回だけ copy する (変換後の bytes が C1 に入り、build 入力としての bytes 同一の照合は行わない)。
 3. **検査は書き出しの前に行う**。`sync-pack` は prune / copy の前、`package` は依存の install と asset の stage の前に、`selectPackBuildInputs` を呼び、
    `ok: false` なら何も書かずに止まる (§5)。
 4. **テストの補助は同じ関数を読む**。`tests/support/pack-internal-canary.ts` の独自の選択 (path の文字列 literal) を削除し、`selectPackBuildInputs` の結果を copy する。
@@ -89,19 +89,51 @@ export function selectPackBuildInputs(
   snapshot は C1 の checkout なので、C1 からのビルド入力の欠落を、ENOENT より前に理由コード付きで検出する。
 - どちらも `selectPackBuildInputs` の戻り値以外から path を作らない。`package` が source repo を読み戻して補う経路は作らない (Pack 単独で再現できなくなる)。
 
+### 5.1 公開の照合 (`pack-exec-mode.md` §4.3) が期待する C1 の集合
+
+本書は `pack-exec-mode.md` §4.3 の「期待 entry の集合」を次のとおり**改訂する** (§4.3 の他の規則は変えない)。ビルド入力を C1 に置くので、照合の期待集合へ入れないと、
+正しく作った C1 を `commit_entries_mismatch` で拒否する。
+
+- **期待集合** = artifact (`release.artifacts`) + **ビルド入力** + C2 の `release/manifest.yaml` (control manifest の sidecar)。この集合と C1 の全 entry / 全 blob を `exactCommitEntries` が完全に比べる。
+- **ビルド入力の entry**: path は `selectPackBuildInputs` の `paths` (§3 と同じ単一の正本。照合側に独自の一覧を持たない)。mode は `100644` 固定。bytes は**固定した source commit** の同じ path の blob と一致する
+  (変換しない。§5 の `sync-pack` が bytes を変えずに copy するのと対)。entry の種別は artifact / control manifest とは別の `build-input` とする。
+  artifact と同じ path のときは artifact の entry だけを期待し、`build-input` の entry は足さない。
+- **責務**: 期待集合を作るのは `packCommitEntries` (`src/setup/pack-publication-staging.ts`) である。呼び出し側が、固定した source commit の `git ls-tree -r` を `selectPackBuildInputs` に通し、
+  その `paths` の blob を `git cat-file` で読んだ `{ path, bytes }` の列を渡す。`packCommitEntries` は選択をしない (選択の正本は 1 つ)。`ok: false` (§4) のときは、期待集合を作らず公開を止める。
+  期待集合の外の entry を 1 件でも観測すれば、従来どおり拒否する。
+- **公開物は変えない**: ビルド入力は公開 tar と manifest の `artifacts[]` に入らない (§2.2)。増えるのは C1 の期待集合だけである。
+- **実測 (本書の根拠)**: 現行の `packCommitEntries` (`pack-publication-staging.ts:223-256`) は `release.artifacts` と control manifest だけから期待集合を作る。
+  `auditPackPublication` の呼び出し元は `src/` に無く (テストだけ)、`exactCommitEntries` に実 C1 を読ませる配線は未実装である (`pack-exec-mode.md` §4.3 の「公開の必須条件」)。
+  canary.7 は C1 に 52 件のビルド入力を人が足して公開されたが、この照合を通っていない。照合を配線すると、期待集合を改訂しないままでは同じ C1 を拒否する。
+
 ## 6. 不変条件 (DbC)
 
 - Pre: 入力は tracked path の一覧のみ。選択は読み取りだけで、file を書かない。
 - Post: `ok: true` のとき、返る path は全て tree に在り、固定 3 件とテンプレート 1 件以上を含む。`ok: false` のとき、`reasons` は欠けた全ての固定 file と、必要ならテンプレート空の理由を含む。
 - Invariant (単一の正本): ビルド入力を**選ぶ**規則 (固定 3 件の一覧とテンプレート規則) は `src/setup/pack-build-inputs.ts` にだけ在る。`sync-pack` / `package` / `tests/support/` は、ビルド入力を選ぶために独自の一覧や規則を持たず、この関数を呼ぶ。入力の**中身を読む**ための既存の参照 (例: `src/runtime/node-bootstrap.ts` の provenance の検証と読込み、`src/setup/vmodel-template-writer.ts` の catalog の読込み) は選択の重複ではないので対象外とする。
 - Invariant (非破壊): ビルド入力の検査が失敗した `sync-pack` は `repoDir` を変えず、`package` は `outDir` に何も書かない。
-- Invariant (artifact と別): `plan.artifactPaths`、release manifest、tar inventory は本契約の前後で変わらない。
+- Invariant (artifact と別): `plan.artifactPaths`、release manifest、tar inventory は本契約の前後で変わらない。照合の期待集合だけが §5.1 のとおり広がる。
 - Invariant (出力の語彙): 出力は理由コード、path、件数だけ。`nextCommands` は引き続き `git add` / `commit` / `push` を実行しない (`localGitMutationExecuted: false`)。
 
 ## 7. oracle
 
-`CANDIDATE-U-PKBIN-001..012` (`docs/test-design/harness/L7-pack-build-inputs-test-design.md`。共有の `L7-unit-test-design.md` には足さない)。012 は L12 の受入
-(新しい clone での再現の実測) である。unit の oracle は path 区切りや実行 bit に依らず、tracked path だけを観測する。
+`CANDIDATE-U-PKBIN-001..017` (`docs/test-design/harness/L7-pack-build-inputs-test-design.md`。共有の `L7-unit-test-design.md` には足さない)。012 は L12 の受入
+(新しい clone での再現の実測。再現性の範囲は §7.1) である。013〜017 は §5.1 の期待集合の oracle である。unit の oracle は path 区切りや実行 bit に依らず、tracked path だけを観測する。
+
+### 7.1 再現性の定義
+
+「同じ C1 / C2 から同じ Pack を作れる」を、5 asset ごとに次のとおり定義する (コードの読みによる。実測は 012)。
+
+| asset | 同一になる条件 | 理由 |
+| --- | --- | --- |
+| `<tag>.tar.gz`、`<tag>.tar.gz.sha256` | **PC・checkout・Node の path に依らず byte 同一** | C2 の sealed な entry だけから作り、Node の path を入力に持たない |
+| `<tag>.ut-tdd.mjs` | **同上 (path 非依存の期待)** | esbuild は `absWorkingDir` 相対のコメントだけを出し、sourcemap は無く、banner は定数 (`scripts/build-node.mjs`)。012 の実測で崩れたら本表を改訂する |
+| `<tag>.consumer-runtime.json`、`<tag>.consumer.sha256` | **Node / npm の install path が同一のときだけ** byte 同一 | receipt の `node.path` / `npm.cli_path` (絶対 path) と、それを含む `generation_id` が runtime json に base64 のまま入り (`src/runtime/node-bootstrap.ts:796-827`、`src/setup/consumer-runtime-release.ts:531`)、`consumer.sha256` は runtime json の digest を持つ (`src/cli/distribution.ts:668-671`) |
+
+- **比べ方**: 同じ PC の 2 つ目の checkout (Node の path が同じ) では 5 asset 全てが一致する。別の PC では、Node / npm の install path が同一なら 5 asset 全て、異なるなら上の 3 asset だけを必須とする。
+  後者で `consumer-runtime.json` が違うときは、receipt を base64 から戻し、`node.path`、`npm.cli_path`、`generation_id`、`receipt_digest` 以外が一致することを確かめて、差が path だけであることを示す。
+- **範囲外 (別 Issue で扱う)**: receipt から絶対 path を除く (または path に依らない形で `generation_id` を作る) こと。receipt 形式 (schema v2) と consumer の検証 (`verifyToolchain`) に触れる契約変更であり、本書では行わない。
+- 本書が保証するのは「ビルド入力の不足で作れない」を無くすことであり、path 非依存の byte 同一は保証しない。
 
 ## 8. 範囲外
 

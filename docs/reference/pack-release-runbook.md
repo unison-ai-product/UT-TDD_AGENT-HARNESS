@@ -108,7 +108,10 @@ node <source の clone の絶対 path>/src/cli.ts distribution package --tag <v0
 
 1. PowerShell の `Get-FileHash -Algorithm SHA256 <file>` (または `sha256sum`) で、5 asset の sha256 を計算します。producer の JSON と一致することを確かめます。
 2. `.sha256` の sidecar の中身が、対応する asset の計算値と一致することを確かめます。
-3. 別の checkout (または別の PC) で同じ C1 / C2 から producer を再実行し、5 asset の sha256 が一致することを確かめます (再現性の確認)。呼び方は §5 と同じで、cwd を別の Pack の checkout に置き、source の CLI を絶対 path で呼びます。
+3. **再現性の確認**。別の Pack の checkout で同じ C1 / C2 から producer を再実行します (呼び方は §5 と同じで、cwd を別の Pack の checkout に置き、source の CLI を絶対 path で呼びます)。比べ方は Node / npm の install path で変わります。
+   - 同じ PC の 2 つ目の checkout、または Node / npm の install path が同一の別 PC: **5 asset 全ての sha256 が一致**します。
+   - Node / npm の install path が異なる別 PC: `tar.gz`、`tar.gz.sha256`、`ut-tdd.mjs` の 3 つが一致すれば合格です。`consumer-runtime.json` と `consumer.sha256` は一致しません (receipt に Node / npm の絶対 path と、それを含む `generation_id` が入るため。契約は `pack-build-inputs.md` §7.1)。差が path だけであることは、receipt を base64 から戻し、`node.path`、`npm.cli_path`、`generation_id`、`receipt_digest` 以外が一致することで示します。
+   - [未自動] path に依らない byte 同一は保証しません。別 Issue で扱います。
 4. 結果 (SHA と 5 つの sha256) を、公開 Issue のコメントに残します。
 
 ## 7. 公開する (prerelease)
