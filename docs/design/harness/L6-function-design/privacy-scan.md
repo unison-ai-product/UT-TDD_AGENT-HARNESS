@@ -178,6 +178,12 @@ finding ごとに 1 行 `<location>:<line>:<kind>[:<reason>]` を出し、末尾
 - **doctor には配線しない**: CI では CI の step が正本になる。同じ検査を 2 か所で流さない。
 - **PR の順序** (設計書保護 gate §10.3 の三段階): (0) 本書と L7 の契約 PR、(1) 登録 + Red PR (実 repo を読む 015 と 016 は `src/doctor/test-repository-isolation.ts` の `repositoryReadContracts` へ登録行を足す。テスト名は候補 ID を引用する)、(2) src を含まない昇格 PR (`CANDIDATE-U-PRIVSCAN-*` を `U-PRIVSCAN-*` へ 1:1 で昇格)、(3) 実装 PR (Green。`src/lint/privacy-scan*.ts`、CLI、CI の step、distribution の配線、`docs/governance/privacy-scan-baseline.json` の初期値)。
 
+### 11.1 Pack の統合テストの source 準備 (issue #1259)
+
+`U-PRIVSCAN-014` では、実行対象の snapshot から Clean Pack plan が選ぶ artifact 一式を、既存の path 対応と内容変換を使って一度だけ temp の Git repository に作り、共通の commit とする。email の当たり、当たりなし、denylist の当たりを試す source は、共通 commit から個別の Git repository として用意する。共通の commit、作業木、ref は作成後に変更しない。ケースごとの README や追加ファイルの変更は、それぞれの作業木と履歴に閉じる。
+
+それぞれの source で、ケース差分を含む artifact commit を先に作る。その commit を `artifactSourceCommit` とする `release/manifest.yaml` を次の commit に加え、既存の tag をその commit に付ける。`sync-pack` は各 source の HEAD を読み、`package` と `sync-stage` は同じケースの tag を読む。baseline の追記は該当ケースの HEAD にだけ積む。3 command は現行の CLI から実行し、各ケースの home、出力先、JSON とテキストの判定、および書き出し前に停止する条件は L7 §2.1 と §3 に従う。
+
 ## 12. 不変条件 (DbC)
 
 - Pre: 入力は mode、走査する単位の列、binary として飛ばした数、`pack` のときは denylist の状態、`tree` のときは現在の baseline と比較元。読み取りだけを行い、ファイルを書かない。

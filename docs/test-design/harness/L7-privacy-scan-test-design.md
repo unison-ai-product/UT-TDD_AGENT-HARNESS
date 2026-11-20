@@ -29,6 +29,13 @@ issue: 1391
 - 1 つの行は規則を 1 本だけ殺すように、入力の書き方を 1 つだけ変える。
 - 015 と 016 は実 repo を読むので、`test-repository-isolation` の登録が要る (L6 §11)。
 
+### 2.1 Pack の統合テストの source 準備 (issue #1259)
+
+- `U-PRIVSCAN-014` の3つの source は、L6 §11.1 の共通 commit から派生させる。ケースごとに README 等の差分を commit し、その commit を manifest から参照して、該当ケースの manifest commit に tag を付ける。実行には temp の合成 home と既存の出力先を使う。email ケースの baseline の更新後も、同ケースの tag と他の source の HEAD、tag、作業木は更新されない。
+- §3 の (a)～(g) の入力と期待をすべて実 CLI で確かめる。JSON とテキストで実行する経路、失敗時の出力先と archive の検査、成功時の exit と判定を維持する。独立した `U-PRIVSCAN-018` は従来の fixture と oracle で実行する。
+- 基準値は main の Windows shard 3/3 の [run 44663067164](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/actions/runs/44663067164) の `U-PRIVSCAN-014` の同期 callback 117.077 秒、ファイル全体 379.365 秒。契約の起点 `8d1fbc4f` では、Clean Pack plan の artifact 1031 件を同じ callback で3回組み立てる。
+- 実装 PR では前後の exact HEAD を固定して、同じ Windows runner 種別と shard モードで、複数回の callback 時間とファイル時間を採る。fixture の準備を hook に移す場合も、準備時間と callback 時間の合計で比較する。実行ごとの値と中央値を記録し、全ケースが通り、合計時間が短くなったことを確認する。対象の timeout を調整できる場合は、短縮後の実測を根拠に決める。
+
 ## 3. oracle 宣言の一覧
 
 以下で `<P>` は「除外に当たらない email を実行時に連結して作った値」(例: ローカル部 `alice`、ドメイン `mail-provider.jp`)、`<D>` は合成の denylist の語 `example-private-repo` を指す。`<G>` はローカル部 `support`・ドメイン `github.com` のアドレス、`<GU>` はその大文字を含む形 (ローカル部 `Support`・ドメイン `GitHub.com`) を指す (L6 §3 E5 と同じ記号。本書も `tree` の検査の対象なので email の形のまま書かない。テストでは実行時に連結して作る)。
