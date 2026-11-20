@@ -4,14 +4,14 @@ artifact_type: design_doc
 status: confirmed
 sub_doc: function-spec
 artifact_role: topic_github_ci_node_version_file
-pair_artifact: docs/test-design/harness/L7-github-ci-node-pin-test-design.md
+pair_artifact: docs/test-design/harness/L7-github-ci-node-version-file-test-design.md
 parent_doc: docs/design/harness/L5-detailed-design/internal-processing.md
 issue: 1873
 ---
 
 # GitHub CI の Node の版の参照を .node-version に集約する (Issue #1873)
 
-> **L6 contract marker**: `github-ci-policy` の期待 step (`commonSteps` / `harnessAggregateSteps`、`github-ci-windows-shard.ts` の aggregate step、`attestation_runtime`) の `actions/setup-node` の `with` は unit-test-granularity contract である。oracle は `docs/test-design/harness/L7-github-ci-node-pin-test-design.md` §3 の `CANDIDATE-U-CIPOL-042`〜`048` が固定する。
+> **L6 contract marker**: `github-ci-policy` の期待 step (`commonSteps` / `harnessAggregateSteps`、`github-ci-windows-shard.ts` の aggregate step、`attestation_runtime`) の `actions/setup-node` の `with` は unit-test-granularity contract である。oracle は `docs/test-design/harness/L7-github-ci-node-version-file-test-design.md` の `CANDIDATE-U-CIPOL-042`〜`048` が固定する。
 
 L5 `internal-processing.md` の「Node toolchain authority」節の項目 2 (source workflow pin) の持ち方だけを、この文書で改める。L5 の他の項目 (版の正本の検査、封印) は変えない。L5 の文書は doc-split の上限にあるので、改訂はこの文書に置く。
 
