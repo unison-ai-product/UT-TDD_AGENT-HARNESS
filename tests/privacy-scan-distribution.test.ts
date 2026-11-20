@@ -251,7 +251,7 @@ describe("Pack privacy distribution source fixtures", () => {
   let denySource: string;
   let materializationCount: number;
 
-  // #1259: Windows preparation was below 78s after sharing the Clean Pack seed.
+  // #1259: Windows maxima after fixture reuse were 77.148s for preparation and 217.972s for the body.
   heavyBeforeAll(["pack", 180_000], () => {
     const before = cleanArtifactMaterializations;
     sharedSeedRoot = join(scratchRoot, "d-seed");
@@ -262,7 +262,6 @@ describe("Pack privacy distribution source fixtures", () => {
     materializationCount = cleanArtifactMaterializations - before;
   });
 
-  // #1259: Windows body took up to 87s in CI and 120s in the local snapshot.
   it("U-PRIVSCAN-014: distribution stops before writing when the Pack scan fails", () => {
     const denyHome = makeHome("d-home", `${D}\n`);
     const packDir = join(scratchRoot, "d-pack");
@@ -363,7 +362,7 @@ describe("Pack privacy distribution source fixtures", () => {
     ]);
     expect(baselined.status).toBe(1);
     expect(kinds(privacyJson(baselined.stdout))).toContain("privacy-email-hit");
-  }, 240_000);
+  }, 360_000);
 
   it("U-PRIVSCAN-014: materializes the common Clean Pack artifacts once", () => {
     expect(materializationCount).toBe(1);
