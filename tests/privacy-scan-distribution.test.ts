@@ -162,6 +162,7 @@ function tagReleaseManifest(root: string): void {
 
 /** Clones the seed, then creates the case-specific artifact and release-manifest commits. */
 function cleanSourceFromSeed(label: string, seedRoot: string, readmeSuffix: string): string {
+  if (!seedRoot) return cleanSource(label, readmeSuffix);
   const root = join(scratchRoot, label);
   sharedCloneRoots.push(root);
   git(scratchRoot, [
@@ -427,49 +428,36 @@ describe("privacy scan candidate oracles (distribution)", () => {
 
   // #1454 r1 FINDING 1 (L6 §8 / §12): a hit artifact path must not leak through the export plan,
   // the next commands, or the sync-pack evidence. #1454 r2: also when a command shell-escapes it.
-  describe("sync-pack artifact path masking", () => {
-    let seed = "";
-    heavyBeforeAll(["pack", 180_000], () => {
-      seed = sharedSeedRoot;
-      if (!seed) {
-        seed = join(scratchRoot, "r-seed");
-        commitCleanArtifacts(seed);
-      }
+  it.each([
+    { label: "plain", hitPath: `skills/${D}-note.md` },
+    { label: "shell-escaped", hitPath: `skills/$${D}-note.md` },
+  ])("U-PRIVSCAN-018 (regression): masks a hit artifact path in sync-pack output and evidence ($label)", ({
+    label,
+    hitPath,
+  }) => {
+    const home = makeHome(`r-home-${label}`, `${D}\n`);
+    const source = cleanSourceFromSeed(`r-source-${label}`, sharedSeedRoot, "plain line");
+    write(source, hitPath, "plain\n");
+    git(source, ["add", "--", hitPath]);
+    git(source, ["commit", "-q", "-m", "hit path"]);
+    const plan = buildCleanDistributionPlan({
+      paths: git(source, ["ls-files"]).split(/\r?\n/).filter(Boolean),
+      sourceTag: TAG,
     });
-
-    it.each([
-      { label: "plain", hitPath: `skills/${D}-note.md` },
-      { label: "shell-escaped", hitPath: `skills/$${D}-note.md` },
-    ])("U-PRIVSCAN-018 (regression): masks a hit artifact path in sync-pack output and evidence ($label)", ({
-      label,
-      hitPath,
-    }) => {
-      const home = makeHome(`r-home-${label}`, `${D}\n`);
-      const source = cleanSourceFromSeed(`r-source-${label}`, seed, "plain line");
-      write(source, hitPath, "plain\n");
-      git(source, ["add", "--", hitPath]);
-      git(source, ["commit", "-q", "-m", "hit path"]);
-      const plan = buildCleanDistributionPlan({
-        paths: git(source, ["ls-files"]).split(/\r?\n/).filter(Boolean),
-        sourceTag: TAG,
-      });
-      expect(plan.artifactPaths).toContain(hitPath);
-      const packDir = join(scratchRoot, `r-pack-${label}`);
-      mkdirSync(packDir, { recursive: true });
-      const evidenceBefore = walkFiles(join(source, ".ut-tdd"));
-      const result = runDistribution(source, home, ["sync-pack", "--repo-dir", packDir, "--json"]);
-      expect(result.status).toBe(1);
-      expect(kinds(privacyJson(result.stdout))).toContain("privacy-denylist-hit");
-      expect(result.stdout).toContain("path-sha256:");
-      const evidence = [
-        ...changedFiles(evidenceBefore, walkFiles(join(source, ".ut-tdd"))).values(),
-      ];
-      expect(evidence.length).toBeGreaterThan(0);
-      for (const text of [result.stdout, result.stderr, ...evidence]) {
-        expect(text).not.toContain(D);
-      }
-    }, 400_000);
-  });
+    expect(plan.artifactPaths).toContain(hitPath);
+    const packDir = join(scratchRoot, `r-pack-${label}`);
+    mkdirSync(packDir, { recursive: true });
+    const evidenceBefore = walkFiles(join(source, ".ut-tdd"));
+    const result = runDistribution(source, home, ["sync-pack", "--repo-dir", packDir, "--json"]);
+    expect(result.status).toBe(1);
+    expect(kinds(privacyJson(result.stdout))).toContain("privacy-denylist-hit");
+    expect(result.stdout).toContain("path-sha256:");
+    const evidence = [...changedFiles(evidenceBefore, walkFiles(join(source, ".ut-tdd"))).values()];
+    expect(evidence.length).toBeGreaterThan(0);
+    for (const text of [result.stdout, result.stderr, ...evidence]) {
+      expect(text).not.toContain(D);
+    }
+  }, 400_000);
 
   // #1454 r3 (L6 §8 / §12): both scans always run, and once the privacy scan rejects, the secret
   // scan's path is masked as well. The file below is hit by both scans at once.
