@@ -447,6 +447,15 @@ describe("consumer G1 screen namespace (issue #1273)", () => {
     expect(invalidRanges(result.violations)).toHaveLength(50);
   });
 
+  it("CANDIDATE-U-CTRACE-055(a): the same range token repeated N times yields N reasons", () => {
+    const tokens = Array.from({ length: 50 }, () => "SC-0〜9007199254740991");
+    const root = consumerFixture({ requirementRows: rangeRows(`${tokens.join(", ")}, F-01`) });
+    const { result } = pureAnalyze(root);
+
+    expect(invalidRanges(result.violations)).toHaveLength(50);
+    expect(result.violations).toHaveLength(50);
+  });
+
   it("CANDIDATE-U-CTRACE-055(b): ordinary dangling references are not suppressed by range reasons", () => {
     const root = consumerFixture({
       requirementRows: rangeRows("SC-0〜9007199254740991, SC-404, F-01"),

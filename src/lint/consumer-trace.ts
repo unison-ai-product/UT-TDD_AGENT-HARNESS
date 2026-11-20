@@ -193,7 +193,7 @@ export function analyzeConsumerG1Trace(reader: ConsumerTraceReader): ConsumerTra
   }
   found.push(...checkRefs(L1, l1, new Set([...l2.ids, ...l3.ids])));
   found.push(...checkRefs(L2, l2, new Set([...l1.ids, ...l3.ids])));
-  const violations = [...new Set(found)].sort();
+  const violations = found.sort();
   const totals = { requirements: l1.ids.size, screens: l2.ids.size, functions: l3.ids.size };
   const ok = violations.length === 0;
   const detail = `requirements=${totals.requirements}, screens=${totals.screens}, functions=${totals.functions}`;
