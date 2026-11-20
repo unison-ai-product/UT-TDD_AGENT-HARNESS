@@ -36,6 +36,19 @@ issue: 1721
 2. **B (release tag)**: 受け入れは現在の正規表現の関門を残す (`semver.valid` では prefix・prerelease・build・先頭 0 の扱いが違う。D-B1〜B4)。3 つの数がすべて安全な整数なら `major.minor.patch` の文字列で `semver.compare` に渡す。どれかが範囲外なら `semver` を使わず、現在と同じ数値の比較 (最初に `!==` になる部の差) を使う (D-B5。頭打ちにしない)。`latestReleaseTag` の選び方 (厳密に大きいときだけ更新、trim した tag を返す、受け入れなければ読み飛ばす) は変えない。
 3. **C (package)**: 受け入れは現在の厳密な規則を**そのまま**残す (正規表現、先頭 0 の拒否、安全な整数。長さの上限は設けない。D-C2)。`semver.valid` を関門にしない (D-C1)。比較は、次のいずれにも当たらないときだけ、`PackageSemver` の各欄から `major.minor.patch[-prerelease]` を組み立てて `semver.compare` に渡し、**符号だけ**を返す (D-C3)。(a) 組み立てた文字列の長さが 256 を超える (`semver.compare` が例外を投げる。D-C2)。(b) prerelease に 16 桁以上の数字だけの識別子がある (`semver` は数値に丸めて順序を壊す。D-C5)。(a) か (b) に当たる入力は、現在の `comparePackageSemver` と同じ比較 (識別子ごとに、数字どうしは桁数、次に辞書順) を補助として使う。`PackageSemver` の型 (prerelease は文字列の配列) は変えない。`semver.parse` の返り値を公開しない (D-C4)。
 
+### 3.0 A をテストできる形にする契約 (issue #1721、2026-11-20 control 決定)
+
+A の関数は `src/runtime/adapter.ts` の module 内 private であり、L7 §2 は「テストできる形は、その PR の契約として L6 に足してから Red を書く」と定める。そのため A の置き換えの前に、公開の形をここで固定する。公開はテストの最小に留める。
+
+| 公開する関数 | signature | 置き場所 | 現在の実装との関係 |
+|---|---|---|---|
+| `compareLenientVersion` | compareLenientVersion(a: string, b: string) => number | `src/runtime/adapter.ts` (export) | 現在の `compareVersion` の改名。挙動は変えない |
+| `newestVersioned` | newestVersioned(candidates: VersionedCandidate[]) => string \| null | `src/runtime/adapter.ts` (export) | 現在の関数をそのまま export する。`VersionedCandidate` も型として export する |
+
+- `parseVersion` は公開しない。001〜014、029、030 はすべて `compareLenientVersion` の符号と `newestVersioned` の返り path で直接検証でき、`parseVersion` の戻り値 (`number[]`) を見る oracle は無い。内部の分け方は置き換えで変わってよい。
+- 新しい module は作らない (置き場所は adapter.ts のまま。1 PR = 1 論点)。
+- 符号だけを約束する (`compareLenientVersion` の返り値の大きさは、`NaN` を含め oracle にしない。`NaN` は 0 とみなす。D-A7)。
+
 ### 3.1 関数のシグネチャと DbC
 
 | 関数 | signature | 前提 | 事後 | invariant | oracle |
@@ -166,7 +179,11 @@ oracle は L7 の `CANDIDATE-U-SEMVER-001〜` に落とす (実装 PR の Red �
 ## 7. 置き換えの PR の順序
 
 1. 本書と L7 の契約 (本 PR)。
-2. A の置き換え (adapter.ts) と、4.1・4.2 の表の Red → Green。
+2. A の置き換え。次の 4 段に分ける (各段は 1 PR)。
+   1. 本書 §3.0 の契約 (契約 PR)。
+   2. 公開 + 特性化テスト PR: `compareVersion` を `compareLenientVersion` へ改名して export し、`newestVersioned` と `VersionedCandidate` を export する (挙動は変えない)。4.1・4.2 の表のテストを `CANDIDATE-U-SEMVER-001〜014`、`029`、`030` を名前で引用して入れる。置き換え**前**の実装で全件が通ることが特性化の証拠であり、挙動を変えない公開に対して偽の Red (`it.fails` や fail-close の stub) を作らない。stub が要る場合は §10.3 の手順 1' (設計書保護) に従う。この PR は src を含むので docs/design と docs/test-design に触れない。
+   3. 昇格 PR (src を含まない): A の候補を正式 ID (`U-SEMVER-001〜014`、`029`、`030`) へ昇格し、テスト名の引用を書き換える。
+   4. 置き換えの Green と Refactor: `semver` を使う adapter へ置き換える。Refactor commit は `tests/` の内容差分 0。
 3. B の置き換え (update-check.ts の B) と、4.3 の表の Red → Green。
 4. C の置き換え (update-check.ts の C) と、4.4 の表の Red → Green。
 
@@ -178,6 +195,7 @@ oracle は L7 の `CANDIDATE-U-SEMVER-001〜` に落とす (実装 PR の Red �
 - adapter の出力は、同じ入力に対して現在の実装と同じ符号 (A、B、C)、同じ受け入れ (B、C) を返す。例外は無い (長さ 257 以上の C の入力も受け入れる)。
 - 例外を投げない。`semver.compare` に渡す文字列は、adapter が安全な整数だけで組み、長さが 256 以下のときに限る。範囲外の数、長すぎる文字列、16 桁以上の数字の識別子は `semver` に渡さない。
 - 新しい依存を足さない (`semver` は既存)。
+- 公開 (§3.0) は export の追加と改名だけで、挙動を変えない。公開した関数の pre / post / invariant は §3.1 の表と本節のとおりで、`parseVersion` は公開しない。
 
 ## 9. 範囲外
 
