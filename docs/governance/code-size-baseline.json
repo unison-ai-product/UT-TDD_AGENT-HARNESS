@@ -17,7 +17,7 @@
   "src/feedback/review-dispatch.ts": { "lines": 606, "functionExcess": 27 },
   "src/feedback/review-verdict-custody.ts": { "lines": 672, "functionExcess": 10 },
   "src/forward/application/forward-workflow.ts": { "lines": null, "functionExcess": 7 },
-  "src/gate/right-arm-static.ts": { "lines": 1438, "functionExcess": 41 },
+  "src/gate/right-arm-static.ts": { "lines": 1431, "functionExcess": 41 },
   "src/gate/static.ts": { "lines": null, "functionExcess": 2 },
   "src/graph/loader.ts": { "lines": null, "functionExcess": 16 },
   "src/lint/bun-final-retirement.ts": { "lines": 697, "functionExcess": null },

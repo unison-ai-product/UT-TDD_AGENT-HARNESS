@@ -29,7 +29,7 @@ vi.mock("node:fs", async (importOriginal) => {
   };
 });
 
-import { existsSync, mkdtempSync, readFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { evaluateStaticGate } from "../src/gate/static.ts";
@@ -192,19 +192,19 @@ describe("consumer G1 screen namespace (issue #1273)", () => {
     );
   });
 
-  it.fails("CANDIDATE-U-CTRACE-042: pure result reports the fixture's three-by-three totals", () => {
+  it("CANDIDATE-U-CTRACE-042: pure result reports the fixture's three-by-three totals", () => {
     const { result } = pureAnalyze(fixtures.fixture042);
     expect(result.totals).toEqual({ requirements: 3, screens: 3, functions: 3 });
   });
 
-  it.fails("CANDIDATE-U-CTRACE-042: pure result has the fixture's contract OK message", () => {
+  it("CANDIDATE-U-CTRACE-042: pure result has the fixture's contract OK message", () => {
     const { result } = pureAnalyze(fixtures.fixture042);
     expect(result.messages).toEqual([
       "g1-trace - OK (consumer column trace: requirements=3, screens=3, functions=3)",
     ]);
   });
 
-  it.fails("CANDIDATE-U-CTRACE-042: pure reader requests the three consumer core documents", () => {
+  it("CANDIDATE-U-CTRACE-042: pure reader requests the three consumer core documents", () => {
     const { requestedPaths } = pureAnalyze(fixtures.fixture042);
     expect([...new Set(requestedPaths)].sort()).toEqual([...CORE_G1_PATHS].sort());
   });
@@ -244,17 +244,17 @@ describe("consumer G1 screen namespace (issue #1273)", () => {
     expect(result.messages.join("\n")).not.toContain("required docs could not be read");
   });
 
-  it.fails("CANDIDATE-U-CTRACE-043(a): pure result counts zero declared screens", () => {
+  it("CANDIDATE-U-CTRACE-043(a): pure result counts zero declared screens", () => {
     const { result } = pureAnalyze(fixtures.fixture043a);
     expect(result.totals.screens).toBe(0);
   });
 
-  it.fails("CANDIDATE-U-CTRACE-043(a): pure result reports the empty screen declaration", () => {
+  it("CANDIDATE-U-CTRACE-043(a): pure result reports the empty screen declaration", () => {
     const { result } = pureAnalyze(fixtures.fixture043a);
     expect(result.violations).toContain("empty_required_set:DOC-L2-SCREEN:画面ID");
   });
 
-  it.fails("CANDIDATE-U-CTRACE-043(a): pure result keeps the SC-01 dangling reference", () => {
+  it("CANDIDATE-U-CTRACE-043(a): pure result keeps the SC-01 dangling reference", () => {
     const { result } = pureAnalyze(fixtures.fixture043a);
     expect(result.violations).toContain(
       "dangling_reference:DOC-L1-REQUIREMENTS:REQ-01:展開先:SC-01",
@@ -271,17 +271,17 @@ describe("consumer G1 screen namespace (issue #1273)", () => {
     expect(result.messages.join("\n")).not.toContain("required docs could not be read");
   });
 
-  it.fails("CANDIDATE-U-CTRACE-043(b): pure result counts zero declared screens", () => {
+  it("CANDIDATE-U-CTRACE-043(b): pure result counts zero declared screens", () => {
     const { result } = pureAnalyze(fixtures.fixture043b);
     expect(result.totals.screens).toBe(0);
   });
 
-  it.fails("CANDIDATE-U-CTRACE-043(b): pure result reports the empty screen declaration", () => {
+  it("CANDIDATE-U-CTRACE-043(b): pure result reports the empty screen declaration", () => {
     const { result } = pureAnalyze(fixtures.fixture043b);
     expect(result.violations).toContain("empty_required_set:DOC-L2-SCREEN:画面ID");
   });
 
-  it.fails("CANDIDATE-U-CTRACE-043(b): pure result keeps the PM-01 dangling reference", () => {
+  it("CANDIDATE-U-CTRACE-043(b): pure result keeps the PM-01 dangling reference", () => {
     const { result } = pureAnalyze(fixtures.fixture043b);
     expect(result.violations).toContain(
       "dangling_reference:DOC-L1-REQUIREMENTS:REQ-01:展開先:PM-01",
@@ -295,7 +295,7 @@ describe("consumer G1 screen namespace (issue #1273)", () => {
     expect(reasons).toContain("dangling_reference:DOC-L1-REQUIREMENTS:REQ-02:展開先:SC-001");
   });
 
-  it.fails("CANDIDATE-U-CTRACE-044(a): pure result rejects SC-001 by exact equality", () => {
+  it("CANDIDATE-U-CTRACE-044(a): pure result rejects SC-001 by exact equality", () => {
     const { result } = pureAnalyze(fixtures.fixture044["SC-001"]);
     expect(result.violations).toContain(
       "dangling_reference:DOC-L1-REQUIREMENTS:REQ-02:展開先:SC-001",
@@ -309,7 +309,7 @@ describe("consumer G1 screen namespace (issue #1273)", () => {
     expect(reasons).toContain("dangling_reference:DOC-L1-REQUIREMENTS:REQ-02:展開先:sc-01");
   });
 
-  it.fails("CANDIDATE-U-CTRACE-044(b): pure result rejects sc-01 by exact equality", () => {
+  it("CANDIDATE-U-CTRACE-044(b): pure result rejects sc-01 by exact equality", () => {
     const { result } = pureAnalyze(fixtures.fixture044["sc-01"]);
     expect(result.violations).toContain(
       "dangling_reference:DOC-L1-REQUIREMENTS:REQ-02:展開先:sc-01",
@@ -323,14 +323,14 @@ describe("consumer G1 screen namespace (issue #1273)", () => {
     expect(reasons).toContain("dangling_reference:DOC-L1-REQUIREMENTS:REQ-02:展開先:ＳＣ-01");
   });
 
-  it.fails("CANDIDATE-U-CTRACE-044(c): pure result rejects fullwidth ＳＣ-01 by exact equality", () => {
+  it("CANDIDATE-U-CTRACE-044(c): pure result rejects fullwidth ＳＣ-01 by exact equality", () => {
     const { result } = pureAnalyze(fixtures.fixture044["ＳＣ-01"]);
     expect(result.violations).toContain(
       "dangling_reference:DOC-L1-REQUIREMENTS:REQ-02:展開先:ＳＣ-01",
     );
   });
 
-  it.fails("CANDIDATE-U-CTRACE-044(a-c): pure results retain the three declared screens", () => {
+  it("CANDIDATE-U-CTRACE-044(a-c): pure results retain the three declared screens", () => {
     const screenCounts = mismatchTokens.map(
       (token) => pureAnalyze(fixtures.fixture044[token]).result.totals.screens,
     );
@@ -348,9 +348,124 @@ describe("consumer G1 screen namespace (issue #1273)", () => {
     ).toEqual(["g1-trace - OK (consumer column trace: requirements=3, screens=4, functions=3)"]);
   });
 
-  it.fails("CANDIDATE-U-CTRACE-044(d): pure result includes the additional declared screen", () => {
+  it("CANDIDATE-U-CTRACE-044(d): pure result includes the additional declared screen", () => {
     const { result } = pureAnalyze(fixtures.fixture044d);
     expect(result.totals.screens).toBe(4);
+  });
+
+  const rangeRows = (...cells: string[]): string[] => [
+    `| REQ-01 | First requirement | details | Must | ${cells[0]} |`,
+    `| REQ-02 | Second requirement | details | Must | ${cells[1] ?? "SC-02, F-02"} |`,
+    `| REQ-03 | Third requirement | details | Must | ${cells[2] ?? "SC-03, F-03"} |`,
+  ];
+  const manyScreens = (count: number): string[] =>
+    Array.from(
+      { length: count },
+      (_, i) => `| SC-${String(i + 1).padStart(4, "0")} | Screen | overview | F-01 | user |`,
+    );
+  const invalidRanges = (violations: readonly string[]): string[] =>
+    violations.filter((v) => v.startsWith("invalid_range:"));
+
+  it("CANDIDATE-U-CTRACE-051: expands a range of exactly 1000 and keeps the document green", () => {
+    const root = consumerFixture({
+      requirementRows: rangeRows("SC-0001〜1000, F-01", "F-02", "F-03"),
+      screenRows: manyScreens(1000),
+    });
+    const { result } = pureAnalyze(root);
+
+    expect(invalidRanges(result.violations)).toEqual([]);
+    expect(result.ok).toBe(true);
+  });
+
+  it("CANDIDATE-U-CTRACE-052: a range of 1001 is invalid_range without expanded dangling references", () => {
+    const root = consumerFixture({
+      requirementRows: rangeRows("SC-0001〜1001, F-01", "F-02", "F-03"),
+      screenRows: manyScreens(1000),
+    });
+    const { result } = pureAnalyze(root);
+
+    expect(result.ok).toBe(false);
+    expect(result.violations).toContain("invalid_range:DOC-L1-REQUIREMENTS:SC-0001〜1001");
+    expect(result.violations.filter((v) => v.startsWith("dangling_reference:"))).toEqual([]);
+  });
+
+  it("CANDIDATE-U-CTRACE-053: a huge range is rejected without expansion and keeps the other tokens", () => {
+    const root = consumerFixture({
+      requirementRows: rangeRows("SC-0〜9007199254740991, F-01", "SC-0〜9007199254740990"),
+    });
+    const started = Date.now();
+    const { result } = pureAnalyze(root);
+
+    expect(Date.now() - started).toBeLessThan(5000);
+    expect(result.violations).toEqual([
+      "invalid_range:DOC-L1-REQUIREMENTS:SC-0〜9007199254740990",
+      "invalid_range:DOC-L1-REQUIREMENTS:SC-0〜9007199254740991",
+    ]);
+  });
+
+  it("doc_type_id outside the frontmatter does not identify the document (Sol r3, #1855)", () => {
+    const root = consumerFixture();
+    const l2 = join(root, "docs/design/L2-screen/screen-list.md");
+    const body = readFileSync(l2, "utf8").replace(/^doc_type_id:.*\r?\n/m, "");
+    writeFileSync(l2, `${body}\n${"```"}yaml\ndoc_type_id: DOC-L2-SCREEN\n${"```"}\n`);
+    const { result } = pureAnalyze(root);
+
+    expect(result.ok).toBe(false);
+    expect(result.violations).toContain("doc_type_mismatch:DOC-L2-SCREEN");
+  });
+
+  it("L3 トレース元 is not read by G1: a bad range there does not change the result (Sol r4, #1847)", () => {
+    const root = consumerFixture();
+    const l3 = join(root, "docs/design/L3-functional/functional-requirements.md");
+    const body = readFileSync(l3, "utf8");
+    const pattern = /(\| F-01 \|.*)REQ-01/;
+    expect(body).toMatch(pattern);
+    writeFileSync(l3, body.replace(pattern, "$1REQ-05〜02"));
+    const { result } = pureAnalyze(root);
+
+    expect(result.violations).toEqual([]);
+    expect(result.ok).toBe(true);
+  });
+
+  it("CANDIDATE-U-CTRACE-054: endpoints beyond the safe integer range are invalid_range", () => {
+    const tokens = ["SC-1〜9007199254740993", "SC-9007199254740993〜9007199254740995"];
+    const root = consumerFixture({ requirementRows: rangeRows(`${tokens.join(", ")}, F-01`) });
+    const { result } = pureAnalyze(root);
+
+    expect(result.ok).toBe(false);
+    expect(invalidRanges(result.violations)).toEqual(
+      tokens.map((token) => `invalid_range:DOC-L1-REQUIREMENTS:${token}`).sort(),
+    );
+  });
+
+  it("CANDIDATE-U-CTRACE-055(a): range reasons stay one per range token", () => {
+    const tokens = Array.from({ length: 50 }, (_, i) => `SC-0〜${100000 + i}`);
+    const root = consumerFixture({ requirementRows: rangeRows(`${tokens.join(", ")}, F-01`) });
+    const { result } = pureAnalyze(root);
+
+    expect(result.violations).toHaveLength(50);
+    expect(invalidRanges(result.violations)).toHaveLength(50);
+  });
+
+  it("CANDIDATE-U-CTRACE-055(a): the same range token repeated N times yields N reasons", () => {
+    const tokens = Array.from({ length: 50 }, () => "SC-0〜9007199254740991");
+    const root = consumerFixture({ requirementRows: rangeRows(`${tokens.join(", ")}, F-01`) });
+    const { result } = pureAnalyze(root);
+
+    expect(invalidRanges(result.violations)).toHaveLength(50);
+    expect(result.violations).toHaveLength(50);
+  });
+
+  it("CANDIDATE-U-CTRACE-055(b): ordinary dangling references are not suppressed by range reasons", () => {
+    const root = consumerFixture({
+      requirementRows: rangeRows("SC-0〜9007199254740991, SC-404, F-01"),
+    });
+    const { result } = pureAnalyze(root);
+
+    expect(invalidRanges(result.violations)).toHaveLength(1);
+    expect(result.violations).toContain(
+      "dangling_reference:DOC-L1-REQUIREMENTS:REQ-01:展開先:SC-404",
+    );
   });
 
   it("CANDIDATE-U-CTRACE-045: keeps the harness screen prefix fixed, including the direct trace map", () => {
