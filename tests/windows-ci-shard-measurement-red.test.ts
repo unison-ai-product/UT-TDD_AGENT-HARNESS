@@ -325,7 +325,7 @@ function assertRejected(edit: Mutation[1], error: WindowsShardMeasurementFailure
   expect(admitWindowsShardMeasurement(input)).toEqual({ ok: false, error });
 }
 
-describe("CANDIDATE-U-CISHARD-012: Windows shard measurement evidence", () => {
+describe("U-CISHARD-012: Windows shard measurement evidence", () => {
   it("establishes the source receipts and the cross-shard timing premise", () => {
     const evidence = fixture();
     expect(evidence.before.map(({ run, job }) => [run.id, run.attempt, job.step.number])).toEqual([
@@ -349,7 +349,7 @@ describe("CANDIDATE-U-CISHARD-012: Windows shard measurement evidence", () => {
     expect(staggered[2].completedAt > staggered[0].completedAt).toBe(true);
   });
 
-  it.fails("CANDIDATE-U-CISHARD-012: calculates the fixed before median and the live after interval", () => {
+  it.fails("U-CISHARD-012: calculates the fixed before median and the live after interval", () => {
     expect(admitWindowsShardMeasurement(fixture())).toEqual({
       ok: true,
       beforeSeconds: [1453, 1429, 1465],
@@ -359,7 +359,7 @@ describe("CANDIDATE-U-CISHARD-012: Windows shard measurement evidence", () => {
     });
   });
 
-  it.fails("CANDIDATE-U-CISHARD-012: uses different shards for the earliest start and latest end", () => {
+  it.fails("U-CISHARD-012: uses different shards for the earliest start and latest end", () => {
     expect(admitWindowsShardMeasurement(staggeredFixture())).toEqual({
       ok: true,
       beforeSeconds: [1453, 1429, 1465],
@@ -369,7 +369,7 @@ describe("CANDIDATE-U-CISHARD-012: Windows shard measurement evidence", () => {
     });
   });
 
-  it.fails("CANDIDATE-U-CISHARD-012: admits the PR head itself as the common snapshot", () => {
+  it.fails("U-CISHARD-012: admits the PR head itself as the common snapshot", () => {
     const evidence = fixture();
     evidence.after.snapshot = {
       commitSha: HEAD,
@@ -383,19 +383,15 @@ describe("CANDIDATE-U-CISHARD-012: Windows shard measurement evidence", () => {
     });
   });
 
-  it.fails.each(bindingMismatches)("CANDIDATE-U-CISHARD-012: refuses %s", (_label, edit) => {
+  it.fails.each(bindingMismatches)("U-CISHARD-012: refuses %s", (_label, edit) => {
     assertRejected(edit, "measurement_binding_mismatch");
   });
 
-  it.fails.each(
-    failedEvidence,
-  )("CANDIDATE-U-CISHARD-012: rejects %s as unsuccessful", (_label, edit) => {
+  it.fails.each(failedEvidence)("U-CISHARD-012: rejects %s as unsuccessful", (_label, edit) => {
     assertRejected(edit, "measurement_not_successful");
   });
 
-  it.each(
-    invalidEvidence,
-  )("CANDIDATE-U-CISHARD-012: rejects %s as invalid evidence", (_label, edit) => {
+  it.each(invalidEvidence)("U-CISHARD-012: rejects %s as invalid evidence", (_label, edit) => {
     assertRejected(edit, "measurement_evidence_invalid");
   });
 });
