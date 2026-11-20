@@ -353,19 +353,86 @@ describe("consumer G1 screen namespace (issue #1273)", () => {
     expect(result.totals.screens).toBe(4);
   });
 
-  it("range expansion fail-closes on endpoints beyond the safe integer range (no endless loop)", () => {
-    const token = "F-9007199254740992〜9007199254740992";
+  const rangeRows = (...cells: string[]): string[] => [
+    `| REQ-01 | First requirement | details | Must | ${cells[0]} |`,
+    `| REQ-02 | Second requirement | details | Must | ${cells[1] ?? "SC-02, F-02"} |`,
+    `| REQ-03 | Third requirement | details | Must | ${cells[2] ?? "SC-03, F-03"} |`,
+  ];
+  const manyScreens = (count: number): string[] =>
+    Array.from(
+      { length: count },
+      (_, i) => `| SC-${String(i + 1).padStart(4, "0")} | Screen | overview | F-01 | user |`,
+    );
+  const invalidRanges = (violations: readonly string[]): string[] =>
+    violations.filter((v) => v.startsWith("invalid_range:"));
+
+  it("CANDIDATE-U-CTRACE-051: expands a range of exactly 1000 and keeps the document green", () => {
     const root = consumerFixture({
-      requirementRows: [
-        `| REQ-01 | First requirement | details | Must | SC-01〜03, F-01, ${token} |`,
-        "| REQ-02 | Second requirement | details | Must | SC-02, F-02 |",
-        "| REQ-03 | Third requirement | details | Must | SC-03, F-03 |",
-      ],
+      requirementRows: rangeRows("SC-0001〜1000, F-01", "F-02", "F-03"),
+      screenRows: manyScreens(1000),
+    });
+    const { result } = pureAnalyze(root);
+
+    expect(invalidRanges(result.violations)).toEqual([]);
+    expect(result.ok).toBe(true);
+  });
+
+  it("CANDIDATE-U-CTRACE-052: a range of 1001 is invalid_range without expanded dangling references", () => {
+    const root = consumerFixture({
+      requirementRows: rangeRows("SC-0001〜1001, F-01", "F-02", "F-03"),
+      screenRows: manyScreens(1000),
     });
     const { result } = pureAnalyze(root);
 
     expect(result.ok).toBe(false);
-    expect(result.violations).toContain(`invalid_range:DOC-L1-REQUIREMENTS:${token}`);
+    expect(result.violations).toContain("invalid_range:DOC-L1-REQUIREMENTS:SC-0001〜1001");
+    expect(result.violations.filter((v) => v.startsWith("dangling_reference:"))).toEqual([]);
+  });
+
+  it("CANDIDATE-U-CTRACE-053: a huge range is rejected without expansion and keeps the other tokens", () => {
+    const root = consumerFixture({
+      requirementRows: rangeRows("SC-0〜9007199254740991, F-01", "SC-0〜9007199254740990"),
+    });
+    const started = Date.now();
+    const { result } = pureAnalyze(root);
+
+    expect(Date.now() - started).toBeLessThan(5000);
+    expect(result.violations).toEqual([
+      "invalid_range:DOC-L1-REQUIREMENTS:SC-0〜9007199254740990",
+      "invalid_range:DOC-L1-REQUIREMENTS:SC-0〜9007199254740991",
+    ]);
+  });
+
+  it("CANDIDATE-U-CTRACE-054: endpoints beyond the safe integer range are invalid_range", () => {
+    const tokens = ["SC-1〜9007199254740993", "SC-9007199254740993〜9007199254740995"];
+    const root = consumerFixture({ requirementRows: rangeRows(`${tokens.join(", ")}, F-01`) });
+    const { result } = pureAnalyze(root);
+
+    expect(result.ok).toBe(false);
+    expect(invalidRanges(result.violations)).toEqual(
+      tokens.map((token) => `invalid_range:DOC-L1-REQUIREMENTS:${token}`).sort(),
+    );
+  });
+
+  it("CANDIDATE-U-CTRACE-055(a): range reasons stay one per range token", () => {
+    const tokens = Array.from({ length: 50 }, (_, i) => `SC-0〜${100000 + i}`);
+    const root = consumerFixture({ requirementRows: rangeRows(`${tokens.join(", ")}, F-01`) });
+    const { result } = pureAnalyze(root);
+
+    expect(result.violations).toHaveLength(50);
+    expect(invalidRanges(result.violations)).toHaveLength(50);
+  });
+
+  it("CANDIDATE-U-CTRACE-055(b): ordinary dangling references are not suppressed by range reasons", () => {
+    const root = consumerFixture({
+      requirementRows: rangeRows("SC-0〜9007199254740991, SC-404, F-01"),
+    });
+    const { result } = pureAnalyze(root);
+
+    expect(invalidRanges(result.violations)).toHaveLength(1);
+    expect(result.violations).toContain(
+      "dangling_reference:DOC-L1-REQUIREMENTS:REQ-01:展開先:SC-404",
+    );
   });
 
   it("CANDIDATE-U-CTRACE-045: keeps the harness screen prefix fixed, including the direct trace map", () => {

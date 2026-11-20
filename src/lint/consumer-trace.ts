@@ -62,6 +62,15 @@ function refTokens(cell: string): string[] {
   return cell.split(REF_SEPARATOR).filter((token) => token && !token.startsWith("<"));
 }
 
+/** 1 つの範囲の展開件数の上限 (§6.3)。展開の前に算術で判定する。 */
+const MAX_RANGE_EXPANSION = 1000;
+
+/** 数字列が安全整数に収まるか。Number に丸める前に桁と辞書順で判定する (§6.3 (5))。 */
+function isSafeDigits(digits: string): boolean {
+  const trimmed = digits.replace(/^0+/, "");
+  return trimmed.length < 16 || (trimmed.length === 16 && trimmed <= "9007199254740991");
+}
+
 /** 参照セルの token を取り、`X〜Y` を始点の桁数で 0 埋めして展開する (§6.3)。 */
 function expandRefs(cell: string, docType: string, violations: string[]): string[] {
   const out: string[] = [];
@@ -75,18 +84,20 @@ function expandRefs(cell: string, docType: string, violations: string[]): string
     const prefix = start?.[1] ?? "";
     const tail = parts[1] ?? "";
     const end = tail.startsWith(prefix) ? tail.slice(prefix.length) : tail;
-    const from = Number(start?.[2]);
-    const to = Number(end);
+    const startDigits = start?.[2] ?? "";
     if (
       !start ||
       !/^\d+$/.test(end) ||
-      !Number.isSafeInteger(from) ||
-      !Number.isSafeInteger(to) ||
-      to < from
+      !isSafeDigits(startDigits) ||
+      !isSafeDigits(end) ||
+      Number(end) < Number(startDigits) ||
+      Number(end) - Number(startDigits) + 1 > MAX_RANGE_EXPANSION
     ) {
       violations.push(`invalid_range:${docType}:${token}`);
       continue;
     }
+    const from = Number(startDigits);
+    const to = Number(end);
     const width = (start[2] as string).length;
     for (let k = 0; k <= to - from; k++) {
       out.push(`${prefix}${String(from + k).padStart(width, "0")}`);
