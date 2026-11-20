@@ -230,11 +230,15 @@ Do not add legacy commands as current company/product execution paths.
 
 ## Hooks (Codex orchestrator parity)
 
-Codex enforces the same guardrails as Claude through repo-local
+Codex reuses Claude's guard entrypoints through repo-local
 `.codex/hooks.json` (PLAN-L7-139). It is **repo-relative only**; never write
 hook config to global `~/.codex/`. It reuses the SAME TypeScript hook entrypoints
 as Claude (`.claude/hooks/work-guard.ts`, `src/cli.ts session ...`) with NO logic
 fork — the guard logic lives in `src/runtime/*.ts` and is runtime-agnostic.
+
+Codex command hooks reject the unsupported `blockOnFailure` field during static validation.
+At runtime, fail-close is limited to a guard returning a confirmed deny.
+Launch failure, timeout, exit 1, and invalid output are unmeasured (fail-open is possible).
 
 Codex tool names differ from Claude, so matchers are mapped (not copied):
 

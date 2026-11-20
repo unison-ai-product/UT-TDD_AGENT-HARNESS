@@ -61,10 +61,10 @@ function codexFailureClaimsOk(text: string): boolean {
 
 function agentsCodexHookSection(): string {
   const text = readFileSync(join(repoRoot, "AGENTS.md"), "utf8");
-  const start = text.indexOf("Codex enforces the same guardrails");
+  const start = text.indexOf("## Hooks (Codex orchestrator parity)");
   expect(start).toBeGreaterThanOrEqual(0);
   const rest = text.slice(start);
-  const end = rest.search(/\n## /);
+  const end = rest.indexOf("\n## ");
   return end < 0 ? rest : rest.slice(0, end);
 }
 
@@ -131,8 +131,7 @@ describe("Codex hook failure claims judge (pure function contrast)", () => {
 });
 
 describe("U-HOOKEXEC-015/016: Codex hook failure policy (Issue #1538)", () => {
-  // Red: CODEX_REQUIRED の guard entry が blockOnFailure: true を持つため、assertion の不一致で赤になる。
-  it.fails("U-HOOKEXEC-015: CODEX_REQUIRED has no blockOnFailure property", () => {
+  it("U-HOOKEXEC-015: CODEX_REQUIRED has no blockOnFailure property", () => {
     const ids = CODEX_REQUIRED.map((entry) => entry.id);
     // 検査を空で通す実装 (guard entry ごと消す) を拒否する。
     expect(ids).toContain("agent-guard");
@@ -144,8 +143,7 @@ describe("U-HOOKEXEC-015/016: Codex hook failure policy (Issue #1538)", () => {
     }
   });
 
-  // Red: AGENTS.md の節と lint 冒頭注釈の両方が (a)(b)(c) を満たさないため、assertion の不一致で赤になる。
-  it.fails("U-HOOKEXEC-016: AGENTS.md and the lint header scope Codex guard fail-close to a confirmed deny", () => {
+  it("U-HOOKEXEC-016: AGENTS.md and the lint header scope Codex guard fail-close to a confirmed deny", () => {
     const sources = [
       { label: "AGENTS.md", text: agentsCodexHookSection() },
       { label: "src/lint/codex-hook-adapter.ts", text: lintHeaderComment() },
