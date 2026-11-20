@@ -1,7 +1,5 @@
 import { execFileSync, spawnSync } from "node:child_process";
-import { createHash } from "node:crypto";
 import {
-  chmodSync,
   cpSync,
   existsSync,
   mkdirSync,
@@ -12,19 +10,13 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { stringify } from "yaml";
 import {
   collectDistributionCandidatePaths,
   packageConsumerRuntimeRelease,
+  resolveConsumerRuntimeReleaseSourceBinding,
 } from "../src/cli/distribution.ts";
-import {
-  type NodeGeneration,
-  type NodeGenerationBuildInput,
-  parseNodeBootstrapReceiptBytes,
-  REVIEWED_NODE_VERSION,
-  REVIEWED_NPM_VERSION,
-} from "../src/runtime/node-bootstrap.ts";
 import {
   deriveArtifactInventoryDigest,
   deriveReleaseId,
@@ -46,6 +38,7 @@ import {
 } from "../src/setup/release-artifact-resolver.ts";
 import { materializeReleaseArtifacts } from "../src/setup/release-materializer.ts";
 import { heavyAfterAll, heavyBeforeAll } from "./support/hook-bounds.ts";
+import { fakeGenerationBuilder } from "./support/pack-publication-audit-generation.ts";
 import { useSyntheticPrivacyHome } from "./support/privacy-denylist-home.ts";
 import { removeTestTree } from "./support/temp-tree.ts";
 
@@ -55,6 +48,21 @@ import { removeTestTree } from "./support/temp-tree.ts";
 // oracle: docs/test-design/harness/L7-pack-publication-audit-wiring-test-design.md
 // 解釈: 失敗の JSON の `publicationAudit` は、CLI が出力へ写せるように、投げられる
 // ConsumerRuntimeReleaseProducerError の `publicationAudit` フィールドに載ると読む (設計 §4 / §5)。
+
+const planResults = vi.hoisted(() => [] as boolean[]);
+vi.mock("../src/setup/pack-publication-staging.ts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../src/setup/pack-publication-staging.ts")>();
+  return {
+    ...actual,
+    buildPackPublicationStagingPlan: (
+      ...args: Parameters<typeof actual.buildPackPublicationStagingPlan>
+    ) => {
+      const result = actual.buildPackPublicationStagingPlan(...args);
+      planResults.push(result.ok);
+      return result;
+    },
+  };
+});
 
 const privacyHome = useSyntheticPrivacyHome();
 const TAG = "v0.2.0-canary.2";
@@ -106,81 +114,6 @@ function git(cwd: string, args: readonly string[], input?: string): string {
 function write(root: string, path: string, text: string): void {
   mkdirSync(dirname(join(root, path)), { recursive: true });
   writeFileSync(join(root, path), text, "utf8");
-}
-
-const canonical = (value: unknown): string => {
-  if (value === null || typeof value !== "object") return JSON.stringify(value);
-  if (Array.isArray(value)) return `[${value.map(canonical).join(",")}]`;
-  return `{${Object.entries(value as Record<string, unknown>)
-    .sort(([left], [right]) => left.localeCompare(right))
-    .map(([key, item]) => `${JSON.stringify(key)}:${canonical(item)}`)
-    .join(",")}}`;
-};
-
-const receiptUnsigned = {
-  schema_version: 2,
-  generation_id: "node-fixture",
-  subject_revision: "a".repeat(40),
-  runtime: "node",
-  node: { path: "C:/toolchain/node.exe", version: "v24.13.0", sha256: "c".repeat(64) },
-  npm: { cli_path: "C:/toolchain/npm-cli.js", version: "11.6.2", sha256: "d".repeat(64) },
-  toolchain_provenance_sha256: "e".repeat(64),
-  package_lock_sha256: "f".repeat(64),
-  tsconfig_node: { path: "tsconfig.node.json", sha256: "0".repeat(64) },
-  builder: { path: "scripts/build-node.mjs", policy: "compiled-esm-only", sha256: "1".repeat(64) },
-  compiled_cli: { path: "ut-tdd.mjs", sha256: "b".repeat(64), local_version: "0.0.0" },
-  source_graph_sha256: "3".repeat(64),
-  source_files: [],
-  external_dependencies: [],
-  external_dependency_closure_sha256: "4".repeat(64),
-};
-
-function fakeGenerationBuilder(): (
-  input: string | NodeGenerationBuildInput,
-) => Promise<NodeGeneration> {
-  return async (input) => {
-    if (typeof input === "string" || !input.outputRoot)
-      throw new Error("fixture generation input must be structured");
-    const compiledBytes = Buffer.from("export default 'fixture runtime';\n", "utf8");
-    const toolchainRoot = process.platform === "win32" ? "C:/toolchain" : "/opt/ut-tdd-toolchain";
-    const unsigned = {
-      ...receiptUnsigned,
-      generation_id: "fixture-generation",
-      subject_revision: input.candidateRevision,
-      node: {
-        ...receiptUnsigned.node,
-        path: `${toolchainRoot}/node${process.platform === "win32" ? ".exe" : ""}`,
-        version: REVIEWED_NODE_VERSION,
-      },
-      npm: {
-        ...receiptUnsigned.npm,
-        cli_path: `${toolchainRoot}/npm-cli.js`,
-        version: REVIEWED_NPM_VERSION,
-      },
-      compiled_cli: {
-        ...receiptUnsigned.compiled_cli,
-        sha256: createHash("sha256").update(compiledBytes).digest("hex"),
-      },
-    };
-    const generationPath = join(input.outputRoot, "fixture-generation");
-    const compiledCliPath = join(generationPath, "ut-tdd.mjs");
-    mkdirSync(generationPath, { recursive: true });
-    writeFileSync(compiledCliPath, compiledBytes);
-    const receiptBytes = Buffer.from(
-      JSON.stringify({
-        ...unsigned,
-        receipt_digest: createHash("sha256").update(canonical(unsigned)).digest("hex"),
-      }),
-      "utf8",
-    );
-    writeFileSync(join(generationPath, "receipt.json"), receiptBytes);
-    return {
-      nodePath: unsigned.node.path,
-      compiledCliPath,
-      generationPath,
-      receipt: parseNodeBootstrapReceiptBytes(receiptBytes),
-    };
-  };
 }
 
 // ---------------------------------------------------------------------------
@@ -309,12 +242,12 @@ interface Attempt {
   readonly outFiles: string[];
 }
 
-async function attempt(fixture: Case): Promise<Attempt> {
+async function attempt(fixture: Case, runGit?: PackPublicationGitRunner): Promise<Attempt> {
   const outDir = mkdtempSync(join(scratchRoot, "out-"));
   let installCalls = 0;
   const files = () => (existsSync(outDir) ? readdirSync(outDir) : []);
   try {
-    const result = await packageConsumerRuntimeRelease({
+    const options = {
       repoRoot: fixture.root,
       tag: TAG,
       outDir,
@@ -323,7 +256,10 @@ async function attempt(fixture: Case): Promise<Attempt> {
         installCalls += 1;
       },
       buildGeneration: fakeGenerationBuilder(),
-    });
+    };
+    const result = await packageConsumerRuntimeRelease({ ...options, runGit } as Parameters<
+      typeof packageConsumerRuntimeRelease
+    >[0]);
     return {
       result: result as unknown as Record<string, unknown>,
       installCalls,
@@ -406,16 +342,29 @@ describe("CANDIDATE-U-PKAUD package の公開照合の配線", () => {
     });
   });
 
-  it.fails("CANDIDATE-U-PKAUD-007: C2 の object を読めなければ indeterminate で止まり、asset を作らない", async () => {
-    // release/notes.md の blob は C2 にだけ在り、計画の構築・snapshot・build input の選択は読まない。観測だけが読む。
-    const fx = makeCase(undefined, { "release/notes.md": "unreadable-in-c2\n" });
-    const oid = git(fx.root, ["rev-parse", `${fx.c2}:release/notes.md`]);
-    const objectFile = join(fx.root, ".git", "objects", oid.slice(0, 2), oid.slice(2));
-    chmodSync(objectFile, 0o666);
-    rmSync(objectFile, { force: true });
-    const run = await attempt(fx);
-    expectRejected(run, "pack_publication_audit_observation_unavailable");
-    expect(run.error?.publicationAudit?.status).toBe("indeterminate");
+  it.fails("CANDIDATE-U-PKAUD-007: 観測の git が失敗すれば indeterminate で止まり、asset を作らない (計画は作られている)", async () => {
+    const fx = makeCase();
+    expect(resolveConsumerRuntimeReleaseSourceBinding(fx.root, TAG)).toMatchObject({
+      releaseRevision: fx.c2,
+      artifactSourceRevision: fx.c1,
+    });
+    for (const failing of ["ls-tree", "cat-file"]) {
+      planResults.length = 0;
+      const failedAt: string[] = [];
+      const runGit: PackPublicationGitRunner = (args) => {
+        if (args.includes(failing)) {
+          failedAt.push(failing);
+          return { status: 128, stdout: new Uint8Array() };
+        }
+        const r = spawnSync("git", ["-C", fx.root, ...args], { maxBuffer: 256 * 1024 * 1024 });
+        return { status: r.status ?? 1, stdout: r.stdout };
+      };
+      const run = await attempt(fx, runGit);
+      expect(planResults).toEqual([true]);
+      expect(failedAt).toEqual([failing]);
+      expectRejected(run, "pack_publication_audit_observation_unavailable");
+      expect(run.error?.publicationAudit?.status).toBe("indeterminate");
+    }
   });
 
   it.fails("CANDIDATE-U-PKAUD-008: 観測は C2 の tree だけを対象にし、index と working tree を読まない", async () => {
