@@ -77,11 +77,14 @@ describe("C: parsePackageSemver / comparePackageSemver (特性化)", () => {
     let s = 20261120;
     const rnd = (n: number) => {
       s = (Math.imul(s, 1664525) + 1013904223) >>> 0;
-      return s % n;
+      return Math.floor((s / 2 ** 32) * n);
     };
     const alpha = "abcxyzAZ-";
+    const seen = { numeric: 0, alpha: 0, hyphen: 0, samePrerelease: 0 };
     const ident = () => {
       const kind = rnd(3);
+      if (kind === 0) seen.numeric++;
+      else seen.alpha++;
       if (kind === 0) {
         const len = 1 + rnd(15);
         const d = String(1 + rnd(9)) + Array.from({ length: len - 1 }, () => rnd(10)).join("");
@@ -89,6 +92,7 @@ describe("C: parsePackageSemver / comparePackageSemver (特性化)", () => {
       }
       const len = 1 + rnd(6);
       const body = Array.from({ length: len }, () => alpha[rnd(alpha.length)]).join("");
+      if (body.includes("-")) seen.hyphen++;
       return kind === 1 ? `${body}a` : `${body}${rnd(10)}`;
     };
     const version = () => {
@@ -103,7 +107,15 @@ describe("C: parsePackageSemver / comparePackageSemver (特性化)", () => {
       expect(semver.valid(a), a).not.toBeNull();
       expect(semver.valid(b), b).not.toBeNull();
       expect(cmp(a, b), `${a} vs ${b}`).toBe(Math.sign(semver.compare(a, b)));
+      const [coreA, preA] = a.split(/-(.*)/s);
+      const [coreB, preB] = b.split(/-(.*)/s);
+      if (preA && preB && coreA === coreB) seen.samePrerelease++;
     }
+    // 生成器が L7 の範囲 (数字・英字・ハイフンの識別子、core が等しい prerelease 同士) を実際に作ったことを確かめる。
+    expect(seen.numeric).toBeGreaterThan(0);
+    expect(seen.alpha).toBeGreaterThan(0);
+    expect(seen.hyphen).toBeGreaterThan(0);
+    expect(seen.samePrerelease).toBeGreaterThan(0);
   });
 
   it("U-SEMVER-032: 長い数字の識別子は桁数と辞書順で比べる (反例)", () => {
