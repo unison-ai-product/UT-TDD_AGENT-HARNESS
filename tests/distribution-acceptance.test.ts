@@ -828,37 +828,18 @@ describe("U-OIDBASE-009 packaged default baseline authority", () => {
         cwd: packGitRoot,
         encoding: "utf8",
       }).trim();
-      const artifactInventoryDigest = deriveArtifactInventoryDigest(artifacts);
-      const zeroAssetInventoryDigest = `sha256:${"0".repeat(64)}`;
-      const recordDigestFor = (releaseAssetInventoryDigest: string) =>
-        deriveReleaseRecordDigest({
-          materializerVersion: "1",
-          artifactSourceCommit,
-          artifactSetDigest: materialized.digest,
-          artifactInventoryDigest,
-          releaseAssetInventoryDigest,
-        });
-      const provisionalRelease = {
-        releaseId: deriveReleaseId("1", artifactSourceCommit, materialized.digest),
+      const releaseBase = {
         materializerVersion: "1",
         artifactSourceCommit,
         artifactSetDigest: materialized.digest,
-        artifactInventoryDigest,
-        releaseAssetInventoryDigest: zeroAssetInventoryDigest,
-        releaseRecordDigest: recordDigestFor(zeroAssetInventoryDigest),
-        artifacts,
+        artifactInventoryDigest: deriveArtifactInventoryDigest(artifacts),
+        releaseAssetInventoryDigest: `sha256:${"0".repeat(64)}`,
       };
-      const provisionalPack = derivePackPublicationAssets({
-        release: provisionalRelease,
-        entries: publicationEntries,
-      });
-      expect(provisionalPack.ok, provisionalPack.ok ? undefined : provisionalPack.error).toBe(true);
-      if (!provisionalPack.ok)
-        throw new Error(`OIDBASE-009 provisional Pack producer failed: ${provisionalPack.error}`);
       const release = {
-        ...provisionalRelease,
-        releaseAssetInventoryDigest: provisionalPack.value.releaseAssetInventoryDigest,
-        releaseRecordDigest: recordDigestFor(provisionalPack.value.releaseAssetInventoryDigest),
+        ...releaseBase,
+        releaseId: deriveReleaseId("1", artifactSourceCommit, materialized.digest),
+        releaseRecordDigest: deriveReleaseRecordDigest(releaseBase),
+        artifacts,
       };
       const packed = derivePackPublicationAssets({ release, entries: publicationEntries });
       expect(packed.ok, packed.ok ? undefined : packed.error).toBe(true);
