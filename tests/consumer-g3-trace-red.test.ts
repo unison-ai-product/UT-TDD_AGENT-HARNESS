@@ -229,7 +229,7 @@ describe("consumer G3-trace document absence (issue #972)", () => {
     expect(withExtras.gate).toEqual(withExtras.helper.messages);
   });
 
-  it.fails("U-CTRACE-046: four consumer docs satisfy both trace entry points", () => {
+  it("U-CTRACE-046: four consumer docs satisfy both trace entry points", () => {
     expect(base.helper).toEqual(SUCCESS);
     expect(base.gate).toEqual(SUCCESS.messages);
     expect(base.analyzer.result).toEqual({
@@ -240,7 +240,7 @@ describe("consumer G3-trace document absence (issue #972)", () => {
     });
   });
 
-  it.fails("U-CTRACE-047: irrelevant harness-only docs are never requested", () => {
+  it("U-CTRACE-047: irrelevant harness-only docs are never requested", () => {
     expect(withExtras.helper).toEqual(SUCCESS);
     expect(withExtras.gate).toEqual(SUCCESS.messages);
     expect(withExtras.analyzer.result).toEqual(base.analyzer.result);
@@ -252,7 +252,7 @@ describe("consumer G3-trace document absence (issue #972)", () => {
     ).toEqual([]);
   });
 
-  it.fails.each(partialCases)("U-CTRACE-048: omitting $path reports exact reasons", ({
+  it.each(partialCases)("U-CTRACE-048: omitting $path reports exact reasons", ({
     path,
     reasons,
     totals,
@@ -264,7 +264,7 @@ describe("consumer G3-trace document absence (issue #972)", () => {
     });
   });
 
-  it.fails.each(multipleCases)("U-CTRACE-049: $label reports all missing documents in order", ({
+  it.each(multipleCases)("U-CTRACE-049: $label reports all missing documents in order", ({
     label,
     reasons,
   }) => {
