@@ -118,8 +118,8 @@ function releaseManifest(artifactSourceCommit: string): Record<string, unknown> 
   };
 }
 
-/** Materializes the clean Pack artifact set in `root`, including package.json transformation. */
-function copyCleanArtifacts(root: string): void {
+/** Materializes and commits the clean Pack artifacts, with optional case inputs. */
+function commitCleanArtifacts(root: string, prepare?: () => void): void {
   const sourcePaths = git(authorRoot, ["ls-files"]).split(/\r?\n/).filter(Boolean);
   const plan = buildCleanDistributionPlan({ paths: sourcePaths, sourceTag: TAG });
   for (const rel of plan.artifactPaths) {
@@ -133,18 +133,18 @@ function copyCleanArtifacts(root: string): void {
     }
   }
   cleanArtifactMaterializations++;
+  prepare?.();
+  git(root, ["init", "-q", "-b", "main"]);
+  git(root, ["config", "core.autocrlf", "false"]);
+  configureFixtureIdentity(root);
+  git(root, ["add", "-A"]);
+  git(root, ["commit", "-q", "-m", "clean artifacts"]);
 }
 
 function configureFixtureIdentity(root: string): void {
   git(root, ["config", "user.email", mail("test", "example.invalid")]);
   git(root, ["config", "user.name", "Privacy Scan Test"]);
   git(root, ["config", "commit.gpgsign", "false"]);
-}
-
-function initCleanSource(root: string): void {
-  git(root, ["init", "-q", "-b", "main"]);
-  git(root, ["config", "core.autocrlf", "false"]);
-  configureFixtureIdentity(root);
 }
 
 function appendFixtureReadme(root: string, readmeSuffix: string): void {
@@ -158,14 +158,6 @@ function tagReleaseManifest(root: string): void {
   git(root, ["add", "--", "release/manifest.yaml"]);
   git(root, ["commit", "-q", "-m", "release manifest"]);
   git(root, ["tag", TAG]);
-}
-
-/** Creates the immutable shared-object seed from one materialization of the clean artifacts. */
-function createCleanSourceSeed(root: string): void {
-  copyCleanArtifacts(root);
-  initCleanSource(root);
-  git(root, ["add", "-A"]);
-  git(root, ["commit", "-q", "-m", "clean artifacts"]);
 }
 
 /** Clones the seed, then creates the case-specific artifact and release-manifest commits. */
@@ -211,12 +203,10 @@ function cleanSource(
   extra: Record<string, string> = {},
 ): string {
   const root = join(scratchRoot, label);
-  copyCleanArtifacts(root);
-  appendFixtureReadme(root, readmeSuffix);
-  for (const [path, text] of Object.entries(extra)) write(root, path, text);
-  initCleanSource(root);
-  git(root, ["add", "-A"]);
-  git(root, ["commit", "-q", "-m", "clean artifacts"]);
+  commitCleanArtifacts(root, () => {
+    appendFixtureReadme(root, readmeSuffix);
+    for (const [path, text] of Object.entries(extra)) write(root, path, text);
+  });
   tagReleaseManifest(root);
   return root;
 }
@@ -264,7 +254,7 @@ describe("Pack privacy distribution source fixtures", () => {
   heavyBeforeAll("pack", () => {
     const before = cleanArtifactMaterializations;
     sharedSeedRoot = join(scratchRoot, "d-seed");
-    createCleanSourceSeed(sharedSeedRoot);
+    commitCleanArtifacts(sharedSeedRoot);
     emailSource = cleanSourceFromSeed("d-email", sharedSeedRoot, P);
     plainSource = cleanSourceFromSeed("d-plain", sharedSeedRoot, "plain line");
     denySource = cleanSourceFromSeed("d-deny", sharedSeedRoot, `mentions ${D}`);
