@@ -251,7 +251,8 @@ describe("Pack privacy distribution source fixtures", () => {
   let denySource: string;
   let materializationCount: number;
 
-  heavyBeforeAll("pack", () => {
+  // #1259: Windows maxima after fixture reuse were 77.148s for preparation and 217.972s for the body.
+  heavyBeforeAll(["pack", 180_000], () => {
     const before = cleanArtifactMaterializations;
     sharedSeedRoot = join(scratchRoot, "d-seed");
     commitCleanArtifacts(sharedSeedRoot);
@@ -361,7 +362,7 @@ describe("Pack privacy distribution source fixtures", () => {
     ]);
     expect(baselined.status).toBe(1);
     expect(kinds(privacyJson(baselined.stdout))).toContain("privacy-email-hit");
-  }, 600_000);
+  }, 360_000);
 
   it("U-PRIVSCAN-014: materializes the common Clean Pack artifacts once", () => {
     expect(materializationCount).toBe(1);
