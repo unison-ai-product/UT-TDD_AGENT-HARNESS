@@ -17,16 +17,19 @@ issue: 1452
 
 一時ディレクトリに独立した Vitest fixture を作り、開発リポジトリと同じ実行設定を通す。CLI を子プロセスで実行して JSON reporter の個別の状態・理由と終了コードを取る。失敗すべき fixture は同じ invocation の成功 fixture と組み合わせ、実行起動・収集・reporter の正常系を確認する。収集前の設定エラー、タイムアウト、テストの未実行で oracle を通過させない。
 
+fixture は L6 §1 の `vitest` alias と runner を通し、callback で呼ぶ import 版と `context.expect` が同じ counter に入ることを確かめる。独立 fixture の21ケースで検証した方式を、開発リポジトリの設定を通して再検証する。
+
 ## 2. 候補 oracle
 
 | ID | 入力と期待 | 検出する反例 |
 | --- | --- | --- |
 | `CANDIDATE-U-VITASSERT-001` | 通常テストで assertion の前に `return`。reporter がそのテストの 0 件を診断し、CLI は非 0。 | 成功として報告する。別の設定エラーで終了する。 |
 | `CANDIDATE-U-VITASSERT-002` | 正常に返る `it.fails` と、本当に対象が throw する `it.fails`。前者は期待した失敗が起きないという理由で FAIL、後者は PASS。各結果を個別に照合する。 | global `requireAssertions` を有効化し、前者も PASS にする。反転を外して後者を FAIL にする。 |
-| `CANDIDATE-U-VITASSERT-003` | import した `expect` で検証する通常テスト、`context.expect` で検証する通常テスト、`context.expect` を取得して早期に戻る通常テスト。最初の 2 件は PASS、最後は assertion 0 件で FAIL。 | import した `expect` だけで検査する。local `expect` を使う正当なテストを拒否する。 |
+| `CANDIDATE-U-VITASSERT-003` | import した `expect` のみ、`context.expect` のみ、両方を1回ずつ呼んで `expect.assertions(2)` を指定するケースはすべて PASS。`context.expect` の取得だけで戻るケースは 0 件で FAIL。`expect.soft` または `expect.poll` だけで検証するケースはそれぞれ PASS。 | import と local のカウントが分離する。関数呼び出しだけを転送し、`soft` や `poll` を 0 件と判定する。 |
 | `CANDIDATE-U-VITASSERT-004` | helper 経由の matcher は PASS。parameterized テストを 2 ケース実行し、matcher を呼ぶ方だけが PASS。元から throw する通常テストは元の診断で FAIL。 | callback の文字列で検査する。ケース間で数を共有する。例外を 0 件診断に置き換える。 |
 | `CANDIDATE-U-VITASSERT-005` | 1 回目の試行で `context.expect` の matcher が失敗し、retry は assertion を呼ばず正常終了する。reporter は retry の 0 件を診断し FAIL。skip・todo は既存の状態を維持する。 | 前の試行の呼び出し数を retry に持ち越す。未実行テストを失敗に変換する。 |
-| `CANDIDATE-U-VITASSERT-006` | `beforeEach` だけが assertion を呼ぶ通常テストは 0 件で FAIL。並行する 2 ケースを Promise で同期し、0 件のケースが待機中に別ケースが import した `expect` を呼ぶ。0 件のケースだけが 0 件で FAIL する。 | セットアップ用 hook や、別ケースの共有カウンター増分で 0 件を合格させる。 |
+| `CANDIDATE-U-VITASSERT-006` | `beforeEach` だけが assertion を呼ぶ通常テストは 0 件で FAIL。並行する2ケースを Promise barrier で決定的に同期し、先に始めた0件のケースが待機している間に別ケースが import した `expect` を呼ぶ。0件のケースは assertion 0 件で FAIL し、assertion を呼んだケースは PASS する。 | セットアップ用 hook や、別ケースの共有カウンター増分で 0 件を合格させる。 |
+| `CANDIDATE-U-VITASSERT-007` | import と local を1回ずつ呼び `expect.assertions(3)` を指定すると、標準診断で実績2件を報告して FAIL。matcher を呼ばず `expect.assertions(2)` または `expect.hasAssertions()` だけを指定した場合も、各標準診断で FAIL。 | メソッド転送の漏れで個数の不一致を合格させる。独自の 0 件診断で標準診断を上書きする。 |
 
 ## 3. 導入の確認
 
