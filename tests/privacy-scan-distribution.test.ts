@@ -456,7 +456,7 @@ describe("privacy scan candidate oracles (distribution)", () => {
     for (const text of [result.stdout, result.stderr, ...evidence]) {
       expect(text).not.toContain(D);
     }
-  }, 400_000);
+  }, 180_000);
 
   // #1454 r3 (L6 §8 / §12): both scans always run, and once the privacy scan rejects, the secret
   // scan's path is masked as well. The file below is hit by both scans at once.
