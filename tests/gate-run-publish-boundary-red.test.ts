@@ -248,11 +248,11 @@ describe("gate-run evidence writer publication boundaries", () => {
     expect(crashResult).toBe("killed-before-link-and-retried");
   });
 
-  it.fails("CANDIDATE-U-GATEPUB-005: same digest is rejected by the second native hard link", () => {
+  it.fails("U-GATEPUB-005: same digest is rejected by the second native hard link", () => {
     expect(collision.actual).toEqual(collision.expected);
   });
 
-  it.fails("CANDIDATE-U-GATEPUB-006: hashes the original UTF-8 gate run ID bytes", () => {
+  it.fails("U-GATEPUB-006: hashes the original UTF-8 gate run ID bytes", () => {
     const filename: unknown = Reflect.get(gateRunEvidenceModule, "gateRunEvidenceFilename");
     if (typeof filename !== "function")
       throw new Error("gateRunEvidenceFilename export is missing");
