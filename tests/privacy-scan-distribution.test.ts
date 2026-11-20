@@ -363,7 +363,7 @@ describe("Pack privacy distribution source fixtures", () => {
     expect(kinds(privacyJson(baselined.stdout))).toContain("privacy-email-hit");
   }, 600_000);
 
-  it("materializes the common Clean Pack artifacts once", () => {
+  it("U-PRIVSCAN-014: materializes the common Clean Pack artifacts once", () => {
     expect(materializationCount).toBe(1);
   });
 });
