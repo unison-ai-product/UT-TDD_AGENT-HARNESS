@@ -53,3 +53,14 @@ link 時点の `EEXIST` ケースでは、preload は fixture の証跡ディレ
 hard link 前に writer の子プロセスが終了すると、当該実行の final は存在せず、完成 temp が残る。別プロセスの retry は新しい `gate_run_id` を使い、その ID に対応する final を1件公開する。前の temp は内容も名前も保持する。通常の `collectGateRunEvidenceProjection` は retry の final を読むが、残った temp は証跡として数えない。
 
 4項目のテスト設計、前提の検証、後続 Red の候補 ID は対になる L7 §2 に置く。
+
+## 4. 証跡の保存名と hash 衝突 (Issue #1468 の追記)
+
+検証境界は `buildGateRunEvidence` の出力を受け取る保存名の導出とする。builder の ID 生成・ASCII 化は既存仕様に従う。保存名を決める既定経路は builder の出力と同じ文字列を受け取り、その文字列の UTF-8 バイト列を SHA-256 で計算し、小文字の64桁 hex と `.json` を連結する。入力が非 ASCII の場合も、Unicode 正規化や文字の置換を行わず、そのバイト列を使う。
+
+| 内部の検証入口 | 契約 |
+|---|---|
+| `gateRunEvidenceFilename(gateRunId, pathDigest?)` | 同じモジュール内で writer が使う純粋な保存名の導出。既定の SHA-256 を経由する。任意の `pathDigest` は ID 文字列を受け取り、64桁の小文字 hex を返す内部依存。 |
+| `boundary.pathDigest(gateRunId)` | writer の保存名を導出するところでのみ使う。別々の ID が同じ保存名になる場合をテストで決定的に作る。§3.2 と同様、CLI オプション、環境変数、設定ファイルに注入経路を設けない。 |
+
+同じ保存名に対して異なる ID が公開を試みた場合も、既存の hard link の no-clobber を使う。2回目の公開は native link が返した `EEXIST` で拒否し、先に公開されたファイルの bytes を保持する。実際の SHA-256 衝突を生成する代わりに、異なる2つの ID を同じ digest に写して確かめる。両軸のテスト設計は L7 §3 に置く。
