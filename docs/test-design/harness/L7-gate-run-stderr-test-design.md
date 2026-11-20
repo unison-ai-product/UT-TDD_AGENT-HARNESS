@@ -32,3 +32,14 @@ issue: 1359
 | `U-GATEPUB-004` | 専用子プロセスを `beforeLink` 内で待機させる。親は通知の受信、temp の完成 JSON と final の不在を確認してからその子だけを強制終了し、終了を観測する。 | 強制終了後も当該 ID の final が存在しない。別プロセスの retry は新しい ID で final を1件作る。旧 temp の path と bytes が維持され、実際の投影 reader に含まれるのは retry の final だけである。 |
 
 Red では、起動・fixture 作成・対照実行を独立に確認し、環境エラーや単なる待機時間切れで期待失敗が成立しないようにする。注入点への到達・発火は、テスト用の記録と成果物の両方で判定する。強制終了の通知や終了待ちには期限を設け、期限切れを crash の証拠にしない。Red テストは各正式 ID を引用する。
+
+## 3. 保存名の hash と衝突 (Issue #1468 の追記)
+
+`U-GATE-010` に残る2項目を、L6 §4 の保存名の導出で検証する。
+
+| 候補 ID | fixture と前提の確認 | 意図する oracle |
+|---|---|---|
+| `CANDIDATE-U-GATEPUB-005` | 専用の一時ディレクトリで、`checkedAt` が異なる入力から通常の builder で異なる2つの ID を作る。1つ目の正規 SHA-256 digest を得て、両方の `boundary.pathDigest` がその digest を返す。呼び出しの引数を記録し、同じ保存名を得たことを確認する。 | 1つ目を公開した状態から、2つ目が既存 ID の事前検査を通り、同じ final への実 hard link に1回進む。その link が返した `EEXIST` が伝わり、final は1件だけで、1つ目の ID と bytes が維持される。 |
+| `CANDIDATE-U-GATEPUB-006` | `gateRunEvidenceFilename` の既定経路に `gate-run:検証:e\u0301:\u{1f9ea}` を直接渡す。入力には `e` と結合アクセント U+0301、補助平面の U+1F9EA を含める。 | 保存名は独立に求めた UTF-8 の固定値 `5bff08e59947329c0a591b9ed978b639d57bb707a218c32b02e7f9c7144b1790.json` と完全一致する。 |
+
+衝突の fixture では、異なる ID、digest 注入の発火、1つ目の公開と後処理を通常の assertion で確かめる。失敗を期待するテストが環境エラーや事前検査の失敗だけで成立しないようにする。
