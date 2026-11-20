@@ -63,7 +63,7 @@ jobs:
           code=$?
           set -e
           cat launcher.err
-          test "$code" -eq 78
+          test "$code" -eq 2
           test ! -s launcher.out
-          test "$(cat launcher.err)" = "consumer_runtime_absent"
+          grep -Eq '^consumer_runtime_absent: .+ setup --worktree .+$' launcher.err
           test ! -e .ut-tdd/runtime/activation/active.json
