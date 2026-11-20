@@ -15,7 +15,7 @@ updated: 2026-10-23
 本書はその §3 分岐、§5 読む文書、§6 表の固定と抽出、§7 trace 規則と空集合、§8 出力、§10 不変条件に加え、§13 の L1 から L3 への降下検査 (issue #1196、CANDIDATE-U-CTRACE-027〜041)、§14 の画面 ID の名前空間 (issue #1273、CANDIDATE-U-CTRACE-042〜045)、§15 の G3-trace の文書不在時の縮退 (issue #1274、U-CTRACE-046〜050) を検証する oracle を定義する。
 共有の `docs/test-design/harness/L7-unit-test-design.md` には索引 (§consumer trace gate) だけを置き、本書が詳細の正本である。
 
-この pair-freeze では候補 ID (`CANDIDATE-U-CTRACE-*`) を宣言した。本変更では旧候補 `CANDIDATE-U-CTRACE-001` だけを正式 ID `U-CTRACE-001` へ 1:1 で昇格し、対応する Red テスト (`it.fails`) を記録する。他の候補 ID は候補のまま維持する。実装 PR は `it.fails` を `it` に戻して Green にするだけで、本書には触れない。
+旧候補 `CANDIDATE-U-CTRACE-001` は先行契約 PR で `U-CTRACE-001` に 1:1 で昇格済み。今回の昇格では候補 `CANDIDATE-U-CTRACE-046`〜`050` を各正式 ID `U-CTRACE-046`〜`050` に 1:1 で昇格し、046〜049 は `it.fails`、050 は現行 harness の通常 `it` として記録する。他の候補 ID は候補のまま維持する。実装 PR は `it.fails` を `it` に戻して Green にするだけで、本書には触れない。
 U-RCDEV-027 (v)(vi) の改訂も同じ契約 PR + Red で行う (設計文書 §9.1)。
 
 ## 2. fixture
