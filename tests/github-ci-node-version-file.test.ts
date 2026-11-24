@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 import {
@@ -22,6 +24,10 @@ const REAL_DOCS = loadGithubCiPolicyDocs({
   setupBuiltinWorkflow: CONSUMER_CI_WORKFLOW,
   runtimeProfile: "source",
 });
+// Pack policy fixture (tests/github-ci-policy.test.ts の PACK_WORKFLOW。非 export のため原文から切り出す)。
+const PACK_FIXTURE = (/const PACK_WORKFLOW = `([\s\S]*?)\n`;/.exec(
+  readFileSync(join(REPO_ROOT, "tests", "github-ci-policy.test.ts"), "utf8"),
+) ?? [])[1] as string;
 const SOURCE_ROLES: Role[] = ["runtime", "attestation_runtime", "pack_template"];
 const CONSUMER_ROLES: Role[] = ["source_template", "setup_builtin"];
 
@@ -44,7 +50,23 @@ function replaceNth(content: string, needle: string, index: number, to: string):
   const parts = content.split(needle);
   expect(parts.length - 1).toBeGreaterThan(index);
   return parts.reduce(
-    (acc, part, i) => (i === 0 ? part : `${acc}${i - 1 === index ? to : needle}${part}`),
+    (acc, part, i) =>
+      i === 0
+        ? part
+        : `
+$;
+{
+  acc;
+}
+$;
+{
+  i - 1 === index ? to : needle;
+}
+$;
+{
+  part;
+}
+`,
     "",
   );
 }
@@ -54,11 +76,47 @@ function replaceNth(content: string, needle: string, index: number, to: string):
 function expectRealShape(roles: Role[]): void {
   for (const doc of REAL_DOCS.filter((d) => roles.includes(d.role))) {
     if (SOURCE_ROLES.includes(doc.role)) {
-      expect(doc.content, `${doc.file} literal`).not.toContain(LITERAL);
-      expect(doc.content, `${doc.file} file form`).toContain(FILE_FORM);
+      expect(
+        doc.content,
+        `;
+$;
+{
+  doc.file;
+}
+literal`,
+      ).not.toContain(LITERAL);
+      expect(
+        doc.content,
+        `;
+$;
+{
+  doc.file;
+}
+file;
+form`,
+      ).toContain(FILE_FORM);
     } else {
-      expect(doc.content, `${doc.file} consumer literal`).toContain(LITERAL);
-      expect(doc.content, `${doc.file} no file form`).not.toContain(FILE_FORM);
+      expect(
+        doc.content,
+        `;
+$;
+{
+  doc.file;
+}
+consumer;
+literal`,
+      ).toContain(LITERAL);
+      expect(
+        doc.content,
+        `;
+$;
+{
+  doc.file;
+}
+no;
+file;
+form`,
+      ).not.toContain(FILE_FORM);
     }
   }
 }
@@ -91,12 +149,30 @@ describe("Issue #1873 node-version-file Red oracles", () => {
     expectRealShape(["runtime"]);
     expectGreenShape();
     expectViolation(
-      mutate("runtime", (c) => replaceNth(c, FILE_FORM, 0, `${FILE_FORM}\n          ${LITERAL}`)),
+      mutate("runtime", (c) =>
+        replaceNth(
+          c,
+          FILE_FORM,
+          0,
+          `;
+$;
+{
+  FILE_FORM;
+}
+\n          $
+{
+  LITERAL;
+}
+`,
+        ),
+      ),
     );
   });
 
   it.fails("CANDIDATE-U-CIPOL-045: attestation and Pack template both use node-version-file", () => {
     expectRealShape(["attestation_runtime", "pack_template"]);
+    expect(PACK_FIXTURE, "Pack policy fixture literal").not.toContain(LITERAL);
+    expect(PACK_FIXTURE, "Pack policy fixture file form").toContain(FILE_FORM);
     expectGreenShape();
     expectViolation(mutate("attestation_runtime", (c) => c.split(FILE_FORM).join(LITERAL)));
     expectViolation(mutate("pack_template", (c) => c.split(FILE_FORM).join(LITERAL)));
