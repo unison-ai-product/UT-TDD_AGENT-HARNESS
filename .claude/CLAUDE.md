@@ -139,7 +139,7 @@ node -e "const fs=require('fs'),d='.ut-tdd/logs/session';let n=0;for(const f of 
 | あなたが | 迷った判断・難所 | レビュー・UI デザイン判断 | 通常の作業 | 軽い作業 |
 |---|---|---|---|---|
 | Fable | 自分で決めて記録する。技術判断だけ Sol に相談する (`ut-tdd advisor`)。PO 前のエスカレーションと大規模設計の相談役でもある | 委譲経路 (`ut-tdd claude --role` / `ut-tdd codex --role`、Opus / Sol) | Haiku (難所は Sonnet) | Haiku |
-| Opus | 計画と判断は自分でせず、全て Fable へ投げる (`ut-tdd advisor --decision design|progress|uiux`、技術判断は Sol)。自分の仕事は、誰に振るかを決めることと、結果を抜き取りで検収して PO へ報告することだけ | closing review は委譲経路 (`ut-tdd claude --role` / `ut-tdd codex --role`) | Haiku (難所は Sonnet) | Haiku |
+| Opus | 計画と判断は自分でせず、全て Fable へ投げる (`ut-tdd advisor` の `--decision design` / `progress` / `uiux`、技術判断は Sol)。自分の仕事は、誰に振るかを決めることと、結果を抜き取りで検収して PO へ報告することだけ | closing review は委譲経路 (`ut-tdd claude --role` / `ut-tdd codex --role`) | Haiku (難所は Sonnet) | Haiku |
 | Sonnet | Opus に相談する (Agent tool の汎用の型に `model: opus` を渡す。相談の回答は closing の根拠にしない) | 委譲経路 (`ut-tdd claude --role <role>`、Opus) | Haiku (難所は自分) | Haiku |
 | Haiku | 指揮をしない。判断が出たら Sonnet に相談する | ― | ― | 自分 |
 
