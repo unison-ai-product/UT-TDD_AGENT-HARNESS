@@ -65,6 +65,8 @@ C2 の生成 (#1885、`pack-c2-manifest.md`。PR #1886 が未 merge) とは独�
    どの経路でも `installDependencies` は呼ばれず、asset は書かれない。
 6. **release asset の観測**: 公開前は release asset が存在しない。観測した C2 の artifact entry の bytes から `buildPackPublicationAssets` で tarball と checksum を再計算した値を `releaseAssets` として渡す。
    期待側 (`tarResolution` 由来) とは別の bytes の入力で導くので、C1 の blob が期待と違えば asset の不一致としても検出できる。
+   **再計算の失敗**: 観測した生の bytes が manifest と合わない (正規化で消える変異など) と、`buildPackPublicationAssets` は `artifact_mismatch` などで失敗する。このとき観測は例外にせず (例外は `observation_unavailable` になるため)、`commitEntries` はそのまま返し、`releaseAssets` を空の列にする。
+   `auditPackPublication` は control manifest → commit entry → release asset の順に比べる (`src/setup/pack-publication-staging.ts`)。そのため、entry が期待と違えば `commit_entries_mismatch` が先に返る。entry が一致して asset だけ再計算できない場合は、`release_assets_mismatch` になる。
 7. **fail-close**: `status` が `attested` でなければ、`ConsumerRuntimeReleaseProducerError` を `pack_publication_audit_<reason>` の理由コードで投げる。`indeterminate` (`observation_unavailable`) も止める (再試行しない。観測できないものを「通った」と見なさない)。
    止まるのは `installDependencies`・tarball の書き込み・stage への書き込みより前なので、`outDir` には何も書かれない。
 
