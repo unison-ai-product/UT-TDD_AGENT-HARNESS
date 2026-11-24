@@ -8,6 +8,7 @@ import { checkGateRunCoverage } from "../src/doctor/process-quality.ts";
 import * as stateDb from "../src/state-db/index.ts";
 import { defaultHarnessDbPath, openHarnessDb } from "../src/state-db/index.ts";
 import { removeTestTree } from "./support/temp-tree.ts";
+import { headSnapshotRoot } from "./support/workspace-roots.ts";
 
 const EVIDENCE_PATH = ".ut-tdd/gate_runs/gate-run.json";
 const CHECKED_AT = "2026-11-24T00:00:00.000Z";
@@ -95,9 +96,9 @@ function projection(repoRoot: string): {
 }
 
 function coverageReasons(): string[] {
-  const sourcePath = new URL("../src/lint/gate-run-coverage.ts", import.meta.url);
+  const sourcePath = join(headSnapshotRoot(), "src/lint/gate-run-coverage.ts");
   const source = ts.createSourceFile(
-    sourcePath.pathname,
+    sourcePath,
     readFileSync(sourcePath, "utf8"),
     ts.ScriptTarget.Latest,
     true,
