@@ -1,7 +1,8 @@
-name: pack-repro-windows
+name: pack-repro
 
 # 使い捨ての受入証跡 (canary.8、#1879「別マシンでの実測の方式」)。
-# 新しい Windows runner で docs/reference/pack-release-runbook.md を手順どおりに再現する。
+# 新しい Windows / Linux runner で docs/reference/pack-release-runbook.md を手順どおりに再現する。
+# 作業 root (source / Pack / 出力) は OS ごとに home の外へ置く (Windows は C:/w、Linux は /tmp/w)。
 # repro/pack-* への push だけで動く。main と PR では動かさない。push はしない (C1 / C2 / tag はすべて local)。
 
 on:
@@ -16,25 +17,50 @@ env:
   PACK_REF: main
   # 受入の対象の tag。Pack の公開済みの同名 tag があっても、clone は --no-tags なので local の tag を作れる。
   PACK_TAG: v0.2.0-canary.8
-  PACK_DIR: C:/w/pack
-  OUT_DIR: C:/w/out
-  EVIDENCE_DIR: C:/w/evidence
 
 jobs:
   pack-repro:
-    runs-on: windows-latest
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # work_root は home の外。Linux は runner.temp も home の下なので /tmp を使う。
+          - os: windows-latest
+            work_root: C:/w
+          - os: ubuntu-latest
+            work_root: /tmp/w
+    env:
+      MATRIX_OS: ${{ matrix.os }}
+      WORK_ROOT: ${{ matrix.work_root }}
+      PACK_DIR: ${{ matrix.work_root }}/pack
+      OUT_DIR: ${{ matrix.work_root }}/out
+      EVIDENCE_DIR: ${{ matrix.work_root }}/evidence
     defaults:
       run:
         shell: bash
     steps:
       # runbook §1 / §2: source の commit を push された SHA に固定する。
-      # runner の workspace (D:\a\...) は home (C:\Users\runneradmin) の外にある。
+      # Windows の workspace (D:\a\...) は home の外。Linux の workspace は home の下なので、次の step で /tmp/w/source へ写す。
       - name: checkout source at the pushed SHA
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           fetch-depth: 0
           persist-credentials: false
+
+      - name: prepare source outside home
+        run: |
+          set -eu
+          mkdir -p "$WORK_ROOT"
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            src="$GITHUB_WORKSPACE"
+          else
+            src="$WORK_ROOT/source"
+            git clone --no-hardlinks "$GITHUB_WORKSPACE" "$src"
+            git -C "$src" checkout --detach "$GITHUB_SHA"
+          fi
+          echo "SRC_DIR=$src" >> "$GITHUB_ENV"
 
       # runbook §0: Node 24 は .node-version に固定する。
       - name: setup node from .node-version
@@ -45,19 +71,27 @@ jobs:
       - name: verify source, node and npm are outside home
         run: |
           set -eu
-          lower() { printf '%s' "$1" | tr 'A-Z' 'a-z' | tr '/' '\\'; }
-          home_w="$(lower "$(cygpath -w "$HOME")")"
+          cd "$SRC_DIR"
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            sep='\'
+            norm() { printf '%s' "$(cygpath -w "$1")" | tr 'A-Z' 'a-z' | tr '/' '\\'; }
+          else
+            sep='/'
+            norm() { readlink -f "$1"; }
+          fi
+          home_w="$(norm "$HOME")"
           echo "HOME=$HOME ($home_w)"
           echo "--- which -a node npm"
           which -a node npm
           check_outside() {
-            p="$(lower "$(cygpath -w "$1")")"
+            p="$(norm "$1")"
             case "$p" in
-              "$home_w"|"$home_w"\\*) echo "NG: $1 is under home" >&2; exit 1 ;;
+              "$home_w"|"$home_w$sep"*) echo "NG: $1 is under home" >&2; exit 1 ;;
             esac
             echo "ok (outside home): $1"
           }
-          check_outside "$GITHUB_WORKSPACE"
+          check_outside "$SRC_DIR"
+          check_outside "$WORK_ROOT"
           check_outside "$(command -v node)"
           check_outside "$(command -v npm)"
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
@@ -67,12 +101,15 @@ jobs:
           test "$(node -v)" = "v$(tr -d '\r\n' < .node-version)"
 
       - name: npm ci --ignore-scripts (runbook §1.2)
-        run: npm ci --ignore-scripts
+        run: |
+          set -eu
+          cd "$SRC_DIR"
+          npm ci --ignore-scripts
 
       - name: clone the public Pack repo (runbook §1.1, §1.3)
         run: |
           set -eu
-          mkdir -p C:/w
+          mkdir -p "$WORK_ROOT"
           git clone --no-tags -c core.autocrlf=false "$PACK_REPO_URL" "$PACK_DIR"
           git -C "$PACK_DIR" checkout --detach "$PACK_REF"
           git -C "$PACK_DIR" switch -c repro/c1
@@ -95,6 +132,7 @@ jobs:
       - name: sync-pack (runbook §3)
         run: |
           set -eu
+          cd "$SRC_DIR"
           node src/cli.ts distribution sync-pack --repo-dir "$PACK_DIR" --tag "$PACK_TAG" --prune-local --json > "$RUNNER_TEMP/sync-pack.json"
           node -e '
             const o = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
@@ -106,6 +144,7 @@ jobs:
       - name: copy build inputs by hand (runbook §3, 未自動 #1882)
         run: |
           set -eu
+          cd "$SRC_DIR"
           git ls-tree -r --name-only "$GITHUB_SHA" \
             | grep -E '^(docs/governance/node-toolchain-provenance\.json|tsconfig\.node\.json|docs/governance/vmodel-document-catalog\.md|docs/templates/vmodel/[^/]+\.md)$' \
             | sort > "$RUNNER_TEMP/build-inputs.txt"
@@ -125,13 +164,16 @@ jobs:
           echo "copied and byte-compared: $copied"
 
       - name: privacy-scan the Pack checkout (runbook §3, 未自動 #1882)
-        working-directory: C:/w/pack
-        run: node "$GITHUB_WORKSPACE/src/cli.ts" privacy-scan check --mode tree --fail-close
+        run: |
+          set -eu
+          cd "$PACK_DIR"
+          node "$SRC_DIR/src/cli.ts" privacy-scan check --mode tree --fail-close
 
       # runbook §4.1: C1。sync-pack の nextCommands のうち git add だけを実行する。commit と push の行は実行しない。
       - name: C1 commit, local only (runbook §3 exec bit, §4.1)
         run: |
           set -eu
+          cd "$SRC_DIR"
           node -e '
             const o = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
             for (const c of o.pack.nextCommands) if (/^git -C \S+ add /.test(c)) console.log(c);
@@ -149,12 +191,12 @@ jobs:
 
       # runbook §4.2: C2。cwd は Pack の checkout、source の CLI は絶対 path。
       - name: C2 manifest and commit, local only (runbook §4.2, §4.4)
-        working-directory: C:/w/pack
         run: |
           set -eu
+          cd "$PACK_DIR"
           c1="$(git rev-parse HEAD)"
           previous="$(git rev-parse "$PACK_REF^{commit}")"
-          node "$GITHUB_WORKSPACE/src/cli.ts" distribution c2-manifest --c1 "$c1" --tag "$PACK_TAG" --previous "$previous" --json
+          node "$SRC_DIR/src/cli.ts" distribution c2-manifest --c1 "$c1" --tag "$PACK_TAG" --previous "$previous" --json
           test "$(git status --short | wc -l | tr -d ' ')" = "1"
           git add -- release/manifest.yaml
           test "$(git diff --cached --name-only)" = "release/manifest.yaml"
@@ -166,11 +208,11 @@ jobs:
 
       # runbook §5: package。cwd は Pack の checkout、source の CLI は絶対 path、出力先は空。
       - name: package (runbook §5)
-        working-directory: C:/w/pack
         run: |
           set -eu
+          cd "$PACK_DIR"
           test ! -e "$OUT_DIR"
-          node "$GITHUB_WORKSPACE/src/cli.ts" distribution package --tag "$PACK_TAG" --out "$OUT_DIR" --json > "$RUNNER_TEMP/package.json"
+          node "$SRC_DIR/src/cli.ts" distribution package --tag "$PACK_TAG" --out "$OUT_DIR" --json > "$RUNNER_TEMP/package.json"
           cat "$RUNNER_TEMP/package.json"
           test "$(ls -1 "$OUT_DIR" | wc -l | tr -d ' ')" = "5"
           for ext in tar.gz tar.gz.sha256 ut-tdd.mjs consumer-runtime.json consumer.sha256; do
@@ -206,13 +248,14 @@ jobs:
         run: |
           set -eu
           {
-            echo "## pack-repro-windows"
+            echo "## pack-repro ($MATRIX_OS)"
             echo
+            echo "- OS: \`$MATRIX_OS\` (work root: \`$WORK_ROOT\`)"
             echo "- source SHA: \`$GITHUB_SHA\`"
             echo "- Pack ref: \`$PACK_REF\` / tag (local only): \`$PACK_TAG\`"
             echo "- runner image: ImageOS=\`${ImageOS:-}\` ImageVersion=\`${ImageVersion:-}\` RUNNER_OS=\`$RUNNER_OS\` RUNNER_ARCH=\`$RUNNER_ARCH\`"
-            echo "- node: \`$(node -v)\` at \`$(cygpath -w "$(command -v node)")\`"
-            echo "- npm: \`$(npm -v)\` at \`$(cygpath -w "$(command -v npm)")\`"
+            echo "- node: \`$(node -v)\` at \`$(command -v node)\`"
+            echo "- npm: \`$(npm -v)\` at \`$(command -v npm)\`"
             echo
             echo "### sha256 (5 assets, sha256sum)"
             echo '```'
@@ -233,8 +276,8 @@ jobs:
       - name: upload assets and sha256.txt
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: pack-repro-windows-${{ github.sha }}
+          name: pack-repro-${{ matrix.os }}-${{ github.sha }}
           path: |
-            C:/w/out/*
-            C:/w/evidence/sha256.txt
+            ${{ matrix.work_root }}/out/*
+            ${{ matrix.work_root }}/evidence/sha256.txt
           if-no-files-found: error
