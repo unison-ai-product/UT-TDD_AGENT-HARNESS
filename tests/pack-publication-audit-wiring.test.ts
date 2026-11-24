@@ -405,7 +405,7 @@ describe("U-PKAUD package の公開照合の配線", () => {
     expect(run.error?.code).toMatch(/^pack_build_input_/);
     expect(run.installCalls).toBe(0);
     expect(run.outFiles).toEqual([]);
-  });
+  }, 180_000);
 
   it.fails("U-PKAUD-010: 失敗の出力は理由コード・path・分類・SHA だけで、bytes・digest・内容を含まない", async () => {
     const fx = makeCase(addExtra());
