@@ -339,9 +339,11 @@ describe("design-pair retirement", () => {
 
   it.fails("CANDIDATE-U-GSPAIR-002 rejects an equal-count replacement and identifies both old paths", async () => {
     const baseFiles = sharedPairFiles();
-    const headFiles = { ...baseFiles };
-    delete headFiles[designA];
-    headFiles["docs/design/harness/L4-architecture/replacement.md"] = designDoc("L4", shared);
+    const headFiles = {
+      ...baseFiles,
+      [designA]: undefined,
+      "docs/design/harness/L4-architecture/replacement.md": designDoc("L4", shared),
+    };
     const fixture = createPairRetirementGitFixture(baseFiles, headFiles);
     try {
       const base = analyzePairFreeze(loadPairDocs(fixture.materialize(fixture.baseCommit)));

@@ -119,14 +119,12 @@ export function createPairRetirementGitFixture(
         runGit(["cat-file", "-e", `${commit}^{commit}`]);
       },
       readAt(commit: string, path: string): string | null {
-        try {
-          return execFileSync("git", ["-C", root, "show", `${commit}:${path}`], {
-            encoding: "utf8",
-            windowsHide: true,
-          });
-        } catch {
-          return null;
-        }
+        const result = spawnSync("git", ["-C", root, "show", `${commit}:${path}`], {
+          encoding: "utf8",
+          windowsHide: true,
+        });
+        if (result.error) throw result.error;
+        return result.status === 0 ? result.stdout : null;
       },
       materialize(commit: string): string {
         const files = versions.get(commit);
