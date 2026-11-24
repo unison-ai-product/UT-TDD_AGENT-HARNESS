@@ -10,7 +10,7 @@ next_pair_freeze: L7
 issue: 1490
 ---
 
-> **L6 contract marker**: `loadGateRunCoverageStats(repoRoot) => GateRunCoverageStats` の初回投影と再試行を定める。候補 oracle `CANDIDATE-U-GRBOOT-001`〜`004` は対応する L7 が固定する。
+> **L6 contract marker**: `loadGateRunCoverageStats(repoRoot) => GateRunCoverageStats` の初回投影と再試行を定める。正式 oracle `U-GRBOOT-001`〜`004` は対応する L7 が固定する。
 
 # Gate run の初回投影と再試行 (Issue #1490)
 
