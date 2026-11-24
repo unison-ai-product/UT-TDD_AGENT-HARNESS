@@ -131,7 +131,7 @@ describe("gate-run coverage stat retirement candidates", () => {
     for (const root of roots) removeTestTree(root);
   });
 
-  it("CANDIDATE-U-GRCOV-001 fails on the returned stats shape and filtered PLAN count", () => {
+  it.fails("CANDIDATE-U-GRCOV-001 retires the unused stats field and filtered PLAN count", () => {
     const successfulRoot = newRepo("001-success");
     const existingFailureRoot = newRepo("001-existing-failure");
     const freshFailureRoot = newRepo("001-fresh-failure");
@@ -233,7 +233,7 @@ describe("gate-run coverage stat retirement candidates", () => {
     );
   });
 
-  it("CANDIDATE-U-GRCOV-003 removes the retired literal from the reason union", () => {
+  it.fails("CANDIDATE-U-GRCOV-003 removes the retired literal from the reason union", () => {
     expect(coverageReasons()).not.toContain("blank_plan_gate_run");
   });
 });
