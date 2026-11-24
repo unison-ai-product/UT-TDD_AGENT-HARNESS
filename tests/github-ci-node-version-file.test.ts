@@ -10,14 +10,20 @@ import {
   loadToolchainPinDocs,
   NODE_TOOLCHAIN_POLICY,
 } from "../src/lint/toolchain-pin.ts";
+import { CONSUMER_CI_WORKFLOW } from "../src/setup/consumer-ci-workflow.ts";
 
 // repo 読みの入口を 1 箇所へ集約する (doctor test-repository-isolation の callsite 契約)。
 const REPO_ROOT = process.cwd();
+type Role = GithubWorkflowDoc["role"];
 const LITERAL = `node-version: "${NODE_TOOLCHAIN_POLICY.nodeVersion}"`;
 const FILE_FORM = "node-version-file: .node-version";
-const REAL_DOCS = loadGithubCiPolicyDocs({ repoRoot: REPO_ROOT, runtimeProfile: "source" });
-
-type Role = GithubWorkflowDoc["role"];
+const REAL_DOCS = loadGithubCiPolicyDocs({
+  repoRoot: REPO_ROOT,
+  setupBuiltinWorkflow: CONSUMER_CI_WORKFLOW,
+  runtimeProfile: "source",
+});
+const SOURCE_ROLES: Role[] = ["runtime", "attestation_runtime", "pack_template"];
+const CONSUMER_ROLES: Role[] = ["source_template", "setup_builtin"];
 
 // Green 後の形: source workflow と Pack template は .node-version を参照し、consumer template は literal を保つ。
 function greenDocs(): GithubWorkflowDoc[] {
@@ -43,6 +49,20 @@ function replaceNth(content: string, needle: string, index: number, to: string):
   );
 }
 
+// 実ファイルを無加工で検査する。source workflow / attestation / Pack template は .node-version 参照、
+// consumer template (実ファイルと CONSUMER_CI_WORKFLOW) は NODE_TOOLCHAIN_POLICY の literal を保つ。
+function expectRealShape(roles: Role[]): void {
+  for (const doc of REAL_DOCS.filter((d) => roles.includes(d.role))) {
+    if (SOURCE_ROLES.includes(doc.role)) {
+      expect(doc.content, `${doc.file} literal`).not.toContain(LITERAL);
+      expect(doc.content, `${doc.file} file form`).toContain(FILE_FORM);
+    } else {
+      expect(doc.content, `${doc.file} consumer literal`).toContain(LITERAL);
+      expect(doc.content, `${doc.file} no file form`).not.toContain(FILE_FORM);
+    }
+  }
+}
+
 function expectGreenShape(): void {
   expect(analyzeGithubCiPolicy(greenDocs()).violations).toEqual([]);
 }
@@ -53,6 +73,7 @@ function expectViolation(docs: GithubWorkflowDoc[]): void {
 
 describe("Issue #1873 node-version-file Red oracles", () => {
   it.fails("CANDIDATE-U-CIPOL-042: runtime legs use node-version-file and reject literal or wrong path", () => {
+    expectRealShape(["runtime"]);
     expectGreenShape();
     expectViolation(mutate("runtime", (c) => replaceNth(c, FILE_FORM, 1, LITERAL)));
     expectViolation(
@@ -61,11 +82,13 @@ describe("Issue #1873 node-version-file Red oracles", () => {
   });
 
   it.fails("CANDIDATE-U-CIPOL-043: aggregate setup-node uses node-version-file", () => {
+    expectRealShape(["runtime"]);
     expectGreenShape();
     expectViolation(mutate("runtime", (c) => replaceNth(c, FILE_FORM, 4, LITERAL)));
   });
 
   it.fails("CANDIDATE-U-CIPOL-044: node-version and node-version-file together are a violation", () => {
+    expectRealShape(["runtime"]);
     expectGreenShape();
     expectViolation(
       mutate("runtime", (c) => replaceNth(c, FILE_FORM, 0, `${FILE_FORM}\n          ${LITERAL}`)),
@@ -73,26 +96,30 @@ describe("Issue #1873 node-version-file Red oracles", () => {
   });
 
   it.fails("CANDIDATE-U-CIPOL-045: attestation and Pack template both use node-version-file", () => {
+    expectRealShape(["attestation_runtime", "pack_template"]);
     expectGreenShape();
     expectViolation(mutate("attestation_runtime", (c) => c.split(FILE_FORM).join(LITERAL)));
     expectViolation(mutate("pack_template", (c) => c.split(FILE_FORM).join(LITERAL)));
   });
 
   it.fails("CANDIDATE-U-CIPOL-046: consumer template literal must equal NODE_TOOLCHAIN_POLICY.nodeVersion", () => {
+    expectRealShape(CONSUMER_ROLES);
     expectGreenShape();
-    expectViolation(
-      mutate("source_template", (c) => c.split(LITERAL).join('node-version: "24.99.9"')),
-    );
-    expectViolation(mutate("source_template", (c) => c.split(LITERAL).join(FILE_FORM)));
+    for (const role of CONSUMER_ROLES) {
+      expectViolation(mutate(role, (c) => c.split(LITERAL).join('node-version: "24.99.9"')));
+      expectViolation(mutate(role, (c) => c.split(LITERAL).join(FILE_FORM)));
+    }
   });
 
   it.fails("CANDIDATE-U-CIPOL-047: version chain keeps workflow green and flags a stale pin", () => {
+    expectRealShape(["runtime"]);
     expectGreenShape();
     const pin = analyzeToolchainPin({ ...loadToolchainPinDocs(REPO_ROOT), nodeVersion: "24.99.9" });
     expect(pin.violations.map((v) => v.rule)).toContain("node-version-mismatch");
   });
 
   it.fails("CANDIDATE-U-CIPOL-048: setup-node must come after checkout in each job", () => {
+    expectRealShape(["runtime"]);
     expectGreenShape();
     expectViolation(
       mutate("runtime", (content) => {
