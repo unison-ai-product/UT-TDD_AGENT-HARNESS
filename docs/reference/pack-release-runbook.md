@@ -22,6 +22,7 @@
 | `gh` | GitHub CLI を入れ、Pack repo に PR を出せるアカウントでログインします。**認証情報を repo や文書に書きません** | `gh auth status` |
 | 私有 denylist | `~/.ut-tdd/privacy-denylist.txt` (§0.1)。無いと `sync-pack` / `package` は書き出しの前に止まります | §0.1 |
 | 作業場所 | source と Pack の checkout は **home の外**に置きます (`package` は home 配下の作業を拒否します)。例: `C:\dev\` の下 | - |
+| Node / npm の置き場所 | `node` と `npm` の実体も **home の外**に置きます。`package` は、repo だけでなく Node / npm の path が home 配下にあっても止まります (`assertProducerPathsOutsideHome`、`src/cli/distribution.ts`)。nvm / volta / fnm などで home の下に入れた Node は使えません。公式の installer で `C:\Program Files\nodejs\` などへ入れます | `which -a node npm` (Git Bash) |
 
 ### 0.1 denylist の作り方
 
