@@ -232,6 +232,8 @@ function makeCase(
     stdio: "pipe",
   });
   git(root, ["config", "core.autocrlf", "false"]);
+  // mode だけの変更 (update-index --chmod) を、後続の git add が working tree の mode で上書きしない。
+  git(root, ["config", "core.fileMode", "false"]);
   git(root, ["config", "user.email", "test@example.invalid"]);
   git(root, ["config", "user.name", "PKAUD Test"]);
   git(root, ["config", "commit.gpgsign", "false"]);
@@ -487,7 +489,8 @@ describe("CANDIDATE-U-PKAUD package の公開照合の配線", () => {
     });
   });
 
-  it.fails("CANDIDATE-U-PKAUD-014: C1 の 160000 は resolveReleaseArtifacts が invalid_artifact で拒否し、観測へ進まない", async () => {
+  // 014 は main の既存の拒否 (invalid_artifact) の特性化で、main で既に通るため it.fails にしない (回帰の oracle)。
+  it("CANDIDATE-U-PKAUD-014: C1 の 160000 は resolveReleaseArtifacts が invalid_artifact で拒否し、観測へ進まない", async () => {
     const run = await attempt(makeCase((root) => stageSpecial(root, "160000", "private/sub")));
     expectRejectedMessage(run, "distribution package tar materialization failed: invalid_artifact");
     expect(planResults).toEqual([]);
