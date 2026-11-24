@@ -344,33 +344,47 @@ describe("workflow-model-guard 候補 oracle (Red)", () => {
     }
   });
 
-  it.fails("CANDIDATE-U-WFGUARD-025: 拒否の stderr は 1 行で reason と直し方を含む", () => {
-    const rows: Array<[string, string, RegExp]> = [
+  it.fails("CANDIDATE-U-WFGUARD-025: 拒否の stderr は 1 行で reason と直し方 (L6 §7) を含む", () => {
+    const hasFixes = (out: string, fixes: RegExp[]): boolean => fixes.every((f) => f.test(out));
+    const allowedFix = [/haiku か sonnet/, /Agent tool/, /委譲経路/];
+    const unreadableFix = [/script を直接渡す/];
+    // 反例 (直し方が空・片方だけ) を、この検査自身が拒否できること。
+    expect(hasFixes("[ut-tdd-guard] BLOCK: workflow_script_unreadable:", unreadableFix)).toBe(
+      false,
+    );
+    expect(
+      hasFixes("BLOCK: workflow_model_not_allowed: haiku か sonnet。Agent tool", allowedFix),
+    ).toBe(false);
+    expect(
+      hasFixes("BLOCK: workflow_model_not_allowed: haiku か sonnet。委譲経路", allowedFix),
+    ).toBe(false);
+    const rows: Array<[string, string, RegExp[]]> = [
+      [withMeta('agent("p", { model: "opus" })'), "workflow_model_not_allowed", allowedFix],
       [
-        withMeta('agent("p", { model: "opus" })'),
-        "workflow_model_not_allowed",
-        /haiku か sonnet[\s\S]*(Agent tool|委譲経路)/,
+        withMeta('agent("p", { model })'),
+        "workflow_model_not_literal",
+        [/文字列 literal で直接書く/],
       ],
-      [withMeta('agent("p", { model })'), "workflow_model_not_literal", /literal/],
-      [withMeta('agent("p")'), "workflow_model_missing", /明示/],
-      [withMeta('agent("p", opts)'), "workflow_agent_opts_invalid", /object literal/],
-      [withMeta("const r = agent;"), "workflow_identifier_aliased", /直接呼/],
+      [
+        withMeta('agent("p")'),
+        "workflow_model_missing",
+        [/全ての agent\(\) の第 2 引数に model を/, /明示する/],
+      ],
+      [withMeta('agent("p", opts)'), "workflow_agent_opts_invalid", [/object literal で直接書き/]],
+      [withMeta("const r = agent;"), "workflow_identifier_aliased", [/直接呼び/]],
     ];
-    for (const [script, reason, fix] of rows) {
-      const out = runHook(envelope(script)).stderr.trimEnd();
+    const check = (stdin: string, reason: string, fixes: RegExp[]): void => {
+      const out = runHook(stdin).stderr.trimEnd();
       expect(out.split(/\r?\n/), reason).toHaveLength(1);
       expect(out.startsWith(`[ut-tdd-guard] BLOCK: ${reason}:`), reason).toBe(true);
-      expect(out, reason).toMatch(fix);
-    }
+      expect(hasFixes(out, fixes), `${reason}: ${out}`).toBe(true);
+    };
+    for (const [script, reason, fixes] of rows) check(envelope(script), reason, fixes);
     const byInput = [
       JSON.stringify({ tool_name: "Workflow", tool_input: { name: "x" } }),
       JSON.stringify({ tool_name: "Workflow", tool_input: { scriptPath: "x.js" } }),
     ];
-    for (const stdin of byInput) {
-      const out = runHook(stdin).stderr.trimEnd();
-      expect(out.split(/\r?\n/), stdin).toHaveLength(1);
-      expect(out.startsWith("[ut-tdd-guard] BLOCK: workflow_script_unreadable:"), stdin).toBe(true);
-    }
+    for (const stdin of byInput) check(stdin, "workflow_script_unreadable", unreadableFix);
   });
 
   it.fails("CANDIDATE-U-WFGUARD-026: 判定本体と hook は bypass も実行も持たず normalizeModelFamily を共有する", () => {
@@ -431,18 +445,30 @@ describe("workflow-model-guard 候補 oracle (Red)", () => {
     expect(settingsDropped.ok).toBe(false);
   });
 
-  it.fails("CANDIDATE-U-WFGUARD-029: モデルの規律の文は .claude/CLAUDE.md の 1 か所だけにある", () => {
-    const discipline = (text: string): string[] =>
-      text
-        .split(/\r?\n/)
-        .filter((l) => /Workflow/.test(l) && /明示/.test(l) && /Haiku/.test(l) && /Sonnet/.test(l));
+  it.fails("CANDIDATE-U-WFGUARD-029: モデルの規律の文は意味を満たし、.claude/CLAUDE.md の 1 か所だけにある", () => {
+    const candidates = (text: string): string[] =>
+      text.split(/\r?\n/).filter((l) => /Workflow/.test(l) && /Haiku/.test(l) && /Sonnet/.test(l));
+    // L6 §11.4 の 4 要素: 全 agent の model 明示が必須 / Haiku が既定 / 複雑な段だけ Sonnet / 上位モデルの検証は外の 2 経路。
+    const meaning = [
+      /全て\s*model\s*を明示し(?!なくて|ない)/,
+      /Haiku が既定/,
+      /条件が複雑な段だけ Sonnet/,
+      /上位モデルの検証は[^。]*Agent tool[^。]*委譲経路[^。]*で行う/,
+    ];
+    const satisfies = (line: string): boolean => meaning.every((m) => m.test(line));
+    // 反例 (意味が逆の文) を、この検査自身が拒否できること。
+    const converse =
+      "Workflow の model は明示しなくてよい。Haiku より Sonnet を常に使う。Agent tool と委譲経路。";
+    expect(satisfies(converse)).toBe(false);
+    const good =
+      "workflow の Workflow agent は全て model を明示し、Haiku が既定で、条件が複雑な段だけ Sonnet。上位モデルの検証は Agent tool か委譲経路で行う。";
+    expect(satisfies(good)).toBe(true);
     const claude = src(".claude/CLAUDE.md");
-    const lines = discipline(claude);
+    const lines = candidates(claude);
     expect(lines).toHaveLength(1);
-    expect(lines[0]).toMatch(/Agent tool/);
-    expect(lines[0]).toMatch(/委譲経路/);
-    expect(discipline(src("CLAUDE.md"))).toEqual([]);
-    expect(discipline(src("AGENTS.md"))).toEqual([]);
+    expect(satisfies(lines[0] ?? "")).toBe(true);
+    expect(candidates(src("CLAUDE.md"))).toEqual([]);
+    expect(candidates(src("AGENTS.md"))).toEqual([]);
     expect(claude).toContain("## UT-TDD Adapter Rule Markers");
     expect(analyzeRuleDrift(loadRuleAdapterDocs(root)).ok).toBe(true);
   });
