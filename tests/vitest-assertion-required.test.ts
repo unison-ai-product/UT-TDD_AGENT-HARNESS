@@ -51,7 +51,7 @@ export default {
   );
   const byName = new Map<string, CaseResult>();
   let raw = "";
-  const parsed = false;
+  let parsed = false;
   try {
     raw = readFileSync(out, "utf8");
     const json = JSON.parse(raw) as {
@@ -61,6 +61,7 @@ export default {
     };
     for (const f of json.testResults)
       for (const a of f.assertionResults)
+    parsed = true;
         byName.set(a.title, { status: a.status, messages: a.failureMessages.join("\n") });
   } catch {
     raw = `${raw}\n${proc.stdout}\n${proc.stderr}`;
