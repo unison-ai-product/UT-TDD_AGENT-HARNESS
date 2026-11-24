@@ -67,10 +67,10 @@ hard link 前に writer の子プロセスが終了すると、当該実行の f
 
 ## 5. 既存証跡走査の拒否診断 (Issue #1490)
 
-writer が既存 `.json` を走査中に read error、malformed JSON、または JSON `null` に遭遇した場合は、その実行の証跡保存を拒否する。拒否は `.tmp-*` の作成・書込みと final への link より前に行い、既存 bytes を保持し、新しい final を作らない。CLI は既存の human stderr warning と JSON の `gate_run_evidence_warning` を使い、gate verdict と exit code は変えない。
+writer が既存 `.json` を走査中に物理 read error、不正 JSON、または JSON `null` に遭遇した場合は、その実行の証跡保存を拒否する。各失敗では問題の既存ファイルの repo-relative、slash-separated path を得て、`Error` を投げる。`error.code` の値は正確に `existing_evidence_scan_failed`、`error.message` は `existing_evidence_scan_failed: ` に続けてその path の `JSON.stringify` 結果を置いた文字列とする。3種の失敗は同じ契約を使い、native/parser の本文、絶対 machine path、raw error cause は message に含めず、cause としても渡さない。
 
-warning は安定診断コード `existing_evidence_scan_failed` と、問題のファイルの repo-relative、slash-separated path を JSON string と同じ escaping で引用して示す。parser の抜粋、native error text、絶対 machine path は含めない。3つの失敗理由には共通コードを使う。既存 ID の `EEXIST`、正常に読める別 ID の反復、同じ ID の拒否は §3.1 の契約に従う。
+拒否は `.tmp-*` への書込みと final への link より前に行う。走査対象を含む既存 bytes を保持し、新しい staging/final を作らない。CLI は現在の `gate run evidence write failed: ` prefix と既存の配置を維持し、その後ろに上記のエラーのメッセージだけを付ける。human-readable では stderr、`--json` では `gate_run_evidence_warning` に出し、`gate_run_evidence` は `null` とする。証跡保存の拒否によって gate verdict / exit code は変えない。
 
-診断の対象は、現行の走査を中断する読み取り失敗、不正 JSON、JSON `null` の3種。別名証跡があるまま発行を継続する判断は、同一 ID の二重発行を防げることを確認した後に行う。[ファイル名と ID の再現](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/1490#issuecomment-7123755365) [契約改訂の承認](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/1490#issuecomment-7123927381)
+診断対象は現行の走査を中断する物理読み取り失敗、不正 JSON、JSON `null` の3種に限る。既存 ID の `EEXIST`、正常に読める別 ID の反復、同じ ID の拒否は §3.1 の契約に従う。別名証跡があるまま発行を継続する判断は、同一 ID の二重発行を防げることを確認した後に行う。[ファイル名と ID の再現](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/1490#issuecomment-7123755365) [契約改訂の承認](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/1490#issuecomment-7123927381)
 
 候補 oracle `CANDIDATE-U-GATEDIAG-001`〜`003` は L7 §4 に定める。
