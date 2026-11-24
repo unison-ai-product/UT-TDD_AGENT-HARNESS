@@ -10,7 +10,7 @@ next_pair_freeze: L7
 issue: 1073
 ---
 
-> **L6 contract marker**: `checkPairRetirement(repoRoot, baseCommit, headCommit) => PairRetirementCheck` は、source repo の U-RCDEV-037 に比較元から失われた設計対と退役宣言の照合結果を返す。候補 oracle `CANDIDATE-U-GSPAIR-001`〜`007` は対応する L7 が定める。
+> **L6 contract marker**: `checkPairRetirement(repoRoot, baseCommit, headCommit) => PairRetirementCheck` は、source repo の U-RCDEV-037 に比較元から失われた設計対と退役宣言の照合結果を返す。正式 oracle `U-GSPAIR-001`〜`007` は対応する L7 が定める。
 
 # Gate static の設計対の維持と退役 (Issue #1073)
 
