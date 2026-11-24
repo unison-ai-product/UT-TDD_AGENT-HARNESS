@@ -43,10 +43,8 @@ live in UT-TDD-owned paths.
 `ut-tdd doctor` is a long-running **singleton** inspection. A second
 concurrent run fails fast with exit 2 and the holder's pid.
 
-The `source-full` profile runs `gate-run-coverage`, which reconciles evidence and
-can initialize or update the repository's `.ut-tdd/harness.db` projection. The
-`source-doc-lane` and toolchain profiles omit that check. The CLI holds a singleton
-lock during the run and writes the requested output when given `--result-file`.
+For shared doctor behavior and its write boundary, see the doctor bullet in the
+root `CLAUDE.md` §Shared Guard Discipline.
 
 - exit 2 (already running) means **wait for the running doctor**; do not retry,
   do not re-launch with a different invocation form (`node -e`, `--json`, direct
