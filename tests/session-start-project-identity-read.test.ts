@@ -2,6 +2,7 @@ import { spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync, realpathSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import { describe, expect, it } from "vitest";
 import { defaultHarnessDbPath, openHarnessDb } from "../src/state-db/index.ts";
 import { migrate } from "../src/state-db/migration.ts";
@@ -52,7 +53,7 @@ describe("SessionStart project identity reads", () => {
       process.execPath,
       [
         "--import",
-        resolve("tests/support/session-start-identity-preload.mjs"),
+        pathToFileURL(resolve("tests/support/session-start-identity-preload.mjs")).href,
         resolve("src/cli.ts"),
         "session",
         "start",
@@ -87,6 +88,7 @@ describe("SessionStart project identity reads", () => {
     }
     start = startSession(root);
     if (start.error) throw start.error;
+    if (start.status !== 0) throw new Error(`SessionStart exit ${start.status}: ${start.stderr}`);
     commandLog = readFileSync(join(root, "session-start-commands.jsonl"), "utf8")
       .trim()
       .split(/\r?\n/)
