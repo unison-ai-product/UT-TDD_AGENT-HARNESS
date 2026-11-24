@@ -34,7 +34,7 @@ import {
 } from "./support/privacy-denylist-home.ts";
 import { removeTestTree } from "./support/temp-tree.ts";
 
-// Red (issue #1882): CANDIDATE-U-PKBIN-006..011 (sync-pack / package の配線)。純粋関数と staging は pack-build-inputs.test.ts。
+// Red (issue #1882): U-PKBIN-006..011 (sync-pack / package の配線)。純粋関数と staging は pack-build-inputs.test.ts。
 
 const FIXED = [
   "docs/governance/node-toolchain-provenance.json",
@@ -217,7 +217,7 @@ function walkBytes(root: string): Map<string, string> {
   return out;
 }
 
-describe("CANDIDATE-U-PKBIN sync-pack / package wiring", () => {
+describe("U-PKBIN sync-pack / package wiring", () => {
   beforeAll(() => {
     authorRoot = process.cwd();
     scratchRoot = mkdtempSync(join(tmpdir(), "pkbin-red-"));
@@ -232,7 +232,7 @@ describe("CANDIDATE-U-PKBIN sync-pack / package wiring", () => {
     if (scratchRoot) removeTestTree(scratchRoot);
   });
 
-  it.fails("CANDIDATE-U-PKBIN-006: ビルド入力が欠けた source の sync-pack は repoDir を 1 byte も変えず exit 1", () => {
+  it.fails("U-PKBIN-006: ビルド入力が欠けた source の sync-pack は repoDir を 1 byte も変えず exit 1", () => {
     const source = cloneSource("c006", (root) => {
       git(root, ["rm", "-q", "--", "tsconfig.node.json"]);
     });
@@ -257,7 +257,7 @@ describe("CANDIDATE-U-PKBIN sync-pack / package wiring", () => {
     expect(walkBytes(packDir)).toEqual(before);
   });
 
-  it.fails("CANDIDATE-U-PKBIN-007: sync-pack はビルド入力を bytes 同一で copy し artifact の集合は変えない", () => {
+  it.fails("U-PKBIN-007: sync-pack はビルド入力を bytes 同一で copy し artifact の集合は変えない", () => {
     const source = cloneSource("c007");
     const packDir = join(scratchRoot, "c007-pack");
     mkdirSync(packDir, { recursive: true });
@@ -292,7 +292,7 @@ describe("CANDIDATE-U-PKBIN sync-pack / package wiring", () => {
     expect(pick(json, "pack", "copiedArtifacts")).toBe(seedArtifactPaths.length);
   });
 
-  it.fails("CANDIDATE-U-PKBIN-008: --prune-local はビルド入力を消さず、一覧に無い stale file だけを消す", () => {
+  it.fails("U-PKBIN-008: --prune-local はビルド入力を消さず、一覧に無い stale file だけを消す", () => {
     const source = cloneSource("c008");
     const packDir = join(scratchRoot, "c008-pack");
     mkdirSync(packDir, { recursive: true });
@@ -322,7 +322,7 @@ describe("CANDIDATE-U-PKBIN sync-pack / package wiring", () => {
     expect(existsSync(join(packDir, "stale", "leftover.txt"))).toBe(false);
   });
 
-  it.fails("CANDIDATE-U-PKBIN-009: package はビルド入力の欠落を install の前に理由コードで止め outDir を空に保つ", async () => {
+  it.fails("U-PKBIN-009: package はビルド入力の欠落を install の前に理由コードで止め outDir を空に保つ", async () => {
     const source = cloneSource("c009", (root) => {
       git(root, ["rm", "-q", "--", "docs/governance/vmodel-document-catalog.md"]);
     });
@@ -351,7 +351,7 @@ describe("CANDIDATE-U-PKBIN sync-pack / package wiring", () => {
     }
   });
 
-  it.fails("CANDIDATE-U-PKBIN-011: ビルド入力の denylist 一致は sync-pack / package の書き出し前に止める", () => {
+  it.fails("U-PKBIN-011: ビルド入力の denylist 一致は sync-pack / package の書き出し前に止める", () => {
     const home = writeSyntheticPrivacyDenylist(mkdtempSync(join(tmpdir(), "pkbin-011-home-")));
     const term = ["example", "fixture", "denylist", "term"].join("-");
     try {
@@ -387,7 +387,7 @@ describe("CANDIDATE-U-PKBIN sync-pack / package wiring", () => {
   });
 });
 
-describe("CANDIDATE-U-PKBIN-010 single source of truth (static)", () => {
+describe("U-PKBIN-010 single source of truth (static)", () => {
   const literals = [
     "node-toolchain-provenance.json",
     "tsconfig.node.json",
@@ -396,7 +396,7 @@ describe("CANDIDATE-U-PKBIN-010 single source of truth (static)", () => {
   ];
   const selectors = ["src/cli/distribution.ts", "tests/support/pack-internal-canary.ts"];
 
-  it.fails("CANDIDATE-U-PKBIN-010: 選択経路に独自の一覧は無く、全員が selectPackBuildInputs を呼ぶ", () => {
+  it.fails("U-PKBIN-010: 選択経路に独自の一覧は無く、全員が selectPackBuildInputs を呼ぶ", () => {
     for (const rel of selectors) {
       const text = readFileSync(join(process.cwd(), rel), "utf8");
       expect(text, `${rel} must call selectPackBuildInputs`).toContain("selectPackBuildInputs");
