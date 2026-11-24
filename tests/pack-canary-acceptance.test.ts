@@ -1844,7 +1844,7 @@ describe("manual canary acceptance publish-record boundary", () => {
           parent: positiveRevision,
           applicable: true,
           passed: false,
-          messages: ["required doc not created: business-requirements.md"],
+          messages: ["missing_core_doc:DOC-L1-REQUIREMENTS"],
         },
         positiveRevision,
       ),
@@ -1856,7 +1856,7 @@ describe("manual canary acceptance publish-record boundary", () => {
           parent: positiveRevision,
           applicable: true,
           passed: false,
-          messages: ["required doc not created: business-requirements.md"],
+          messages: ["missing_core_doc:DOC-L1-REQUIREMENTS"],
         },
         positiveRevision,
       ),
@@ -1869,6 +1869,21 @@ describe("manual canary acceptance publish-record boundary", () => {
           applicable: true,
           passed: false,
           messages: ["required doc not created: another-slot.md"],
+        },
+        positiveRevision,
+      ),
+    ).toThrow("agent-g1-negative-invalid");
+    expect(() =>
+      verifyAgentG1Negative(
+        {
+          revision: "b".repeat(40),
+          parent: positiveRevision,
+          applicable: true,
+          passed: false,
+          messages: [
+            "missing_core_doc:DOC-L1-REQUIREMENTS",
+            "required doc not created: business-requirements.md",
+          ],
         },
         positiveRevision,
       ),
@@ -1976,7 +1991,7 @@ describe("manual canary acceptance publish-record boundary", () => {
               gate: "G1",
               applicable: true,
               passed: false,
-              messages: ["required doc not created: business-requirements.md"],
+              messages: ["missing_core_doc:DOC-L1-REQUIREMENTS"],
             }
           : {
               gate: "G1",
@@ -2188,7 +2203,7 @@ describe("manual canary acceptance publish-record boundary", () => {
         parent: subjectRevision,
         applicable: true,
         passed: false,
-        messages: ["required doc not created: business-requirements.md"],
+        messages: ["missing_core_doc:DOC-L1-REQUIREMENTS"],
       },
       review,
     });
