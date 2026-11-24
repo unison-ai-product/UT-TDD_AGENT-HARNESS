@@ -581,7 +581,11 @@ Task-kind ベースの割当 (PO rule 2026-07-14、旧 tier 記述を supersede)
 - **doctor は singleton** (PLAN-L7-442)。二重起動は exit 2 + holder pid で fail-fast する。
   exit 2 を見たら**待つ**。retry も別形式 (`node -e` / `--json` / 直接 `runDoctor`) での
   再起動もしない (2026-07-16 実害: doctor 16 並行、空きメモリ 31MB)。一部だけ要るなら
-  `--scope` や check 関数の直接呼び出しを使う。
+  `--scope` や check 関数の直接呼び出しを使う。`source-full` の
+  `gate-run-coverage` は証跡を照合し、必要に応じてリポジトリの `.ut-tdd/harness.db` に
+  初回投影や整合する行の更新を行う。`source-doc-lane` と toolchain プロファイルでは
+  この検査を実行しない。CLI は実行時に singleton lock を使用し、`--result-file` 指定時には
+  要求された出力を書き出す。
 - **並列 subagent は既定上限 8** (`DEFAULT_MAX_PARALLEL`、`src/runtime/agent-slots.ts`)。
   `agent-slots` が fire/release を記録し上限到達を警告する (fail-open advisory であって
   fail-close gate ではない)。

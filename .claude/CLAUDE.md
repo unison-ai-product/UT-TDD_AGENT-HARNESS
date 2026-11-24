@@ -40,8 +40,11 @@ live in UT-TDD-owned paths.
 
 ## Doctor Invocation Discipline (PLAN-L7-442)
 
-`ut-tdd doctor` is a long-running, read-only, **singleton** inspection. A second
-concurrent run fail-fasts with exit 2 and the holder's pid. Rules:
+`ut-tdd doctor` is a long-running **singleton** inspection. A second
+concurrent run fails fast with exit 2 and the holder's pid.
+
+For shared doctor behavior and its write boundary, see the doctor bullet in the
+root `CLAUDE.md` §Shared Guard Discipline.
 
 - exit 2 (already running) means **wait for the running doctor**; do not retry,
   do not re-launch with a different invocation form (`node -e`, `--json`, direct
