@@ -56,7 +56,7 @@ C2 の生成 (#1885、`pack-c2-manifest.md`。PR #1886 が未 merge) とは独�
    観測した entry は path を UTF-8 のバイト順で並べる。`kind` は、path が期待集合の `control-manifest` / `build-input` に当たればその種別、それ以外は `artifact` とする。
    期待に無い path は `artifact` と観測され、path の不一致で拒否される (`exactCommitEntries`)。
 5. **観測の mode**: `100644` / `100755` 以外 (`120000` symlink、`160000` submodule) を見つけたら、観測は entry を作らず `commit_entries_mismatch` と等価の拒否を返す (`PackPublicationCommitEntry` の型は 2 つの mode しか持てないため。symlink の拒否は `pack-exec-mode.md` §4.3 の (d) と同じ向き)。
-   **到達する経路** (`src/setup/release-artifact-resolver.ts` の `parseTree` と `ENTRY_MODES`、`src/setup/release-materializer.ts` の `validSymlink`、`src/cli/distribution.ts` の tar の mode の検査を実測して固定する。どれも照合の理由コードへ写像せず、既存の理由のまま止める):
+   **到達する経路** (`src/setup/release-artifact-resolver.ts` の `parseTree` と `ENTRY_MODES`、`src/setup/release-materializer.ts` の `validSymlink`、`src/cli/distribution.ts` の tar の mode の検査を実測して固定する。どれも照合の理由コードへ写像せず、既存の理由のまま止める。manifest の `mode` は `100644` / `100755` しか持てず (`src/schema/release-manifest.ts` の `PUBLICATION_MODES`)、`120000` を書いた manifest は `parsePublicationManifest` が `consumer_runtime_release_manifest_invalid` で先に止める。以下の symlink の経路は、manifest を有効なまま C1 の tree だけを symlink にした場合である):
    - C1 の `160000` (submodule、path を問わない): `parseTree` が tree 全体を拒否し、`distribution package tar materialization failed: invalid_artifact` で止まる (`ENTRY_MODES` に無く、type が `blob` でない)。
    - C1 の `120000` で、artifact の path かつ危険な target (絶対 path・drive 付き・`\` を含むなど、`validSymlink` が拒否するもの): materializer が拒否し、同じく `invalid_artifact` で止まる。
    - C1 の `120000` で、artifact の path かつ安全な相対の target: materializer は mode を保って通す。メモリ上の tar の導出が `distribution package tar mode is unsupported: <path>` で止まる (照合より前、§3.1 (iii))。
