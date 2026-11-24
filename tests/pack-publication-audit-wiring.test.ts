@@ -43,6 +43,7 @@ import { useSyntheticPrivacyHome } from "./support/privacy-denylist-home.ts";
 import { removeTestTree } from "./support/temp-tree.ts";
 
 // Red (issue #1894): CANDIDATE-U-PKAUD-001..011 と 013..017 を it.fails で登録する。
+// 004 / 005 は既存の拒否 (artifact_mismatch) の特性化で、main で既に通るため it.fails にしない (回帰の oracle)。
 // 012 は L12 の手動受入 (CI の対象外) なので、ここには登録しない (省略)。
 // 契約: docs/design/harness/L6-function-design/pack-publication-audit-wiring.md
 // oracle: docs/test-design/harness/L7-pack-publication-audit-wiring-test-design.md
@@ -344,7 +345,7 @@ describe("CANDIDATE-U-PKAUD package の公開照合の配線", () => {
     });
   });
 
-  it.fails("CANDIDATE-U-PKAUD-004: artifact の blob を 1 byte 変えると、既存の tar の導出が artifact_mismatch で拒否する (計画も観測も呼ばれない)", async () => {
+  it("CANDIDATE-U-PKAUD-004: artifact の blob を 1 byte 変えると、既存の tar の導出が artifact_mismatch で拒否する (計画も観測も呼ばれない)", async () => {
     const license = baseEntries.find((entry) => entry.path === "LICENSE")?.content.toString("utf8");
     const run = await attempt(makeCase((root) => write(root, "LICENSE", `${license}x`)));
     expectRejectedMessage(
@@ -353,7 +354,7 @@ describe("CANDIDATE-U-PKAUD package の公開照合の配線", () => {
     );
   });
 
-  it.fails("CANDIDATE-U-PKAUD-005: artifact の mode だけが manifest と違うと、既存の tar の導出が artifact_mismatch で拒否する", async () => {
+  it("CANDIDATE-U-PKAUD-005: artifact の mode だけが manifest と違うと、既存の tar の導出が artifact_mismatch で拒否する", async () => {
     const run = await attempt(
       makeCase((root) => git(root, ["update-index", "--chmod=+x", "--", "LICENSE"])),
     );
