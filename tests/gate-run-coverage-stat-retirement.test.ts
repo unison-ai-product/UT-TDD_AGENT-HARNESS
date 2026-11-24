@@ -154,7 +154,11 @@ describe("gate-run coverage stat retirement candidates", () => {
       existingDb.close();
     }
     const existingFailure = observeStats(existingFailureRoot);
-    expect(existingFailure.stats.orphanGateRuns).toBe(1);
+    expect.soft(existingFailure.stats.orphanGateRuns).toBe(1);
+    expect.soft(existingFailure.statements).toContain("SELECT COUNT(*) AS value FROM gate_runs");
+    expect
+      .soft(existingFailure.statements)
+      .toContain("SELECT COUNT(*) AS value FROM workflow_runs");
 
     writeEvidence(freshFailureRoot, { malformed: true });
     const freshFailure = observeStats(freshFailureRoot);
