@@ -244,6 +244,7 @@ interface Attempt {
 }
 
 async function attempt(fixture: Case, runGit?: PackPublicationGitRunner): Promise<Attempt> {
+  planResults.length = 0; // 計画の呼び出しの記録は case ごとに始める (テスト間で溜めない)
   const outDir = mkdtempSync(join(scratchRoot, "out-"));
   let installCalls = 0;
   const files = () => (existsSync(outDir) ? readdirSync(outDir) : []);
@@ -490,11 +491,18 @@ describe("CANDIDATE-U-PKAUD package の公開照合の配線", () => {
   it.each([
     "/etc/passwd",
     "C:/x",
-  ])("CANDIDATE-U-PKAUD-016: 危険な target %s の artifact の symlink は invalid_artifact で拒否する", async (target) => {
+  ])("CANDIDATE-U-PKAUD-016: 危険な target %s の artifact の symlink は観測へ進む前に拒否する", async (target) => {
     const fx = makeCase((root) => stageSpecial(root, "120000", "LICENSE", target));
     expectTreeEntry(fx.root, fx.c1, "LICENSE", "120000", target);
     const run = await attempt(fx);
-    expectRejectedMessage(run, "distribution package tar materialization failed: invalid_artifact");
+    // OS により、source preflight の privacy-input-unreadable (Linux は symlink を実体化する) か、
+    // materializer の invalid_artifact のどちらかで止まる。どちらでも観測へは進まない。
+    expect(run.error?.message).toMatch(
+      /privacy-input-unreadable|distribution package tar materialization failed: invalid_artifact/,
+    );
+    expect(run.installCalls).toBe(0);
+    expect(run.outFiles).toEqual([]);
+    expect(planResults).toEqual([]);
   });
 
   it.fails("CANDIDATE-U-PKAUD-017: artifact でない path の symlink は観測が commit_entries_mismatch (extra) で拒否する", async () => {
