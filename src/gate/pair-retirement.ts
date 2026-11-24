@@ -135,42 +135,36 @@ function parseDeclarations(input: {
   );
   const contents = readBlobs(repoRoot, head, added);
   const declared = new Set<string>();
+  const declarationError = (entry: TreeEntry, message: string) =>
+    new Error(`${entry.path} at ${head}: ${message} (compared ${mergeBase}..${head})`);
   for (const entry of added) {
     const issue = /^docs\/governance\/design-pair-retirements\/issue-([1-9]\d*)\.json$/u.exec(
       entry.path,
     );
-    if (!issue)
-      throw new Error(
-        `${entry.path} at ${head}: invalid retirement declaration path (compared ${mergeBase}..${head})`,
-      );
+    if (!issue) throw declarationError(entry, "invalid retirement declaration path");
     let parsed: unknown;
     try {
       parsed = JSON.parse(contents.get(entry.path) ?? "");
     } catch {
-      throw new Error(`${entry.path} at ${head}: invalid JSON (compared ${mergeBase}..${head})`);
+      throw declarationError(entry, "invalid JSON");
     }
-    if (
-      !parsed ||
-      typeof parsed !== "object" ||
-      !Array.isArray((parsed as { pairs?: unknown }).pairs) ||
-      (parsed as { pairs: unknown[] }).pairs.length === 0
-    ) {
-      throw new Error(
-        `${entry.path} at ${head}: pairs must be a non-empty array (compared ${mergeBase}..${head})`,
-      );
+    const pairs =
+      parsed && typeof parsed === "object" && "pairs" in parsed ? parsed.pairs : undefined;
+    if (!Array.isArray(pairs) || pairs.length === 0) {
+      throw declarationError(entry, "pairs must be a non-empty array");
     }
-    for (const item of (parsed as { pairs: unknown[] }).pairs) {
+    for (const item of pairs) {
       if (!item || typeof item !== "object")
-        throw new Error(
-          `${entry.path} at ${head}: invalid pair declaration (compared ${mergeBase}..${head})`,
-        );
-      const pair = item as { design?: unknown; testDesign?: unknown };
-      if (typeof pair.design !== "string" || typeof pair.testDesign !== "string") {
-        throw new Error(
-          `${entry.path} at ${head}: design and testDesign paths are required (compared ${mergeBase}..${head})`,
-        );
+        throw declarationError(entry, "invalid pair declaration");
+      if (
+        !("design" in item) ||
+        typeof item.design !== "string" ||
+        !("testDesign" in item) ||
+        typeof item.testDesign !== "string"
+      ) {
+        throw declarationError(entry, "design and testDesign paths are required");
       }
-      const paths = [pair.design, pair.testDesign];
+      const paths = [item.design, item.testDesign];
       if (
         paths.some(
           (path) =>
@@ -179,15 +173,10 @@ function parseDeclarations(input: {
             path.split("/").some((part) => !part || part === "." || part === ".."),
         )
       ) {
-        throw new Error(
-          `${entry.path} at ${head}: paths must be canonical repo-relative paths (compared ${mergeBase}..${head})`,
-        );
+        throw declarationError(entry, "paths must be canonical repo-relative paths");
       }
       const key = JSON.stringify(paths);
-      if (declared.has(key))
-        throw new Error(
-          `${entry.path} at ${head}: duplicate pair ${key} (compared ${mergeBase}..${head})`,
-        );
+      if (declared.has(key)) throw declarationError(entry, `duplicate pair ${key}`);
       declared.add(key);
     }
   }
