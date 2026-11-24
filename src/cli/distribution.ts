@@ -2,7 +2,6 @@ import { execFileSync, type SpawnSyncReturns, spawnSync } from "node:child_proce
 import { createHash } from "node:crypto";
 import {
   chmodSync,
-  cpSync,
   existsSync,
   lstatSync,
   mkdtempSync,
@@ -31,6 +30,7 @@ import {
   buildConsumerReadinessPlan,
   buildConsumerRuntimeRelease,
   buildPackSyncPlan,
+  type CleanDistributionPlan,
   type ConsumerNodeRuntimeReadinessInput,
   type ConsumerRuntimeReleaseAdmissionInput,
   canonicalJson,
@@ -40,9 +40,9 @@ import {
   type PackAuthoringSmokeResult,
   releaseArtifactFileNames,
   runPackAuthoringSmoke,
-  transformCleanDistributionArtifact,
   validateConsumerRuntimeRelease,
 } from "../setup/index.ts";
+import { selectPackBuildInputs } from "../setup/pack-build-inputs.ts";
 import { derivePackPublicationAssets } from "../setup/pack-publication-assets.ts";
 import type { ReleaseAggregateFinalTree } from "../setup/release-aggregate-admission.ts";
 import { admitReleaseAggregate } from "../setup/release-aggregate-admission.ts";
@@ -53,6 +53,7 @@ import {
 import { attestReleaseChannel } from "../setup/release-channel-adapter.ts";
 import { materializeReleaseArtifacts } from "../setup/release-materializer.ts";
 import { ensureDir } from "../shared/fs.ts";
+import { applyPackSync, copyCleanDistributionArtifact } from "./distribution-pack-sync.ts";
 import * as privacy from "./distribution-privacy.ts";
 import { emitSyncPlan, type SyncPlanOptions } from "./distribution-sync-plan.ts";
 
@@ -184,37 +185,6 @@ function readConsumerRuntimeReadiness(repoRoot: string): ConsumerNodeRuntimeRead
   }
 }
 
-function copyCleanDistributionArtifact(input: {
-  sourceRoot: string;
-  sourcePath: string;
-  targetRoot: string;
-  artifactPath: string;
-}): void {
-  if (
-    input.sourcePath === ".ut-tdd/teams/example-review-team.yaml" &&
-    input.artifactPath === "docs/templates/team/example-review-team.yaml"
-  ) {
-    const projection = privacy.readTrackedTeamBlob(input.sourceRoot);
-    if (!projection.ok) throw new Error(`authoring projection denied: ${projection.error}`);
-    const to = join(input.targetRoot, ...input.artifactPath.split("/"));
-    ensureDir(dirname(to), { recursive: true });
-    writeFileSync(to, projection.bytes, { encoding: "utf8", mode: 0o644 });
-    return;
-  }
-  const from = join(input.sourceRoot, ...input.sourcePath.split("/"));
-  const to = join(input.targetRoot, ...input.artifactPath.split("/"));
-  ensureDir(dirname(to), { recursive: true });
-  if (input.artifactPath === "package.json") {
-    writeFileSync(
-      to,
-      transformCleanDistributionArtifact(input.artifactPath, readFileSync(from, "utf8")),
-      "utf8",
-    );
-    return;
-  }
-  cpSync(from, to, { recursive: true });
-}
-
 function hexDigest(bytes: Uint8Array): string {
   return createHash("sha256").update(bytes).digest("hex");
 }
@@ -240,7 +210,10 @@ export type ConsumerRuntimeReleaseProducerErrorCode =
   | "consumer_runtime_release_manifest_invalid"
   | "consumer_runtime_release_channel_unavailable"
   | "consumer_runtime_release_artifact_source_not_first_parent_ancestor"
-  | "consumer_runtime_release_diff_outside_release";
+  | "consumer_runtime_release_diff_outside_release"
+  | "pack_build_input_missing"
+  | "pack_build_input_untracked"
+  | "pack_build_input_template_set_empty";
 
 export class ConsumerRuntimeReleaseProducerError extends Error {
   readonly code: ConsumerRuntimeReleaseProducerErrorCode;
@@ -250,6 +223,27 @@ export class ConsumerRuntimeReleaseProducerError extends Error {
     this.name = "ConsumerRuntimeReleaseProducerError";
     this.code = code;
   }
+}
+
+/** Build inputs (not Pack artifacts) and the paths the scans must read (pack-build-inputs.md §5). */
+function packBuildInputs(
+  exportPlan: CleanDistributionPlan,
+  sourcePaths: readonly string[],
+  exists?: (path: string) => boolean,
+) {
+  const selection = selectPackBuildInputs(sourcePaths, exists);
+  const extra = selection.ok
+    ? selection.paths.filter((path) => !exportPlan.artifactPaths.includes(path))
+    : [];
+  return { selection, extra, scanned: [...exportPlan.artifactPaths, ...extra] };
+}
+
+/** `package`: stops with a reason code before anything is installed or staged. */
+function requiredScanPaths(exportPlan: CleanDistributionPlan, sourcePaths: readonly string[]) {
+  const { selection, scanned } = packBuildInputs(exportPlan, sourcePaths);
+  if (selection.ok) return scanned;
+  const detail = selection.reasons.map((r) => ("path" in r ? `${r.code}:${r.path}` : r.code));
+  throw new ConsumerRuntimeReleaseProducerError(selection.reasons[0].code, detail.join(","));
 }
 
 function gitOutput(repoRoot: string, args: readonly string[]): string {
@@ -579,7 +573,7 @@ export async function packageConsumerRuntimeRelease(input: {
       repoRoot: input.repoRoot,
       sourceRoot,
       sourcePaths,
-      exportPlan,
+      exportPlan: { ...exportPlan, artifactPaths: requiredScanPaths(exportPlan, sourcePaths) },
       homeDirectory,
     });
     const tarRelease = resolveDistributionTarReleaseIdentity({
@@ -998,14 +992,22 @@ export function registerDistributionCommands(program: Command): void {
           cleanRepo: opts.cleanRepo,
         });
         const {
+          selection: buildInputs,
+          extra: buildInputPaths,
+          scanned,
+        } = packBuildInputs(exportPlan, sourcePaths, (path) =>
+          existsSync(join(repoRoot, ...path.split("/"))),
+        );
+        const {
           secretScan,
           privacyScan,
-          ok: scansOk,
+          ok: scansPassed,
         } = privacy.runPreDistributionScans({
           repoRoot,
           sourcePaths,
-          exportPlan,
+          exportPlan: { ...exportPlan, artifactPaths: scanned },
         });
+        const scansOk = scansPassed && buildInputs.ok;
         const sync = buildPackSyncPlan({
           exportPlan,
           sourcePaths,
@@ -1013,47 +1015,19 @@ export function registerDistributionCommands(program: Command): void {
           branch: opts.branch,
         });
         const shown = privacy.reportedPack({ privacyScan, exportPlan, sourcePaths, sync });
-        const plannedArtifacts = new Set(exportPlan.artifactPaths);
+        const plannedArtifacts = new Set(scanned);
         const existingBefore = repoExists
           ? collectFilesystemCandidatePaths(repoDir).filter((path) => !plannedArtifacts.has(path))
           : [];
-        const prunedPaths: string[] = [];
-        let copyError: string | null = null;
-        let pruneError: string | null = null;
-        let authoringSmoke: PackAuthoringSmokeResult = {
-          ok: false,
-          checked: [],
-          errors: ["not-run"],
-        };
-
-        if (repoExists && opts.pruneLocal && exportPlan.ok && scansOk) {
-          try {
-            for (const rel of existingBefore) {
-              rmSync(join(repoDir, ...rel.split("/")), { force: true });
-              prunedPaths.push(rel);
-            }
-          } catch (error) {
-            pruneError = error instanceof Error ? error.message : String(error);
-          }
-        }
-
-        if (repoExists && exportPlan.ok && scansOk && pruneError === null) {
-          try {
-            for (const rel of exportPlan.artifactPaths) {
-              const sourceRel = cleanDistributionSourcePath(rel, sourcePaths);
-              copyCleanDistributionArtifact({
-                sourceRoot: repoRoot,
-                sourcePath: sourceRel,
-                targetRoot: repoDir,
-                artifactPath: rel,
-              });
-            }
-          } catch (error) {
-            copyError = error instanceof Error ? error.message : String(error);
-          }
-          if (copyError === null) authoringSmoke = runPackAuthoringSmoke(repoDir);
-        }
-
+        const { prunedPaths, pruneError, copyError, authoringSmoke } = applyPackSync({
+          run: repoExists && exportPlan.ok && scansOk,
+          repoRoot,
+          repoDir,
+          exportPlan,
+          sourcePaths,
+          buildInputPaths,
+          prunePaths: opts.pruneLocal ? existingBefore : [],
+        });
         const unmanagedExistingPaths =
           repoExists && pruneError === null
             ? collectFilesystemCandidatePaths(repoDir).filter((path) => !plannedArtifacts.has(path))
@@ -1081,6 +1055,9 @@ export function registerDistributionCommands(program: Command): void {
             repoDir,
             repoExists,
             manifest,
+            buildInputs: buildInputs.ok
+              ? { ok: true, count: buildInputs.paths.length, paths: buildInputs.paths }
+              : buildInputs,
             copiedArtifacts:
               repoExists && exportPlan.ok && scansOk && pruneError === null && copyError === null
                 ? exportPlan.artifactPaths.length
@@ -1095,13 +1072,17 @@ export function registerDistributionCommands(program: Command): void {
             actualRemoteMutationRequiresPoApproval: true,
             nextCommands: [
               `git -C ${repoDir} status --short`,
-              ...gitAddPathspecCommands(repoDir, shown.plan.artifactPaths, existingBefore),
+              ...gitAddPathspecCommands(
+                repoDir,
+                [...shown.plan.artifactPaths, ...buildInputPaths],
+                existingBefore,
+              ),
               `git -C ${repoDir} commit -m "chore: sync clean pack ${exportPlan.sourceTag}"`,
               `git -C ${repoDir} push origin ${opts.branch ?? "main"}`,
             ],
           },
         };
-        const output = privacy.reportSyncPack(raw, privacyScan, exportPlan.artifactPaths);
+        const output = privacy.reportSyncPack(raw, privacyScan, scanned);
         writeFileSync(manifest, `${JSON.stringify(output, null, 2)}\n`, "utf8");
         if (opts.json) {
           process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);
@@ -1116,6 +1097,9 @@ export function registerDistributionCommands(program: Command): void {
         for (const line of privacy.scanFailureLines(secretScan, privacyScan))
           process.stdout.write(`  ${line}\n`);
         process.stdout.write(`  unmanaged-existing: ${unmanagedExistingPaths.length}\n`);
+        if (!buildInputs.ok)
+          process.stdout.write(`  build-inputs: ${JSON.stringify(buildInputs.reasons)}
+`);
         process.stdout.write(`  pruned-local: ${prunedPaths.length}\n`);
         process.stdout.write(
           "  git commit/push: requires explicit human approval; commands were not executed\n",

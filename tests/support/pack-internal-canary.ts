@@ -30,6 +30,7 @@ import {
   releaseArtifactFileNames,
   transformCleanDistributionArtifact,
 } from "../../src/setup/index.ts";
+import { selectPackBuildInputs } from "../../src/setup/pack-build-inputs.ts";
 import {
   createLocalGitObjectReader,
   resolveReleaseArtifacts,
@@ -123,27 +124,13 @@ function materializeProducerRoot(root: string): void {
     }
   }
 
-  // These are explicit tagged-source build inputs, not Pack entries or runtime fallbacks.
-  for (const sourcePath of [
-    "docs/governance/node-toolchain-provenance.json",
-    "tsconfig.node.json",
-  ]) {
-    const destination = join(root, sourcePath);
-    mkdirSync(dirname(destination), { recursive: true });
-    cpSync(join(SOURCE_ROOT, sourcePath), destination);
-  }
-  const sourceTreePaths = trackedPaths();
-  const vmodelBuildInputs = sourceTreePaths.filter(
-    (path) =>
-      path === "docs/governance/vmodel-document-catalog.md" ||
-      (path.startsWith("docs/templates/vmodel/") &&
-        path.endsWith(".md") &&
-        !path.startsWith("docs/templates/vmodel/review-examples/")),
+  // Explicit tagged-source build inputs, not Pack entries or runtime fallbacks.
+  const buildInputs = selectPackBuildInputs(trackedPaths(), (path) =>
+    existsSync(join(SOURCE_ROOT, path)),
   );
-  if (vmodelBuildInputs.length === 0)
-    throw new Error("tracked Node build input inventory is empty");
-  for (const path of vmodelBuildInputs) {
-    if (!sourceTreePaths.includes(path)) throw new Error(`untracked Node build input: ${path}`);
+  if (!buildInputs.ok)
+    throw new Error(`Node build input selection failed: ${JSON.stringify(buildInputs)}`);
+  for (const path of buildInputs.paths) {
     const destination = join(root, path);
     mkdirSync(dirname(destination), { recursive: true });
     cpSync(join(SOURCE_ROOT, path), destination);
