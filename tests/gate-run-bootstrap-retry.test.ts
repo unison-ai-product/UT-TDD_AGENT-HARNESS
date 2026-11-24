@@ -257,17 +257,17 @@ describe("gate-run bootstrap retry oracles", () => {
     expect(schemaOnlyProjection.workflows).toHaveLength(1);
   });
 
-  it.fails("U-GRBOOT-001 failed first attempt rolls back to an uninitialized logical state", () => {
+  it("U-GRBOOT-001 failed first attempt rolls back to an uninitialized logical state", () => {
     expect(rollbackState.userVersion).toBe(0);
     expect(rollbackState.applicationTables).toEqual([]);
     expect(rollbackState.populatedApplicationTables).toEqual([]);
   });
 
-  it.fails("U-GRBOOT-002 retry projection matches a normal first run", () => {
+  it("U-GRBOOT-002 retry projection matches a normal first run", () => {
     expect(retryProjection).toEqual(normalFirstRunProjection);
   });
 
-  it.fails("U-GRBOOT-003 current schema-only database receives the full initial projection", () => {
+  it("U-GRBOOT-003 current schema-only database receives the full initial projection", () => {
     expect(schemaOnlyProjection).toEqual(normalFirstRunProjection);
   });
 
