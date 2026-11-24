@@ -181,6 +181,8 @@ jobs:
           test -s "$RUNNER_TEMP/git-add.sh"
           bash -eu "$RUNNER_TEMP/git-add.sh"
           tr -d '\r' < "$RUNNER_TEMP/build-inputs.txt" | xargs -d '\n' git -C "$PACK_DIR" add --
+          # --prune-local が消した file (Pack に前からあって、今回の artifact 集合に無いもの) の削除を stage する。nextCommands は add だけを出すため。
+          git -C "$PACK_DIR" add -u
           git -C "$PACK_DIR" update-index --chmod=+x -- scripts/ut-tdd scripts/git-hooks/pre-push
           git -C "$PACK_DIR" config user.name "pack-repro"
           git -C "$PACK_DIR" config user.email "pack-repro@users.noreply.github.com"
