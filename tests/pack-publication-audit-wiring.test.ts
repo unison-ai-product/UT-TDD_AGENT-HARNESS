@@ -214,9 +214,11 @@ function makeCase(
 ): Case {
   caseSeq += 1;
   const root = join(scratchRoot, `case-${caseSeq}`);
-  execFileSync("git", ["clone", "--quiet", "--local", "--no-tags", baseRoot, root], {
-    stdio: "pipe",
-  });
+  execFileSync(
+    "git",
+    ["clone", "--quiet", "--local", "--no-tags", "-c", "core.autocrlf=false", baseRoot, root],
+    { stdio: "pipe" },
+  );
   git(root, ["config", "core.autocrlf", "false"]);
   // mode だけの変更 (update-index --chmod) を、後続の git add が working tree の mode で上書きしない。
   git(root, ["config", "core.fileMode", "false"]);
