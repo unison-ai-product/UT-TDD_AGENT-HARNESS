@@ -43,6 +43,7 @@ import {
   validateConsumerRuntimeRelease,
 } from "../setup/index.ts";
 import { selectPackBuildInputs } from "../setup/pack-build-inputs.ts";
+import { registerC2ManifestCommand, resolvePackRoot } from "../setup/pack-c2-manifest.ts";
 import { derivePackPublicationAssets } from "../setup/pack-publication-assets.ts";
 import type { ReleaseAggregateFinalTree } from "../setup/release-aggregate-admission.ts";
 import { admitReleaseAggregate } from "../setup/release-aggregate-admission.ts";
@@ -724,6 +725,7 @@ export function utTddCliProbe(
 
 export function registerDistributionCommands(program: Command): void {
   const distribution = program.command("distribution").description("clean distribution planning");
+  registerC2ManifestCommand(distribution);
 
   distribution
     .command("authoring-smoke")
@@ -732,11 +734,7 @@ export function registerDistributionCommands(program: Command): void {
     .option("--root <dir>", "Pack tree root", ".")
     .option("--json", "JSON output")
     .action((opts: { root?: string; json?: boolean }) => {
-      const root = opts.root
-        ? isAbsolute(opts.root)
-          ? opts.root
-          : join(process.cwd(), opts.root)
-        : process.cwd();
+      const root = resolvePackRoot(opts.root);
       const smoke = runPackAuthoringSmoke(root);
       const output = { ok: smoke.ok, root, smoke };
       if (opts.json) {

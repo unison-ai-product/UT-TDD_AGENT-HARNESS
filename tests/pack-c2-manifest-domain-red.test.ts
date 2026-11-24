@@ -88,7 +88,7 @@ function expectRejected(result: unknown, reason: string, detail?: string) {
 }
 
 describe("Pack C2 manifest domain candidate oracles", () => {
-  it.fails("U-C2MAN-001: fixed input yields pinned golden manifest bytes", async () => {
+  it("U-C2MAN-001: fixed input yields pinned golden manifest bytes", async () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     try {
       vi.setSystemTime(new Date("2026-01-01T00:00:00Z"));
@@ -113,7 +113,7 @@ describe("Pack C2 manifest domain candidate oracles", () => {
     }
   });
 
-  it.fails("U-C2MAN-003: preserves stable, release order and previous records", async () => {
+  it("U-C2MAN-003: preserves stable, release order and previous records", async () => {
     const after = publication(manifestBytes(await build()).toString("utf8"));
     const before = publication(previousText);
     expect(after.parsed.channels.stable).toBe(before.parsed.channels.stable);
@@ -129,7 +129,7 @@ describe("Pack C2 manifest domain candidate oracles", () => {
     }
   });
 
-  it.fails("U-C2MAN-004: appends one release and moves only canary", async () => {
+  it("U-C2MAN-004: appends one release and moves only canary", async () => {
     const idsBefore = Object.keys(publication(previousText).parsed.releases);
     const { releases, channels } = publication(
       manifestBytes(await build()).toString("utf8"),
@@ -138,7 +138,7 @@ describe("Pack C2 manifest domain candidate oracles", () => {
     expect(idsBefore).not.toContain(channels.canary);
   });
 
-  it.fails("U-C2MAN-005: uses derived asset digest and recomputes record digest", async () => {
+  it("U-C2MAN-005: uses derived asset digest and recomputes record digest", async () => {
     const deriveAssets = vi.fn(loggedAssets);
     const { releases, channels } = publication(
       manifestBytes(await build({ deriveAssets })).toString("utf8"),
@@ -157,7 +157,7 @@ describe("Pack C2 manifest domain candidate oracles", () => {
     expect(release.releaseRecordDigest).toBe(deriveReleaseRecordDigest(release));
   });
 
-  it.fails("U-C2MAN-006: derives artifact set and release ID from resolved digest", async () => {
+  it("U-C2MAN-006: derives artifact set and release ID from resolved digest", async () => {
     const { releases, channels } = publication(
       manifestBytes(await build()).toString("utf8"),
     ).parsed;
@@ -165,7 +165,7 @@ describe("Pack C2 manifest domain candidate oracles", () => {
     expect(channels.canary).toBe(deriveReleaseId("1", C1, fixture.resolution.digest));
   });
 
-  it.fails.each([
+  it.each([
     ["symlink mode", "120000", "README.md"],
     ["untracked path", "100644", "not-in-c1.txt"],
   ])("U-C2MAN-014: rejects %s", async (_label, mode, path) => {
@@ -176,7 +176,7 @@ describe("Pack C2 manifest domain candidate oracles", () => {
     expectRejected(await build({ resolveArtifacts }), "c2_inventory_invalid");
   });
 
-  it.fails.each([
+  it.each([
     "invalid_distribution_plan",
     "unavailable",
     "invalid_artifact",
@@ -185,7 +185,7 @@ describe("Pack C2 manifest domain candidate oracles", () => {
     expectRejected(await build({ resolveArtifacts }), "c2_artifact_resolution_failed", error);
   });
 
-  it.fails.each([
+  it.each([
     "invalid_release",
     "artifact_mismatch",
     "unsupported_path",
@@ -196,7 +196,7 @@ describe("Pack C2 manifest domain candidate oracles", () => {
     expectRejected(await build({ deriveAssets }), "c2_assets_failed", error);
   });
 
-  it.fails("U-C2MAN-017: rejects an invalid assembled manifest before returning bytes", async () => {
+  it("U-C2MAN-017: rejects an invalid assembled manifest before returning bytes", async () => {
     const deriveAssets = () => ({
       ok: true,
       value: { releaseAssetInventoryDigest: "sha256:invalid" },
@@ -204,7 +204,7 @@ describe("Pack C2 manifest domain candidate oracles", () => {
     expectRejected(await build({ deriveAssets }), "c2_manifest_invalid");
   });
 
-  it.fails("U-C2MAN-018: rejects a release ID already registered in previous", async () => {
+  it("U-C2MAN-018: rejects a release ID already registered in previous", async () => {
     const input = { ...fixture.input, previousBytes: Buffer.from(C2_GOLDEN, "utf8") };
     expectRejected(await build({}, input), "c2_release_already_registered");
   });
@@ -218,7 +218,7 @@ describe("Pack C2 manifest domain candidate oracles", () => {
     ["close", true],
     ["unlink", false],
   ];
-  it.fails.each(
+  it.each(
     writeCases,
   )("U-C2MAN-019: write fault %s with preexisting release directory %s", async (fault, preexistingRelease) => {
     const { fs, files, dirs, operations } = createWriteFaultPorts(fault, preexistingRelease);
