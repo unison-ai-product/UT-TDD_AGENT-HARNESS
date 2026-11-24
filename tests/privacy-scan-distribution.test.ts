@@ -1,6 +1,5 @@
 import { execFileSync, spawnSync } from "node:child_process";
 import {
-  cpSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -18,16 +17,13 @@ import {
   deriveReleaseId,
   deriveReleaseRecordDigest,
 } from "../src/schema/release-manifest.ts";
-import {
-  buildCleanDistributionPlan,
-  cleanDistributionSourcePath,
-  transformCleanDistributionArtifact,
-} from "../src/setup/distribution.ts";
+import { buildCleanDistributionPlan } from "../src/setup/distribution.ts";
 import {
   digestConsumerRuntimeBytes,
   digestMaterializedReleaseEntries,
 } from "../src/setup/index.ts";
 import { heavyAfterAll, heavyBeforeAll } from "./support/hook-bounds.ts";
+import { copyPackBuildInputs, copyPackFiles } from "./support/pack-build-input-fixture.ts";
 import { removeTestTree } from "./support/temp-tree.ts";
 
 // L7 §2: no source line may match the email shape, so addresses are joined at runtime.
@@ -122,16 +118,8 @@ function releaseManifest(artifactSourceCommit: string): Record<string, unknown> 
 function commitCleanArtifacts(root: string, prepare?: () => void): void {
   const sourcePaths = git(authorRoot, ["ls-files"]).split(/\r?\n/).filter(Boolean);
   const plan = buildCleanDistributionPlan({ paths: sourcePaths, sourceTag: TAG });
-  for (const rel of plan.artifactPaths) {
-    const from = join(authorRoot, cleanDistributionSourcePath(rel, sourcePaths));
-    const to = join(root, rel);
-    mkdirSync(dirname(to), { recursive: true });
-    if (rel === "package.json") {
-      writeFileSync(to, transformCleanDistributionArtifact(rel, readFileSync(from, "utf8")));
-    } else {
-      cpSync(from, to, { recursive: true });
-    }
-  }
+  copyPackFiles(authorRoot, root, plan.artifactPaths, sourcePaths, true);
+  copyPackBuildInputs(authorRoot, root, sourcePaths);
   cleanArtifactMaterializations++;
   prepare?.();
   git(root, ["init", "-q", "-b", "main"]);

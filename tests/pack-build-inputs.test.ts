@@ -41,12 +41,12 @@ function fullTree(): string[] {
 }
 
 describe("U-PKBIN selectPackBuildInputs (pure)", () => {
-  it.fails("U-PKBIN-001: 揃った tree から固定 3 件と対象テンプレートだけを昇順で選ぶ", () => {
+  it("U-PKBIN-001: 揃った tree から固定 3 件と対象テンプレートだけを昇順で選ぶ", () => {
     const result = selectPackBuildInputs([...fullTree()].reverse());
     expect(result).toEqual({ ok: true, paths: [...FIXED, TPL_A, TPL_B].sort() });
   });
 
-  it.fails.each(
+  it.each(
     FIXED,
   )("U-PKBIN-002: 固定 file %s だけが欠けると、その 1 件の missing だけを返す", (gone) => {
     const result = selectPackBuildInputs(fullTree().filter((path) => path !== gone));
@@ -56,7 +56,7 @@ describe("U-PKBIN selectPackBuildInputs (pure)", () => {
     });
   });
 
-  it.fails("U-PKBIN-003: テンプレートが 0 件なら template_set_empty だけを返す", () => {
+  it("U-PKBIN-003: テンプレートが 0 件なら template_set_empty だけを返す", () => {
     const tree = fullTree().filter((path) => !path.startsWith("docs/templates/vmodel/"));
     expect(selectPackBuildInputs(tree)).toEqual({
       ok: false,
@@ -64,7 +64,7 @@ describe("U-PKBIN selectPackBuildInputs (pure)", () => {
     });
   });
 
-  it.fails("U-PKBIN-004: working tree にだけ在る固定 file は untracked、exists 無しなら missing", () => {
+  it("U-PKBIN-004: working tree にだけ在る固定 file は untracked、exists 無しなら missing", () => {
     const gone = "tsconfig.node.json";
     const tree = fullTree().filter((path) => path !== gone);
     expect(selectPackBuildInputs(tree, (path) => path === gone)).toEqual({
@@ -77,7 +77,7 @@ describe("U-PKBIN selectPackBuildInputs (pure)", () => {
     });
   });
 
-  it.fails("U-PKBIN-005: 複数の欠落を path の昇順で全て返す", () => {
+  it("U-PKBIN-005: 複数の欠落を path の昇順で全て返す", () => {
     const tree = fullTree().filter(
       (path) =>
         path !== FIXED[0] && path !== FIXED[2] && !path.startsWith("docs/templates/vmodel/"),
@@ -261,7 +261,7 @@ function planOf(input: Parameters<typeof buildPackPublicationStagingPlan>[0]) {
 }
 
 describe("U-PKBIN publication expected set (§5.1)", () => {
-  it.fails("U-PKBIN-013: 期待集合にビルド入力を足し、正しい C1 を attested にする", async () => {
+  it("U-PKBIN-013: 期待集合にビルド入力を足し、正しい C1 を attested にする", async () => {
     const input = stagingInput([BIN], BUILD_INPUTS);
     const plan = planOf(input);
     const buildEntries = plan.commitEntries.filter(
@@ -289,7 +289,7 @@ describe("U-PKBIN publication expected set (§5.1)", () => {
     ]);
   });
 
-  it.fails("U-PKBIN-014: 期待集合に無い 100644 file が 1 件増えると commit_entries_mismatch", async () => {
+  it("U-PKBIN-014: 期待集合に無い 100644 file が 1 件増えると commit_entries_mismatch", async () => {
     const input = stagingInput([BIN], BUILD_INPUTS);
     const plan = planOf(input);
     const control = Buffer.from(input.controlManifestBytes);
@@ -305,7 +305,7 @@ describe("U-PKBIN publication expected set (§5.1)", () => {
     });
   });
 
-  it.fails("U-PKBIN-015: ビルド入力が 1 件欠けた C1 は commit_entries_mismatch", async () => {
+  it("U-PKBIN-015: ビルド入力が 1 件欠けた C1 は commit_entries_mismatch", async () => {
     const input = stagingInput([BIN], BUILD_INPUTS);
     const plan = planOf(input);
     const control = Buffer.from(input.controlManifestBytes);
@@ -319,7 +319,7 @@ describe("U-PKBIN publication expected set (§5.1)", () => {
     });
   });
 
-  it.fails("U-PKBIN-016: ビルド入力 1 件の bytes だけが 1 byte 違う C1 は commit_entries_mismatch", async () => {
+  it("U-PKBIN-016: ビルド入力 1 件の bytes だけが 1 byte 違う C1 は commit_entries_mismatch", async () => {
     const input = stagingInput([BIN], BUILD_INPUTS);
     const plan = planOf(input);
     const control = Buffer.from(input.controlManifestBytes);
@@ -337,7 +337,7 @@ describe("U-PKBIN publication expected set (§5.1)", () => {
     });
   });
 
-  it.fails("U-PKBIN-017: artifact と重なる path は artifact の変換後 bytes を 1 件だけ期待する", async () => {
+  it("U-PKBIN-017: artifact と重なる path は artifact の変換後 bytes を 1 件だけ期待する", async () => {
     const overlap: ArtifactSpec = {
       sourcePath: "tsconfig.pack.json",
       destinationPath: FIXED[2],

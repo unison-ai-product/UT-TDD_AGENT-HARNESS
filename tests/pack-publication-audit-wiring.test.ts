@@ -214,9 +214,11 @@ function makeCase(
 ): Case {
   caseSeq += 1;
   const root = join(scratchRoot, `case-${caseSeq}`);
-  execFileSync("git", ["clone", "--quiet", "--local", "--no-tags", baseRoot, root], {
-    stdio: "pipe",
-  });
+  execFileSync(
+    "git",
+    ["clone", "--quiet", "--local", "--no-tags", "-c", "core.autocrlf=false", baseRoot, root],
+    { stdio: "pipe" },
+  );
   git(root, ["config", "core.autocrlf", "false"]);
   // mode だけの変更 (update-index --chmod) を、後続の git add が working tree の mode で上書きしない。
   git(root, ["config", "core.fileMode", "false"]);
@@ -396,14 +398,14 @@ describe("U-PKAUD package の公開照合の配線", () => {
     expectRejected(committed, "pack_publication_audit_commit_entries_mismatch");
   });
 
-  it.fails("U-PKAUD-009: ビルド入力の欠落は pack_build_input_* のまま報告され、照合の理由に上書きされない", async () => {
+  it("U-PKAUD-009: ビルド入力の欠落は pack_build_input_* のまま報告され、照合の理由に上書きされない", async () => {
     const run = await attempt(
       makeCase((root) => git(root, ["rm", "-q", "--", "tsconfig.node.json"])),
     );
     expect(run.error?.code).toMatch(/^pack_build_input_/);
     expect(run.installCalls).toBe(0);
     expect(run.outFiles).toEqual([]);
-  });
+  }, 180_000);
 
   it.fails("U-PKAUD-010: 失敗の出力は理由コード・path・分類・SHA だけで、bytes・digest・内容を含まない", async () => {
     const fx = makeCase(addExtra());
