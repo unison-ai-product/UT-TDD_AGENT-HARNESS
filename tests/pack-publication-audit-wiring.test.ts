@@ -396,7 +396,7 @@ describe("U-PKAUD package の公開照合の配線", () => {
     expectRejected(committed, "pack_publication_audit_commit_entries_mismatch");
   });
 
-  it.fails("U-PKAUD-009: ビルド入力の欠落は pack_build_input_* のまま報告され、照合の理由に上書きされない", async () => {
+  it("U-PKAUD-009: ビルド入力の欠落は pack_build_input_* のまま報告され、照合の理由に上書きされない", async () => {
     const run = await attempt(
       makeCase((root) => git(root, ["rm", "-q", "--", "tsconfig.node.json"])),
     );
