@@ -43,3 +43,13 @@ Red では、起動・fixture 作成・対照実行を独立に確認し、環�
 | `U-GATEPUB-006` | `gateRunEvidenceFilename` の既定経路に `gate-run:検証:e\u0301:\u{1f9ea}` を直接渡す。入力には `e` と結合アクセント U+0301、補助平面の U+1F9EA を含める。 | 保存名は独立に求めた UTF-8 の固定値 `5bff08e59947329c0a591b9ed978b639d57bb707a218c32b02e7f9c7144b1790.json` と完全一致する。 |
 
 衝突の fixture では、異なる ID、digest 注入の発火、1つ目の公開と後処理を通常の assertion で確かめる。失敗を期待するテストが環境エラーや事前検査の失敗だけで成立しないようにする。
+
+## 4. 既存証跡走査の拒否診断 (Issue #1490)
+
+| 候補 ID | fixture | 観測 |
+|---|---|---|
+| `CANDIDATE-U-GATEDIAG-001` | 隔離ディレクトリに `.json` で終わるディレクトリを置き、実際の読み取り失敗を起こす。 | 診断コードと相対パスを含む拒否を観測し、既存ディレクトリを保持する。staging と final の追加は0件。 |
+| `CANDIDATE-U-GATEDIAG-002` | 不正 JSON と JSON `null` を別の隔離ディレクトリに置く。 | どちらも同じ診断コードを返し、該当する相対パスを JSON 文字列として引用する。既存 bytes を保持し、staging と final の追加は0件。 |
+| `CANDIDATE-U-GATEDIAG-003` | 不正 JSON を置いた隔離ディレクトリで実 CLI を human-readable と `--json` の両方で起動する。各形式で passed と failed の対照を取る。 | verdict と exit code はそれぞれの対照と一致する。human の警告先は stderr、JSON の警告先は `gate_run_evidence_warning` で `gate_run_evidence` は `null`。警告には診断コードと引用済み相対パスが現れ、入力断片、ネイティブエラー本文、絶対パスは0件。 |
+
+正常な公開と、既存の同じ ID を持つ証跡の `EEXIST` は §2 の対照で確認する。fixture の成立と公開状態を独立した通常の assertion で確かめる。

@@ -64,3 +64,13 @@ hard link 前に writer の子プロセスが終了すると、当該実行の f
 | `boundary.pathDigest(gateRunId)` | writer の保存名を導出するところでのみ使う。別々の ID が同じ保存名になる場合をテストで決定的に作る。§3.2 と同様、CLI オプション、環境変数、設定ファイルに注入経路を設けない。 |
 
 同じ保存名に対して異なる ID が公開を試みた場合も、既存の hard link の no-clobber を使う。2回目の公開は native link が返した `EEXIST` で拒否し、先に公開されたファイルの bytes を保持する。実際の SHA-256 衝突を生成する代わりに、異なる2つの ID を同じ digest に写して確かめる。両軸のテスト設計は L7 §3 に置く。
+
+## 5. 既存証跡走査の拒否診断 (Issue #1490)
+
+writer が既存 `.json` を走査中に read error、malformed JSON、または JSON `null` に遭遇した場合は、その実行の証跡保存を拒否する。拒否は `.tmp-*` の作成・書込みと final への link より前に行い、既存 bytes を保持し、新しい final を作らない。CLI は既存の human stderr warning と JSON の `gate_run_evidence_warning` を使い、gate verdict と exit code は変えない。
+
+warning は安定診断コード `existing_evidence_scan_failed` と、問題のファイルの repo-relative、slash-separated path を JSON string と同じ escaping で引用して示す。parser の抜粋、native error text、絶対 machine path は含めない。3つの失敗理由には共通コードを使う。既存 ID の `EEXIST`、正常に読める別 ID の反復、同じ ID の拒否は §3.1 の契約に従う。
+
+診断の対象は、現行の走査を中断する読み取り失敗、不正 JSON、JSON `null` の3種。別名証跡があるまま発行を継続する判断は、同一 ID の二重発行を防げることを確認した後に行う。[ファイル名と ID の再現](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/1490#issuecomment-7123755365) [契約改訂の承認](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/1490#issuecomment-7123927381)
+
+候補 oracle `CANDIDATE-U-GATEDIAG-001`〜`003` は L7 §4 に定める。
