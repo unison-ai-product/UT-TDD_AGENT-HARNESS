@@ -409,23 +409,6 @@ canonical root、HEAD identity、worktree topology の判定と、symlink / esca
   composition root は DB の対象が resolver の `canonicalProjectRoot` と一致することを検証し、
   一致しなければ fail-close する。
 
-### 同一 checkout の HEAD identity 読取を一度にする (Issue #1938)
-
-project-memory root を解決するたびに、Git topology から current worktree と canonical
-project root を求め、既存のディレクトリ検査を行う。両 root の `realpath` 結果が文字列として
-一致した場合は、既存の HEAD identity loader をその実ディレクトリに対して一度だけ実行し、
-その結果を同じ解決の両側で使う。異なる実パスでは従来どおり current と canonical の
-HEAD identity を別々に読み、両方が有効で一致した場合にだけ採用する。
-
-読取結果の有効範囲は一回の root 解決。次の解決では topology と HEAD identity を改めて読み、
-SessionStart の Memory 読取、inbox 復旧、復旧後の要約の間でも結果を持ち越さない。
-HEAD と作業ツリー、origin の検証は既存 loader が担当する。root の symlink / escape 検査、
-typed deny、エラー時の各呼び出し元の扱い、Memory と inbox の保存先は従来の契約に従う。
-
-SessionStart は既存の event append と後続処理の順序、同期処理、設定の 30 秒を維持する。
-digest の PR 検査と inbox 復旧の GitHub 呼び出しは別の契約で扱う。
-[Issue #1938 の進行判断](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/1938#issuecomment-7126608255)
-
 ### 配送側
 
 > **旧契約 / 別owner**: 以下の新規 episode 配送抑止は #1062 が置き換える。CANDIDATE-U-MEMEPI-009 / 010 / 018 の
