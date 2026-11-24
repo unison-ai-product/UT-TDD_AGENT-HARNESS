@@ -1,8 +1,8 @@
-import { existsSync } from "node:fs";
 import type { GateRunCoverageStats } from "../lint/gate-run-coverage.ts";
+import { HARNESS_DB_TABLES, SCHEMA_VERSION } from "../schema/harness-db.ts";
 import { stableId } from "../stable-id.ts";
 import { defaultHarnessDbPath, type HarnessDb, openHarnessDb } from "../state-db/index.ts";
-import { migrate } from "../state-db/migration.ts";
+import { tableNames } from "../state-db/migration.ts";
 import {
   collectGateRunEvidenceProjection,
   rebuildHarnessDb,
@@ -403,20 +403,32 @@ function reconcile(db: HarnessDb, repoRoot: string): GateRunCoverageStats {
 
 export function loadGateRunCoverageStats(repoRoot: string): GateRunCoverageStats {
   const dbPath = defaultHarnessDbPath(repoRoot);
-  const needsRebuild = !existsSync(dbPath);
   const db = openHarnessDb(dbPath, { repoRoot });
+  let uninitialized = false;
   try {
-    // Keep the empty schema available for fail-closed diagnostics after a fresh
-    // projection rollback; all projection rows still belong to the outer transaction.
-    if (needsRebuild) migrate(db);
     try {
       return runSqliteTransaction(db, () => {
-        if (needsRebuild) rebuildHarnessDb({ repoRoot, db, skipTokenTelemetry: true });
+        const names = new Set(tableNames(db).filter((name) => !name.startsWith("sqlite_")));
+        const userVersion = db.userVersion();
+        uninitialized = userVersion === 0 && names.size === 0;
+        const schemaOnly =
+          userVersion === SCHEMA_VERSION &&
+          HARNESS_DB_TABLES.every((table) => names.has(table.name)) &&
+          !HARNESS_DB_TABLES.some(
+            (table) => db.prepare(`SELECT 1 FROM ${table.name} LIMIT 1`).get() !== undefined,
+          );
+
+        if (uninitialized || schemaOnly) {
+          rebuildHarnessDb({ repoRoot, db, skipTokenTelemetry: true });
+        }
         return reconcile(db, repoRoot);
       });
     } catch (error) {
-      if (error instanceof GateRunCoverageMismatch) return currentStats(db, error.failure);
-      throw error;
+      if (!(error instanceof GateRunCoverageMismatch)) throw error;
+      if (uninitialized) {
+        return { gateRuns: 0, workflowRuns: 0, blankPlanGateRuns: 0, ...error.failure };
+      }
+      return currentStats(db, error.failure);
     }
   } finally {
     db.close();
