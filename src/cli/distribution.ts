@@ -1013,6 +1013,7 @@ export function registerDistributionCommands(program: Command): void {
           branch: opts.branch,
         });
         const shown = privacy.reportedPack({ privacyScan, exportPlan, sourcePaths, sync });
+        const shownInputs = privacy.reportedBuildInputPaths(privacyScan, buildInputPaths);
         const plannedArtifacts = new Set(scanned);
         const existingBefore = repoExists
           ? collectFilesystemCandidatePaths(repoDir).filter((path) => !plannedArtifacts.has(path))
@@ -1072,7 +1073,7 @@ export function registerDistributionCommands(program: Command): void {
               `git -C ${repoDir} status --short`,
               ...gitAddPathspecCommands(
                 repoDir,
-                [...shown.plan.artifactPaths, ...buildInputPaths],
+                [...shown.plan.artifactPaths, ...shownInputs],
                 existingBefore,
               ),
               `git -C ${repoDir} commit -m "chore: sync clean pack ${exportPlan.sourceTag}"`,
@@ -1096,8 +1097,7 @@ export function registerDistributionCommands(program: Command): void {
           process.stdout.write(`  ${line}\n`);
         process.stdout.write(`  unmanaged-existing: ${unmanagedExistingPaths.length}\n`);
         if (!buildInputs.ok)
-          process.stdout.write(`  build-inputs: ${JSON.stringify(buildInputs.reasons)}
-`);
+          process.stdout.write(`  build-inputs: ${JSON.stringify(buildInputs.reasons)}\n`);
         process.stdout.write(`  pruned-local: ${prunedPaths.length}\n`);
         process.stdout.write(
           "  git commit/push: requires explicit human approval; commands were not executed\n",

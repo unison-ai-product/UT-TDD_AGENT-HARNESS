@@ -257,6 +257,30 @@ describe("U-PKBIN sync-pack / package wiring", () => {
     expect(walkBytes(packDir)).toEqual(before);
   });
 
+  it("U-PKBIN-006 (regression, L6 privacy-scan §12): 拒否時はビルド入力の path を escape 後の形も含めて nextCommands に出さない", () => {
+    // tests/ は Pack に入るので、denylist の語は実行時に結合する。
+    const term = ["zz", "build", "input", "word"].join("-");
+    const home = mkdtempSync(join(tmpdir(), "pkbin-deny-home-"));
+    write(home, ".ut-tdd/privacy-denylist.txt", `${term}\n`);
+    const rel = `docs/templates/vmodel/${term}$person.md`;
+    const source = cloneSource("c006-mask", (root) => write(root, rel, "template\n"));
+    const packDir = join(scratchRoot, "c006-mask-pack");
+    mkdirSync(packDir, { recursive: true });
+    try {
+      const result = runDistribution(source, home, ["sync-pack", "--repo-dir", packDir, "--json"]);
+      expect(result.status).toBe(1);
+      expect(kindsOf(result.stdout)).toContain("privacy-denylist-hit");
+      const commands = pick(parseJson(result.stdout), "pack", "nextCommands") as string[];
+      expect(commands.join("\n")).toContain("path-sha256:");
+      for (const text of [result.stdout, result.stderr, commands.join("\n")]) {
+        expect(text).not.toContain(term);
+        expect(text).not.toContain("$person");
+      }
+    } finally {
+      removeTestTree(home);
+    }
+  });
+
   it("U-PKBIN-007: sync-pack はビルド入力を bytes 同一で copy し artifact の集合は変えない", () => {
     const source = cloneSource("c007");
     const packDir = join(scratchRoot, "c007-pack");
