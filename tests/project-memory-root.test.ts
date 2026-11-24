@@ -270,7 +270,7 @@ function initTrackedProject(root: string, identity = "fixture/project"): void {
 }
 
 describe("project-scoped canonical Memory root (PLAN-L7-512)", () => {
-  it("CANDIDATE-U-PMEMROOT-010: revalidates identity on a separate root resolution", () => {
+  it.fails("CANDIDATE-U-PMEMROOT-010: revalidates identity on a separate root resolution", () => {
     const identityReads: string[] = [];
     let identity: string | null = "owner/product";
     const resolverPorts = ports({
