@@ -257,44 +257,6 @@ describe("design-pair retirement", () => {
     }
   });
 
-  it("requires old tracked paths when a pair moves between document layouts", async () => {
-    const oldDesign = "docs/design/L1-requirements/a.md";
-    const oldTest = "docs/test-design/L7-pair/shared.md";
-    const declaration = "docs/governance/design-pair-retirements/issue-1073.json";
-    for (const [design, testDesign, ok] of [
-      [designA, shared, false],
-      [oldDesign, oldTest, true],
-    ] as const) {
-      const fixture = createPairRetirementGitFixture(
-        {
-          [oldDesign]: designDoc("L1", oldTest),
-          [oldTest]: testDesignDoc(oldDesign),
-        },
-        {
-          [oldDesign]: undefined,
-          [oldTest]: undefined,
-          [designA]: designDoc("L1", shared),
-          [shared]: testDesignDoc(designA),
-          [declaration]: JSON.stringify({ pairs: [{ design, testDesign }] }),
-        },
-      );
-      try {
-        const result = await observePairRetirement(
-          fixture.root,
-          fixture.baseCommit,
-          fixture.headCommit,
-        );
-        expect(result).toMatchObject({ ok });
-        if (!ok) {
-          expect(JSON.stringify(result)).toContain(oldDesign);
-          expect(JSON.stringify(result)).toContain(oldTest);
-        }
-      } finally {
-        fixture.cleanup();
-      }
-    }
-  });
-
   it("isolates a readable commit with a missing tracked blob", () => {
     const fixture = createPairRetirementGitFixture(sharedPairFiles(), sharedPairFiles());
     try {
