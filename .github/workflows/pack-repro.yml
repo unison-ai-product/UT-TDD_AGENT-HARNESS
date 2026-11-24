@@ -186,6 +186,8 @@ jobs:
           git -C "$PACK_DIR" config user.email "pack-repro@users.noreply.github.com"
           git -C "$PACK_DIR" status --short
           git -C "$PACK_DIR" commit -m "chore: sync clean pack $PACK_TAG" -m "Source-Commit: $GITHUB_SHA"
+          echo "--- leftover after C1 (must be empty) ---"
+          git -C "$PACK_DIR" status --short --untracked-files=all | head -50
           test -z "$(git -C "$PACK_DIR" status --short)"
           echo "C1=$(git -C "$PACK_DIR" rev-parse HEAD)"
 
