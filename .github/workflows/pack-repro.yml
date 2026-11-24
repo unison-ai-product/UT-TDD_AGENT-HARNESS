@@ -216,8 +216,11 @@ jobs:
           set -eu
           cd "$PACK_DIR"
           test ! -e "$OUT_DIR"
-          node "$SRC_DIR/src/cli.ts" distribution package --tag "$PACK_TAG" --out "$OUT_DIR" --json > "$RUNNER_TEMP/package.json"
+          rc=0
+          node "$SRC_DIR/src/cli.ts" distribution package --tag "$PACK_TAG" --out "$OUT_DIR" --json > "$RUNNER_TEMP/package.json" 2> "$RUNNER_TEMP/package.err" || rc=$?
           cat "$RUNNER_TEMP/package.json"
+          tail -20 "$RUNNER_TEMP/package.err"
+          test "$rc" = 0
           test "$(ls -1 "$OUT_DIR" | wc -l | tr -d ' ')" = "5"
           for ext in tar.gz tar.gz.sha256 ut-tdd.mjs consumer-runtime.json consumer.sha256; do
             test -f "$OUT_DIR/$PACK_TAG.$ext"
