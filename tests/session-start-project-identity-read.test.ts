@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { describe, expect, it } from "vitest";
+import { resolveProjectMemoryRootWithPorts } from "../src/runtime/project-memory-root.ts";
 import { defaultHarnessDbPath, openHarnessDb } from "../src/state-db/index.ts";
 import { migrate } from "../src/state-db/migration.ts";
 import { heavyAfterAll, heavyBeforeAll } from "./support/hook-bounds.ts";
@@ -143,5 +144,83 @@ describe("SessionStart project identity reads", () => {
     expect(resolutions.map((git) => git.filter((command) => command === "show").length)).toEqual([
       1, 1, 1,
     ]);
+  });
+});
+
+const win = process.platform === "win32";
+const primary = win ? "C:\\dev\\product" : "/dev/product";
+const linked = win ? "C:\\dev\\product-worker" : "/dev/product-worker";
+const common = win ? `${primary}\\.git` : `${primary}/.git`;
+
+function ports(overrides: Partial<Parameters<typeof resolveProjectMemoryRootWithPorts>[1]> = {}) {
+  return {
+    gitTopLevel: () => linked,
+    gitCommonDir: () => common,
+    realpath: (path: string) => path,
+    isDirectory: () => true,
+    isSafeDescendant: () => true,
+    projectIdentity: () => "owner/product",
+    ...overrides,
+  };
+}
+
+describe("Project identity read boundaries", () => {
+  it.fails("CANDIDATE-U-PMEMROOT-010: revalidates identity on a separate root resolution", () => {
+    const identityReads: string[] = [];
+    let identity: string | null = "owner/product";
+    const resolverPorts = ports({
+      gitTopLevel: () => primary,
+      projectIdentity: (path) => {
+        identityReads.push(path);
+        return identity;
+      },
+    });
+
+    const first = resolveProjectMemoryRootWithPorts(primary, resolverPorts);
+    const firstReads = identityReads.splice(0);
+    expect(first).toMatchObject({
+      ok: true,
+      projectId: "owner/product",
+      canonicalProjectRoot: primary,
+      currentWorktreeRoot: primary,
+      authoredMemoryRoot: join(primary, ".ut-tdd", "memory"),
+    });
+    if (!first.ok) throw new Error(first.reason);
+    const linkedResult = resolveProjectMemoryRootWithPorts(linked, ports());
+    if (!linkedResult.ok) throw new Error(linkedResult.reason);
+    expect(first.projectNamespace).toBe(linkedResult.projectNamespace);
+    expect(first.runtimeBusRoot).toBe(linkedResult.runtimeBusRoot);
+
+    identity = null;
+    expect(resolveProjectMemoryRootWithPorts(primary, resolverPorts)).toEqual({
+      ok: false,
+      reason: "project_identity_unavailable",
+    });
+    expect({ first: firstReads, second: identityReads }).toEqual({
+      first: [primary],
+      second: [primary],
+    });
+  });
+
+  it.each([
+    { canonicalIdentity: "owner/product", expected: { ok: true, projectId: "owner/product" } },
+    { canonicalIdentity: "owner/other", expected: { ok: false, reason: "project_identity_drift" } },
+    { canonicalIdentity: null, expected: { ok: false, reason: "project_identity_unavailable" } },
+  ])("CANDIDATE-U-PMEMROOT-011: verifies both distinct paths (canonical identity: $canonicalIdentity)", ({
+    canonicalIdentity,
+    expected,
+  }) => {
+    const identityReads: string[] = [];
+    const result = resolveProjectMemoryRootWithPorts(
+      linked,
+      ports({
+        projectIdentity: (path) => {
+          identityReads.push(path);
+          return path === linked ? "owner/product" : canonicalIdentity;
+        },
+      }),
+    );
+    expect(result).toMatchObject(expected);
+    expect(identityReads).toEqual([linked, primary]);
   });
 });

@@ -270,65 +270,6 @@ function initTrackedProject(root: string, identity = "fixture/project"): void {
 }
 
 describe("project-scoped canonical Memory root (PLAN-L7-512)", () => {
-  it.fails("CANDIDATE-U-PMEMROOT-010: revalidates identity on a separate root resolution", () => {
-    const identityReads: string[] = [];
-    let identity: string | null = "owner/product";
-    const resolverPorts = ports({
-      gitTopLevel: () => primary,
-      projectIdentity: (path) => {
-        identityReads.push(path);
-        return identity;
-      },
-    });
-
-    const first = resolveProjectMemoryRootWithPorts(primary, resolverPorts);
-    const firstReads = identityReads.splice(0);
-    expect(first).toMatchObject({
-      ok: true,
-      projectId: "owner/product",
-      canonicalProjectRoot: primary,
-      currentWorktreeRoot: primary,
-      authoredMemoryRoot: join(primary, ".ut-tdd", "memory"),
-    });
-    if (!first.ok) throw new Error(first.reason);
-    const linkedResult = resolveProjectMemoryRootWithPorts(linked, ports());
-    if (!linkedResult.ok) throw new Error(linkedResult.reason);
-    expect(first.projectNamespace).toBe(linkedResult.projectNamespace);
-    expect(first.runtimeBusRoot).toBe(linkedResult.runtimeBusRoot);
-
-    identity = null;
-    expect(resolveProjectMemoryRootWithPorts(primary, resolverPorts)).toEqual({
-      ok: false,
-      reason: "project_identity_unavailable",
-    });
-    expect({ first: firstReads, second: identityReads }).toEqual({
-      first: [primary],
-      second: [primary],
-    });
-  });
-
-  it.each([
-    { canonicalIdentity: "owner/product", expected: { ok: true, projectId: "owner/product" } },
-    { canonicalIdentity: "owner/other", expected: { ok: false, reason: "project_identity_drift" } },
-    { canonicalIdentity: null, expected: { ok: false, reason: "project_identity_unavailable" } },
-  ])("CANDIDATE-U-PMEMROOT-011: verifies both distinct paths (canonical identity: $canonicalIdentity)", ({
-    canonicalIdentity,
-    expected,
-  }) => {
-    const identityReads: string[] = [];
-    const result = resolveProjectMemoryRootWithPorts(
-      linked,
-      ports({
-        projectIdentity: (path) => {
-          identityReads.push(path);
-          return path === linked ? "owner/product" : canonicalIdentity;
-        },
-      }),
-    );
-    expect(result).toMatchObject(expected);
-    expect(identityReads).toEqual([linked, primary]);
-  });
-
   it("CANDIDATE-U-PMEMROOT-001: linked worktreeをcanonical corpusとproject busへ収束する", () => {
     const result = resolveProjectMemoryRootWithPorts(linked, ports());
     expect(result).toMatchObject({
