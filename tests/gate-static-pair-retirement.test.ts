@@ -83,7 +83,7 @@ describe("design-pair retirement", () => {
     }
   });
 
-  it.fails("U-GSPAIR-001 accepts an additional valid pair without a retirement declaration", async () => {
+  it("U-GSPAIR-001 accepts an additional valid pair without a retirement declaration", async () => {
     const fixture = createPairRetirementGitFixture(sharedPairFiles(), {
       ...sharedPairFiles(),
       [designC]: designDoc("L3", testC),
@@ -101,7 +101,7 @@ describe("design-pair retirement", () => {
     }
   });
 
-  it.fails("U-GSPAIR-002 rejects an equal-count replacement and identifies both old paths", async () => {
+  it("U-GSPAIR-002 rejects an equal-count replacement and identifies both old paths", async () => {
     const baseFiles = sharedPairFiles();
     const headFiles = {
       ...baseFiles,
@@ -126,7 +126,7 @@ describe("design-pair retirement", () => {
     }
   });
 
-  it.fails("U-GSPAIR-003 keys shared test designs by the complete design/test pair", async () => {
+  it("U-GSPAIR-003 keys shared test designs by the complete design/test pair", async () => {
     const baseFiles = sharedPairFiles();
     const declaration = "docs/governance/design-pair-retirements/issue-1073.json";
     const fixture = createPairRetirementGitFixture(baseFiles, {
@@ -163,7 +163,7 @@ describe("design-pair retirement", () => {
     }
   });
 
-  it.fails("U-GSPAIR-004 rejects reused, duplicate, extra, and malformed retirement declarations", async () => {
+  it("U-GSPAIR-004 rejects reused, duplicate, extra, and malformed retirement declarations", async () => {
     const baseFiles = sharedPairFiles();
     const declaration = "docs/governance/design-pair-retirements/issue-1073.json";
     const priorDeclaration = "docs/governance/design-pair-retirements/issue-1000.json";
@@ -216,7 +216,7 @@ describe("design-pair retirement", () => {
     }
   });
 
-  it.fails("U-GSPAIR-005 compares merge-base to the event head, not the advanced base tip", async () => {
+  it("U-GSPAIR-005 compares merge-base to the event head, not the advanced base tip", async () => {
     const baseOnly = "docs/design/harness/L5-detailed-design/base-only.md";
     const headOnly = "docs/design/harness/L6-function-design/head-only.md";
     const common = sharedPairFiles();
@@ -257,6 +257,44 @@ describe("design-pair retirement", () => {
     }
   });
 
+  it("requires old tracked paths when a pair moves between document layouts", async () => {
+    const oldDesign = "docs/design/L1-requirements/a.md";
+    const oldTest = "docs/test-design/L7-pair/shared.md";
+    const declaration = "docs/governance/design-pair-retirements/issue-1073.json";
+    for (const [design, testDesign, ok] of [
+      [designA, shared, false],
+      [oldDesign, oldTest, true],
+    ] as const) {
+      const fixture = createPairRetirementGitFixture(
+        {
+          [oldDesign]: designDoc("L1", oldTest),
+          [oldTest]: testDesignDoc(oldDesign),
+        },
+        {
+          [oldDesign]: undefined,
+          [oldTest]: undefined,
+          [designA]: designDoc("L1", shared),
+          [shared]: testDesignDoc(designA),
+          [declaration]: JSON.stringify({ pairs: [{ design, testDesign }] }),
+        },
+      );
+      try {
+        const result = await observePairRetirement(
+          fixture.root,
+          fixture.baseCommit,
+          fixture.headCommit,
+        );
+        expect(result).toMatchObject({ ok });
+        if (!ok) {
+          expect(JSON.stringify(result)).toContain(oldDesign);
+          expect(JSON.stringify(result)).toContain(oldTest);
+        }
+      } finally {
+        fixture.cleanup();
+      }
+    }
+  });
+
   it("isolates a readable commit with a missing tracked blob", () => {
     const fixture = createPairRetirementGitFixture(sharedPairFiles(), sharedPairFiles());
     try {
@@ -268,7 +306,7 @@ describe("design-pair retirement", () => {
     }
   });
 
-  it.fails("U-GSPAIR-006 rejects unresolved commits and unreadable tracked documents", async () => {
+  it("U-GSPAIR-006 rejects unresolved commits and unreadable tracked documents", async () => {
     const base = sharedPairFiles();
     const fixture = createPairRetirementGitFixture(base, {
       ...base,
@@ -302,7 +340,7 @@ describe("design-pair retirement", () => {
     }
   });
 
-  it.fails("U-GSPAIR-007 refuses golden-only fallback for incomplete or conflicting CI input", async () => {
+  it("U-GSPAIR-007 refuses golden-only fallback for incomplete or conflicting CI input", async () => {
     const base = sharedPairFiles();
     const fixture = createPairRetirementGitFixture(base, base, {
       [designC]: designDoc("L3", testC),
