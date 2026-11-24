@@ -146,7 +146,7 @@ jobs:
           set -eu
           cd "$SRC_DIR"
           git ls-tree -r --name-only "$GITHUB_SHA" \
-            | grep -E '^(docs/governance/node-toolchain-provenance\.json|tsconfig\.node\.json|docs/governance/vmodel-document-catalog\.md|docs/templates/vmodel/[^/]+\.md)$' \
+            | grep -E '^(docs/governance/node-toolchain-provenance\.json|tsconfig\.node\.json|docs/governance/vmodel-document-catalog\.md|docs/templates/vmodel/.+.md)$' \
             | sort > "$RUNNER_TEMP/build-inputs.txt"
           expected="$(wc -l < "$RUNNER_TEMP/build-inputs.txt" | tr -d ' ')"
           echo "build inputs (ls-tree): $expected"
