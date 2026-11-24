@@ -153,7 +153,8 @@ function parseDeclarations(input: {
     if (!Array.isArray(pairs) || pairs.length === 0) {
       throw declarationError(entry, "pairs must be a non-empty array");
     }
-    for (const item of pairs) {
+    const declarations: unknown[] = pairs;
+    for (const item of declarations) {
       if (!item || typeof item !== "object")
         throw declarationError(entry, "invalid pair declaration");
       if (
