@@ -1,4 +1,4 @@
-import { type SpawnSyncReturns, spawnSync } from "node:child_process";
+import { execFileSync, type SpawnSyncReturns, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
   chmodSync,
@@ -43,11 +43,7 @@ import {
   transformCleanDistributionArtifact,
   validateConsumerRuntimeRelease,
 } from "../setup/index.ts";
-import {
-  readGitBlob,
-  registerC2ManifestCommand,
-  resolvePackRoot,
-} from "../setup/pack-c2-manifest.ts";
+import { registerC2ManifestCommand, resolvePackRoot } from "../setup/pack-c2-manifest.ts";
 import { derivePackPublicationAssets } from "../setup/pack-publication-assets.ts";
 import type { ReleaseAggregateFinalTree } from "../setup/release-aggregate-admission.ts";
 import { admitReleaseAggregate } from "../setup/release-aggregate-admission.ts";
@@ -413,6 +409,17 @@ export function assertProducerPathsOutsideHome(input: {
   for (const toolPath of [input.receipt.node.path, input.receipt.npm.cli_path]) {
     if (pathWithin(input.homeDirectory, toolPath))
       throw new Error("consumer runtime toolchain is user-home scoped");
+  }
+}
+
+function readGitBlob(repoRoot: string, revision: string, path: string): Buffer {
+  try {
+    return execFileSync("git", ["-C", repoRoot, "show", `${revision}:${path}`], {
+      encoding: null,
+      stdio: ["ignore", "pipe", "ignore"],
+    });
+  } catch {
+    throw new Error(`consumer runtime source blob unavailable: ${path}`);
   }
 }
 

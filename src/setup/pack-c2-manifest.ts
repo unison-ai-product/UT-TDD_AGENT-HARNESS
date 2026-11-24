@@ -1,4 +1,4 @@
-import { execFileSync, spawnSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import {
   closeSync,
   lstatSync,
@@ -205,17 +205,6 @@ function removeOwned(path: string, remove: (path: string) => void, residue: stri
 
 export function resolvePackRoot(path: string | undefined): string {
   return path ? (isAbsolute(path) ? path : join(process.cwd(), path)) : process.cwd();
-}
-
-export function readGitBlob(repoRoot: string, revision: string, path: string): Buffer {
-  try {
-    return execFileSync("git", ["-C", repoRoot, "show", `${revision}:${path}`], {
-      encoding: null,
-      stdio: ["ignore", "pipe", "ignore"],
-    });
-  } catch {
-    throw new Error(`consumer runtime source blob unavailable: ${path}`);
-  }
 }
 
 function checkoutGit(repository: string, ...args: string[]): Buffer | undefined {
