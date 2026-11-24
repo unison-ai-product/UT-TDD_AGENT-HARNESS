@@ -494,13 +494,8 @@ describe("CANDIDATE-U-PKAUD package の公開照合の配線", () => {
   });
 
   it.fails("CANDIDATE-U-PKAUD-015: 安全な artifact の symlink は tar mode is unsupported で拒否する", async () => {
-    const link = { LICENSE: { mode: "120000", content: Buffer.from("NOTICE") } };
     const run = await attempt(
-      makeCase(
-        (root) => stageSpecial(root, "120000", "LICENSE", "NOTICE"),
-        {},
-        { manifestOverrides: link },
-      ),
+      makeCase((root) => stageSpecial(root, "120000", "LICENSE", "NOTICE")),
     );
     expectRejectedMessage(run, "distribution package tar mode is unsupported: LICENSE");
   });
@@ -509,14 +504,7 @@ describe("CANDIDATE-U-PKAUD package の公開照合の配線", () => {
     "/etc/passwd",
     "C:/x",
   ])("CANDIDATE-U-PKAUD-016: 危険な target %s の artifact の symlink は invalid_artifact で拒否する", async (target) => {
-    const link = { LICENSE: { mode: "120000", content: Buffer.from(target) } };
-    const run = await attempt(
-      makeCase(
-        (root) => stageSpecial(root, "120000", "LICENSE", target),
-        {},
-        { manifestOverrides: link },
-      ),
-    );
+    const run = await attempt(makeCase((root) => stageSpecial(root, "120000", "LICENSE", target)));
     expectRejectedMessage(run, "distribution package tar materialization failed: invalid_artifact");
   });
 
