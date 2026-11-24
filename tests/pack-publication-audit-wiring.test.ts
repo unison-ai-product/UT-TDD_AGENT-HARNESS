@@ -112,6 +112,12 @@ function git(cwd: string, args: readonly string[], input?: string): string {
   }).trim();
 }
 
+/** 書いた file だけを index へ入れる。index にだけ在る symlink / submodule を `git add .` が working tree で上書きしないため。 */
+function writeStaged(root: string, path: string, text: string): void {
+  write(root, path, text);
+  git(root, ["add", "--", path]);
+}
+
 function write(root: string, path: string, text: string): void {
   mkdirSync(dirname(join(root, path)), { recursive: true });
   writeFileSync(join(root, path), text, "utf8");
@@ -239,14 +245,12 @@ function makeCase(
   git(root, ["config", "commit.gpgsign", "false"]);
   if (mutateC1) {
     mutateC1(root);
-    git(root, ["add", "--ignore-removal", "--", "."]);
     git(root, ["commit", "--quiet", "-m", "C1 mutation"]);
   }
   const c1 = git(root, ["rev-parse", "HEAD"]);
-  write(root, "release/manifest.yaml", stringify(manifestFor(c1, opts.manifestOverrides)));
-  for (const [path, text] of Object.entries(c2Extra)) write(root, path, text);
+  writeStaged(root, "release/manifest.yaml", stringify(manifestFor(c1, opts.manifestOverrides)));
+  for (const [path, text] of Object.entries(c2Extra)) writeStaged(root, path, text);
   opts.mutateC2?.(root);
-  git(root, ["add", "--ignore-removal", "--", "release"]);
   git(root, ["commit", "--quiet", "-m", "C2 release manifest"]);
   git(root, ["tag", TAG]);
   return { root, c1, c2: git(root, ["rev-parse", "HEAD"]) };
@@ -309,7 +313,7 @@ function stageSpecial(root: string, mode: "120000" | "160000", path: string, tar
 }
 
 const addExtra = (path = "private/pkaud-extra.txt") => {
-  return (root: string) => write(root, path, `${SECRET_TEXT}\n`);
+  return (root: string) => writeStaged(root, path, `${SECRET_TEXT}\n`);
 };
 
 describe("CANDIDATE-U-PKAUD package の公開照合の配線", () => {
@@ -349,7 +353,7 @@ describe("CANDIDATE-U-PKAUD package の公開照合の配線", () => {
 
   it("CANDIDATE-U-PKAUD-004: artifact の blob を 1 byte 変えると、既存の tar の導出が artifact_mismatch で拒否する (計画も観測も呼ばれない)", async () => {
     const license = baseEntries.find((entry) => entry.path === "LICENSE")?.content.toString("utf8");
-    const run = await attempt(makeCase((root) => write(root, "LICENSE", `${license}x`)));
+    const run = await attempt(makeCase((root) => writeStaged(root, "LICENSE", `${license}x`)));
     expectRejectedMessage(
       run,
       "distribution package tar materialization failed: artifact_mismatch",
@@ -481,7 +485,7 @@ describe("CANDIDATE-U-PKAUD package の公開照合の配線", () => {
     const pkg = baseEntries
       .find((entry) => entry.path === "package.json")
       ?.content.toString("utf8");
-    const run = await attempt(makeCase((root) => write(root, "package.json", `${pkg} `)));
+    const run = await attempt(makeCase((root) => writeStaged(root, "package.json", `${pkg} `)));
     expectRejected(run, "pack_publication_audit_commit_entries_mismatch");
     expect(run.error?.publicationAudit?.details).toContainEqual({
       category: "content",
@@ -496,14 +500,15 @@ describe("CANDIDATE-U-PKAUD package の公開照合の配線", () => {
     expect(planResults).toEqual([]);
   });
 
-  it.fails("CANDIDATE-U-PKAUD-015: 安全な artifact の symlink は tar mode is unsupported で拒否する", async () => {
+  // 015 / 016 は main の既存の拒否 (tar mode unsupported / invalid_artifact) の特性化で、main で既に通るため it.fails にしない。
+  it("CANDIDATE-U-PKAUD-015: 安全な artifact の symlink は tar mode is unsupported で拒否する", async () => {
     const run = await attempt(
       makeCase((root) => stageSpecial(root, "120000", "LICENSE", "NOTICE")),
     );
     expectRejectedMessage(run, "distribution package tar mode is unsupported: LICENSE");
   });
 
-  it.fails.each([
+  it.each([
     "/etc/passwd",
     "C:/x",
   ])("CANDIDATE-U-PKAUD-016: 危険な target %s の artifact の symlink は invalid_artifact で拒否する", async (target) => {
