@@ -614,7 +614,11 @@ function runAuthoritativeBuilder(input: {
     if (!metadata || typeof metadata !== "object" || Array.isArray(metadata))
       throw new Error("invalid builder metafile");
     return metadata;
-  } catch {
+  } catch (error) {
+    const e = error as { stderr?: Buffer; message?: string };
+    process.stderr.write(`[repro-diag] builder failed: ${e.message ?? ""}
+${e.stderr ? e.stderr.toString().slice(-3000) : ""}
+`);
     throw new NodeBootstrapError("node-bootstrap-builder-failed");
   } finally {
     rmSync(metafile, { force: true });
