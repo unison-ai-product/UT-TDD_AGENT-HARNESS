@@ -119,13 +119,14 @@ function pairTuples(docs: PairDoc[]): Set<string> {
   return pairs;
 }
 
-function parseDeclarations(
-  repoRoot: string,
-  mergeBase: string,
-  head: string,
-  baseTree: Map<string, TreeEntry>,
-  headTree: Map<string, TreeEntry>,
-): Set<string> {
+function parseDeclarations(input: {
+  repoRoot: string;
+  mergeBase: string;
+  head: string;
+  baseTree: Map<string, TreeEntry>;
+  headTree: Map<string, TreeEntry>;
+}): Set<string> {
+  const { repoRoot, mergeBase, head, baseTree, headTree } = input;
   const added = [...headTree.values()].filter(
     ({ path }) =>
       path.startsWith(RETIREMENT_DIRECTORY) &&
@@ -222,7 +223,7 @@ export function checkPairRetirement(
       [...blobs].map(([path, content]) => parsePairDoc(path, content));
     const baseline = pairTuples(toDocs(baseBlobs));
     const current = pairTuples(toDocs(headBlobs));
-    const declared = parseDeclarations(repoRoot, mergeBase, head, baseTree, headTree);
+    const declared = parseDeclarations({ repoRoot, mergeBase, head, baseTree, headTree });
     const missing = [...baseline].filter((pair) => !current.has(pair)).sort();
     const unannounced = missing.filter((pair) => !declared.has(pair));
     const extra = [...declared].filter((pair) => !baseline.has(pair) || current.has(pair)).sort();

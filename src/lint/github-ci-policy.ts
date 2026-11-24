@@ -5,6 +5,7 @@ import {
   githubExpression,
   harnessAggregateSteps,
   harnessLaneEvidenceSteps,
+  LINUX_FULL_REGRESSION_ENV,
   runtimeLegShapeProblems,
   WINDOWS_SHARD_REGRESSION_STEPS,
 } from "./github-ci-windows-shard.ts";
@@ -514,10 +515,7 @@ fi`,
     }),
     step("test — 全回帰 (vitest run)", {
       if: LANE_FULL_ONLY_IF,
-      env: {
-        UT_TDD_DOCTOR_RESULT_FILE: `${githubExpression("runner.temp")}/ut-tdd-doctor-result.json`,
-        UT_TDD_DOCTOR_RESULT_ROOT: githubExpression("github.workspace"),
-      },
+      env: LINUX_FULL_REGRESSION_ENV,
       run: "npm run test",
     }),
     run("doc lane checks (readability / rule-drift)", "npm run test:doc-lane", LANE_DOC_ONLY_IF),
