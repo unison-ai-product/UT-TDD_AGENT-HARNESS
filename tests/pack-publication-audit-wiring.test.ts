@@ -42,7 +42,7 @@ import { fakeGenerationBuilder } from "./support/pack-publication-audit-generati
 import { useSyntheticPrivacyHome } from "./support/privacy-denylist-home.ts";
 import { removeTestTree } from "./support/temp-tree.ts";
 
-// Red (issue #1894): CANDIDATE-U-PKAUD-001..011 と 013 を it.fails で登録する。
+// Red (issue #1894): CANDIDATE-U-PKAUD-001..011 と 013..017 を it.fails で登録する。
 // 012 は L12 の手動受入 (CI の対象外) なので、ここには登録しない (省略)。
 // 契約: docs/design/harness/L6-function-design/pack-publication-audit-wiring.md
 // oracle: docs/test-design/harness/L7-pack-publication-audit-wiring-test-design.md
@@ -175,19 +175,28 @@ heavyAfterAll("teardown", () => {
   if (scratchRoot) removeTestTree(scratchRoot);
 });
 
-function manifestFor(c1: string): Record<string, unknown> {
-  const artifacts = baseEntries.map((entry) => ({
-    sourcePath: entry.path,
-    destinationPath: entry.path,
-    mode: entry.mode,
-    size: entry.content.length,
-    contentDigest: digestConsumerRuntimeBytes(entry.content),
-  }));
+type EntryOverride = { mode: string; content: Buffer };
+
+function manifestFor(
+  c1: string,
+  overrides: Readonly<Record<string, EntryOverride>> = {},
+): Record<string, unknown> {
+  const artifacts = baseEntries
+    .map((base) => ({ ...base, ...overrides[base.path] }))
+    .map((entry) => ({
+      sourcePath: entry.path,
+      destinationPath: entry.path,
+      mode: entry.mode,
+      size: entry.content.length,
+      contentDigest: digestConsumerRuntimeBytes(entry.content),
+    }));
   const base = {
     materializerVersion: "1",
     artifactSourceCommit: c1,
     artifactSetDigest: baseDigest,
-    artifactInventoryDigest: deriveArtifactInventoryDigest(artifacts),
+    artifactInventoryDigest: deriveArtifactInventoryDigest(
+      artifacts as Parameters<typeof deriveArtifactInventoryDigest>[0],
+    ),
     releaseAssetInventoryDigest: `sha256:${"c".repeat(64)}`,
     artifacts,
   };
@@ -211,6 +220,10 @@ let caseSeq = 0;
 function makeCase(
   mutateC1?: (root: string) => void,
   c2Extra: Readonly<Record<string, string>> = {},
+  opts: {
+    mutateC2?: (root: string) => void;
+    manifestOverrides?: Readonly<Record<string, EntryOverride>>;
+  } = {},
 ): Case {
   caseSeq += 1;
   const root = join(scratchRoot, `case-${caseSeq}`);
@@ -223,13 +236,14 @@ function makeCase(
   git(root, ["config", "commit.gpgsign", "false"]);
   if (mutateC1) {
     mutateC1(root);
-    git(root, ["add", "--", "."]);
+    git(root, ["add", "--ignore-removal", "--", "."]);
     git(root, ["commit", "--quiet", "-m", "C1 mutation"]);
   }
   const c1 = git(root, ["rev-parse", "HEAD"]);
-  write(root, "release/manifest.yaml", stringify(manifestFor(c1)));
+  write(root, "release/manifest.yaml", stringify(manifestFor(c1, opts.manifestOverrides)));
   for (const [path, text] of Object.entries(c2Extra)) write(root, path, text);
-  git(root, ["add", "--", "release"]);
+  opts.mutateC2?.(root);
+  git(root, ["add", "--ignore-removal", "--", "release"]);
   git(root, ["commit", "--quiet", "-m", "C2 release manifest"]);
   git(root, ["tag", TAG]);
   return { root, c1, c2: git(root, ["rev-parse", "HEAD"]) };
@@ -276,6 +290,21 @@ function expectRejected(run: Attempt, code: string): void {
   expect(run.outFiles).toEqual([]);
 }
 
+function expectRejectedMessage(run: Attempt, text: string): void {
+  expect(run.error?.message).toContain(text);
+  expect(run.installCalls).toBe(0);
+  expect(run.outFiles).toEqual([]);
+}
+
+/** index にだけ mode 120000 / 160000 の entry を足す (Windows でも symlink / submodule を作らない)。 */
+function stageSpecial(root: string, mode: "120000" | "160000", path: string, target = "target.ts") {
+  const oid =
+    mode === "160000"
+      ? git(root, ["rev-parse", "HEAD"])
+      : git(root, ["hash-object", "-w", "--stdin"], target);
+  git(root, ["update-index", "--add", "--cacheinfo", `${mode},${oid},${path}`]);
+}
+
 const addExtra = (path = "private/pkaud-extra.txt") => {
   return (root: string) => write(root, path, `${SECRET_TEXT}\n`);
 };
@@ -315,30 +344,33 @@ describe("CANDIDATE-U-PKAUD package の公開照合の配線", () => {
     });
   });
 
-  it.fails("CANDIDATE-U-PKAUD-004: artifact の blob を 1 byte 変えると、計画の構築が commit_entry_mismatch で落とす", async () => {
+  it.fails("CANDIDATE-U-PKAUD-004: artifact の blob を 1 byte 変えると、既存の tar の導出が artifact_mismatch で拒否する (計画も観測も呼ばれない)", async () => {
     const license = baseEntries.find((entry) => entry.path === "LICENSE")?.content.toString("utf8");
     const run = await attempt(makeCase((root) => write(root, "LICENSE", `${license}x`)));
-    expectRejected(run, "pack_publication_audit_plan_commit_entry_mismatch");
+    expectRejectedMessage(
+      run,
+      "distribution package tar materialization failed: artifact_mismatch",
+    );
   });
 
-  it.fails("CANDIDATE-U-PKAUD-005: artifact の mode だけが manifest と違うと、計画の構築が落とす", async () => {
+  it.fails("CANDIDATE-U-PKAUD-005: artifact の mode だけが manifest と違うと、既存の tar の導出が artifact_mismatch で拒否する", async () => {
     const run = await attempt(
       makeCase((root) => git(root, ["update-index", "--chmod=+x", "--", "LICENSE"])),
     );
-    expectRejected(run, "pack_publication_audit_plan_commit_entry_mismatch");
+    expectRejectedMessage(
+      run,
+      "distribution package tar materialization failed: artifact_mismatch",
+    );
   });
 
-  it.fails("CANDIDATE-U-PKAUD-006: mode 120000 の entry は観測が entry を作らず extra として拒否する", async () => {
+  it.fails("CANDIDATE-U-PKAUD-006: C2 の release/ の中の mode 120000 は観測が entry を作らず extra として拒否する", async () => {
     const run = await attempt(
-      makeCase((root) => {
-        const oid = git(root, ["hash-object", "-w", "--stdin"], "target\n");
-        git(root, ["update-index", "--add", "--cacheinfo", `120000,${oid},private/link`]);
-      }),
+      makeCase(undefined, {}, { mutateC2: (root) => stageSpecial(root, "120000", "release/link") }),
     );
     expectRejected(run, "pack_publication_audit_commit_entries_mismatch");
     expect(run.error?.publicationAudit?.details).toContainEqual({
       category: "extra",
-      path: "private/link",
+      path: "release/link",
     });
   });
 
@@ -381,7 +413,7 @@ describe("CANDIDATE-U-PKAUD package の公開照合の配線", () => {
 
   it.fails("CANDIDATE-U-PKAUD-009: ビルド入力の欠落は pack_build_input_* のまま報告され、照合の理由に上書きされない", async () => {
     const run = await attempt(
-      makeCase((root) => rmSync(join(root, "tsconfig.node.json"), { force: true })),
+      makeCase((root) => git(root, ["rm", "-q", "--", "tsconfig.node.json"])),
     );
     expect(run.error?.code).toMatch(/^pack_build_input_/);
     expect(run.installCalls).toBe(0);
@@ -451,6 +483,48 @@ describe("CANDIDATE-U-PKAUD package の公開照合の配線", () => {
     expect(run.error?.publicationAudit?.details).toContainEqual({
       category: "content",
       path: "package.json",
+    });
+  });
+
+  it.fails("CANDIDATE-U-PKAUD-014: C1 の 160000 は resolveReleaseArtifacts が invalid_artifact で拒否し、観測へ進まない", async () => {
+    const run = await attempt(makeCase((root) => stageSpecial(root, "160000", "private/sub")));
+    expectRejectedMessage(run, "distribution package tar materialization failed: invalid_artifact");
+    expect(planResults).toEqual([]);
+  });
+
+  it.fails("CANDIDATE-U-PKAUD-015: 安全な artifact の symlink は tar mode is unsupported で拒否する", async () => {
+    const link = { LICENSE: { mode: "120000", content: Buffer.from("NOTICE") } };
+    const run = await attempt(
+      makeCase(
+        (root) => stageSpecial(root, "120000", "LICENSE", "NOTICE"),
+        {},
+        { manifestOverrides: link },
+      ),
+    );
+    expectRejectedMessage(run, "distribution package tar mode is unsupported: LICENSE");
+  });
+
+  it.fails.each([
+    "/etc/passwd",
+    "C:/x",
+  ])("CANDIDATE-U-PKAUD-016: 危険な target %s の artifact の symlink は invalid_artifact で拒否する", async (target) => {
+    const link = { LICENSE: { mode: "120000", content: Buffer.from(target) } };
+    const run = await attempt(
+      makeCase(
+        (root) => stageSpecial(root, "120000", "LICENSE", target),
+        {},
+        { manifestOverrides: link },
+      ),
+    );
+    expectRejectedMessage(run, "distribution package tar materialization failed: invalid_artifact");
+  });
+
+  it.fails("CANDIDATE-U-PKAUD-017: artifact でない path の symlink は観測が commit_entries_mismatch (extra) で拒否する", async () => {
+    const run = await attempt(makeCase((root) => stageSpecial(root, "120000", "notes/link")));
+    expectRejected(run, "pack_publication_audit_commit_entries_mismatch");
+    expect(run.error?.publicationAudit?.details).toContainEqual({
+      category: "extra",
+      path: "notes/link",
     });
   });
 
