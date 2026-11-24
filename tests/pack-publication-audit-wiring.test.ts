@@ -488,20 +488,17 @@ describe("CANDIDATE-U-PKAUD package の公開照合の配線", () => {
     expectRejectedMessage(run, "distribution package tar mode is unsupported: LICENSE");
   });
 
-  it.each([
-    "/etc/passwd",
-    "C:/x",
-  ])("CANDIDATE-U-PKAUD-016: 危険な target %s の artifact の symlink は観測へ進む前に拒否する", async (target) => {
+  it("CANDIDATE-U-PKAUD-016: 危険な (絶対 path の) target の artifact の symlink は materializer の invalid_artifact で拒否する", async () => {
+    // 先行の privacy scan は artifact を readFileSync で読む。Linux の snapshot は symlink を実体化するので、
+    // dangling な target (例: C:/x) は privacy-input-unreadable で先に止まる。target を実在する無害な file の
+    // 絶対 path にして scan を通し、materializer の validSymlink の拒否 (絶対 path) だけを成功条件にする。
+    const harmless = join(scratchRoot, "harmless-target.txt");
+    write(scratchRoot, "harmless-target.txt", "harmless");
+    const target = harmless.replaceAll("\\", "/");
     const fx = makeCase((root) => stageSpecial(root, "120000", "LICENSE", target));
     expectTreeEntry(fx.root, fx.c1, "LICENSE", "120000", target);
     const run = await attempt(fx);
-    // OS により、source preflight の privacy-input-unreadable (Linux は symlink を実体化する) か、
-    // materializer の invalid_artifact のどちらかで止まる。どちらでも観測へは進まない。
-    expect(run.error?.message).toMatch(
-      /privacy-input-unreadable|distribution package tar materialization failed: invalid_artifact/,
-    );
-    expect(run.installCalls).toBe(0);
-    expect(run.outFiles).toEqual([]);
+    expectRejectedMessage(run, "distribution package tar materialization failed: invalid_artifact");
     expect(planResults).toEqual([]);
   });
 
