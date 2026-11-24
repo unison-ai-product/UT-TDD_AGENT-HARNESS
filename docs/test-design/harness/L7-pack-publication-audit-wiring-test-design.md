@@ -15,7 +15,7 @@ issue: 1894
 
 対になる設計文書は `docs/design/harness/L6-function-design/pack-publication-audit-wiring.md` である。共有の
 `docs/test-design/harness/L7-unit-test-design.md` には行を足さない (shared file の直列化規律)。本書が
-oracle の正本であり、`CANDIDATE-U-PKAUD-001`〜`014` を候補として宣言する。昇格・実装は別 PR である。
+oracle の正本であり、`CANDIDATE-U-PKAUD-001`〜`017` を候補として宣言する。昇格・実装は別 PR である。
 Red は `it.fails` で先に入れ、Green で `it` に戻す (設計書保護 gate)。
 
 ## 2. 候補の oracle
@@ -39,6 +39,9 @@ Red は `it.fails` で先に入れ、Green で `it` に戻す (設計書保護 g
 | `CANDIDATE-U-PKAUD-012` | **L12 受入 (手動 + 記録)**: canary.7 と同じ形の C1 (ビルド入力 52 件を含む) と C2 で、`docs/reference/pack-release-runbook.md` の手順だけで `package` を実行する。次に C1 へ私有の file を足した C2 でも実行する | 前者は `attested` で 5 asset の sha256 が独立の再計算と一致する。後者は `commit_entries_mismatch` で止まり、asset が無い。結果を #1894 / #1879 のコメントに残す | 手順書に照合の読み方が無い / 人の手で照合を飛ばせる経路が残る |
 | `CANDIDATE-U-PKAUD-013` | 正規化で消える変異: C1 の `package.json` の末尾に空白を 1 byte 足す (manifest の `contentDigest` は元のまま。C2 は C1 の上に `release/manifest.yaml` だけを足す) | 計画の構築は通り (materializer の `JSON.parse` / `JSON.stringify` で差分が消える)、観測が生の blob の違いを捕まえて `error: pack_publication_audit_commit_entries_mismatch`、`details` に `{ category: "content", path: "package.json" }`。`installDependencies` は 0 回、`outDir` は空 | 観測で読んだ bytes を正規化してから比べる / 期待を C1 の生の blob から作る (sealed の bytes と比べない) |
 | `CANDIDATE-U-PKAUD-014` | C1 由来の `160000` (submodule) を 1 件置き (`release/` の外)、C2 はそれを継承する | 観測より前に `resolveReleaseArtifacts` が `invalid_artifact` で拒否し、`package` は既存の理由 (`distribution package tar materialization failed: invalid_artifact`) で exit 1。観測は呼ばれず、`installDependencies` は 0 回、`outDir` は空 (設計 §3.5 の到達経路) | C1 の `160000` を materializer で素通りさせる / 既存の拒否を握りつぶして観測へ進む |
+| `CANDIDATE-U-PKAUD-015` | C1 の artifact の path (例: `src/link`) を mode `120000`、安全な相対の target (`target.ts`) の symlink にし、manifest もその mode で作る。C2 はその C1 の上に `release/manifest.yaml` だけを足す | `distribution package tar mode is unsupported: src/link` で exit 1 (照合より前の既存の拒否。照合の理由コードにならない)。観測は呼ばれず、`installDependencies` は 0 回、`outDir` は空 | 安全な symlink を tar に入れて公開する / 既存の拒否を照合の理由に書き換える |
+| `CANDIDATE-U-PKAUD-016` | 015 と同じ作り方で、target を危険なもの (絶対 path `/etc/passwd`、または drive 付きの `C:/x`) にする | `distribution package tar materialization failed: invalid_artifact` で exit 1 (materializer の `validSymlink` の拒否)。観測は呼ばれず、asset は作られない | 危険な symlink を materializer で通す |
+| `CANDIDATE-U-PKAUD-017` | C1 の artifact でない path (materializer の対象外、`release/` の外、例: `notes/link`) に mode `120000` の symlink を置き、C2 はそれを継承する | 照合の観測が mode を拒否して `error: pack_publication_audit_commit_entries_mismatch`、`details` に `{ category: "extra", path: "notes/link" }`。`installDependencies` は 0 回、`outDir` は空 | 対象外の symlink を観測で捨てて素通りさせる / `120000` を `100644` として扱う |
 
 ## 3. 範囲と実行
 
