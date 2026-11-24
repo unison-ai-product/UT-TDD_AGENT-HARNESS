@@ -44,8 +44,10 @@ C2 の生成 (#1885、`pack-c2-manifest.md`。PR #1886 が未 merge) とは独�
    計画には、C2 の `release/manifest.yaml` の bytes (`git cat-file blob <C2>:release/manifest.yaml`) と、そこから解釈した manifest、`tarResolution.entries` から作る sealed entry を渡す。
    ビルド入力は、C1 の tree を `selectPackBuildInputs` に通した `paths` の **C1 の blob** を `{ path, bytes }` で `packCommitEntries` に渡す (照合側は選択しない)。期待 bytes を C1 の blob とすることは、`pack-build-inputs.md` §5.1 の「`package` の照合での期待 bytes」で改訂済みである (source commit との一致はこの照合の保証に含めない。§9)。
    計画の構築が `invalid_manifest` / `v1_read_only` / `unknown_release` / `control_manifest_mismatch` / `commit_entry_mismatch` などで失敗したときは、観測に進まず止める (§4)。
-   計画は C1 から materializer (`resolveReleaseArtifacts`) が作った sealed entry を使うので、C1 の blob の変異のうち**正規化で消えないもの** (変換を通らない artifact の bytes など) は、計画の構築の段階の `commit_entry_mismatch` で落ちる。
-   **正規化で消える変異** (`package.json` の末尾の空白など、`transformCleanDistributionArtifact` の `JSON.parse` / `JSON.stringify` で元に戻るもの) は計画を通る。これは観測が捕まえる: 観測は C2 の tree の生の blob を読み、期待 (sealed の bytes) と違うので `commit_entries_mismatch` になる (§4、`details` は `content`)。どちらの経路でも asset は作られない。
+   C1 の blob の変異は、照合より前の既存の検査で次のとおりに止まる (`src/cli/distribution.ts` のメモリ上の tar の導出が、manifest の `artifacts[]` と materializer の出力を `exactEntries` (`src/setup/pack-publication-assets.ts`) で比べる)。既存の拒否は、照合の理由コードへ写像しない。
+   - **正規化で消えない変異** (変換を通らない artifact の bytes、artifact の mode): `exactEntries` が `contentDigest` / `mode` の不一致で拒否し、`distribution package tar materialization failed: artifact_mismatch` で止まる。計画も観測も呼ばれない。
+   - **正規化で消える変異** (`package.json` の末尾の空白など、`transformCleanDistributionArtifact` の `JSON.parse` / `JSON.stringify` で元に戻るもの): tar の導出と計画を通る。観測は C2 の tree の生の blob を読み、期待 (sealed の bytes) と違うので `commit_entries_mismatch` になる (§4、`details` は `content`)。
+   計画の構築の `commit_entry_mismatch` は、tar の導出の検査を通った後の多重の防御であり、C1 の blob の変異では到達しない。どの経路でも asset は作られない。
 4. **観測 (`observePackPublication`)**: 固定した **C2 の SHA** の tree を、次の 2 つの Git コマンドだけで読む。
    - `git ls-tree -r -z --full-tree <C2>`: 全 entry の mode と blob oid と path。
    - `git cat-file --batch`: 各 blob の bytes。標準入力には、直前の `ls-tree` の出力から取った blob の OID だけを 1 行に 1 つ渡す (commit の SHA や ref 名は渡さない)。OID は bytes を取り出すためだけに使い、size と `sha256:` digest は取り出した bytes から計算する。
