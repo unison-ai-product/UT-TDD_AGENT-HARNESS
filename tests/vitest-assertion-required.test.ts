@@ -59,10 +59,12 @@ export default {
         assertionResults: { title: string; status: string; failureMessages: string[] }[];
       }[];
     };
-    for (const f of json.testResults)
-      for (const a of f.assertionResults)
-    parsed = true;
+    for (const f of json.testResults) {
+      for (const a of f.assertionResults) {
         byName.set(a.title, { status: a.status, messages: a.failureMessages.join("\n") });
+      }
+    }
+    parsed = true;
   } catch {
     raw = `${raw}\n${proc.stdout}\n${proc.stderr}`;
   }
