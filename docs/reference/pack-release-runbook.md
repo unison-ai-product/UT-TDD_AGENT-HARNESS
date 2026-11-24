@@ -22,6 +22,7 @@
 | `gh` | GitHub CLI を入れ、Pack repo に PR を出せるアカウントでログインします。**認証情報を repo や文書に書きません** | `gh auth status` |
 | 私有 denylist | `~/.ut-tdd/privacy-denylist.txt` (§0.1)。無いと `sync-pack` / `package` は書き出しの前に止まります | §0.1 |
 | 作業場所 | source と Pack の checkout は **home の外**に置きます (`package` は home 配下の作業を拒否します)。例: `C:\dev\` の下 | - |
+| Node / npm の置き場所 | `node` と `npm` の実体も **home の外**に置きます。`package` は、repo だけでなく Node / npm の path が home 配下にあっても止まります (`assertProducerPathsOutsideHome`、`src/cli/distribution.ts`)。nvm / volta / fnm などで home の下に入れた Node は使えません。公式の installer で `C:\Program Files\nodejs\` などへ入れます | `which -a node npm` (Git Bash) |
 
 ### 0.1 denylist の作り方
 
@@ -82,7 +83,6 @@ node src/cli.ts distribution sync-pack --repo-dir <Pack の checkout> --tag <v0.
    ```bash
    node <source の clone の絶対 path>/src/cli.ts distribution c2-manifest --c1 <C1 の SHA> --tag <v0.2.0-canary.N> --previous <Pack main の SHA> --json
    ```
-   [未自動 #1885] このサブコマンドは、まだ実装されていません。`src/setup/release-materializer.ts` の `materializeReleaseArtifacts` は、候補の bytes と digest を返すだけです。v2 manifest の inventory、release ID、asset inventory digest、record digest の導出と、既存の stable を保ったまま canary を更新する処理は、#1885 でコマンドにします。
    **#1885 が merge するまで、この手順は手順書だけでは再現できません。その間は公開しません。** tar の inventory を手で書かないでください。
 3. Pack に PR を出し、Pack の CI を green にします。Draft の間は公開しません。
 4. 公開に使う tag は C2 に付けます。tag は書き換えません (取り消せないため)。
