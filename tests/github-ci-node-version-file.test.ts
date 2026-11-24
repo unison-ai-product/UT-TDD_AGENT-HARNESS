@@ -50,23 +50,7 @@ function replaceNth(content: string, needle: string, index: number, to: string):
   const parts = content.split(needle);
   expect(parts.length - 1).toBeGreaterThan(index);
   return parts.reduce(
-    (acc, part, i) =>
-      i === 0
-        ? part
-        : `
-$;
-{
-  acc;
-}
-$;
-{
-  i - 1 === index ? to : needle;
-}
-$;
-{
-  part;
-}
-`,
+    (acc, part, i) => (i === 0 ? part : `${acc}${i - 1 === index ? to : needle}${part}`),
     "",
   );
 }
@@ -76,47 +60,11 @@ $;
 function expectRealShape(roles: Role[]): void {
   for (const doc of REAL_DOCS.filter((d) => roles.includes(d.role))) {
     if (SOURCE_ROLES.includes(doc.role)) {
-      expect(
-        doc.content,
-        `;
-$;
-{
-  doc.file;
-}
-literal`,
-      ).not.toContain(LITERAL);
-      expect(
-        doc.content,
-        `;
-$;
-{
-  doc.file;
-}
-file;
-form`,
-      ).toContain(FILE_FORM);
+      expect(doc.content, `${doc.file} literal`).not.toContain(LITERAL);
+      expect(doc.content, `${doc.file} file form`).toContain(FILE_FORM);
     } else {
-      expect(
-        doc.content,
-        `;
-$;
-{
-  doc.file;
-}
-consumer;
-literal`,
-      ).toContain(LITERAL);
-      expect(
-        doc.content,
-        `;
-$;
-{
-  doc.file;
-}
-no;
-file;
-form`,
-      ).not.toContain(FILE_FORM);
+      expect(doc.content, `${doc.file} consumer literal`).toContain(LITERAL);
+      expect(doc.content, `${doc.file} no file form`).not.toContain(FILE_FORM);
     }
   }
 }
@@ -149,23 +97,7 @@ describe("Issue #1873 node-version-file Red oracles", () => {
     expectRealShape(["runtime"]);
     expectGreenShape();
     expectViolation(
-      mutate("runtime", (c) =>
-        replaceNth(
-          c,
-          FILE_FORM,
-          0,
-          `;
-$;
-{
-  FILE_FORM;
-}
-\n          $
-{
-  LITERAL;
-}
-`,
-        ),
-      ),
+      mutate("runtime", (c) => replaceNth(c, FILE_FORM, 0, `${FILE_FORM}\n          ${LITERAL}`)),
     );
   });
 
