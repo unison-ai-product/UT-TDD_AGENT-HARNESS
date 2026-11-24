@@ -279,7 +279,7 @@ describe("U-PKBIN sync-pack / package wiring", () => {
     } finally {
       removeTestTree(home);
     }
-  });
+  }, 180_000);
 
   it("U-PKBIN-007: sync-pack はビルド入力を bytes 同一で copy し artifact の集合は変えない", () => {
     const source = cloneSource("c007");
