@@ -102,7 +102,7 @@ repositoryReadContracts["tests/design-root.test.ts"] = {
 };
 
 const HEAD_SNAPSHOT_ROWS = `
-github-pr-trace.test.ts:1 model-id-ssot-drift.test.ts:1 model-id-ssot.test.ts:1 consumer-ci-workflow-red.test.ts:1 consumer-g3-trace-red.test.ts:1
+github-pr-trace.test.ts:1 model-id-ssot-drift.test.ts:1 model-id-ssot.test.ts:1 consumer-ci-workflow-red.test.ts:1 consumer-g3-trace-red.test.ts:1 gate-run-coverage-stat-retirement.test.ts:1
 doctor-source-preflight-profile.test.ts:2 setup-project-identity-bootstrap.test.ts:2 plan-mechanism-retirement.test.ts:1 sub-doc-schema-integrity.test.ts:3 disposition/issue-only-projection.test.ts:1 zero-trust-download-integration.test.ts:2 plan-mechanism-retirement-acceptance.test.ts:1 gh-command-source-inventory.test.ts:1
 `;
 
