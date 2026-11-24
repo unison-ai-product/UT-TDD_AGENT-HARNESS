@@ -445,30 +445,41 @@ describe("workflow-model-guard 候補 oracle (Red)", () => {
     expect(settingsDropped.ok).toBe(false);
   });
 
-  it.fails("CANDIDATE-U-WFGUARD-029: モデルの規律の文は意味を満たし、.claude/CLAUDE.md の 1 か所だけにある", () => {
-    const candidates = (text: string): string[] =>
-      text.split(/\r?\n/).filter((l) => /Workflow/.test(l) && /Haiku/.test(l) && /Sonnet/.test(l));
-    // L6 §11.4 の 4 要素: 全 agent の model 明示が必須 / Haiku が既定 / 複雑な段だけ Sonnet / 上位モデルの検証は外の 2 経路。
-    const meaning = [
-      /全て\s*model\s*を明示し(?!なくて|ない)/,
-      /Haiku が既定/,
-      /条件が複雑な段だけ Sonnet/,
-      /上位モデルの検証は[^。]*Agent tool[^。]*委譲経路[^。]*で行う/,
+  it.fails("CANDIDATE-U-WFGUARD-029: モデルの規律の文は L6 §11.4 の文言そのままで .claude/CLAUDE.md の 1 か所だけにある", () => {
+    // L6 §11.4 が定める規律の文 (契約の文言そのもの)。部分一致の述語は使わない。
+    const contract =
+      "workflow の agent は全て model を明示し、Haiku が既定で、条件が複雑な段だけ Sonnet。上位モデルの検証は Agent tool か委譲経路で行う";
+    const norm = (t: string): string => t.replace(/\s+/g, "");
+    // 契約文の直後は句点か行末に限る (「…で行うことは禁止する」のような続きを許さない)。
+    const count = (text: string): number =>
+      text
+        .split(/\r?\n/)
+        .map(norm)
+        .reduce((n, line) => {
+          let hits = 0;
+          for (
+            let i = line.indexOf(norm(contract));
+            i !== -1;
+            i = line.indexOf(norm(contract), i + 1)
+          ) {
+            const next = line[i + norm(contract).length];
+            if (next === undefined || next === "。") hits += 1;
+          }
+          return n + hits;
+        }, 0);
+    // 反例 (否定形への置換・逆の文) を、この検査自身が拒否できること。契約文そのものは通ること。
+    const mutants = [
+      contract.replace("Haiku が既定で", "Haiku が既定ではなく"),
+      contract.replace("条件が複雑な段だけ Sonnet", "条件が複雑な段だけ Sonnet に限る必要はない"),
+      contract.replace("で行う", "で行うことは禁止する"),
+      "Workflow の model は明示しなくてよい。Haiku より Sonnet を常に使う。Agent tool と委譲経路。",
     ];
-    const satisfies = (line: string): boolean => meaning.every((m) => m.test(line));
-    // 反例 (意味が逆の文) を、この検査自身が拒否できること。
-    const converse =
-      "Workflow の model は明示しなくてよい。Haiku より Sonnet を常に使う。Agent tool と委譲経路。";
-    expect(satisfies(converse)).toBe(false);
-    const good =
-      "workflow の Workflow agent は全て model を明示し、Haiku が既定で、条件が複雑な段だけ Sonnet。上位モデルの検証は Agent tool か委譲経路で行う。";
-    expect(satisfies(good)).toBe(true);
+    for (const m of mutants) expect(count(m), m).toBe(0);
+    expect(count(contract)).toBe(1);
     const claude = src(".claude/CLAUDE.md");
-    const lines = candidates(claude);
-    expect(lines).toHaveLength(1);
-    expect(satisfies(lines[0] ?? "")).toBe(true);
-    expect(candidates(src("CLAUDE.md"))).toEqual([]);
-    expect(candidates(src("AGENTS.md"))).toEqual([]);
+    expect(count(claude)).toBe(1);
+    expect(count(src("CLAUDE.md"))).toBe(0);
+    expect(count(src("AGENTS.md"))).toBe(0);
     expect(claude).toContain("## UT-TDD Adapter Rule Markers");
     expect(analyzeRuleDrift(loadRuleAdapterDocs(root)).ok).toBe(true);
   });
