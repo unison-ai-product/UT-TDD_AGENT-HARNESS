@@ -487,7 +487,7 @@ Task-kind ベースの割当 (PO rule 2026-07-14、旧 tier 記述を supersede)
   「あなたが○○なら」の表を参照する。
   - Fable (`claude-fable-5-2`): PO 前のエスカレーションと大規模設計の相談役 (`ut-tdd advisor`)。
   - Opus (`claude-opus-5-5`): 指揮のときは振り分けと検収に専念する。計画と判断 (順序・方式・FLAG の扱い) は Fable へ投げ、手を動かす作業は Sonnet と Haiku へ振る (PO 2026-11-24)。
-    成果物は自分で書き下ろさない。フロントデザイン/UI デザインの判断・レビューも担う。
+    成果物は自分で書き下ろさない。UI デザインの判断も Fable へ投げる。UI を含む PR の closing review は委譲経路で担う。
   - Sonnet (`claude-sonnet-5-5`): **難所の worker**。自明でない実装、設計ドキュメントの起草、
     基準が全部は明示できない編集、決まった UI デザインの実装。
   - Haiku (`claude-haiku-5-5`): **手を動かす作業の主力 (既定の worker)**。web 検索、doc パッチ、
