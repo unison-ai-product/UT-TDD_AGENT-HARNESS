@@ -77,7 +77,7 @@ describe("SessionStart project identity reads", () => {
     );
   }
 
-  heavyBeforeAll("setup", () => {
+  heavyBeforeAll("db", () => {
     root = realpathSync(mkdtempSync(join(tmpdir(), "ut-session-start-identity-")));
     ensureTrackedProjectIdentity(root, "fixture/session-start-identity");
     const db = openHarnessDb(defaultHarnessDbPath(root), { repoRoot: root });
