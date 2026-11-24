@@ -12,11 +12,17 @@ issue: 1938
 
 # SessionStart の project identity 読取 (Issue #1938)
 
-> **L6 contract marker**: `resolveProjectMemoryRootWithPorts(repoRoot, ports)` は、既存の検査を経た同一実パスに対し、一回の解決中に HEAD identity を一度だけ読む。linked worktree の別実パスはそれぞれ照合する。
+> **L6 contract marker**: `resolveProjectMemoryRootWithPorts(repoRoot, ports) => ProjectMemoryRootResult` の読取回数と再検証を、L7 の CANDIDATE-U-PMEMROOT-010・011 で検証する。
 
 [Memory の canonical root 契約](memory.md#canonical-memory-root-resolver-の配置-issue-963)を補う。
 
 ## 1. 一回の root 解決の境界
+
+| 条件 | 契約 |
+| --- | --- |
+| Pre | Git topology から取得した current root と canonical root を実パスに解決し、既存のディレクトリ検査に通った場合に identity 読取へ進む。 |
+| Post | 同じ実パスでは identity 読取は1回、異なる実パスでは各1回。検証済みの ID が一致した場合にだけ、既存のパス検査を経て root と namespace を返す。欠落・不一致には従来の typed deny を返す。 |
+| Invariant | 次の root 解決では topology と identity を読み直す。各解決の作業ツリーと origin の検証、パス逸脱の拒否、SessionStart の順序を維持する。 |
 
 project-memory root を解決するたびに、Git topology から current worktree と canonical
 project root を求め、既存のディレクトリ検査を行う。両 root の `realpath` 結果が文字列として

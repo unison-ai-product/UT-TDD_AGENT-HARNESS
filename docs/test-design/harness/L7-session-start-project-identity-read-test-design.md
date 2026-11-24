@@ -11,7 +11,7 @@ issue: 1938
 
 # SessionStart の project identity 読取テスト設計 (Issue #1938)
 
-[既存の project-scoped Memory root テスト設計](L7-project-scoped-memory-root-test-design.md)を併せて実行する。
+上位の契約は `docs/design/harness/L6-function-design/session-start-project-identity-read.md`。 [既存の project-scoped Memory root テスト設計](L7-project-scoped-memory-root-test-design.md)も併せて実行する。
 
 ## 1. 候補 oracle と負荷診断
 
