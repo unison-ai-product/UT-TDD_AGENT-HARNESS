@@ -1,13 +1,5 @@
 import { execFileSync, spawnSync } from "node:child_process";
-import {
-  cpSync,
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  readdirSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { describe, expect, it, vi } from "vitest";
@@ -39,6 +31,13 @@ import {
 import { materializeReleaseArtifacts } from "../src/setup/release-materializer.ts";
 import { heavyAfterAll, heavyBeforeAll } from "./support/hook-bounds.ts";
 import { fakeGenerationBuilder } from "./support/pack-publication-audit-generation.ts";
+import {
+  expectTreeEntry,
+  git,
+  stageSpecial,
+  write,
+  writeStaged,
+} from "./support/pack-publication-audit-git.ts";
 import { useSyntheticPrivacyHome } from "./support/privacy-denylist-home.ts";
 import { removeTestTree } from "./support/temp-tree.ts";
 
@@ -103,25 +102,6 @@ const TEMPLATES = [
   "docs/templates/vmodel/L0-charter.md",
   "docs/templates/vmodel/L1-requirements.md",
 ];
-
-function git(cwd: string, args: readonly string[], input?: string): string {
-  return execFileSync("git", ["-C", cwd, ...args], {
-    encoding: "utf8",
-    input,
-    stdio: ["pipe", "pipe", "pipe"],
-  }).trim();
-}
-
-/** 書いた file だけを index へ入れる。index にだけ在る symlink / submodule を `git add .` が working tree で上書きしないため。 */
-function writeStaged(root: string, path: string, text: string): void {
-  write(root, path, text);
-  git(root, ["add", "--", path]);
-}
-
-function write(root: string, path: string, text: string): void {
-  mkdirSync(dirname(join(root, path)), { recursive: true });
-  writeFileSync(join(root, path), text, "utf8");
-}
 
 // ---------------------------------------------------------------------------
 // fixture: 共有の基底 (C1 の中身、manifest 無し) を 1 回だけ作り、case ごとに local clone する
@@ -303,15 +283,6 @@ function expectRejectedMessage(run: Attempt, text: string): void {
   expect(run.outFiles).toEqual([]);
 }
 
-/** index にだけ mode 120000 / 160000 の entry を足す (Windows でも symlink / submodule を作らない)。 */
-function stageSpecial(root: string, mode: "120000" | "160000", path: string, target = "target.ts") {
-  const oid =
-    mode === "160000"
-      ? git(root, ["rev-parse", "HEAD"])
-      : git(root, ["hash-object", "-w", "--stdin"], target);
-  git(root, ["update-index", "--add", "--cacheinfo", `${mode},${oid},${path}`]);
-}
-
 const addExtra = (path = "private/pkaud-extra.txt") => {
   return (root: string) => writeStaged(root, path, `${SECRET_TEXT}\n`);
 };
@@ -371,9 +342,15 @@ describe("CANDIDATE-U-PKAUD package の公開照合の配線", () => {
   });
 
   it.fails("CANDIDATE-U-PKAUD-006: C2 の release/ の中の mode 120000 は観測が entry を作らず extra として拒否する", async () => {
-    const run = await attempt(
-      makeCase(undefined, {}, { mutateC2: (root) => stageSpecial(root, "120000", "release/link") }),
+    const fx = makeCase(
+      undefined,
+      {},
+      {
+        mutateC2: (root) => stageSpecial(root, "120000", "release/link"),
+      },
     );
+    expectTreeEntry(fx.root, fx.c2, "release/link", "120000", "target.ts");
+    const run = await attempt(fx);
     expectRejected(run, "pack_publication_audit_commit_entries_mismatch");
     expect(run.error?.publicationAudit?.details).toContainEqual({
       category: "extra",
@@ -495,16 +472,18 @@ describe("CANDIDATE-U-PKAUD package の公開照合の配線", () => {
 
   // 014 は main の既存の拒否 (invalid_artifact) の特性化で、main で既に通るため it.fails にしない (回帰の oracle)。
   it("CANDIDATE-U-PKAUD-014: C1 の 160000 は resolveReleaseArtifacts が invalid_artifact で拒否し、観測へ進まない", async () => {
-    const run = await attempt(makeCase((root) => stageSpecial(root, "160000", "private/sub")));
+    const fx = makeCase((root) => stageSpecial(root, "160000", "private/sub"));
+    expectTreeEntry(fx.root, fx.c1, "private/sub", "160000");
+    const run = await attempt(fx);
     expectRejectedMessage(run, "distribution package tar materialization failed: invalid_artifact");
     expect(planResults).toEqual([]);
   });
 
   // 015 / 016 は main の既存の拒否 (tar mode unsupported / invalid_artifact) の特性化で、main で既に通るため it.fails にしない。
   it("CANDIDATE-U-PKAUD-015: 安全な artifact の symlink は tar mode is unsupported で拒否する", async () => {
-    const run = await attempt(
-      makeCase((root) => stageSpecial(root, "120000", "LICENSE", "NOTICE")),
-    );
+    const fx = makeCase((root) => stageSpecial(root, "120000", "LICENSE", "NOTICE"));
+    expectTreeEntry(fx.root, fx.c1, "LICENSE", "120000", "NOTICE");
+    const run = await attempt(fx);
     expectRejectedMessage(run, "distribution package tar mode is unsupported: LICENSE");
   });
 
@@ -512,12 +491,16 @@ describe("CANDIDATE-U-PKAUD package の公開照合の配線", () => {
     "/etc/passwd",
     "C:/x",
   ])("CANDIDATE-U-PKAUD-016: 危険な target %s の artifact の symlink は invalid_artifact で拒否する", async (target) => {
-    const run = await attempt(makeCase((root) => stageSpecial(root, "120000", "LICENSE", target)));
+    const fx = makeCase((root) => stageSpecial(root, "120000", "LICENSE", target));
+    expectTreeEntry(fx.root, fx.c1, "LICENSE", "120000", target);
+    const run = await attempt(fx);
     expectRejectedMessage(run, "distribution package tar materialization failed: invalid_artifact");
   });
 
   it.fails("CANDIDATE-U-PKAUD-017: artifact でない path の symlink は観測が commit_entries_mismatch (extra) で拒否する", async () => {
-    const run = await attempt(makeCase((root) => stageSpecial(root, "120000", "notes/link")));
+    const fx = makeCase((root) => stageSpecial(root, "120000", "notes/link"));
+    expectTreeEntry(fx.root, fx.c1, "notes/link", "120000", "target.ts");
+    const run = await attempt(fx);
     expectRejected(run, "pack_publication_audit_commit_entries_mismatch");
     expect(run.error?.publicationAudit?.details).toContainEqual({
       category: "extra",
