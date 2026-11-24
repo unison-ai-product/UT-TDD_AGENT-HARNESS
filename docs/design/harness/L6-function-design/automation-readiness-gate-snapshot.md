@@ -10,7 +10,7 @@ next_pair_freeze: L7
 issue: 1490
 ---
 
-> **L6 contract marker**: `evaluateAutomationReadiness(db) => AutomationReadinessRow[]` が一度の呼出しで使う証跡と更新の範囲を定める。U-READY-GATE-01 を継承し、候補 oracle `CANDIDATE-U-READSNAP-001`〜`004` を対応する L7 で定める。
+> **L6 contract marker**: `evaluateAutomationReadiness(db) => AutomationReadinessRow[]` が一度の呼出しで使う証跡と更新の範囲を定める。U-READY-GATE-01 を継承し、正式 oracle `U-READSNAP-001`〜`004` を対応する L7 で定める。
 
 # Automation readiness の証跡読取と更新 (Issue #1490)
 
