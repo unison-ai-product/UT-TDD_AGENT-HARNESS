@@ -73,4 +73,4 @@ writer が既存 `.json` を走査中に物理 read error、不正 JSON、また
 
 診断対象は現行の走査を中断する物理読み取り失敗、不正 JSON、JSON `null` の3種に限る。既存 ID の `EEXIST`、正常に読める別 ID の反復、同じ ID の拒否は §3.1 の契約に従う。別名証跡があるまま発行を継続する判断は、同一 ID の二重発行を防げることを確認した後に行う。[ファイル名と ID の再現](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/1490#issuecomment-7123755365) [契約改訂の承認](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/1490#issuecomment-7123927381)
 
-候補 oracle `CANDIDATE-U-GATEDIAG-001`〜`003` は L7 §4 に定める。
+正式 oracle `U-GATEDIAG-001`〜`003` は L7 §4 に定める。
