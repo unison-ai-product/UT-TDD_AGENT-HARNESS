@@ -10,7 +10,7 @@ next_pair_freeze: L7
 issue: 1073
 ---
 
-> **L6 contract marker**: `checkPairRetirement(repoRoot, baseCommit, headCommit) => PairRetirementCheck` は、source repo の U-RCDEV-037 に比較元から失われた設計対と退役宣言の照合結果を返す。候補 oracle `CANDIDATE-U-GSPAIR-001`〜`006` は対応する L7 が定める。
+> **L6 contract marker**: `checkPairRetirement(repoRoot, baseCommit, headCommit) => PairRetirementCheck` は、source repo の U-RCDEV-037 に比較元から失われた設計対と退役宣言の照合結果を返す。候補 oracle `CANDIDATE-U-GSPAIR-001`〜`007` は対応する L7 が定める。
 
 # Gate static の設計対の維持と退役 (Issue #1073)
 
@@ -26,7 +26,11 @@ source repo の PR 回帰テスト U-RCDEV-037 は、G1〜G6 の層別の固定�
 | Post | 比較元の対から変更側で失われた対の集合と、今回宣言した対の集合が一致した場合だけ、この照合は成功する。 |
 | Invariant | 両方に同じ document root 解決・path 正規化・pair-freeze の双方向照合を使う。照合はリポジトリへ書き込まない。 |
 
-PR ではイベントの base commit と head commit の merge-base を比較元、同じイベントの head commit を変更側とする。手元で PR を比較する際の参照は `origin/main` と `HEAD` とする。commit、比較元、文書、宣言のいずれかの読み取りに失敗した PR は失敗として報告する。途中で参照が更新されても、比較に使う commit を取り直さない。PR の比較を行わない main 上の回帰検証では既存の golden と不変条件を実行する。
+PR 比較の起動入力は `.github/workflows/harness-check.yml` の `harness-check-linux` と `harness-check-windows` の両 job が同一の固定名で渡す。`PAIR_RETIREMENT_EVENT_NAME` は `${{ github.event_name }}`、`PAIR_RETIREMENT_BASE_SHA` は `${{ github.event.pull_request.base.sha }}`、`PAIR_RETIREMENT_HEAD_SHA` は `${{ github.event.pull_request.head.sha }}` を値とする。比較入口はこの3入力と GitHub Actions の自動設定値 `GITHUB_EVENT_NAME` を読む。
+
+GitHub Actions の自動設定値がある場合は `GITHUB_ACTIONS=true` を要求し、`PAIR_RETIREMENT_EVENT_NAME` が空でなく `GITHUB_EVENT_NAME` と完全一致することを必須とする。`pull_request` の場合は base / head SHA の両方を必須とし、各値がこのリポジトリの完全な 40 桁の hexadecimal commit SHA であり、checkout 内で commit として解決できることを確認する。成功したらイベントの base commit と head commit の merge-base を比較元、同じイベントの head commit を変更側として固定する。いずれかの入力が欠落・不正・commit 解決失敗、またはイベント名が不一致なら、golden のみを実行する経路へ降格せず比較全体を失敗させる。`origin/main` や checkout の `HEAD` を PR SHA の補完・代用にしてはならない。比較元や文書または宣言を読み取れない場合も PR の比較は失敗とする。
+
+`push` など `pull_request` 以外の GitHub Actions event では、event 名が `GITHUB_EVENT_NAME` と一致し、base / head SHA が両方とも空である場合に限り、PR 比較を起動せず既存の golden と不変条件を実行する。非 PR event にどちらかの PR SHA が渡された場合、または CI event 名・入力が欠落や矛盾する場合は失敗させる。手元での比較は GitHub Actions の自動設定値がいずれも無く、3つの `PAIR_RETIREMENT_*` 入力がいずれも未設定の場合に限り、`origin/main` と `HEAD` を比較対象として明示的に解決する。手元経路でも commit 解決や読み取りに失敗したら失敗し、PR 入力の部分指定を手元経路へ読み替えない。比較に使う commit は起動時に固定し、途中で参照が更新されても取り直さない。
 
 対は `(設計文書の repo 相対 path, テスト設計文書の repo 相対 path)` で識別する。L1〜L6 の設計 sub-doc を起点とし、有効な参照と逆参照がある組を、既存の pair-freeze と同じルールで1組ずつ数える。複数の設計文書が同じテスト設計を共有する場合は、設計文書ごとに異なる対となる。別の対の追加によって消失を相殺できない。
 
