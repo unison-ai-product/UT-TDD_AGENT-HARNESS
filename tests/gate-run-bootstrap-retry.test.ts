@@ -166,7 +166,7 @@ function addUnrelatedArtifact(repoRoot: string): void {
   }
 }
 
-describe("gate-run bootstrap retry candidate oracles", () => {
+describe("gate-run bootstrap retry oracles", () => {
   const roots: string[] = [];
   let failedFirstRun!: ReturnType<typeof checkGateRunCoverage>;
   let rollbackState!: DatabaseState;
@@ -257,21 +257,21 @@ describe("gate-run bootstrap retry candidate oracles", () => {
     expect(schemaOnlyProjection.workflows).toHaveLength(1);
   });
 
-  it.fails("CANDIDATE-U-GRBOOT-001 failed first attempt rolls back to an uninitialized logical state", () => {
+  it.fails("U-GRBOOT-001 failed first attempt rolls back to an uninitialized logical state", () => {
     expect(rollbackState.userVersion).toBe(0);
     expect(rollbackState.applicationTables).toEqual([]);
     expect(rollbackState.populatedApplicationTables).toEqual([]);
   });
 
-  it.fails("CANDIDATE-U-GRBOOT-002 retry projection matches a normal first run", () => {
+  it.fails("U-GRBOOT-002 retry projection matches a normal first run", () => {
     expect(retryProjection).toEqual(normalFirstRunProjection);
   });
 
-  it.fails("CANDIDATE-U-GRBOOT-003 current schema-only database receives the full initial projection", () => {
+  it.fails("U-GRBOOT-003 current schema-only database receives the full initial projection", () => {
     expect(schemaOnlyProjection).toEqual(normalFirstRunProjection);
   });
 
-  it("CANDIDATE-U-GRBOOT-004 nonempty database keeps unrelated rows through invalid and valid checks", () => {
+  it("U-GRBOOT-004 nonempty database keeps unrelated rows through invalid and valid checks", () => {
     expect(controlBeforeProjection).toEqual({
       gateRuns: [],
       workflows: [],
