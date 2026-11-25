@@ -57,6 +57,6 @@ const observed = {
   timeoutMs: duration && ts.isNumericLiteral(duration) ? Number(duration.text) : null,
 };
 
-it("CANDIDATE-U-CDPD-013: consumer-toolchain CLI test has the bounded db budget", () => {
+it("U-CDPD-013: consumer-toolchain CLI test has the bounded db budget", () => {
   expect(observed).toEqual({ name: "heavyIt", hookClass: "db", timeoutMs: 40_000 });
 });
