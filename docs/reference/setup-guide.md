@@ -121,6 +121,10 @@ asset を置いたフォルダに、5 つ以外のファイルやフォルダが
 
 この手順は、canary.7 から canary.8 への入れ直しを、Windows (Node v24.22.3) で 1 回流して確かめただけです。その実測では、新しい版の setup と `doctor --setup-smoke` はどちらも exit 0 で、setup は約 10 秒かかりました。この実測では、新しい clone を元の手元の clone から作り、そのあと origin をプロジェクトの origin に向け直しています。プロジェクトの origin から直接 clone する方法は確かめていません。その場合、元の clone の未 push の commit は付いてこないので、先に push してください。ほかの OS と、ほかの版の組み合わせは確かめていません ([#1879](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/1879))。
 
+### 既存の設計文書の plan: を issue: に直す
+
+既存の設計文書で `plan: docs/plans/PLAN-<id>.md` を使っている場合は、対応する GitHub Issue の番号を確かめ、frontmatter を `issue: <番号>` に変更してください。v0.2.0-canary.8 以降の文書所有者の検査は、旧 `plan:` を所有者として数えません。
+
 ## 4. setup を流し直したとき
 
 同じ版で setup を流し直しても、壊れることはありません。
