@@ -50,7 +50,7 @@ describe("Pack consumer Claude SessionStart timeout", () => {
     hook = sessionStartHook(claudeMirror, "claude");
   });
 
-  it.fails("CANDIDATE-U-PACKSTART-001", () => expect(hook.timeout).toBe(60));
+  it("CANDIDATE-U-PACKSTART-001", () => expect(hook.timeout).toBe(60));
 });
 
 describe("Pack consumer Codex SessionStart timeout", () => {
@@ -60,7 +60,7 @@ describe("Pack consumer Codex SessionStart timeout", () => {
     hook = sessionStartHook(codexMirror, "codex");
   });
 
-  it.fails("CANDIDATE-U-PACKSTART-002", () => expect(hook.timeout).toBe(60));
+  it("CANDIDATE-U-PACKSTART-002", () => expect(hook.timeout).toBe(60));
 });
 
 describe("setup generated Claude SessionStart timeout", () => {
@@ -70,7 +70,7 @@ describe("setup generated Claude SessionStart timeout", () => {
     hook = sessionStartHook(BUILTIN_GITHUB_TEMPLATES["adapter/.claude/settings.json"], "claude");
   });
 
-  it.fails("CANDIDATE-U-PACKSTART-003", () => expect(hook.timeout).toBe(60));
+  it("CANDIDATE-U-PACKSTART-003", () => expect(hook.timeout).toBe(60));
 });
 
 describe("setup generated Codex SessionStart timeout", () => {
@@ -80,5 +80,5 @@ describe("setup generated Codex SessionStart timeout", () => {
     hook = sessionStartHook(BUILTIN_GITHUB_TEMPLATES["adapter/.codex/hooks.json"], "codex");
   });
 
-  it.fails("CANDIDATE-U-PACKSTART-004", () => expect(hook.timeout).toBe(60));
+  it("CANDIDATE-U-PACKSTART-004", () => expect(hook.timeout).toBe(60));
 });
