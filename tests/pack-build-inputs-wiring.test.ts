@@ -424,12 +424,12 @@ describe("U-PKBIN sync-pack / package wiring", () => {
     }
   });
 
-  it.fails("U-PKBIN-018: U-PKBIN-008 has a 60 second timeout", (ctx) => {
-    expect(registeredPackTests(ctx, "U-PKBIN-008")[0]?.timeout).toBe(60_000);
+  it.fails("U-PKBIN-018: U-PKBIN-008 has a 75 second timeout", (ctx) => {
+    expect(registeredPackTests(ctx, "U-PKBIN-008")[0]?.timeout).toBe(75_000);
   });
 
-  it.fails("U-PKBIN-019: U-PKBIN-011 has a 60 second timeout", (ctx) => {
-    expect(registeredPackTests(ctx, "U-PKBIN-011")[0]?.timeout).toBe(60_000);
+  it.fails("U-PKBIN-019: U-PKBIN-011 has a 75 second timeout", (ctx) => {
+    expect(registeredPackTests(ctx, "U-PKBIN-011")[0]?.timeout).toBe(75_000);
   });
 });
 
