@@ -21,3 +21,20 @@ issue: 1490
 | `U-GRBOOT-004` | gate 行が 0 で他の既存行がある DB に対し、不一致を起こす入力と正しい入力をそれぞれ試す。不一致で既存行は保持され、正しい入力では通常の照合が進む。 | gate 行だけの空判定で非空 DB を全再構築する。 |
 
 001〜003 の Red と 004 の通常テストは、正式 ID へ昇格した。Green は後続の段で行う。
+
+## 準備 hook の実行上限 (#1956)
+
+準備 hook は独立した一時リポジトリ5個を作り、`checkGateRunCoverage` を7回実行する。#1949 の Windows 3/3 は10秒の既定上限で止まり、既存の5テストは未実行でファイル全体は12.536秒だった。同じ head の再実行は5件すべて成功し、ファイル全体は7.896秒だった。main の `4100b69d` と #1958 の Windows 3/3 でも、同じ準備 hook が10秒上限に達した。
+
+この準備 hook は既存の `heavyBeforeAll("db", ...)` を使う。上限は SQLite の準備に使う共有値180,000ミリ秒で、既存の `[hook-timing]` 形式で所要時間を出す。対象は `gate-run-bootstrap-retry.test.ts` の準備 hook 1個とする。
+
+| 候補 ID | 刺激 | 期待結果 |
+| --- | --- | --- |
+| `CANDIDATE-U-GRBOOT-005` | TypeScript AST で `gate-run bootstrap retry oracles` の準備 hook の登録を読む | 登録は `heavyBeforeAll`、種別は `db`、共有の上限は180,000ミリ秒 |
+
+Red は現行の `beforeAll` 登録で比較が失敗する。構文と対象の一意性はテストの比較より前に確かめる。Green では同じ比較、既存の5テスト、準備 hook の `[hook-timing]` 行を確かめる。
+
+- [同じ head で10秒上限を超えた試行](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/actions/runs/45533194323/attempts/4)
+- [同じ head で5件が成功した試行](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/actions/runs/45533194323/attempts/5)
+- [main で10秒上限を超えた Windows 3/3](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/actions/runs/45542894160/job/138965427474)
+- [#1958 の Windows 3/3 での再現](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/actions/runs/45546111457/job/138986758356)
