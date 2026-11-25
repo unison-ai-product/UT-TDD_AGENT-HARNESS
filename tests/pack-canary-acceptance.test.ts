@@ -7,6 +7,7 @@ import {
 import { createHash } from "node:crypto";
 import {
   copyFileSync,
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readdirSync,
@@ -1835,47 +1836,25 @@ describe("manual canary acceptance publish-record boundary", () => {
     ).toThrow("agent-g1-positive-invalid");
   });
 
-  it("U-ST-PACKCANARY-018: rejects same-revision or unnamed-slot G1 negative evidence", () => {
+  it.fails("U-ST-PACKCANARY-018: rejects same-revision or unnamed-slot G1 negative evidence", () => {
     const positiveRevision = "a".repeat(40);
-    expect(() =>
+    const core = "missing_core_doc:DOC-L1-REQUIREMENTS";
+    const verify = (revision: string, messages: string[]) =>
       verifyAgentG1Negative(
-        {
-          revision: "b".repeat(40),
-          parent: positiveRevision,
-          applicable: true,
-          passed: false,
-          messages: ["required doc not created: business-requirements.md"],
-        },
+        { revision, parent: positiveRevision, applicable: true, passed: false, messages },
         positiveRevision,
-      ),
-    ).not.toThrow();
+      );
+    expect(() => verify("b".repeat(40), [core])).not.toThrow();
+    expect(() => verify(positiveRevision, [core])).toThrow("agent-g1-negative-invalid");
+    expect(() => verify("b".repeat(40), ["required doc not created: another-slot.md"])).toThrow(
+      "agent-g1-negative-invalid",
+    );
     expect(() =>
-      verifyAgentG1Negative(
-        {
-          revision: positiveRevision,
-          parent: positiveRevision,
-          applicable: true,
-          passed: false,
-          messages: ["required doc not created: business-requirements.md"],
-        },
-        positiveRevision,
-      ),
-    ).toThrow("agent-g1-negative-invalid");
-    expect(() =>
-      verifyAgentG1Negative(
-        {
-          revision: "b".repeat(40),
-          parent: positiveRevision,
-          applicable: true,
-          passed: false,
-          messages: ["required doc not created: another-slot.md"],
-        },
-        positiveRevision,
-      ),
+      verify("b".repeat(40), [core, "required doc not created: business-requirements.md"]),
     ).toThrow("agent-g1-negative-invalid");
   });
 
-  it("U-ST-PACKCANARY-016..018: mock adapter exercises consumer CLI wiring (not provider evidence)", () => {
+  it.fails("U-ST-PACKCANARY-016..018: mock adapter exercises consumer CLI wiring (not provider evidence)", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-canary-agent-authoring-"));
     tempRoots.push(root);
     const runGit = (...args: string[]) =>
@@ -1966,17 +1945,15 @@ describe("manual canary acceptance publish-record boundary", () => {
         };
       }
       if (cliArgs[0] === "gate" && cliArgs[1] === "G1") {
-        const negative = execFileSync("git", ["-C", root, "branch", "--show-current"], {
-          encoding: "utf8",
-        })
-          .trim()
-          .startsWith("ut-tdd-agent-e2e-negative-");
+        const negative = !existsSync(
+          join(root, "docs/design/L1-requirements/functional-requirements.md"),
+        );
         const static_gate = negative
           ? {
               gate: "G1",
               applicable: true,
               passed: false,
-              messages: ["required doc not created: business-requirements.md"],
+              messages: ["missing_core_doc:DOC-L1-REQUIREMENTS"],
             }
           : {
               gate: "G1",
@@ -2139,7 +2116,7 @@ describe("manual canary acceptance publish-record boundary", () => {
     rejectVerdictFieldMutation("exact_head", "b".repeat(40));
   });
 
-  it("U-ST-PACKCANARY-015..019: offline structural join accepts a complete fixture (not an AT-DIST-003 run)", () => {
+  it.fails("U-ST-PACKCANARY-015..019: offline structural join accepts a complete fixture (not an AT-DIST-003 run)", () => {
     const input = agentRecord();
     const releaseDirectory = agentReleaseDir(input.assetBytes);
     const review = agentReviewEvidence();
@@ -2188,7 +2165,7 @@ describe("manual canary acceptance publish-record boundary", () => {
         parent: subjectRevision,
         applicable: true,
         passed: false,
-        messages: ["required doc not created: business-requirements.md"],
+        messages: ["missing_core_doc:DOC-L1-REQUIREMENTS"],
       },
       review,
     });

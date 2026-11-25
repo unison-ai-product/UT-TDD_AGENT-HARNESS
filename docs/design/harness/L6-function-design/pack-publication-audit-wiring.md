@@ -9,7 +9,7 @@ related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 issue: 1894
 ---
 
-> **L6 contract marker**: `observePackPublication({ repoRoot, c1, c2 }) => PackPublicationObservation` (固定した C2 の 40 桁 SHA の Git tree を `git ls-tree -r -z` と `git cat-file` だけで読み、path / mode / size / digest / bytes の entry の列を返す。`src/setup/pack-publication-observe.ts` に置く) と、`packageConsumerRuntimeRelease` (`src/cli/distribution.ts`) の中での `buildPackPublicationStagingPlan` → `auditPackPublication` の呼び出しは unit-test-granularity contract である (未実装の目標契約。関数名は実装で変えてよいが、契約の意味は変えない)。pre: `c1` / `c2` は `resolveConsumerRuntimeReleaseSourceBinding` が返した SHA で、観測は ref 名・index・working tree を読まない。post: `status: "attested"` のときだけ `package` は asset を書き出す。`partial_publication` / `indeterminate` / 計画の preflight 失敗では、`installDependencies` も asset の stage も実行せず、`outDir` は空のままである。invariant: 公開の照合は `package` を通らずに済ませる経路を持たない (canary.7 の再発の防止)。oracle は `docs/test-design/harness/L7-pack-publication-audit-wiring-test-design.md` の `CANDIDATE-U-PKAUD-001`〜`017` が固定する (正式 ID `U-PKAUD-*` への昇格は、src を含まない昇格 PR で行う)。
+> **L6 contract marker**: `observePackPublication({ repoRoot, c1, c2 }) => PackPublicationObservation` (固定した C2 の 40 桁 SHA の Git tree を `git ls-tree -r -z` と `git cat-file` だけで読み、path / mode / size / digest / bytes の entry の列を返す。`src/setup/pack-publication-observe.ts` に置く) と、`packageConsumerRuntimeRelease` (`src/cli/distribution.ts`) の中での `buildPackPublicationStagingPlan` → `auditPackPublication` の呼び出しは unit-test-granularity contract である (未実装の目標契約。関数名は実装で変えてよいが、契約の意味は変えない)。pre: `c1` / `c2` は `resolveConsumerRuntimeReleaseSourceBinding` が返した SHA で、観測は ref 名・index・working tree を読まない。post: `status: "attested"` のときだけ `package` は asset を書き出す。`partial_publication` / `indeterminate` / 計画の preflight 失敗では、`installDependencies` も asset の stage も実行せず、`outDir` は空のままである。invariant: 公開の照合は `package` を通らずに済ませる経路を持たない (canary.7 の再発の防止)。oracle は `docs/test-design/harness/L7-pack-publication-audit-wiring-test-design.md` の `U-PKAUD-001`〜`017` が固定する (正式 ID `U-PKAUD-*` への昇格は、src を含まない昇格 PR で行う)。
 
 # 公開前の Pack の照合を `package` に配線する方式 (Issue #1894)
 
@@ -115,7 +115,7 @@ C2 の生成 (#1885、`pack-c2-manifest.md`。PR #1886 が未 merge) とは独�
 
 ## 8. oracle
 
-`CANDIDATE-U-PKAUD-001..017` (`docs/test-design/harness/L7-pack-publication-audit-wiring-test-design.md`。共有の `L7-unit-test-design.md` には足さない)。012 は L12 の受入である。
+`U-PKAUD-001..017` (`docs/test-design/harness/L7-pack-publication-audit-wiring-test-design.md`。共有の `L7-unit-test-design.md` には足さない)。012 は L12 の受入である。
 unit の oracle は一時 Git repo (C1 / C2 を実際に commit する) と `installDependencies` の spy を使い、ネットワークを使わない。
 
 ## 9. 範囲外

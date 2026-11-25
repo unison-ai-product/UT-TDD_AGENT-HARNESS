@@ -261,6 +261,17 @@ export function reportedPack(input: {
 }
 
 /**
+ * The build-input paths for the `git add` commands: masked on rejection, like `reportedPack`'s
+ * artifact paths, so no escaped form of a rejected path reaches `nextCommands` (L6 §12).
+ */
+export function reportedBuildInputPaths(
+  privacyScan: PrivacyScanResult,
+  paths: readonly string[],
+): string[] {
+  return privacyScan.ok ? [...paths] : paths.map(maskedPath);
+}
+
+/**
  * Defense in depth for values built from raw paths: on rejection, replaces every raw artifact path
  * wherever it occurs in `value`. It cannot see escaped forms, so reported path lists and commands
  * must come from `reportedPack`.
