@@ -17,7 +17,7 @@ issue: 1527
 
 ## 2. fixtures
 
-- すべて一時ディレクトリに作る使い捨ての repo で行う。実 repo (本 repo) を対象にしない。
+- §3 の oracle はすべて一時ディレクトリに作る使い捨ての repo で行う。
 - `designed`: `resolveVModelRoots` が解決する `designRoot` に L1〜L3 の設計文書と対の test-design を持つ最小 repo (`src/` も `package.json` も無い)。
 - `designed-pair-broken`: `designed` から、ある設計文書の対 (`pair_artifact` の指す文書) を欠落させた repo。
 - `designed-l1-only`: L1 の設計文書と、その対になる test-design だけを持つ repo (L2 / L3 が無い)。L1 の設計文書は有効な `pair_artifact` で test-design を指し、test-design はその設計文書を逆参照する。したがって pair-freeze は `pass` になる。
@@ -40,3 +40,19 @@ issue: 1527
 | CANDIDATE-U-CDPD-010 | summary は not-applicable を pass に数えない | 入力 (a): `designed-l1-only` で profile を実行する。4 検査の結果は確定している: pair-freeze は `pass`、G1 は `fail` (`consumer-trace-gates.md` §5 が G1 に L1 / L2 / L3 の core 文書を要求し、L2 / L3 が無いため)、G2 と G3 は `not-applicable`。期待: summary は pass 1 / fail 1 / not-applicable 2 と数え、exit 1。`--json` の 4 件の結果に 3 状態と、not-applicable の理由がある。入力 (b): summary の集計関数へ、合成入力として `pass` 1 件と `not-applicable` 3 件を直接渡す。期待: pass 1 / not-applicable 3 と数え、「全件 pass」と表示しない。反例: (a) で pass 2 件以上と数える / fail を落とす。(b) で pass 4 件と数える / 「全件 pass」と表示する |
 | CANDIDATE-U-CDPD-011 | profile は src を要求しない | 入力: `designed` (`src/` も `package.json` も無い) と、同じ repo に空の `src/` と `package.json` を足したもの。期待: 両方で `consumer-design-phase` の結果が同一。反例: `src/` が無いと失敗する / 有無で結果が変わる |
 | CANDIDATE-U-CDPD-012 | 実装前判定の局所性 | 入力: `empty` で `consumer-design-phase` と `--setup-smoke`。期待: 実装前の対象外規則は `consumer-toolchain` だけに適用され、他 2 つの結果状態を変えない。反例: `consumer-design-phase` の gate が実装前を理由に `not-applicable` になる |
+
+## 4. consumer-toolchain の CLI テストの実行上限 (#1956)
+
+`tests/cli-surface.test.ts` の `runs a named consumer-safe doctor profile without relying on setup-smoke alias` は、`doctor --profile consumer-toolchain --json` を起動する。#1949 の Windows 1/3 で20秒上限に達した回の所要時間は20.365秒だった。同じ head の再実行は7.580秒で成功し、#1959 の公式 CI では6.835秒で成功した。
+
+この1件は `heavyIt` の `['db', 40_000]` で登録し、既存の `[hook-timing]` 形式で実行時間を出す。40秒は観測した最大の所要時間を約20秒上回る。CLI の exit 0、`ok: true`、`toolchain-pin` の成功、`plan-governance` の診断がないことを、既存シナリオで引き続き検証する。
+
+| 候補 ID | 刺激 | 期待結果 |
+| --- | --- | --- |
+| `CANDIDATE-U-CDPD-013` | 独立した HEAD snapshot から、上記 test の一意な登録を TypeScript AST で読む | `heavyIt` の種別が `db`、当該 test の上限が40,000ミリ秒 |
+
+Red は現行の `it` と20,000ミリ秒の登録で比較が失敗する。構文と登録の一意性は比較前に確かめる。Green はこの比較、既存の CLI シナリオ、実行時間のログを検証する。
+
+- [20秒上限に達した Windows 1/3](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/actions/runs/45533194323/job/138933341554)
+- [同一 head で成功した Windows 1/3](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/actions/runs/45533194323/job/138954895540)
+- [#1959 で成功した Windows 1/3](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/actions/runs/45548836555/job/138984940950)

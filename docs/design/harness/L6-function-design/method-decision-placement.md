@@ -11,7 +11,7 @@ created: 2026-11-25
 issue: 1923
 ---
 
-> **L6 contract marker**: 本書は文書の契約であり、実装関数を持たない。契約の判定は `judgeDecisionRecords(l3Chapter) => DecisionJudgement`、`judgeDetailDocs(records, detailDocs) => DetailJudgement`、`judgeTemplateItems(items, records) => TemplateJudgement` という判定の形で書く (入力は consumer の文書の節、出力は適合 / 不適合と reason token)。oracle は `docs/test-design/harness/L7-method-decision-placement-test-design.md` の `CANDIDATE-U-METHODDEC-001`〜`012` が固定する。新しい管理機構・保管方式・gate は足さない (ADR-001 決定 4)。既存の ADR 運用、非著者 review、DoR (#1928) の読取りに乗せる。
+> **L6 contract marker**: 本書は文書の契約であり、実装関数を持たない。契約の判定は `judgeDecisionRecords(l3Chapter, adrs) => DecisionJudgement`、`judgeApprovedBaseline(records, baselines) => BaselineJudgement`、`judgeDetailDocs(records, detailDocs) => DetailJudgement`、`judgeTemplateItems(items, records) => TemplateJudgement` という判定の形で書く (入力は consumer の文書の節、出力は適合 / 不適合と reason token)。oracle は `docs/test-design/harness/L7-method-decision-placement-test-design.md` の `CANDIDATE-U-METHODDEC-001`〜`017` が固定する。新しい管理機構・保管方式・gate は足さない (ADR-001 決定 4)。既存の ADR 運用、非著者 review、DoR (#1928) の読取りに乗せる。
 
 # 方式の決定の置き場 - 機能設計 (Issue #1923)
 
@@ -36,13 +36,17 @@ consumer (UT-TDD を導入した先の製品開発) の V-model 文書で、**�
 | 方式の決定 | 後から変えにくい方式の選択。変えると L4 / L5 の複数文書とデータの移行が要るものを指す。 |
 | 論点 | 方式の決定の対象 1 件 (例: データの保存方式)。論点 ID は小文字 ASCII の kebab-case とする。 |
 | 必須論点 | すべての consumer が決定記録を持つ論点。`data-store` (データの保存方式)、`tenant-isolation` (テナント分離)、`authn` (認証方式) の 3 種。 |
-| 決定記録 | 論点 1 件につき 1 件、L3 の「方式の決定」章に置く記録。記録 ID は `DEC-NNN` (3 桁の連番)。 |
-| 選んだ方式 | 決定記録の欄。採用した方式を 1 つだけ、方式コードと日本語の説明の組で書く。方式コードは小文字 ASCII の kebab-case (例: `db-per-tenant`、`shared-schema-rls`、`none-single-org`)。「分離なし (単一組織)」のような「その論点が要らない」という選択も選んだ方式である。 |
+| 決定記録 | 論点 1 件につき 1 件、L3 の「方式の決定」章に置く記録。記録 ID は `DEC-NNN` (3 桁の連番)。書式は §3.4。 |
+| 選んだ方式 | 決定記録の欄。採用した方式を 1 つだけ、方式コードと日本語の説明の組で書く。方式コードは小文字 ASCII の kebab-case (例: `db-per-tenant`、`shared-schema-rls`、`none-single-org`)。「分離なし (単一組織)」のような「その論点が要らない」という選択も選んだ方式である。欄の値は `<方式コード>: <説明>` の形で、最初の `: ` より前を方式コードとして読む。 |
 | 却下した案 | 決定記録の欄。比較して採らなかった案と、却下の理由。 |
 | 承認 | PO が決定記録を認めた記録。§5.1 の 4 項目で成り立つ。 |
 | 詳細 | 選んだ方式を実現する設計 (スキーマ、物理配置、認証フローなど)。L4 / L5 に置く。決定ではない。 |
-| 適用条件 | テンプレートの項目が、特定の論点の特定の方式コードのときだけ必須になることを示す注記。形は `適用条件: <論点 ID>=<方式コード>`。 |
-| 非適用 | 適用条件が、承認済みの決定記録の方式コードと合わない項目の状態。必須として扱わない。 |
+| 適用条件 | 項目が、特定の論点の方式コードに応じて必須になることを示す注記。形は 1 行の `適用条件: <論点 ID>=<方式コード>` または `適用条件: <論点 ID>!=<方式コード>` で、論点 ID と方式コードは小文字 ASCII の kebab-case。`=` は「その論点の承認済みの決定記録の方式コードが一致するとき」、`!=` は「一致しないとき」に限り適用される。承認済みの決定記録が無い論点の条件は評価しない (適用・非適用のどちらにも判定せず、§6.3 の矛盾にも数えない)。この書式に合わない `適用条件:` で始まる行は `applicability_condition_invalid` (§6.3、§8)。 |
+| 非適用 | 適用条件が、承認済みの決定記録の方式コードにより適用されない項目の状態。必須として扱わない。 |
+| 予約語 | 論点 `tenant-isolation` の方式コード `none-single-org` は「分離なし」を意味する予約語であり、分離しない選択はこのコードで書く。それ以外の方式コードは consumer が決める。他の論点では特別な意味を持たない。マルチテナントを採用した場合は `tenant-isolation!=none-single-org` と書く。 |
+| 参照行 | L4 / L5 が決定記録を参照する 1 行。形は `参照する決定記録: DEC-NNN (論点 ID: <論点 ID>)`。 |
+| 論点 ID の表記 | 見出しと参照行で、論点 ID はバッククォート 1 組で囲んでも囲まなくてもよい。同じ値として読む。 |
+| 方式決定の検査 | 本書の判定 `judgeDecisionRecords`、`judgeApprovedBaseline`、`judgeDetailDocs`、`judgeTemplateItems` を行う検査の総称。DoR (#1928) は、このうち Git を読まない `judgeDecisionRecords` の結果だけを使う (§7)。 |
 
 ## 3. 置き場 (二段)
 
@@ -68,6 +72,22 @@ consumer (UT-TDD を導入した先の製品開発) の V-model 文書で、**�
 
 ADR の「決定」は、決定記録の「選んだ方式」と同じ内容でなければならない (食い違うときは、ADR を直して再度承認を受ける。これは非著者 review で確かめ、機械では検査しない)。承認の正本は決定記録の承認欄であり、承認済みの記録が参照する ADR の status は `accepted` でなければならない (§4.1 の欄 7)。
 
+**3.4 決定記録の書式**
+
+第9章の中の見出しは、論点ごとに 1 つの `##### 9-N <日本語名> (論点 ID: <論点 ID>)` とする (N は数字、論点 ID の表記は §2)。決定記録はその見出しの下に置く表で、1 件につき 1 つの 2 列の表 (欄名 | 値) とする。表の 1 行目は見出し行 (列名は読まない)。`DEC-NNN` を表題として持つ位置は、欄名が `記録 ID` の行の値である。2 行目以降の欄名は §4.1 の 10 欄である。値の読み方は次のとおり。
+
+- 承認の値は `承認者: <値> / 承認日: <値> / 承認対象 revision: <値> / 承認根拠: <値>` の形で、項目名の後の値が空、または項目名が無いとき、その項目は欠ける (§5.1)。
+- 起草の値は `<起草者> / AI の推奨: <方式コード>` の形で読む。
+
+表は、次の順に調べて最初に当たった 1 種別だけの `decision_markup_invalid:<種別>` を出し、決定記録として数えない (他の規則の対象にしない)。
+
+1. `table_shape`: 見出し行を除く行に、セルが 2 つでない行がある。
+2. `record_id`: `記録 ID` の行が無い、または値が `DEC-` と 3 桁の数字の形でない。
+3. `topic_mismatch`: `論点` の欄の値が、表が属する見出しの論点 ID と違う。
+4. `record_id_duplicate`: 1〜3 を通った表の間で、記録 ID が他の表と同じ (同じ記録 ID の表はすべて数えない)。
+
+第9章の `##### 9-` で始まる見出しが上の形に合わなければ `decision_markup_invalid:heading` を出し、その見出しの下の表は決定記録として数えない。見出しの下に無い表 (第9章の冒頭の注記など) は決定記録でなく、reason も出さない。数えない表だけの論点は、記録が 0 件の論点として §4.2 で判定される。
+
 ## 4. 決定記録の必須項目
 
 ### 4.1 欄と規則
@@ -81,7 +101,7 @@ ADR の「決定」は、決定記録の「選んだ方式」と同じ内容で�
 - 欄 4 (却下した案) の「案が 0 件」と、欄 6 (承認) の欠落は、`decision_field_missing` を出さず、下表の専用の reason だけを出す。欄 4 の「案はあるが却下の理由が空」は `decision_field_missing:却下した案` を出す。
 - 欄 7 (ADR 参照) は、欄が無いか空なら `decision_field_missing:ADR 参照` だけを出す。path があるが ADR が存在しない、または status が合わないときは `adr_ref_invalid` だけを出す。
 - 状態が `proposed` の記録は、欄 6 の 4 項目が空でよい (承認前の起草を許す明示の例外)。`superseded` の記録は、承認 4 項目を持っていた場合それを残す (消さない)。
-- 複数の規則が同時に当たるときは、当たった reason をすべて出す。ある規則が別の規則を打ち消すことはない (専用の規則を持つ欄が、一般の規則と二重に出ることもない)。ただし、承認対象 revision (欄 6) が空の `approved` の記録は `approval_incomplete` だけを出し、比較基準の照合 (§4.3) は行わないので `approval_baseline_unavailable` は出さない。
+- 複数の規則が同時に当たるときは、当たった reason をすべて出す。ある規則が別の規則を打ち消すことはない (専用の規則を持つ欄が、一般の規則と二重に出ることもない)。承認対象 revision (欄 6) が空の `approved` の記録は `judgeDecisionRecords` が `approval_incomplete` を出し、`judgeApprovedBaseline` (§4.3) は照合しないので `approval_baseline_unavailable` は出ない。
 
 | 欄 | 内容 |
 |---|---|
@@ -104,9 +124,9 @@ ADR の「決定」は、決定記録の「選んだ方式」と同じ内容で�
 
 ### 4.3 変更 (置換)
 
-`approved` の決定記録の欄 2〜4 を、その記録の中で書き換えない。判定は **比較基準** との照合で行う。比較基準は、その記録の `承認対象 revision` (欄 6) の commit にある L3 第9章の、同じ `DEC-NNN` の記録の欄 2〜4 である (consumer の既存の Git 履歴から読み、新しい保管方式は作らない)。
+`approved` の決定記録の欄 2〜4 を、その記録の中で書き換えない。判定は **比較基準** との照合で行い、これは方式決定の検査 (`judgeApprovedBaseline`) が受け持つ。**DoR は Git を読まず、この照合をしない** (§7)。比較基準は、その記録の `承認対象 revision` (欄 6) の commit にある L3 第9章の、同じ `DEC-NNN` の記録の欄 2〜4 である (consumer の既存の Git 履歴から読み、新しい保管方式は作らない)。
 
-この照合は、`承認対象 revision` が非空のときだけ行う。空のときは `approval_incomplete` (§5.1) だけを出し、比較基準の照合はしない (専用の規則を持つ欄を二重に出さない、§4.1)。
+この照合は、状態が `approved` で `承認対象 revision` が非空の記録だけを対象にする。空の記録は `judgeDecisionRecords` の `approval_incomplete` (§5.1) だけで、`judgeApprovedBaseline` は何も出さない (二重に出さない、§4.1)。
 
 - 現行の欄 2〜4 が比較基準と食い違う: `approved_decision_edited_in_place`。
 - 非空の承認対象 revision を Git 履歴で解決できない、またはその commit に同じ `DEC-NNN` の記録が無い: `approval_baseline_unavailable`。
@@ -154,7 +174,9 @@ DoR (#1928) の署名は L0〜L3 全体に対する署名であり、本書の�
 
 **6.1 詳細は決定記録を参照する**
 
-L4 / L5 で、必須論点 (および consumer が足した論点) の詳細を書く節は、冒頭に `DEC-NNN` を参照する。参照のない節は `detail_without_decision_ref`。これは L4 / L5 の側で参照を足せば直り、段 0 へは戻らない。
+`superseded` でない決定記録 R の「詳細の置き場」欄 (§4.1 の欄 8) が文書 ID で指す L4 / L5 の文書は、R の参照行 (§2) を 1 行以上持つ。判定は**文書単位**である。「詳細の置き場」欄は文書 ID を持ち、節を指す入力が無いので、文書の中のどの節にあっても参照行は数える。参照行を詳細を書いた節に置くことは書き方の推奨であり、機械の判定の対象にしない (非著者 review が読む)。次の参照行は数えない: 記録 ID が第9章に無い、論点 ID が記録 ID の記録の論点と違う、形が §2 に合わない。R の「詳細の置き場」が指す文書で、数える参照行が 0 件なら `detail_without_decision_ref` を出す (文書と記録の組ごとに当たるが、reason の集合では 1 つ)。
+
+参照が要る範囲は、記録の「詳細の置き場」欄が指す文書だけである。どの記録の「詳細の置き場」にも載っていない L4 / L5 の文書には、参照行を求めない。載っている文書は、参照行が 1 行以上あれば適合であり、節ごとには求めない (節の位置は判定しない)。入力として渡されなかった文書 (まだ書かれていない) は判定しない (§7)。これは L4 / L5 の側で参照行を足せば直り、段 0 へは戻らない。
 
 **6.2 L4 / L5 は決定を持たない**
 
@@ -164,32 +186,33 @@ L4 / L5 が、第9章に記録の無い論点について「選んだ方式」�
 
 L4 / L5 の必須の項目が、参照する決定記録の方式コードと両立しないときは、`detail_contradicts_decision`。判定は次の 2 つで行う。
 
-1. その項目が `適用条件: <論点 ID>=<方式コード>` を持ち、参照する決定記録の方式コードが、その条件の値と異なる (機械で読める)。
+1. その項目が適用条件 (§2) を持ち、条件の論点 ID の承認済みの決定記録の方式コードにより、その条件が適用されない (`=` なら方式コードが異なる、`!=` なら同じ)。項目を書いていること自体が矛盾であり、項目を書いていないことは矛盾でない (非適用、§8)。機械で読める。条件の書式が §2 に合わないときは `applicability_condition_invalid` を出す。この reason は、適用条件を評価して出す reason だけを抑える。抑える集合は `detail_contradicts_decision` (この判定) と `unconditional_item_presumes_decision` (§8) の 2 つである。適用条件と独立な reason (`template_prefilled_decision` など) は抑えず、当たれば併せて出す (§9)。
 2. その項目の記述が、選んだ方式の説明と直接反する (非著者 review が読む)。
 
 矛盾は L4 / L5 の側の書き換えで解決しない。段 0 へ戻し (§5.3)、PO が決定記録の置換 (§4.3) か、詳細を決定記録に合わせた書き直しのどちらかを判断する。
 
 ## 7. DoR が読む範囲
 
-DoR (#1928) が方式の決定について読むのは、**L3 第9章の決定記録 (§4.3 の比較基準として、承認対象 revision 時点の同じ第9章を含む) と、それが参照する ADR の存在・status だけ**とする。次の 3 点を確かめる。
+DoR (#1928) が方式の決定について読むのは、**現在の L3 第9章の決定記録と、それが参照する ADR の存在・status だけ**とする。DoR は **Git を読まない**。§4.3 の履歴との照合 (承認対象 revision 時点の第9章との比較) は DoR でなく方式決定の検査 (`judgeApprovedBaseline`) が受け持つ。DoR が使うのは `judgeDecisionRecords` の結果だけである。次の 3 点を確かめる。
 
 1. 必須論点 3 種のそれぞれに、`superseded` でない決定記録がちょうど 1 件ある (§4.2)。
 2. その記録が §4.1 の欄をすべて持つ。
-3. その記録の状態が `approved` で、承認の 4 項目がそろい、ADR 参照が有効で、欄 2〜4 が比較基準と一致する (§5.1、§4.1 の欄 7、§4.3)。
+3. その記録の状態が `approved` で、承認の 4 項目がそろい、ADR 参照が有効である (§5.1、§4.1 の欄 7)。
 
-満たさない論点は `decision_not_ready:<論点 ID>` とする。DoR は **L4 / L5 の詳細を読まない**。DoR を通る時点 (段 1) では L4 / L5 はまだ書かれていないため、`詳細の置き場` (欄 8) は予定を書くだけで、存在を検査しない。L4 / L5 の側の整合 (§6) は、段 2 の L4〜L6 の pair-freeze の非著者 review で確かめる。両者の範囲は重ならない。
+満たさない論点は `decision_not_ready:<論点 ID>` とする。認可・外部 AI へのデータの境界・PII・ライセンスの 4 項目は必須論点に足さず、DoR では人の確認項目のままにする (実導入で不足が出たら必須論点の追加を別に起こす)。DoR は **L4 / L5 の詳細を読まない**。DoR を通る時点 (段 1) では L4 / L5 はまだ書かれていないため、`詳細の置き場` (欄 8) は予定を書くだけで、存在を検査しない。L4 / L5 の側の整合 (§6) は、段 2 の L4〜L6 の pair-freeze の非著者 review で確かめる。両者の範囲は重ならない。
 
 | 検査 | 読む文書 | 時点 |
 |---|---|---|
-| 決定記録の存在・欄・承認 (§4、§5、§7) | L3 第9章と、参照する ADR の status | DoR (段 1) |
-| 詳細が決定記録を参照し、矛盾しない (§6) | L4 / L5 | pair-freeze の review (段 2) |
+| 決定記録の存在・欄・承認 (§4、§5、§7) | 現在の L3 第9章と、参照する ADR の status (Git は読まない) | DoR (段 1) |
+| 承認後の欄 2〜4 の書き換え (§4.3) | 承認対象 revision 時点の第9章 (Git) | 方式決定の検査 |
+| 詳細が決定記録を参照し、矛盾しない (§6) | L4 / L5 | 方式決定の検査と pair-freeze の review (段 2) |
 
 ## 8. テンプレートへの規則 (選択を尊重する)
 
 テンプレート (consumer へ配る `docs/templates/vmodel`) は次を守る。#1930 は本書の freeze の後にこれへ合わせる。
 
 1. **適用条件のない必須項目は、どの方式コードでも成り立つこと。** 特定の方式を前提にする項目は、適用条件を付ける。例: DB をテナントごとに分ける選択のとき、「全テーブルが tenant_id を持つ」を、適用条件のない必須項目にしない (`unconditional_item_presumes_decision`)。
-2. 適用条件が承認済みの方式コードと合わない項目は非適用であり、欠けていても不適合にしない。
+2. 適用条件が承認済みの方式コードにより適用されない項目は非適用であり、欠けていても不適合にしない。適用条件の書式は §2 のとおりで、合わない `適用条件:` 行を持つ項目は `applicability_condition_invalid` を出し、条件を評価する `unconditional_item_presumes_decision` は出さない (抑える集合は §6.3)。同じ項目が結論文を持てば `template_prefilled_decision` は独立に併せて出す。テンプレートは方式コードを知らないので、「マルチテナントのとき」は `tenant-isolation!=none-single-org` と書く (§2 の予約語)。
 3. 方式を前提にした結論の文 (「RLS で分離する」「案C を採用する」など) を、例とも注記せずに本文へ置かない。例文を置くときは「例」と明示し、選択肢として並べる (`template_prefilled_decision`)。
 4. テンプレートは第9章「方式の決定」と決定記録の欄 (§4.1) を、空の様式として持つ。必須論点の 3 種の見出しは置くが、「選んだ方式」の欄は空にする。
 
@@ -197,11 +220,12 @@ DoR (#1928) が方式の決定について読むのは、**L3 第9章の決定�
 
 | 判定 | 入力 | 出力 |
 |---|---|---|
-| `judgeDecisionRecords` | consumer の L3 第9章 (決定記録の一覧)、参照 ADR の存在・status、`approved` の各記録の `承認対象 revision` 時点の第9章 (比較基準、§4.3。`approved` の記録が無ければ不要) | 適合、または reason token の集合 (`decision_field_missing:<欄名>` / `decision_alternatives_insufficient` / `required_topic_missing:<論点 ID>` / `decision_duplicate:<論点 ID>` / `approval_incomplete` / `approver_equals_drafter` / `adr_ref_invalid` / `approved_decision_edited_in_place` / `approval_baseline_unavailable`)。DoR は、いずれかが出た必須論点、または状態が `approved` でない必須論点を `decision_not_ready:<論点 ID>` とする (§7)。 |
-| `judgeDetailDocs` | 決定記録と、L4 / L5 の節 | 適合、または `detail_without_decision_ref` / `decision_outside_l3` / `detail_contradicts_decision`。いずれも L3 を書き換えない。後者 2 つは段 0 へ戻す (§5.3)。 |
-| `judgeTemplateItems` | テンプレートの項目 (適用条件の有無) と決定記録 | 適合、`unconditional_item_presumes_decision`、`template_prefilled_decision`。非適用の項目の欠落は適合。 |
+| `judgeDecisionRecords` | 現在の L3 第9章 (見出しと決定記録の表)、参照 ADR の存在・status。Git は入力にしない | 適合、または reason token の集合 (`decision_markup_invalid:<種別>` (§3.4) / `decision_field_missing:<欄名>` / `decision_alternatives_insufficient` / `required_topic_missing:<論点 ID>` / `decision_duplicate:<論点 ID>` / `approval_incomplete` / `approver_equals_drafter` / `adr_ref_invalid`)。DoR は、いずれかが出た必須論点、または状態が `approved` でない必須論点を `decision_not_ready:<論点 ID>` とする (§7)。 |
+| `judgeApprovedBaseline` | `judgeDecisionRecords` が数えた記録のうち `approved` で `承認対象 revision` が非空のものと、その revision 時点の第9章 (比較基準、§4.3、Git から読む) | 適合、または `approved_decision_edited_in_place` / `approval_baseline_unavailable`。DoR は呼ばない。 |
+| `judgeDetailDocs` | 決定記録と、L4 / L5 の文書・節 | 適合、または `detail_without_decision_ref` / `decision_outside_l3` / `detail_contradicts_decision` / `applicability_condition_invalid`。いずれも L3 を書き換えない。`decision_outside_l3` と `detail_contradicts_decision` は段 0 へ戻す (§5.3)。 |
+| `judgeTemplateItems` | テンプレートの項目 (適用条件の有無) と決定記録 | 適合、`unconditional_item_presumes_decision`、`template_prefilled_decision`、`applicability_condition_invalid`。非適用の項目の欠落は適合。 |
 
-reason が複数当たるときは全部を出す (昇順、重複なし。§4.1 の空欄の規則に従い、専用の規則を持つ欄 4・6 は `decision_field_missing` と二重に出さない)。`承認対象 revision` が空なら `approval_incomplete` だけで、`approval_baseline_unavailable` は出さない (比較基準の照合は非空の revision だけが対象、§4.3)。
+reason が複数当たるときは全部を出す。例外は `applicability_condition_invalid` が抑える 2 つ (§6.3) だけで、`template_prefilled_decision` などは併発する (昇順、重複なし。§4.1 の空欄の規則に従い、専用の規則を持つ欄 4・6 は `decision_field_missing` と二重に出さない)。各判定が出す reason は、その判定の行に書いたものだけで、他の判定の reason を代わりに出さない。`承認対象 revision` が空の記録は `judgeDecisionRecords` の `approval_incomplete` だけで、`judgeApprovedBaseline` は何も出さない (§4.3)。数えない表 (§3.4) の欄は、欄の規則 (§4.1) の対象外である。
 
 ## 10. 不変条件
 
