@@ -257,11 +257,11 @@ describe("direct gate evidence writer", () => {
     }
   });
 
-  it.fails("U-GATEDIAG-001: sanitizes a physical read failure", () => {
+  it("U-GATEDIAG-001: sanitizes a physical read failure", () => {
     expectWriterDiagnostic(observed.read);
   });
 
-  it.fails("U-GATEDIAG-002: sanitizes malformed and null evidence", () => {
+  it("U-GATEDIAG-002: sanitizes malformed and null evidence", () => {
     expectWriterDiagnostic(observed.malformed);
     expectWriterDiagnostic(observed.null);
   });
@@ -321,7 +321,7 @@ for (const approved of [true, false]) {
         expect(rejected).toHaveLength(3);
       });
 
-      it.fails("U-GATEDIAG-003: emits only the path diagnostic", () => {
+      it("U-GATEDIAG-003: emits only the path diagnostic", () => {
         for (const { run, path, forbidden } of rejected) {
           const expected = expectedWarning(path);
           assertWarningIsSanitized(run.warning, expected, forbidden);
