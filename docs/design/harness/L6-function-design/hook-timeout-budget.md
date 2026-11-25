@@ -213,3 +213,17 @@ advisor への相談 (2026-11-13、`ut-tdd advisor --decision implementation`、
 - 方式 C (入口を軽くする) は、上の計測で phase ごとの所要が分かってから、issue #1057 の対応方針 2 として別に切り出す。
 - consumer の `hook work-guard` が git の失敗で exit 1 になり、Claude で拒否になること (§2。source の shim は通す) を、source の shim の扱いにそろえるかの判断。予算とは別の論点なので、別 Issue で扱う。
 - 既存の consumer は、setup の confirm を経た上書きで新しい予算を受け取る。移行の仕組みは作らない。Pack のリリースノートで知らせる。
+
+## 11. canary.9 の Pack consumer SessionStart (#1938)
+
+canary.8 の Windows consumer では、VS Code の Claude 拡張で cold が31.523秒でキャンセルされ、warm は26.769秒と28.163秒だった。別の低負荷観測では Node プロセス9〜10本で cold 9.4秒、warm 7.1〜8.8秒、高負荷では33秒を超えてキャンセルされた。PO が許容した60秒を、Pack の SessionStart に先に採用する。[観測と範囲の決定](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/1938#issuecomment-7154876199)
+
+| 面 | 対象 | 実装後 |
+| --- | --- | --- |
+| consumer の Claude 配布テンプレート | `docs/templates/adapter/.claude/settings.json` の `hooks.SessionStart` にある `session start` | 同期 command、`timeout: 60` |
+| consumer の Codex 配布テンプレート | `docs/templates/adapter/.codex/hooks.json` の同イベントの `session start` | 同期 command、`timeout: 60` |
+| 実 setup の生成設定 | `src/setup/templates.ts` の同じ二つの adapter 設定 | 各配布テンプレートと同じ値、既存の launcher と argv |
+
+60秒は host が同期 hook に与える上限を表す。SessionStart の書込みの順序と fail-open の扱いを維持し、host による中断後の状態回復は #1938 の別条件として扱う。source 開発 repo の `.claude/settings.json` と `.codex/hooks.json` の SessionStart は現行の30秒とする。ほかのイベント、guard、非同期 memory-wake は現行の配線と上限を使う。
+
+この段は #1057 の共通化に先行する。従来の30秒の記述のうち Pack の SessionStart 2本に本節を適用し、#1057 のほかの hook と source 設定の変更は引き続き §9 の別段で扱う。canary.9 の配布後、実機の計測を対象版・host・設定・session ID と結び付けて記録する。canary.8 の失敗記録はその版の測定結果として残す。

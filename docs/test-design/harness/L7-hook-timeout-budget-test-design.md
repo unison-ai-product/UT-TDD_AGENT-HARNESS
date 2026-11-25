@@ -153,3 +153,18 @@ L6 §10 の受け入れ条件 3 の手動の確認は、自動テストの oracl
 - 実際の Claude Code で、10 秒止まってから exit 0 する guard を `onFailure: "block"`・`timeout: 60` で置くと、tool が通る。
 - 同じく 70 秒止まる guard では、tool が拒否される。このとき model に届いた文言をそのまま記録する。
 - Codex の guard の時間切れは、`CANDIDATE-U-HOOKEXEC-017` (`docs/test-design/harness/L7-codex-hook-failure-test-design.md`) の手順で測る。本書では結果を主張しない。
+
+## 8. canary.9 の Pack consumer SessionStart (#1938)
+
+[L6 §11](../../design/harness/L6-function-design/hook-timeout-budget.md#11-canary9-の-pack-consumer-sessionstart-1938) の先行変更を検証する。配布の JSON は独立した HEAD snapshot から読み、生成側は実 setup が使う `BUILTIN_GITHUB_TEMPLATES` の当該エントリを JSON として読む。各面で `session start` を起動する同期 command が1つあることを通常の検査で先に確かめる。
+
+| 候補 ID | 入力 | 期待結果 |
+| --- | --- | --- |
+| `CANDIDATE-U-PACKSTART-001` | Claude の配布テンプレート | 該当 command の `timeout` は数値の60 |
+| `CANDIDATE-U-PACKSTART-002` | Codex の配布テンプレート | 該当 command の `timeout` は数値の60 |
+| `CANDIDATE-U-PACKSTART-003` | 実 setup が使う Claude 設定 | 該当 command の `timeout` は数値の60 |
+| `CANDIDATE-U-PACKSTART-004` | 実 setup が使う Codex 設定 | 該当 command の `timeout` は数値の60 |
+
+契約合流の後、登録と Red を別 PR に入れる。現行の4面では30が返り、比較だけが失敗する。欠落、重複、JSON の破損は通常の失敗として扱う。Green で4面の比較を通常テストに変え、既存の `U-SLOG-010` と対象外検査では Pack SessionStart の旧30秒を期待する箇所だけ60秒に合わせる。source の `U-SLOG-011` と他イベントの期待は従来の値を使う。回帰の対象には既存の配布と生成の設定一致も含める。
+
+4件の設定検査は host の完走や中断時の回復を測らない。配布後の実機計測では canary.9 の実配布物と Windows host を使い、各 run の設定値、whole-hook の時間、終了またはキャンセル、該当 session の記録と digest を記録する。canary.8 の `AT-835-008` の観測を上書きしない。
