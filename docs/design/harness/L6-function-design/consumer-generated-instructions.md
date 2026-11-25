@@ -68,7 +68,7 @@ hybrid の consumer で Codex lane が返事を共有 memory に書いても、C
 - **付ける条件**: 書く memory の宛先が Claude lane (返事・review 依頼・引き継ぎ) のときに限り `--notify-claude` を付ける。教訓・事実の記録など Claude lane に宛てない memory には付けない。
 - **失敗時の事実**: 動いている Claude セッションが見つからないとき、`--notify-claude` は exit 1 で終わる。ただし memory 本体はその前に書き込まれている (`src/cli.ts` の `memory add`)。案内文は失敗時の扱いを新たに定めず、この挙動を変えない。
 - **差し替え**: `ut-tdd notify claude` は未実装である (`state-channel-consolidation.md` §6)。実装する PR (同書の段 5 と 7) が、この案内文を同じ PR で差し替える。
-- **範囲外**: 受け取る側の `UserPromptSubmit` hook は #1970 が持つ。`claude-memory-wake` の待ち時間 (wake window) の延長はしない (#1938 が縮める方向と逆になる)。新しい CLI・hook・生成物は足さない。
+- **範囲外**: 受け取る側の `UserPromptSubmit` hook は #1970 が持つ。`claude-memory-wake` の待ち時間 (wake window) の延長はしない (#1072 の control 決定)。新しい CLI・hook・生成物は足さない。
 
 ## 4. DbC
 
