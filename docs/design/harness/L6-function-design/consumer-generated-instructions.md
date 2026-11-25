@@ -56,6 +56,20 @@ consumer の実運用で、生成された managed block と生成コマンド�
 - `src/setup/templates.ts` が生成の正本である。`docs/templates/adapter/` の文面は同じ本文に保つ (対の drift を許さない)。
 - 新しい関数や層は足さない。定数 1 個と、既存の文面組み立ての置き換えに限る (最小実装原則)。
 
+### 3.5 送り手の案内: Claude lane への通知 (issue #1072、canary.9)
+
+hybrid の consumer で Codex lane が返事を共有 memory に書いても、Claude lane は気づかず止まる (Pack#13、#1072)。canary.9 の範囲は **送り手の案内だけ** とする (#1072 の control 決定 2026-11-25)。いま動く送信口は `memory add --notify-claude` だけなので、これを案内する。
+
+- **置き場所**: `AGENTS.md` の managed block だけ。Codex 向けの案内なので、`CLAUDE.md` / `.claude/CLAUDE.md` の managed block には入れない。
+- **案内文**: managed block に、次の 1 項目を箇条書きとして置く (接頭辞は §3.1 の定数から組む)。
+
+  > Claude lane に宛てた共有 memory (返事・review 依頼・引き継ぎ) を書くときは、`${CONSUMER_CLI_PREFIX} memory add --notify-claude ...` を使う。動いている Claude セッションの受信箱へ知らせが届く。Claude lane に宛てない memory には付けない。
+
+- **付ける条件**: 書く memory の宛先が Claude lane (返事・review 依頼・引き継ぎ) のときに限り `--notify-claude` を付ける。教訓・事実の記録など Claude lane に宛てない memory には付けない。
+- **失敗時の事実**: 動いている Claude セッションが見つからないとき、`--notify-claude` は exit 1 で終わる。ただし memory 本体はその前に書き込まれている (`src/cli.ts` の `memory add`)。案内文は失敗時の扱いを新たに定めず、この挙動を変えない。
+- **差し替え**: `ut-tdd notify claude` は未実装である (`state-channel-consolidation.md` §6)。実装する PR (同書の段 5 と 7) が、この案内文を同じ PR で差し替える。
+- **範囲外**: 受け取る側の `UserPromptSubmit` hook は #1970 が持つ。`claude-memory-wake` の待ち時間 (wake window) の延長はしない (#1072 の control 決定)。新しい CLI・hook・生成物は足さない。
+
 ## 4. DbC
 
 - pre: 生成器へ渡す consumer の状態は、`package.json` の有無と scripts の集合だけである。
@@ -67,6 +81,7 @@ consumer の実運用で、生成された managed block と生成コマンド�
 - このリポジトリ自身の `CLAUDE.md` / `AGENTS.md` の表記は変えない。
 - launcher の生成内容 (`renderConsumerNodeWrapper`) と doctor の profile の振る舞いは変えない。
 - `doctor --profile consumer-toolchain` が `package.json` 無しで赤のままになる件は、本書の範囲外である (別 Issue で扱う)。
+- §3.5 の受け取る側の hook (#1970) と wake window の延長は、本書の範囲外である。
 
 ## 6. 単位の契約 (DbC)
 
@@ -77,4 +92,4 @@ consumer の実運用で、生成された managed block と生成コマンド�
 - pre: 渡す consumer の状態は `package.json` の有無と scripts の集合だけである (§4)。
 - post: 生成された全ファイルに bare の `ut-tdd <args>` が現れず、setup doctor の表記は `doctor --profile consumer-setup-smoke` の 1 種類である (§3.3、§4)。
 - invariant: 接頭辞の文字列は生成器の中で 1 か所だけ定義される (§4)。
-- oracle: CANDIDATE-U-CGENI-001〜007 が上記を固定する。
+- oracle: CANDIDATE-U-CGENI-001〜010 が上記を固定する (008〜010 は §3.5)。
