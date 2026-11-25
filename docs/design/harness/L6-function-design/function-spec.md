@@ -446,19 +446,6 @@ PLAN-L7-363 以降、`appendGateRun` は `writeGateRunEvidence` として CLI �
 `plan_id` が空の gate row と、`plan_registry` に無い `plan_id` を持つ gate row は、それだけでは違反にしない。
 A-132 だけがあり JSON 証跡が無い clean tree では、`gate_runs` は正規の seed row 7 件で、violation は 0 となる。
 
-#### 照合時に追加する行の検査 (#1490)
-
-`insertGateRun` と `insertRoutineGate` は、それぞれの INSERT の直前に、バインドする全列の名前と値を `SqliteProjectionStore` と同じ行検査に通す。既存の禁止列名と文字列値の判定を共有する。通常のリポジトリ相対パスを含む行は保存できる。
-
-| 書き込み先 | 検査対象の列 | 入力元 |
-| --- | --- | --- |
-| `gate_runs` | `gate_run_id`, `gate_id`, `plan_id`, `status`, `checked_at`, `evidence_path` | JSON 証跡から投影した値とその相対パス、または A-132 の正規 seed |
-| `workflow_runs` | `workflow_run_id`, `plan_id`, `drive_run_id`, `workflow`, `phase`, `ready_status`, `blocked_reason`, `human_required`, `checked_at` | 対応する gate の ID・状態・時刻から作る routine-gate 行と、gate に対応する `plan_id` |
-
-JSON から列に採用した文字列も同じ判定を受ける。証跡の `messages` や `checks` のように列に取り込まない内容は対象外とする。拒否の診断には問題の列を示し、その値を含めない。
-
-拒否した行は挿入せず、例外を照合の transaction 境界まで伝える。同じ transaction 内で先に行った追加・削除・再構築も巻き戻し、開始時の状態を保つ。両経路とも通常の INSERT を維持し、主キーの重複時は制約違反で拒否する。
-
 ### §2.3 `trace check` (FR-03)
 
 ```
