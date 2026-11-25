@@ -41,7 +41,7 @@ import {
 import { useSyntheticPrivacyHome } from "./support/privacy-denylist-home.ts";
 import { removeTestTree } from "./support/temp-tree.ts";
 
-// Red (issue #1894): CANDIDATE-U-PKAUD-001..011 と 013..017 を it.fails で登録する。
+// Red (issue #1894): U-PKAUD-001..011 と 013..017 を it.fails で登録する。
 // 004 / 005 は既存の拒否 (artifact_mismatch) の特性化で、main で既に通るため it.fails にしない (回帰の oracle)。
 // 012 は L12 の手動受入 (CI の対象外) なので、ここには登録しない (省略)。
 // 契約: docs/design/harness/L6-function-design/pack-publication-audit-wiring.md
@@ -214,9 +214,11 @@ function makeCase(
 ): Case {
   caseSeq += 1;
   const root = join(scratchRoot, `case-${caseSeq}`);
-  execFileSync("git", ["clone", "--quiet", "--local", "--no-tags", baseRoot, root], {
-    stdio: "pipe",
-  });
+  execFileSync(
+    "git",
+    ["clone", "--quiet", "--local", "--no-tags", "-c", "core.autocrlf=false", baseRoot, root],
+    { stdio: "pipe" },
+  );
   git(root, ["config", "core.autocrlf", "false"]);
   // mode だけの変更 (update-index --chmod) を、後続の git add が working tree の mode で上書きしない。
   git(root, ["config", "core.fileMode", "false"]);
@@ -288,8 +290,8 @@ const addExtra = (path = "private/pkaud-extra.txt") => {
   return (root: string) => writeStaged(root, path, `${SECRET_TEXT}\n`);
 };
 
-describe("CANDIDATE-U-PKAUD package の公開照合の配線", () => {
-  it.fails("CANDIDATE-U-PKAUD-001: 正しい C1 / C2 は attested で、5 asset が書かれ照合の結果が出力される", async () => {
+describe("U-PKAUD package の公開照合の配線", () => {
+  it.fails("U-PKAUD-001: 正しい C1 / C2 は attested で、5 asset が書かれ照合の結果が出力される", async () => {
     const fx = makeCase();
     const run = await attempt(fx);
     expect(run.error).toBeUndefined();
@@ -305,7 +307,7 @@ describe("CANDIDATE-U-PKAUD package の公開照合の配線", () => {
     });
   });
 
-  it.fails("CANDIDATE-U-PKAUD-002: 期待外の file が C1 にあれば extra で拒否し、asset を作らない", async () => {
+  it.fails("U-PKAUD-002: 期待外の file が C1 にあれば extra で拒否し、asset を作らない", async () => {
     const run = await attempt(makeCase(addExtra()));
     expectRejected(run, "pack_publication_audit_commit_entries_mismatch");
     expect(run.error?.publicationAudit?.details).toContainEqual({
@@ -314,7 +316,7 @@ describe("CANDIDATE-U-PKAUD package の公開照合の配線", () => {
     });
   });
 
-  it.fails("CANDIDATE-U-PKAUD-003: release/ 配下の release/manifest.yaml 以外の file は extra で拒否する", async () => {
+  it.fails("U-PKAUD-003: release/ 配下の release/manifest.yaml 以外の file は extra で拒否する", async () => {
     const run = await attempt(makeCase(undefined, { "release/notes.md": "notes\n" }));
     expectRejected(run, "pack_publication_audit_commit_entries_mismatch");
     expect(run.error?.publicationAudit?.details).toContainEqual({
@@ -323,7 +325,7 @@ describe("CANDIDATE-U-PKAUD package の公開照合の配線", () => {
     });
   });
 
-  it("CANDIDATE-U-PKAUD-004: artifact の blob を 1 byte 変えると、既存の tar の導出が artifact_mismatch で拒否する (計画も観測も呼ばれない)", async () => {
+  it("U-PKAUD-004: artifact の blob を 1 byte 変えると、既存の tar の導出が artifact_mismatch で拒否する (計画も観測も呼ばれない)", async () => {
     const license = baseEntries.find((entry) => entry.path === "LICENSE")?.content.toString("utf8");
     const run = await attempt(makeCase((root) => writeStaged(root, "LICENSE", `${license}x`)));
     expectRejectedMessage(
@@ -332,7 +334,7 @@ describe("CANDIDATE-U-PKAUD package の公開照合の配線", () => {
     );
   });
 
-  it("CANDIDATE-U-PKAUD-005: artifact の mode だけが manifest と違うと、既存の tar の導出が artifact_mismatch で拒否する", async () => {
+  it("U-PKAUD-005: artifact の mode だけが manifest と違うと、既存の tar の導出が artifact_mismatch で拒否する", async () => {
     const run = await attempt(
       makeCase((root) => git(root, ["update-index", "--chmod=+x", "--", "LICENSE"])),
     );
@@ -342,7 +344,7 @@ describe("CANDIDATE-U-PKAUD package の公開照合の配線", () => {
     );
   });
 
-  it.fails("CANDIDATE-U-PKAUD-006: C2 の release/ の中の mode 120000 は観測が entry を作らず extra として拒否する", async () => {
+  it.fails("U-PKAUD-006: C2 の release/ の中の mode 120000 は観測が entry を作らず extra として拒否する", async () => {
     const fx = makeCase(
       undefined,
       {},
@@ -359,7 +361,7 @@ describe("CANDIDATE-U-PKAUD package の公開照合の配線", () => {
     });
   });
 
-  it.fails("CANDIDATE-U-PKAUD-007: 観測の git が失敗すれば indeterminate で止まり、asset を作らない (計画は作られている)", async () => {
+  it.fails("U-PKAUD-007: 観測の git が失敗すれば indeterminate で止まり、asset を作らない (計画は作られている)", async () => {
     const fx = makeCase();
     expect(resolveConsumerRuntimeReleaseSourceBinding(fx.root, TAG)).toMatchObject({
       releaseRevision: fx.c2,
@@ -384,7 +386,7 @@ describe("CANDIDATE-U-PKAUD package の公開照合の配線", () => {
     }
   });
 
-  it.fails("CANDIDATE-U-PKAUD-008: 観測は C2 の tree だけを対象にし、index と working tree を読まない", async () => {
+  it.fails("U-PKAUD-008: 観測は C2 の tree だけを対象にし、index と working tree を読まない", async () => {
     const clean = makeCase();
     write(clean.root, "untracked-extra.txt", "untracked\n");
     write(clean.root, "staged-extra.txt", "staged\n");
@@ -396,16 +398,16 @@ describe("CANDIDATE-U-PKAUD package の公開照合の配線", () => {
     expectRejected(committed, "pack_publication_audit_commit_entries_mismatch");
   });
 
-  it.fails("CANDIDATE-U-PKAUD-009: ビルド入力の欠落は pack_build_input_* のまま報告され、照合の理由に上書きされない", async () => {
+  it("U-PKAUD-009: ビルド入力の欠落は pack_build_input_* のまま報告され、照合の理由に上書きされない", async () => {
     const run = await attempt(
       makeCase((root) => git(root, ["rm", "-q", "--", "tsconfig.node.json"])),
     );
     expect(run.error?.code).toMatch(/^pack_build_input_/);
     expect(run.installCalls).toBe(0);
     expect(run.outFiles).toEqual([]);
-  });
+  }, 180_000);
 
-  it.fails("CANDIDATE-U-PKAUD-010: 失敗の出力は理由コード・path・分類・SHA だけで、bytes・digest・内容を含まない", async () => {
+  it.fails("U-PKAUD-010: 失敗の出力は理由コード・path・分類・SHA だけで、bytes・digest・内容を含まない", async () => {
     const fx = makeCase(addExtra());
     const run = await attempt(fx);
     expect(run.error?.code).toBe("pack_publication_audit_commit_entries_mismatch");
@@ -427,7 +429,7 @@ describe("CANDIDATE-U-PKAUD package の公開照合の配線", () => {
     expect(serialized).not.toMatch(/sha256:[0-9a-f]{64}/);
   });
 
-  it.fails("CANDIDATE-U-PKAUD-011: 観測は固定した C2 の SHA だけで git を呼び、cat-file の入力は ls-tree の blob OID と 1 対 1 に対応する", () => {
+  it.fails("U-PKAUD-011: 観測は固定した C2 の SHA だけで git を呼び、cat-file の入力は ls-tree の blob OID と 1 対 1 に対応する", () => {
     const fx = makeCase();
     const calls: Array<{ args: readonly string[]; stdin?: string }> = [];
     const runGit: PackPublicationGitRunner = (args, stdin) => {
@@ -459,7 +461,7 @@ describe("CANDIDATE-U-PKAUD package の公開照合の配線", () => {
     expect(first.status).toBe("observed");
   });
 
-  it.fails("CANDIDATE-U-PKAUD-013: package.json の末尾の空白は計画を通り、観測が生の blob の違いを content として拒否する", async () => {
+  it.fails("U-PKAUD-013: package.json の末尾の空白は計画を通り、観測が生の blob の違いを content として拒否する", async () => {
     const pkg = baseEntries
       .find((entry) => entry.path === "package.json")
       ?.content.toString("utf8");
@@ -472,7 +474,7 @@ describe("CANDIDATE-U-PKAUD package の公開照合の配線", () => {
   });
 
   // 014 は main の既存の拒否 (invalid_artifact) の特性化で、main で既に通るため it.fails にしない (回帰の oracle)。
-  it("CANDIDATE-U-PKAUD-014: C1 の 160000 は resolveReleaseArtifacts が invalid_artifact で拒否し、観測へ進まない", async () => {
+  it("U-PKAUD-014: C1 の 160000 は resolveReleaseArtifacts が invalid_artifact で拒否し、観測へ進まない", async () => {
     const fx = makeCase((root) => stageSpecial(root, "160000", "private/sub"));
     expectTreeEntry(fx.root, fx.c1, "private/sub", "160000");
     const run = await attempt(fx);
@@ -481,14 +483,14 @@ describe("CANDIDATE-U-PKAUD package の公開照合の配線", () => {
   });
 
   // 015 / 016 は main の既存の拒否 (tar mode unsupported / invalid_artifact) の特性化で、main で既に通るため it.fails にしない。
-  it("CANDIDATE-U-PKAUD-015: 安全な artifact の symlink は tar mode is unsupported で拒否する", async () => {
+  it("U-PKAUD-015: 安全な artifact の symlink は tar mode is unsupported で拒否する", async () => {
     const fx = makeCase((root) => stageSpecial(root, "120000", "LICENSE", "NOTICE"));
     expectTreeEntry(fx.root, fx.c1, "LICENSE", "120000", "NOTICE");
     const run = await attempt(fx);
     expectRejectedMessage(run, "distribution package tar mode is unsupported: LICENSE");
   });
 
-  it("CANDIDATE-U-PKAUD-016: 危険な (絶対 path の) target の artifact の symlink は materializer の invalid_artifact で拒否する", async () => {
+  it("U-PKAUD-016: 危険な (絶対 path の) target の artifact の symlink は materializer の invalid_artifact で拒否する", async () => {
     // 先行の privacy scan は artifact を readFileSync で読む。Linux の snapshot は symlink を実体化するので、
     // dangling な target (例: C:/x) は privacy-input-unreadable で先に止まる。target を実在する無害な file の
     // 絶対 path にして scan を通し、materializer の validSymlink の拒否 (絶対 path) だけを成功条件にする。
@@ -502,7 +504,7 @@ describe("CANDIDATE-U-PKAUD package の公開照合の配線", () => {
     expect(planResults).toEqual([]);
   });
 
-  it.fails("CANDIDATE-U-PKAUD-017: artifact でない path の symlink は観測が commit_entries_mismatch (extra) で拒否する", async () => {
+  it.fails("U-PKAUD-017: artifact でない path の symlink は観測が commit_entries_mismatch (extra) で拒否する", async () => {
     const fx = makeCase((root) => stageSpecial(root, "120000", "notes/link"));
     expectTreeEntry(fx.root, fx.c1, "notes/link", "120000", "target.ts");
     const run = await attempt(fx);
@@ -513,5 +515,5 @@ describe("CANDIDATE-U-PKAUD package の公開照合の配線", () => {
     });
   });
 
-  // CANDIDATE-U-PKAUD-012 は L12 の手動受入 (canary.7 形の 52 件 + 実機) で CI の対象外のため、ここには登録しない。
+  // U-PKAUD-012 は L12 の手動受入 (canary.7 形の 52 件 + 実機) で CI の対象外のため、ここには登録しない。
 });

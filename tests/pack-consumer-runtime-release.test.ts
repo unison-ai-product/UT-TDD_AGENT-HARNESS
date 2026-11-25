@@ -65,6 +65,7 @@ import {
   resolveReleaseArtifacts,
 } from "../src/setup/release-artifact-resolver.ts";
 import { materializeReleaseArtifacts } from "../src/setup/release-materializer.ts";
+import { copyPackBuildInputs, copyPackFiles } from "./support/pack-build-input-fixture.ts";
 import { useSyntheticPrivacyHome } from "./support/privacy-denylist-home.ts";
 
 const privacyHome = useSyntheticPrivacyHome();
@@ -419,14 +420,8 @@ async function createProducerFixture(
     "docs/templates/adapter/.claude/commands/ut-tdd-test.md",
     ...AUTHORING_TEMPLATE_ARTIFACT_PATHS,
   ];
-  const sourcePathSet = sourcePaths;
-  for (const artifactPath of artifactPaths) {
-    const sourcePath = cleanDistributionSourcePath(artifactPath, sourcePathSet);
-    const from = join(repositoryRoot, ...sourcePath.split("/"));
-    const to = join(root, ...artifactPath.split("/"));
-    mkdirSync(dirname(to), { recursive: true });
-    cpSync(from, to, { recursive: true });
-  }
+  copyPackFiles(repositoryRoot, root, artifactPaths, sourcePaths);
+  copyPackBuildInputs(repositoryRoot, root, sourcePaths);
   rmSync(join(root, ".github", "workflows", "harness-check.yml"), { force: true });
   commitFixtureArtifact(root);
   const fixturePlan = buildCleanDistributionPlan({
@@ -458,7 +453,7 @@ async function createProducerFixture(
         if (item.mode !== "100644" && item.mode !== "100755")
           throw new Error("publication fixture mode is not supported");
         return {
-          sourcePath: cleanDistributionSourcePath(item.path, sourcePathSet),
+          sourcePath: cleanDistributionSourcePath(item.path, sourcePaths),
           destinationPath: item.path,
           mode: item.mode,
           size: item.content.length,

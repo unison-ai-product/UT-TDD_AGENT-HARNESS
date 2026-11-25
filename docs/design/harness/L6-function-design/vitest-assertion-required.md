@@ -10,7 +10,7 @@ next_pair_freeze: L7
 issue: 1452
 ---
 
-> **L6 contract marker**: `evaluateAssertionCount(expectedFailure, callbackOutcome, assertionCalls) => "keep" | "reject_zero_assertions"` は、Vitest の標準検証後に適用する判定契約である。公開 API を追加しない。Vitest 4.1.12 の `TestRunner.runTask` / `TestRunner.getTestFn(task)` が得る callback 境界で、各試行の `task.context.expect` の assertion counter 差分を測る。候補 oracle `CANDIDATE-U-VITASSERT-001`〜`007` は対応する L7 が固定する。
+> **L6 contract marker**: `evaluateAssertionCount(expectedFailure, callbackOutcome, assertionCalls) => "keep" | "reject_zero_assertions"` は、Vitest の標準検証後に適用する判定契約である。公開 API を追加しない。Vitest 4.1.12 の `TestRunner.runTask` / `TestRunner.getTestFn(task)` が得る callback 境界で、各試行の `task.context.expect` の assertion counter 差分を測る。正式 oracle `U-VITASSERT-001`〜`007` は対応する L7 が固定する。
 
 # Vitest の assertion 必須化 (Issue #1452)
 

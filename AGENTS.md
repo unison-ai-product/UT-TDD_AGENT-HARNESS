@@ -361,8 +361,10 @@ calls.
 
 ## Doctor Invocation Discipline (PLAN-L7-442)
 
-`ut-tdd doctor` は長時間・read-only の **singleton** 検査。2 本目以降は exit 2
-(保持者 pid 付き) で fail-fast する。規律:
+`ut-tdd doctor` は長時間の **singleton** 検査。2 本目以降は exit 2
+(保持者 pid 付き) で fail-fast する。
+
+doctor の共有動作と書き込み境界は、root `CLAUDE.md` の §Shared Guard Discipline を参照。
 
 - exit 2 (already running) は **実行中 doctor の完了を待つ**。再試行しない。
   起動形を変えた再実行 (`node -e` / `--json` / `runDoctor` 直呼び) もしない。
