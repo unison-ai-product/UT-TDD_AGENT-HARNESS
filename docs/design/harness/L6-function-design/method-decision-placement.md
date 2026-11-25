@@ -72,16 +72,25 @@ ADR の「決定」は、決定記録の「選んだ方式」と同じ内容で�
 
 ### 4.1 欄と規則
 
-決定記録は次の欄をすべて持つ。1 つでも欠けるか空なら不適合 (`decision_field_missing:<欄名>`)。
+決定記録は次の欄をすべて持つ。
+
+**空欄の規則 (全欄に共通):**
+
+- 「欠ける」は、欄が無い、または値が空 (空文字、空の一覧) のことである。
+- 欄 1・2・3・5・7・8・9・10 は、状態 (欄 9) を問わず、欠けたら `decision_field_missing:<欄名>` とする。
+- 欄 4 (却下した案) の「案が 0 件」と、欄 6 (承認) の欠落は、`decision_field_missing` を出さず、下表の専用の reason だけを出す。欄 4 の「案はあるが却下の理由が空」は `decision_field_missing:却下した案` を出す。
+- 欄 7 (ADR 参照) は、欄が無いか空なら `decision_field_missing:ADR 参照` だけを出す。path があるが ADR が存在しない、または status が合わないときは `adr_ref_invalid` だけを出す。
+- 状態が `proposed` の記録は、欄 6 の 4 項目が空でよい (承認前の起草を許す明示の例外)。`superseded` の記録は、承認 4 項目を持っていた場合それを残す (消さない)。
+- 複数の規則が同時に当たるときは、当たった reason をすべて出す。ある規則が別の規則を打ち消すことはない (専用の規則を持つ欄が、一般の規則と二重に出ることもない)。
 
 | 欄 | 内容 |
 |---|---|
 | 1. 論点 | 論点 ID。 |
 | 2. 選んだ方式 | 方式コードと説明を 1 つ。 |
 | 3. 理由 | この要件・制約にどう合うか (要件 ID か制約を 1 つ以上引く)。 |
-| 4. 却下した案 | 1 案以上。各案に却下の理由。選んだ方式と却下した案を合わせて 2 案以上が比較されていること。0 件なら `decision_alternatives_insufficient`。 |
+| 4. 却下した案 | 1 案以上。各案に却下の理由。選んだ方式と却下した案を合わせて 2 案以上が比較されていること。案が 0 件 (欄が無い、または空の一覧) なら `decision_alternatives_insufficient` だけを出す。案が 1 件以上あり、いずれかの案の却下の理由が空なら `decision_field_missing:却下した案` を出す。 |
 | 5. 起草 | 起草者 (AI の場合はモデル名)。AI が推奨した方式コードを併記する。AI の推奨と選んだ方式が違うときは、PO の判断理由が欄 3 に書かれていること。 |
-| 6. 承認 | §5.1。状態が `approved` のときは 4 項目すべてが必須。 |
+| 6. 承認 | §5.1。状態が `approved` のときは 4 項目すべてが必須で、1 つでも欠ければ `approval_incomplete` だけを出す (`decision_field_missing` は出さない)。状態が `proposed` のときは空でよい。 |
 | 7. ADR 参照 | consumer の `docs/adr/` の ADR への path。その ADR が存在すること。状態が `approved` の記録では、その ADR の status が `accepted` であること。満たさなければ `adr_ref_invalid`。状態が `proposed` の間は、ADR が存在すれば status は問わない。 |
 | 8. 詳細の置き場 | 詳細を書く予定の L4 / L5 文書 ID (`DOC-L4-DATA` など) を 1 つ以上。予定であり、存在は検査しない (§7)。 |
 | 9. 状態 | `proposed` / `approved` / `superseded` のどれか。 |
@@ -95,7 +104,13 @@ ADR の「決定」は、決定記録の「選んだ方式」と同じ内容で�
 
 ### 4.3 変更 (置換)
 
-`approved` の決定記録の欄 2〜4 を、その記録の中で書き換えない (`approved_decision_edited_in_place`)。方式を変えるときは次の手順を踏む。
+`approved` の決定記録の欄 2〜4 を、その記録の中で書き換えない。判定は **比較基準** との照合で行う。比較基準は、その記録の `承認対象 revision` (欄 6) の commit にある L3 第9章の、同じ `DEC-NNN` の記録の欄 2〜4 である (consumer の既存の Git 履歴から読み、新しい保管方式は作らない)。
+
+- 現行の欄 2〜4 が比較基準と食い違う: `approved_decision_edited_in_place`。
+- 承認対象 revision を解決できない、またはその commit に同じ `DEC-NNN` の記録が無い: `approval_baseline_unavailable`。
+- 食い違いが無い: 適合。最初から別の方式で承認された記録と、承認の後に書き換えられた記録を区別できるのは、この比較基準があるからである。
+
+方式を変えるときは次の手順を踏む。
 
 1. 新しい `DEC-NNN` を起こし、置換元に旧記録を書く。
 2. 旧記録の状態を `superseded` にする (欄 2〜4 はそのまま残す)。
@@ -154,11 +169,11 @@ L4 / L5 の必須の項目が、参照する決定記録の方式コードと両
 
 ## 7. DoR が読む範囲
 
-DoR (#1928) が方式の決定について読むのは、**L3 第9章の決定記録と、それが参照する ADR の存在・status だけ**とする。次の 3 点を確かめる。
+DoR (#1928) が方式の決定について読むのは、**L3 第9章の決定記録 (§4.3 の比較基準として、承認対象 revision 時点の同じ第9章を含む) と、それが参照する ADR の存在・status だけ**とする。次の 3 点を確かめる。
 
 1. 必須論点 3 種のそれぞれに、`superseded` でない決定記録がちょうど 1 件ある (§4.2)。
 2. その記録が §4.1 の欄をすべて持つ。
-3. その記録の状態が `approved` で、承認の 4 項目がそろい、ADR 参照が有効である (§5.1、§4.1 の欄 7)。
+3. その記録の状態が `approved` で、承認の 4 項目がそろい、ADR 参照が有効で、欄 2〜4 が比較基準と一致する (§5.1、§4.1 の欄 7、§4.3)。
 
 満たさない論点は `decision_not_ready:<論点 ID>` とする。DoR は **L4 / L5 の詳細を読まない**。DoR を通る時点 (段 1) では L4 / L5 はまだ書かれていないため、`詳細の置き場` (欄 8) は予定を書くだけで、存在を検査しない。L4 / L5 の側の整合 (§6) は、段 2 の L4〜L6 の pair-freeze の非著者 review で確かめる。両者の範囲は重ならない。
 
@@ -180,11 +195,11 @@ DoR (#1928) が方式の決定について読むのは、**L3 第9章の決定�
 
 | 判定 | 入力 | 出力 |
 |---|---|---|
-| `judgeDecisionRecords` | consumer の L3 第9章 (決定記録の一覧) と、参照 ADR の存在・status | 適合、または reason token の集合 (`decision_field_missing:<欄名>` / `decision_alternatives_insufficient` / `required_topic_missing:<論点 ID>` / `decision_duplicate:<論点 ID>` / `approval_incomplete` / `approver_equals_drafter` / `adr_ref_invalid` / `approved_decision_edited_in_place`)。DoR は、いずれかが出た必須論点、または状態が `approved` でない必須論点を `decision_not_ready:<論点 ID>` とする (§7)。 |
+| `judgeDecisionRecords` | consumer の L3 第9章 (決定記録の一覧)、参照 ADR の存在・status、`approved` の各記録の `承認対象 revision` 時点の第9章 (比較基準、§4.3。`approved` の記録が無ければ不要) | 適合、または reason token の集合 (`decision_field_missing:<欄名>` / `decision_alternatives_insufficient` / `required_topic_missing:<論点 ID>` / `decision_duplicate:<論点 ID>` / `approval_incomplete` / `approver_equals_drafter` / `adr_ref_invalid` / `approved_decision_edited_in_place` / `approval_baseline_unavailable`)。DoR は、いずれかが出た必須論点、または状態が `approved` でない必須論点を `decision_not_ready:<論点 ID>` とする (§7)。 |
 | `judgeDetailDocs` | 決定記録と、L4 / L5 の節 | 適合、または `detail_without_decision_ref` / `decision_outside_l3` / `detail_contradicts_decision`。いずれも L3 を書き換えない。後者 2 つは段 0 へ戻す (§5.3)。 |
 | `judgeTemplateItems` | テンプレートの項目 (適用条件の有無) と決定記録 | 適合、`unconditional_item_presumes_decision`、`template_prefilled_decision`。非適用の項目の欠落は適合。 |
 
-reason が複数当たるときは全部を出す (昇順、重複なし)。
+reason が複数当たるときは全部を出す (昇順、重複なし。§4.1 の空欄の規則に従い、専用の規則を持つ欄 4・6 は `decision_field_missing` と二重に出さない)。
 
 ## 10. 不変条件
 

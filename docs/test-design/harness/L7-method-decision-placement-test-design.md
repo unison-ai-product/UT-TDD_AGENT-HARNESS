@@ -21,7 +21,7 @@ issue: 1923
 
 - 入力は、短い markdown の節 (L3 第9章、L4 / L5 の節、テンプレートの項目) を直接組んだもの。実 repo も GitHub も使わない。
 - 既定の決定記録 `DEC-001`: 論点 `tenant-isolation`、選んだ方式 `db-per-tenant (DB をテナントごとに分ける)`、理由に要件 ID 1 件、却下した案 1 件 (`shared-schema-rls`、理由付き)、起草 `AI: claude-sonnet-5-5`、承認 4 項目すべて (承認者 `po-1`)、ADR 参照は存在する status `accepted` の ADR、詳細の置き場 `DOC-L4-DATA`、状態 `approved`、置換元 `-`。
-- 既定の第9章は、`data-store` (`DEC-002`) と `authn` (`DEC-003`) の記録も、同様にそろった形で持つ。行ごとに 1 点だけ変える。
+- 既定の第9章は、`data-store` (`DEC-002`) と `authn` (`DEC-003`) の記録も、同様にそろった形で持つ。行ごとに 1 点だけ変える。`approved` の各記録には、承認対象 revision 時点の第9章 (比較基準) を同じ内容で添える。期待の reason 集合は、書いた token だけから成る (書かれていない reason は出ない)。
 
 ## 3. Candidate oracle matrix
 
@@ -32,8 +32,8 @@ issue: 1923
 | ID | 入力 | 期待 | 反例 |
 |---|---|---|---|
 | `CANDIDATE-U-METHODDEC-001` | 既定の第9章 (3 論点とも完全) | 適合、reason なし | - (基準) |
-| `CANDIDATE-U-METHODDEC-002` | `DEC-001` の `理由` を空にする (別ケース: `ADR 参照` を欠く) | `decision_field_missing:理由` (別ケースは `decision_field_missing:ADR 参照`) | 欄がそろっていれば、`詳細の置き場` が未作成の L4 文書 ID でも適合 (存在は見ない) |
-| `CANDIDATE-U-METHODDEC-003` | `DEC-001` の `却下した案` が 0 件 (別ケース: 1 件で却下の理由が空) | 前者は `decision_alternatives_insufficient`、後者は `decision_field_missing:却下した案` | 却下した案が 1 件で理由があれば適合 (選んだ方式と合わせて 2 案) |
+| `CANDIDATE-U-METHODDEC-002` | `DEC-001` (`approved`) の `理由` を空にする。別ケース: `ADR 参照` の欄が無い。別ケース: `ADR 参照` の path があるが ADR が存在しない | 理由が空: `{decision_field_missing:理由}`。ADR 参照の欄が無い: `{decision_field_missing:ADR 参照}`。path のみ存在しない: `{adr_ref_invalid}` (各ケースの reason 集合はこれだけ) | 欄がそろっていれば、`詳細の置き場` が未作成の L4 文書 ID でも適合 (存在は見ない) |
+| `CANDIDATE-U-METHODDEC-003` | `DEC-001` (`approved`) の `却下した案` が (a) 0 件 (欄が無い、または空の一覧) (b) 1 件で却下の理由が空 | (a) `{decision_alternatives_insufficient}` だけ (`decision_field_missing` は出さない) (b) `{decision_field_missing:却下した案}` だけ | 却下した案が 1 件で理由があれば適合 (選んだ方式と合わせて 2 案)。`proposed` の記録でも (a) (b) は同じ reason (空欄の例外は承認の欄だけ) |
 | `CANDIDATE-U-METHODDEC-004` | (a) `tenant-isolation` の決定記録が無く、第8章 (未確定事項) に「テナント分離は TBD」と書いてあるだけ (b) `data-store` の `superseded` でない記録が 2 件 | (a) `required_topic_missing:tenant-isolation` (b) `decision_duplicate:data-store` | `tenant-isolation` の記録があり、選んだ方式が `none-single-org (分離なし、単一組織)` のとき適合 (値は限定しない)。`superseded` の旧記録と `approved` の新記録が 1 件ずつなら適合 |
 | `CANDIDATE-U-METHODDEC-005` | `DEC-001` (状態 `approved`) の ADR 参照先が存在しない (別ケース: 存在するが status が `proposed`) | 各ケース `adr_ref_invalid` | 状態が `proposed` の記録で、ADR が存在し status が `proposed` なら適合 |
 
@@ -41,9 +41,9 @@ issue: 1923
 
 | ID | 入力 | 期待 | 反例 |
 |---|---|---|---|
-| `CANDIDATE-U-METHODDEC-006` | `DEC-001` の状態が `approved`、承認根拠が空 (別ケース: 承認対象 revision が空) | 各ケース `approval_incomplete` | 状態が `proposed` なら、承認の 4 項目が空でも適合 (承認前の起草は許す) |
+| `CANDIDATE-U-METHODDEC-006` | `DEC-001` の状態が `approved` で、(a) 承認根拠が空 (b) 承認対象 revision が空 (c) 承認の 4 項目がすべて空 | 各ケース `{approval_incomplete}` だけ (`decision_field_missing:承認` は出さない) | 状態が `proposed` で承認の 4 項目がすべて空なら適合 (承認前の起草を許す明示の例外)。ただし `proposed` でも `理由` が空なら `decision_field_missing:理由` |
 | `CANDIDATE-U-METHODDEC-007` | 起草が `AI: claude-sonnet-5-5`、承認者も `claude-sonnet-5-5` | `approver_equals_drafter` | 承認者が `po-1` で承認根拠のコメント URL があれば適合。AI の推奨 (`shared-schema-rls`) と選んだ方式 (`db-per-tenant`) が違う記録でも、欄 3 に PO の判断理由があれば適合 |
-| `CANDIDATE-U-METHODDEC-008` | `approved` の `DEC-001` の `選んだ方式` を、同じ記録の中で `shared-schema-rls` に書き換える (before / after の 2 版を渡す) | `approved_decision_edited_in_place` | 新しい `DEC-004` (置換元 `DEC-001`) を起こし、`DEC-001` を `superseded` にして欄 2〜4 を残し、`DEC-004` が欄 1〜10 そろっているなら適合 |
+| `CANDIDATE-U-METHODDEC-008` | 入力に比較基準を渡す (`approved` の `DEC-001` の `承認対象 revision` 時点の第9章)。(a) 比較基準の `DEC-001` は `選んだ方式` が `db-per-tenant`、現行は同じ ID のまま `shared-schema-rls` (b) 承認対象 revision を解決できない (c) 承認対象 revision の第9章に `DEC-001` の記録が無い | (a) `{approved_decision_edited_in_place}` (b)(c) `{approval_baseline_unavailable}` | (a') 比較基準も現行も `shared-schema-rls` (最初からその方式で承認された記録) なら適合。(a'') 新しい `DEC-004` (置換元 `DEC-001`) を起こし、`DEC-001` を `superseded` にして欄 2〜4 を残し、`DEC-004` の比較基準と現行が一致し欄 1〜10 そろっているなら適合 |
 
 ### 3.3 DoR が読む範囲 (設計 §7)
 
