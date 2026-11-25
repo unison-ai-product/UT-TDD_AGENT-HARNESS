@@ -17,9 +17,7 @@ export type TemplateSet = { [name: string]: string };
 const CLAUDE_OPUS = MODEL_IDS.claude.opus;
 const CLAUDE_SONNET = MODEL_IDS.claude.sonnet;
 const CLAUDE_HAIKU = MODEL_IDS.claude.haiku;
-const GPT_FRONTIER = MODEL_IDS.codex.frontier;
-const GPT_WORKER = MODEL_IDS.codex.worker;
-const GPT_SPARK = MODEL_IDS.codex.spark;
+const { frontier: GPT_FRONTIER, worker: GPT_WORKER, spark: GPT_SPARK } = MODEL_IDS.codex;
 const CONSUMER_CLI_PREFIX = "node .ut-tdd/bin/ut-tdd.mjs";
 
 export const BUILTIN_GITHUB_TEMPLATES: TemplateSet = {
