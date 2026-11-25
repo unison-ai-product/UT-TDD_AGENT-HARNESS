@@ -86,10 +86,11 @@ ADR の「決定」は、決定記録の「選んだ方式」と同じ内容で�
 - 承認の値は `承認者: <値> / 承認日: <値> / 承認対象 revision: <値> / 承認根拠: <値>` の形で、項目名の後の値が空、または項目名が無いとき、その項目は欠ける (§5.1)。
 - 起草の値は `<起草者> / AI の推奨: <方式コード>` の形で読む。
 
-**未記入 (プレースホルダ)**: 値が `<` と `>` で囲んだ部分 (`<` の後に `<` と `>` 以外の文字が 1 字以上続き、`>` で閉じるもの) を 1 つ以上含むとき、その値は未記入である (例: `DEC-<NNN>`、`<方式コード…>`)。未記入の値を 1 つでも持つ表は、次の 1〜4 より先に、決定記録として数えない表にする。この表は `decision_markup_invalid` を出さない (同じ表が 1〜4 の違反を併せ持っていても出さない)。また §4.1 の欄の規則の対象にもならない (記録が無いのと同じ扱い)。結果は入力の種類で決まる。
+**未記入 (プレースホルダ)**: 決定記録の表は、`記録 ID` の行の値が `<` と `>` で囲んだ部分 (`<` の後に `<` と `>` 以外の文字が 1 字以上続き、`>` で閉じるもの) を 1 つ以上含むときに限り、未記入である (例: `DEC-<NNN>`)。未記入の表は、次の 1〜4 より先に、決定記録として数えない表にする。この表は `decision_markup_invalid` を出さない (同じ表が 1〜4 の違反を併せ持っていても出さない)。また §4.1 の欄の規則の対象にもならない (記録が無いのと同じ扱い)。結果は入力の種類で決まる。
 
 - consumer の文書の第9章: 数えない表になり、その論点は記録が 0 件の論点として §4.2 の `required_topic_missing:<論点 ID>` で判定される (`decision_field_missing` は出さない)。表が属する見出しの論点が必須論点でなければ、reason は出ない。
 - 配布テンプレートの第9章 (空の様式、§8.4): どの reason も出さない。テンプレートには `judgeDecisionRecords` を適用せず、必須論点の記録が 0 件でも不適合にしない。
+- `記録 ID` の値が `DEC-NNN` の形であれば、表は決定記録であり、他の行の値に `<…>` があっても特別に扱わない。各行は §4.1 の既存の規則だけで読む (文章中の `Map<String, Tenant>` は普通の文章である。`選んだ方式` に `<方式コード: 説明>` が残っていても、値は空でないので `decision_field_missing` は出ず、reason なしである。`承認` の項目に `<…>` が残っていても同じで、項目が空でなければ `approval_incomplete` は出ない)。
 - 見出しは値ではないので、見出しの `<…>` は本規則の対象外であり、`decision_markup_invalid:heading` のままである (下記)。
 
 表は、次の順に調べて最初に当たった 1 種別だけの `decision_markup_invalid:<種別>` を出し、決定記録として数えない (他の規則の対象にしない)。
@@ -228,7 +229,7 @@ DoR (#1928) が方式の決定について読むのは、**現在の L3 第9章�
 2. 適用条件が承認済みの方式コードにより適用されない項目は非適用であり、欠けていても不適合にしない。適用条件の書式は §2 のとおりで、合わない `適用条件:` を持つ項目は `applicability_condition_invalid` を出し、条件を評価する `unconditional_item_presumes_decision` は出さない (抑える集合は §6.3)。同じ項目が結論文を持てば `template_prefilled_decision` は独立に併せて出す。テンプレートは方式コードを知らないので、「マルチテナントのとき」は `tenant-isolation!=none-single-org`、「行レベル分離のときだけ」は `tenant-isolation=row-level` と書く (§2 の予約語)。
 3. 方式を前提にした結論の文 (「RLS で分離する」「案C を採用する」など) を、例とも注記せずに本文へ置かない。例文を置くときは「例」と明示し、選択肢として並べる (`template_prefilled_decision`)。
    - ER 図のエンティティも対象とする。エンティティ 1 件は 1 項目であり、表なら 1 行、コードブロックの図記法ならそのエンティティの定義の範囲である。固定するのは `tenants` エンティティ (テナント分離を前提にした結論) で、その項目の中に「例」の明示か、書式に合う適用条件 (§2) のどちらかが無ければ `template_prefilled_decision` とする。同じ項目に書式に合わない `適用条件:` があるときは、書式に合う条件が無いものとして読み、「例」の明示が無ければ `applicability_condition_invalid` と `template_prefilled_decision` を併せて出す (「例」の明示があれば `applicability_condition_invalid` だけ)。直前の注記の段落に書いた適用条件は項目が違うので及ばない (§2 の範囲)。ER 図のエンティティは §8.1 の必須項目ではないので `unconditional_item_presumes_decision` は出さない。他のエンティティが方式を前提にするかは本書では固定せず、結論の文と同じく非著者 review が読む。
-4. テンプレートは第9章「方式の決定」と決定記録の欄 (§4.1) を、空の様式として持つ。必須論点の 3 種の見出しは置くが、「選んだ方式」の欄は空にする。空の様式の値は `DEC-<NNN>`、`<方式コード…>` のようなプレースホルダで書いてよく、未記入として扱う (§3.4)。
+4. テンプレートは第9章「方式の決定」と決定記録の欄 (§4.1) を、空の様式として持つ。必須論点の 3 種の見出しは置くが、「選んだ方式」の欄は空にする。空の様式の記録 ID は `DEC-<NNN>`、他の欄の値は `<方式コード…>` のようなプレースホルダで書いてよい。表が未記入になるのは `記録 ID` の値にプレースホルダがあるときだけである (§3.4)。
 
 ## 9. 判定の定義 (oracle の入力と出力)
 
@@ -239,7 +240,7 @@ DoR (#1928) が方式の決定について読むのは、**現在の L3 第9章�
 | `judgeDetailDocs` | 決定記録と、L4 / L5 の文書・節 | 適合、または `detail_without_decision_ref` / `decision_outside_l3` / `detail_contradicts_decision` / `applicability_condition_invalid`。いずれも L3 を書き換えない。`decision_outside_l3` と `detail_contradicts_decision` は段 0 へ戻す (§5.3)。 |
 | `judgeTemplateItems` | テンプレートの項目 (適用条件の有無) と決定記録 | 適合、`unconditional_item_presumes_decision`、`template_prefilled_decision`、`applicability_condition_invalid`。非適用の項目の欠落は適合。 |
 
-reason が複数当たるときは全部を出す。例外は `applicability_condition_invalid` が抑える 2 つ (§6.3) だけで、`template_prefilled_decision` などは併発する (昇順、重複なし。§4.1 の空欄の規則に従い、専用の規則を持つ欄 4・6 は `decision_field_missing` と二重に出さない)。各判定が出す reason は、その判定の行に書いたものだけで、他の判定の reason を代わりに出さない。`承認対象 revision` が空の記録は `judgeDecisionRecords` の `approval_incomplete` だけで、`judgeApprovedBaseline` は何も出さない (§4.3)。数えない表 (§3.4、未記入の値を持つ表を含む) の欄は、欄の規則 (§4.1) の対象外である。
+reason が複数当たるときは全部を出す。例外は `applicability_condition_invalid` が抑える 2 つ (§6.3) だけで、`template_prefilled_decision` などは併発する (昇順、重複なし。§4.1 の空欄の規則に従い、専用の規則を持つ欄 4・6 は `decision_field_missing` と二重に出さない)。各判定が出す reason は、その判定の行に書いたものだけで、他の判定の reason を代わりに出さない。`承認対象 revision` が空の記録は `judgeDecisionRecords` の `approval_incomplete` だけで、`judgeApprovedBaseline` は何も出さない (§4.3)。数えない表 (§3.4、`記録 ID` が未記入の表を含む) の欄は、欄の規則 (§4.1) の対象外である。
 
 ## 10. 不変条件
 
