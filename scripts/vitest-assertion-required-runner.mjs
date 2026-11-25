@@ -1,11 +1,11 @@
-import { VitestTestRunner } from "vitest/runners";
+import { TestRunner } from "../node_modules/vitest/dist/index.js";
 import { testExpectScope } from "./vitest-assertion-required-expect.mjs";
 
-export default class AssertionRequiredRunner extends VitestTestRunner {
+export default class AssertionRequiredRunner extends TestRunner {
   assertionCallsByTask = new WeakMap();
 
   async runTask(task) {
-    const run = VitestTestRunner.getTestFn(task);
+    const run = TestRunner.getTestFn(task);
     const taskExpect = task.context.expect;
     const before = taskExpect.getState().assertionCalls;
 
