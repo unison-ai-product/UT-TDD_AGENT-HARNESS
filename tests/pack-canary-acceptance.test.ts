@@ -1835,7 +1835,7 @@ describe("manual canary acceptance publish-record boundary", () => {
     ).toThrow("agent-g1-positive-invalid");
   });
 
-  it.fails("U-ST-PACKCANARY-018: rejects same-revision or unnamed-slot G1 negative evidence", () => {
+  it("U-ST-PACKCANARY-018: rejects same-revision or unnamed-slot G1 negative evidence", () => {
     const positiveRevision = "a".repeat(40);
     expect(() =>
       verifyAgentG1Negative(
@@ -1890,7 +1890,7 @@ describe("manual canary acceptance publish-record boundary", () => {
     ).toThrow("agent-g1-negative-invalid");
   });
 
-  it.fails("U-ST-PACKCANARY-016..018: mock adapter exercises consumer CLI wiring (not provider evidence)", () => {
+  it("U-ST-PACKCANARY-016..018: mock adapter exercises consumer CLI wiring (not provider evidence)", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-canary-agent-authoring-"));
     tempRoots.push(root);
     const runGit = (...args: string[]) =>
@@ -2154,7 +2154,7 @@ describe("manual canary acceptance publish-record boundary", () => {
     rejectVerdictFieldMutation("exact_head", "b".repeat(40));
   });
 
-  it.fails("U-ST-PACKCANARY-015..019: offline structural join accepts a complete fixture (not an AT-DIST-003 run)", () => {
+  it("U-ST-PACKCANARY-015..019: offline structural join accepts a complete fixture (not an AT-DIST-003 run)", () => {
     const input = agentRecord();
     const releaseDirectory = agentReleaseDir(input.assetBytes);
     const review = agentReviewEvidence();
