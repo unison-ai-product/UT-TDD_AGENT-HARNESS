@@ -20,6 +20,7 @@ const CLAUDE_HAIKU = MODEL_IDS.claude.haiku;
 const GPT_FRONTIER = MODEL_IDS.codex.frontier;
 const GPT_WORKER = MODEL_IDS.codex.worker;
 const GPT_SPARK = MODEL_IDS.codex.spark;
+const CONSUMER_CLI_PREFIX = "node .ut-tdd/bin/ut-tdd.mjs";
 
 export const BUILTIN_GITHUB_TEMPLATES: TemplateSet = {
   ...CLAUDE_COMMAND_TEMPLATE_SET,
@@ -71,6 +72,7 @@ export const BUILTIN_GITHUB_TEMPLATES: TemplateSet = {
     '- Codex delegation: `ut-tdd codex --role <role> --task "..."`',
     '- Claude delegation: `ut-tdd claude --role <role> --task "..."`',
     "- Team run: `ut-tdd team run --definition .ut-tdd/teams/<team>.yaml`",
+    `- Claude lane に宛てた共有 memory (返事・review 依頼・引き継ぎ) を書くときは、\`${CONSUMER_CLI_PREFIX} memory add --notify-claude ...\` を使う。動いている Claude セッションの受信箱へ知らせが届く。Claude lane に宛てない memory には付けない。`,
     "",
     "## GPT / Codex runtime defaults",
     "",
