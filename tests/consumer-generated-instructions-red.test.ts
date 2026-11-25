@@ -148,7 +148,7 @@ afterAll(() => {
 });
 
 describe("consumer generated instructions sender guidance (#1072)", () => {
-  it.fails.each(
+  it.each(
     FIXTURES,
   )("CANDIDATE-U-CGENI-008: %s AGENTS managed block has one sender instruction", (fixture) => {
     const agents = standardFixtures.get(fixture.name)?.read("AGENTS.md");
@@ -172,7 +172,7 @@ describe("consumer generated instructions sender guidance (#1072)", () => {
     }
   });
 
-  it.fails.each(
+  it.each(
     FIXTURES,
   )("CANDIDATE-U-CGENI-009: %s sender command follows source prefix substitution", (fixture) => {
     const agents = substitutedFixtures.get(fixture.name)?.read("AGENTS.md") ?? "";
