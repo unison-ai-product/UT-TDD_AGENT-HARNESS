@@ -6,7 +6,7 @@ status: confirmed
 pair_artifact: docs/design/harness/L4-basic-design/team-multi-pc-multi-repo.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 created: 2026-10-26
-updated: 2026-11-02
+updated: 2026-11-25
 issue: 1327
 related_issues: [1330, 593]
 ---
@@ -33,8 +33,8 @@ related_issues: [1330, 593]
 |---|---|---|---|
 | CANDIDATE-ST-TEAM-001 | `machine_id` (§3) | 同じ PC・同じ OS ユーザの 2 つの worktree で `machine_id` が違う。`machine.json` が壊れているのに黙って作り直す | `machine.json` が無ければ 1 回だけ作り、以後は全 worktree で同じ値。壊れていれば fail-close し、作り直しの手順を出す |
 | CANDIDATE-ST-TEAM-002 | `principal` (§3) | git の `user.name` を書き換えると操作者が変わる。`gh` が使えないのに claim が通る | 操作者は `gh` の login (小文字化) だけで決まる。`gh` が使えなければ claim・review request・宛先付き通知の送信が `actor_unresolved` で止まり、読み取りは続く |
-| CANDIDATE-ST-TEAM-003 | 二重 claim の拒否 (§4.1) — A の事例「PC2 が PC1 のチケットを拾う」 | PC1 が `issue-1` を claim した後、PC2 の claim が通る。拒否の理由に持ち主が出ない | PC2 の claim は deny され、持ち主の `principal` と PC1 の `machine_label` が返る。ref の先頭は PC1 の `claim.json` のまま |
-| CANDIDATE-ST-TEAM-004 | 同時 claim の原子性 (§4.1、GitHub 実機) | 2 PC がほぼ同時に同じチケットを claim し、両方が成功を返す。ref が後勝ちで上書きされる | ちょうど 1 本だけが成功し、もう 1 本は deny。ref の先頭は成功した側の `claim.json` |
+| CANDIDATE-ST-TEAM-003 | 二重 claim の拒否 (§4.1、UTV4-FR-005) — A の事例「PC2 が PC1 のチケットを拾う」 | PC1 の操作者が GitHub Issue を self-assign した後、PC2 の別の操作者の self-assign が lint / bot に拒否されずに残る。拒否の理由に現在の assignee が出ない | 2 人目の assign は lint または bot が拒否し、現在の assignee の login が示される。assignee は 1 人目のまま |
+| CANDIDATE-ST-TEAM-004 | 同時 claim の排他 (§4.1、GitHub 実機) | 2 人がほぼ同時に同じ Issue を self-assign し、lint / bot が両方を残す、または両方を外す | 最終的に assignee がちょうど 1 人になり、もう 1 人の assign は拒否される。残る assignee は先に assign した側 |
 | CANDIDATE-ST-TEAM-005 | 担当替え (§4.1) | `reason` または `head` の無い transfer が通る。transfer で ref の鎖が切れる (旧記録が失われる) | 記録の欠けた transfer は deny。通った transfer は旧 principal・旧 machine_id・理由・HEAD を持ち、鎖を辿ると claim → transfer → release が読める |
 | CANDIDATE-ST-TEAM-006 | claim と権限 (§4.1) | claim があることで書き込みが許され、claim が無いことで手元の編集が止まる | claim は編集の可否に影響しない |
 | CANDIDATE-ST-TEAM-007 | 宛先付き通知 (§4.3) — A の事例「返事が別の PC の inbox に届く」 | PC1 宛ての通知を PC2 が取り込む。宛先の無い通知をどちらかが取り込む。`cli:unknown-session` だけの送り手の通知が送れる | PC1 宛ては PC1 だけが取り込み、PC2 は取り込まない。宛先の無い通知は誰も取り込まない。`principal` と `machine_id` の無い送り手は送信が止まる |
