@@ -94,7 +94,7 @@ GitHub で Pack リポジトリを **Watch → Custom → Releases** に設定�
 
 入れた runtime は、その場で新しい版に更新できません (#930)。新しい版へ移る方法は、プロジェクトの新しい clone を作り、そこへ新しい版を入れ直すことです。
 
-1. プロジェクトの新しい clone を作ります。commit 済みのファイル (設計文書など) は、clone にそのまま付いてきます。origin remote が必要な点は §0 と同じです。
+1. プロジェクトの新しい clone を作ります。commit 済みのファイル (設計文書など) は、clone にそのまま付いてきます (origin から clone する場合は、元の clone の commit を先に push してください)。origin remote が必要な点は §0 と同じです。
 2. 新しい clone で、§1 と同じく `.ut-tdd/` を Git の対象から外します (`echo ".ut-tdd/" >> .git/info/exclude`。Windows PowerShell では §1 の `Add-Content` を使います)。
 3. 新しい版の asset 5 つだけを、新しく作った専用のフォルダに置きます (§1 の手順 1 と同じ表の 5 つです)。
 4. 新しい clone の中で、そのフォルダを指定して setup を実行します。`<consumer anchor>` は、**新しい版の** release notes にあるものを使ってください。
@@ -119,7 +119,7 @@ asset を置いたフォルダに、5 つ以外のファイルやフォルダが
 
 **この手順の検証の範囲**
 
-この手順は、canary.7 から canary.8 への入れ直しを、Windows (Node v24.22.3) で 1 回流して確かめただけです。その実測では、新しい版の setup と `doctor --setup-smoke` はどちらも exit 0 で、setup は約 10 秒かかりました。ほかの OS と、ほかの版の組み合わせは確かめていません ([#1879](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/1879))。
+この手順は、canary.7 から canary.8 への入れ直しを、Windows (Node v24.22.3) で 1 回流して確かめただけです。その実測では、新しい版の setup と `doctor --setup-smoke` はどちらも exit 0 で、setup は約 10 秒かかりました。この実測では、新しい clone を元の手元の clone から作り、そのあと origin をプロジェクトの origin に向け直しています。プロジェクトの origin から直接 clone する方法は確かめていません。その場合、元の clone の未 push の commit は付いてこないので、先に push してください。ほかの OS と、ほかの版の組み合わせは確かめていません ([#1879](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/1879))。
 
 ## 4. setup を流し直したとき
 
