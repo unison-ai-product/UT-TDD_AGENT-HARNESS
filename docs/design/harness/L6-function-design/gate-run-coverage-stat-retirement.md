@@ -10,7 +10,7 @@ next_pair_freeze: L7
 issue: 1490
 ---
 
-> **L6 contract marker**: `loadGateRunCoverageStats(repoRoot) => GateRunCoverageStats` の内部集計を定める。候補 oracle `CANDIDATE-U-GRCOV-001`〜`003` は対応する L7 で定める。
+> **L6 contract marker**: `loadGateRunCoverageStats(repoRoot) => GateRunCoverageStats` の内部集計を定める。正式 oracle `U-GRCOV-001`〜`003` は対応する L7 で定める。
 
 # Gate-run coverage の未使用集計値の退役 (Issue #1490)
 

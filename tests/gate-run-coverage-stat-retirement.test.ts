@@ -132,7 +132,7 @@ describe("gate-run coverage stat retirement candidates", () => {
     for (const root of roots) removeTestTree(root);
   });
 
-  it.fails("CANDIDATE-U-GRCOV-001 retires the unused stats field and filtered PLAN count", () => {
+  it.fails("U-GRCOV-001 retires the unused stats field and filtered PLAN count", () => {
     const successfulRoot = newRepo("001-success");
     const existingFailureRoot = newRepo("001-existing-failure");
     const freshFailureRoot = newRepo("001-fresh-failure");
@@ -188,7 +188,7 @@ describe("gate-run coverage stat retirement candidates", () => {
       .not.toContain("SELECT COUNT(*) AS value FROM gate_runs WHERE COALESCE(plan_id, '') = ''");
   });
 
-  it("CANDIDATE-U-GRCOV-002 preserves PLAN NULL/empty decisions and mismatch rollback", () => {
+  it("U-GRCOV-002 preserves PLAN NULL/empty decisions and mismatch rollback", () => {
     const root = newRepo("002");
     roots.push(root);
     const gateRunId = "gate-run:grcov-plan-compatibility";
@@ -238,7 +238,7 @@ describe("gate-run coverage stat retirement candidates", () => {
     );
   });
 
-  it.fails("CANDIDATE-U-GRCOV-003 removes the retired literal from the reason union", () => {
+  it.fails("U-GRCOV-003 removes the retired literal from the reason union", () => {
     expect(coverageReasons()).not.toContain("blank_plan_gate_run");
   });
 });
