@@ -220,9 +220,11 @@ canary.8 の Windows consumer では、VS Code の Claude 拡張で cold が31.5
 
 | 面 | 対象 | 実装後 |
 | --- | --- | --- |
-| consumer の Claude 配布テンプレート | `docs/templates/adapter/.claude/settings.json` の `hooks.SessionStart` にある `session start` | 同期 command、`timeout: 60` |
-| consumer の Codex 配布テンプレート | `docs/templates/adapter/.codex/hooks.json` の同イベントの `session start` | 同期 command、`timeout: 60` |
-| 実 setup の生成設定 | `src/setup/templates.ts` の同じ二つの adapter 設定 | 各配布テンプレートと同じ値、既存の launcher と argv |
+| 実 setup の生成設定 | `src/setup/templates.ts` の Claude・Codex adapter 設定の `hooks.SessionStart` にある `session start` | 既存の同期 command・launcher・argv に、§6 の `session-start` の予算を設定する |
+| consumer の Claude 配布テンプレート | `docs/templates/adapter/.claude/settings.json` の該当 command | Claude の生成設定の値を写す |
+| consumer の Codex 配布テンプレート | `docs/templates/adapter/.codex/hooks.json` の該当 command | Codex の生成設定の値を写す |
+
+この段で使う60秒の定義は、§6 の `REQUIRED` の `session-start` に持たせる `timeoutSeconds` 1か所とする。`templates.ts` は両設定とも `hookTimeoutSeconds("session-start")` を呼び、数値の literal をテンプレートに直接書かない。静的な配布 mirror は生成設定に合わせる。他の hook への `timeoutSeconds` の適用は #1057 の共通化で行う。
 
 60秒は host が同期 hook に与える上限を表す。SessionStart の書込みの順序と fail-open の扱いを維持し、host による中断後の状態回復は #1938 の別条件として扱う。source 開発 repo の `.claude/settings.json` と `.codex/hooks.json` の SessionStart は現行の30秒とする。ほかのイベント、guard、非同期 memory-wake は現行の配線と上限を使う。
 

@@ -85,10 +85,10 @@ oracle は、正しい実装に 1 つだけ加えた変異 (§3) を基準に設
 | `CANDIDATE-U-HOOKBUDGET-001` | unit | `projectHook.hookTimeoutSeconds` を 7 つの id と、未知の id (`"no-such-hook"` を型の外から渡す) で呼ぶ | 最初の assertion は「`hookTimeoutSeconds` が関数である」。続けて、7 つの id の値が §2 の表の literal と一致し、未知の id は `unknown required project hook id` を含む例外を投げる | M1–M5 |
 | `CANDIDATE-U-HOOKBUDGET-002` | unit | 生成する `adapter/.claude/settings.json` を JSON として読む | 最初の assertion は「`hookTimeoutSeconds` が関数である」。続けて、すべての hook が §2 の同定でちょうど 1 つの id に当たり、各 hook の `timeout` が number で、`hookTimeoutSeconds(その id)` と一致する (関係の oracle。literal は持たない) | M6–M8 |
 | `CANDIDATE-U-HOOKBUDGET-003` | unit | 生成する `adapter/.codex/hooks.json` を JSON として読む | 002 と同じ検査を Codex の 5 つの id について行う | M9–M11 |
-| `CANDIDATE-U-HOOKBUDGET-004` | static | mirror の `docs/templates/adapter/.claude/settings.json` | (a) `agent-guard` と `work-guard` がちょうど 1 つずつあり、どちらも `timeout` が 60。加えて、PreToolUse の hook のうち `onFailure: "block"` を持つものは、すべて `timeout` が 60。(b) `session-start`・`post-tool-use`・`session-summary` が 60、`claude-memory-wake` が 930、`subagent-stop` が 5 | M12、M13 |
-| `CANDIDATE-U-HOOKBUDGET-005` | static | mirror の `docs/templates/adapter/.codex/hooks.json` | (a) `agent-guard` と `work-guard` がちょうど 1 つずつあり、PreToolUse の hook はすべて `timeout` が 60 (Codex の PreToolUse の hook はすべて guard である)。(b) `session-start`・`post-tool-use`・`session-summary` が 60 | M14 |
-| `CANDIDATE-U-HOOKBUDGET-006` | static | source の `.claude/settings.json` | 004 と同じ検査 | M15–M17 |
-| `CANDIDATE-U-HOOKBUDGET-007` | static | source の `.codex/hooks.json` | 005 と同じ検査 | M18、M19 |
+| `CANDIDATE-U-HOOKBUDGET-004` | static | mirror の `docs/templates/adapter/.claude/settings.json` | (a) `agent-guard` と `work-guard` がちょうど 1 つずつあり、どちらも `timeout` が 60。加えて、PreToolUse の hook のうち `onFailure: "block"` を持つものは、すべて `timeout` が 60。(b) `post-tool-use`・`session-summary` が 60、`claude-memory-wake` が 930、`subagent-stop` が 5。Pack の `session-start` は §8 が検査する | M12、M13 |
+| `CANDIDATE-U-HOOKBUDGET-005` | static | mirror の `docs/templates/adapter/.codex/hooks.json` | (a) `agent-guard` と `work-guard` がちょうど 1 つずつあり、PreToolUse の hook はすべて `timeout` が 60 (Codex の PreToolUse の hook はすべて guard である)。(b) `post-tool-use`・`session-summary` が 60。Pack の `session-start` は §8 が検査する | M14 |
+| `CANDIDATE-U-HOOKBUDGET-006` | static | source の `.claude/settings.json` | 004 と同じ検査に加え、#1057 の段で source の `session-start` が §2 の予算になることを確認する | M15–M17 |
+| `CANDIDATE-U-HOOKBUDGET-007` | static | source の `.codex/hooks.json` | 005 と同じ検査に加え、#1057 の段で source の `session-start` が §2 の予算になることを確認する | M18、M19 |
 | `CANDIDATE-U-HOOKBUDGET-008` | unit + static | 6 面 (生成物 2、mirror 2、source 2) の全 hook | どの hook も `async` が `true` でない。`asyncRewake` は見ない | M20–M22 |
 | `CANDIDATE-U-HOOKBUDGET-009` | unit | 生成する `adapter/.claude/CLAUDE.md` | managed block の中に、L6 §5.1 の 6 行が連続して含まれる | M23–M25 |
 | `CANDIDATE-U-HOOKBUDGET-010` | static | mirror の `docs/templates/adapter/.claude/CLAUDE.md` | 009 と同じ検査 | M26、M27 |
@@ -165,6 +165,8 @@ L6 §10 の受け入れ条件 3 の手動の確認は、自動テストの oracl
 | `CANDIDATE-U-PACKSTART-003` | 実 setup が使う Claude 設定 | 該当 command の `timeout` は数値の60 |
 | `CANDIDATE-U-PACKSTART-004` | 実 setup が使う Codex 設定 | 該当 command の `timeout` は数値の60 |
 
-契約合流の後、登録と Red を別 PR に入れる。現行の4面では30が返り、比較だけが失敗する。欠落、重複、JSON の破損は通常の失敗として扱う。Green で4面の比較を通常テストに変え、既存の `U-SLOG-010` と対象外検査では Pack SessionStart の旧30秒を期待する箇所だけ60秒に合わせる。source の `U-SLOG-011` と他イベントの期待は従来の値を使う。回帰の対象には既存の配布と生成の設定一致も含める。
+契約合流の後、登録と Red を別 PR に入れる。現行の4面では30が返り、比較だけが失敗する。欠落、重複、JSON の破損は通常の失敗として扱う。Green で4面の比較を通常テストに変え、`U-SLOG-010`、`U-SLOG-011`、`source and consumer non-target hook timeouts remain unchanged` から SessionStart の timeout の数値比較を外す。他イベントの数値比較、guard の診断、配布 mirror と生成設定の一致検査は維持する。この段の Pack の数値を検査する oracle は上の PACKSTART 4件に集約する。#1057 の生成設定 oracle 002・003 は §4 の値の参照関係を検査する。
+
+共有 `L7-unit-test-design.md` の凍結が解けた後、Green に続く正式 ID 昇格の PR（`src/`・`scripts/` を含まない）で、`U-SLOG-010` の Claude・Codex SessionStart の数値記述を PACKSTART への参照に替える。`U-SLOG-011` の source SessionStart の数値記述も、#1057 の source 設定の oracle を指す記述に替える。共有文書にはこの改訂のタイミングまで従来の記録が残り、Pack の SessionStart には本節を適用する。
 
 4件の設定検査は host の完走や中断時の回復を測らない。配布後の実機計測では canary.9 の実配布物と Windows host を使い、各 run の設定値、whole-hook の時間、終了またはキャンセル、該当 session の記録と digest を記録する。canary.8 の `AT-835-008` の観測を上書きしない。
