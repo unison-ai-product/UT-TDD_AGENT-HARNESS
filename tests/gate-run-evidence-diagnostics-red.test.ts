@@ -192,7 +192,7 @@ function assertWarningIsSanitized(
   expected: string,
   forbidden: string[],
 ): void {
-  expect.soft(warning).toBe(expected);
+  expect(warning).toBe(expected);
   for (const detail of forbidden) expect.soft(warning).not.toContain(detail);
 }
 
@@ -228,7 +228,7 @@ function observeDirectFailure(kind: FailureFixture) {
 }
 
 function expectWriterDiagnostic(observed: ReturnType<typeof observeDirectFailure>) {
-  expect.soft(observed.result.code).toBe("existing_evidence_scan_failed");
+  expect(observed.result.code).toBe("existing_evidence_scan_failed");
   expect.soft(observed.result.message).toBe(diagnosticPrefix + JSON.stringify(observed.path));
   expect.soft(observed.result.hasCause).toBe(false);
   for (const detail of observed.forbidden)
@@ -257,11 +257,11 @@ describe("direct gate evidence writer", () => {
     }
   });
 
-  it.fails("U-GATEDIAG-001: sanitizes a physical read failure", () => {
+  it("U-GATEDIAG-001: sanitizes a physical read failure", () => {
     expectWriterDiagnostic(observed.read);
   });
 
-  it.fails("U-GATEDIAG-002: sanitizes malformed and null evidence", () => {
+  it("U-GATEDIAG-002: sanitizes malformed and null evidence", () => {
     expectWriterDiagnostic(observed.malformed);
     expectWriterDiagnostic(observed.null);
   });
@@ -321,7 +321,7 @@ for (const approved of [true, false]) {
         expect(rejected).toHaveLength(3);
       });
 
-      it.fails("U-GATEDIAG-003: emits only the path diagnostic", () => {
+      it("U-GATEDIAG-003: emits only the path diagnostic", () => {
         for (const { run, path, forbidden } of rejected) {
           const expected = expectedWarning(path);
           assertWarningIsSanitized(run.warning, expected, forbidden);
