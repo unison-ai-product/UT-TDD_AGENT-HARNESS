@@ -74,3 +74,19 @@ writer が既存 `.json` を走査中に物理 read error、不正 JSON、また
 診断対象は現行の走査を中断する物理読み取り失敗、不正 JSON、JSON `null` の3種に限る。既存 ID の `EEXIST`、正常に読める別 ID の反復、同じ ID の拒否は §3.1 の契約に従う。別名証跡があるまま発行を継続する判断は、同一 ID の二重発行を防げることを確認した後に行う。[ファイル名と ID の再現](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/1490#issuecomment-7123755365) [契約改訂の承認](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/1490#issuecomment-7123927381)
 
 正式 oracle `U-GATEDIAG-001`〜`003` は L7 §4 に定める。
+
+## 6. 運用時の復旧 (Issue #1490 items 2・3)
+
+### 6.1 古い DB projection の再構築
+
+旧 PLAN にひも付いた投影行が残り、`gate-run-coverage` が `invalid_gate_run_evidence` を報告する場合は、対象リポジトリで `ut-tdd db rebuild` を実行する。再構築後、`ut-tdd doctor` の `gate-run-coverage - OK` を確認する。DB の投影を証跡から作り直すため、旧 PLAN の投影行は解消され、監査記録 `.ut-tdd/audit/A-132-l8-l14-verification-band-execution.md` に由来する正規の `G-VERIFY` 履歴は保持される。
+
+### 6.2 既存証跡走査の拒否
+
+`existing_evidence_scan_failed` が出た場合は、警告に示されたリポジトリ相対パスを確認する。読み取りに失敗している場合はアクセスを復旧し、原本を読める状態で JSON と ID を確認する。不正 JSON または JSON `null` の場合は、対象ファイルを `.ut-tdd/gate_runs/` の走査範囲外に保全し、退避の前後で SHA-256 が一致することを確かめる。破損ファイルのコピーだけを作り、元ファイルを走査範囲に残した場合は、同じ診断が続く。
+
+正常な証跡を保持し、退避したファイルの由来と既存の証跡を照合する。同じ ID の発行済み証跡を見落とす可能性があれば、再試行を保留する。重複のおそれが解消したら元の gate コマンドを再実行し、次の出力で保存結果を確認する。
+
+### 6.3 保存結果の読み分け
+
+human-readable 出力の `- evidence: .ut-tdd/gate_runs/<hash>.json`、または `--json` 出力の非 `null` な `gate_run_evidence` が、新しい証跡の保存成功を示す。`gate_run_evidence_warning` または stderr の `gate run evidence write failed:` は保存失敗を示す。既存 ID による `EEXIST` では新しい証跡は保存されず、既存 final は保持される。これは gate の verdict / exit code とは別の結果である。
