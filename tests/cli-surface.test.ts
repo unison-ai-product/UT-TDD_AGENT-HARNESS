@@ -622,32 +622,12 @@ describe("L7 CLI surface closure", () => {
     }
   }, 20_000);
 
-  it("passes plan skill injection through task route adapter plans", () => {
-    const sourcePlan = join(
-      repoRoot,
-      "docs",
-      "plans",
-      "PLAN-L7-135-dynamic-skill-injection-materialization.md",
-    );
-    if (!existsSync(sourcePlan)) return;
+  it("rejects the retired plan option when routing a task", () => {
+    const run = runCli(["task", "route", "--role", "se", "--plan", "PLAN-L7-135", "--json"]);
 
-    const run = runCli([
-      "task",
-      "route",
-      "--role",
-      "se",
-      "--plan",
-      sourcePlan,
-      "--mode",
-      "codex-only",
-      "--execute",
-      "--json",
-    ]);
-    const payload = JSON.parse(run.stdout);
-
-    expect(run.status).toBe(0);
-    expect(payload.adapterPlan.context_injection.required_paths.length).toBeGreaterThan(0);
-    expect(payload.adapterPlan.stdin).toContain("UT-TDD context injection:");
+    expect(run.status).toBe(1);
+    expect(run.stderr).toContain("unknown option '--plan'");
+    expect(run.stdout).toBe("");
   }, 20_000);
 
   it("keeps proposal advisory lanes aligned with executable task routing", () => {
