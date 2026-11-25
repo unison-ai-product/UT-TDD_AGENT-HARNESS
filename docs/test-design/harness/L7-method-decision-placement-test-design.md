@@ -43,7 +43,7 @@ issue: 1923
 |---|---|---|---|
 | `CANDIDATE-U-METHODDEC-006` | `DEC-001` の状態が `approved` で、(a) 承認根拠が空 (b) 承認対象 revision が空 (c) 承認の 4 項目がすべて空 | 各ケース `{approval_incomplete}` だけ (`decision_field_missing:承認` は出さない) | 状態が `proposed` で承認の 4 項目がすべて空なら適合 (承認前の起草を許す明示の例外)。ただし `proposed` でも `理由` が空なら `decision_field_missing:理由` |
 | `CANDIDATE-U-METHODDEC-007` | 起草が `AI: claude-sonnet-5-5`、承認者も `claude-sonnet-5-5` | `approver_equals_drafter` | 承認者が `po-1` で承認根拠のコメント URL があれば適合。AI の推奨 (`shared-schema-rls`) と選んだ方式 (`db-per-tenant`) が違う記録でも、欄 3 に PO の判断理由があれば適合 |
-| `CANDIDATE-U-METHODDEC-008` | 入力に比較基準を渡す (`approved` の `DEC-001` の `承認対象 revision` 時点の第9章)。(a) 比較基準の `DEC-001` は `選んだ方式` が `db-per-tenant`、現行は同じ ID のまま `shared-schema-rls` (b) 承認対象 revision を解決できない (c) 承認対象 revision の第9章に `DEC-001` の記録が無い | (a) `{approved_decision_edited_in_place}` (b)(c) `{approval_baseline_unavailable}` | (a') 比較基準も現行も `shared-schema-rls` (最初からその方式で承認された記録) なら適合。(a'') 新しい `DEC-004` (置換元 `DEC-001`) を起こし、`DEC-001` を `superseded` にして欄 2〜4 を残し、`DEC-004` の比較基準と現行が一致し欄 1〜10 そろっているなら適合 |
+| `CANDIDATE-U-METHODDEC-008` | 入力に比較基準を渡す (`approved` の `DEC-001` の `承認対象 revision` 時点の第9章)。(a) 比較基準の `DEC-001` は `選んだ方式` が `db-per-tenant`、現行は同じ ID のまま `shared-schema-rls` (b) 非空の承認対象 revision が Git 履歴で解決できない (c) 承認対象 revision の第9章に `DEC-001` の記録が無い | (a) `{approved_decision_edited_in_place}` (b)(c) `{approval_baseline_unavailable}` | (a') 比較基準も現行も `shared-schema-rls` (最初からその方式で承認された記録) なら適合。(a'') 新しい `DEC-004` (置換元 `DEC-001`) を起こし、`DEC-001` を `superseded` にして欄 2〜4 を残し、`DEC-004` の比較基準と現行が一致し欄 1〜10 そろっているなら適合 |
 
 ### 3.3 DoR が読む範囲 (設計 §7)
 

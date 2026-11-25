@@ -81,7 +81,7 @@ ADR の「決定」は、決定記録の「選んだ方式」と同じ内容で�
 - 欄 4 (却下した案) の「案が 0 件」と、欄 6 (承認) の欠落は、`decision_field_missing` を出さず、下表の専用の reason だけを出す。欄 4 の「案はあるが却下の理由が空」は `decision_field_missing:却下した案` を出す。
 - 欄 7 (ADR 参照) は、欄が無いか空なら `decision_field_missing:ADR 参照` だけを出す。path があるが ADR が存在しない、または status が合わないときは `adr_ref_invalid` だけを出す。
 - 状態が `proposed` の記録は、欄 6 の 4 項目が空でよい (承認前の起草を許す明示の例外)。`superseded` の記録は、承認 4 項目を持っていた場合それを残す (消さない)。
-- 複数の規則が同時に当たるときは、当たった reason をすべて出す。ある規則が別の規則を打ち消すことはない (専用の規則を持つ欄が、一般の規則と二重に出ることもない)。
+- 複数の規則が同時に当たるときは、当たった reason をすべて出す。ある規則が別の規則を打ち消すことはない (専用の規則を持つ欄が、一般の規則と二重に出ることもない)。ただし、承認対象 revision (欄 6) が空の `approved` の記録は `approval_incomplete` だけを出し、比較基準の照合 (§4.3) は行わないので `approval_baseline_unavailable` は出さない。
 
 | 欄 | 内容 |
 |---|---|
@@ -106,8 +106,10 @@ ADR の「決定」は、決定記録の「選んだ方式」と同じ内容で�
 
 `approved` の決定記録の欄 2〜4 を、その記録の中で書き換えない。判定は **比較基準** との照合で行う。比較基準は、その記録の `承認対象 revision` (欄 6) の commit にある L3 第9章の、同じ `DEC-NNN` の記録の欄 2〜4 である (consumer の既存の Git 履歴から読み、新しい保管方式は作らない)。
 
+この照合は、`承認対象 revision` が非空のときだけ行う。空のときは `approval_incomplete` (§5.1) だけを出し、比較基準の照合はしない (専用の規則を持つ欄を二重に出さない、§4.1)。
+
 - 現行の欄 2〜4 が比較基準と食い違う: `approved_decision_edited_in_place`。
-- 承認対象 revision を解決できない、またはその commit に同じ `DEC-NNN` の記録が無い: `approval_baseline_unavailable`。
+- 非空の承認対象 revision を Git 履歴で解決できない、またはその commit に同じ `DEC-NNN` の記録が無い: `approval_baseline_unavailable`。
 - 食い違いが無い: 適合。最初から別の方式で承認された記録と、承認の後に書き換えられた記録を区別できるのは、この比較基準があるからである。
 
 方式を変えるときは次の手順を踏む。
@@ -199,7 +201,7 @@ DoR (#1928) が方式の決定について読むのは、**L3 第9章の決定�
 | `judgeDetailDocs` | 決定記録と、L4 / L5 の節 | 適合、または `detail_without_decision_ref` / `decision_outside_l3` / `detail_contradicts_decision`。いずれも L3 を書き換えない。後者 2 つは段 0 へ戻す (§5.3)。 |
 | `judgeTemplateItems` | テンプレートの項目 (適用条件の有無) と決定記録 | 適合、`unconditional_item_presumes_decision`、`template_prefilled_decision`。非適用の項目の欠落は適合。 |
 
-reason が複数当たるときは全部を出す (昇順、重複なし。§4.1 の空欄の規則に従い、専用の規則を持つ欄 4・6 は `decision_field_missing` と二重に出さない)。
+reason が複数当たるときは全部を出す (昇順、重複なし。§4.1 の空欄の規則に従い、専用の規則を持つ欄 4・6 は `decision_field_missing` と二重に出さない)。`承認対象 revision` が空なら `approval_incomplete` だけで、`approval_baseline_unavailable` は出さない (比較基準の照合は非空の revision だけが対象、§4.3)。
 
 ## 10. 不変条件
 
