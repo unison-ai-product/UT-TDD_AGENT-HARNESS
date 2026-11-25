@@ -10,7 +10,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it, type TestContext } from "vitest";
 import { stringify } from "yaml";
 import { packageConsumerRuntimeRelease } from "../src/cli/distribution.ts";
 import {
@@ -199,6 +199,12 @@ function pick(value: unknown, ...keys: string[]): unknown {
 function kindsOf(stdout: string): unknown[] {
   const findings = pick(parseJson(stdout), "privacyScan", "findings");
   return Array.isArray(findings) ? findings.map((finding) => pick(finding, "kind")) : [];
+}
+
+function registeredPackTests(ctx: TestContext, id: string) {
+  return (ctx.task.suite?.tasks ?? [])
+    .filter((task) => task.type === "test")
+    .filter((task) => task.name.startsWith(`${id}:`));
 }
 
 function walkBytes(root: string): Map<string, string> {
@@ -408,6 +414,22 @@ describe("U-PKBIN sync-pack / package wiring", () => {
     } finally {
       removeTestTree(home);
     }
+  });
+
+  it("the two Pack CLI cases each have one numeric timeout registration", (ctx) => {
+    for (const id of ["U-PKBIN-008", "U-PKBIN-011"]) {
+      const matches = registeredPackTests(ctx, id);
+      expect(matches, id).toHaveLength(1);
+      expect(matches[0]?.timeout, id).toEqual(expect.any(Number));
+    }
+  });
+
+  it.fails("U-PKBIN-018: U-PKBIN-008 has a 75 second timeout", (ctx) => {
+    expect(registeredPackTests(ctx, "U-PKBIN-008")[0]?.timeout).toBe(75_000);
+  });
+
+  it.fails("U-PKBIN-019: U-PKBIN-011 has a 75 second timeout", (ctx) => {
+    expect(registeredPackTests(ctx, "U-PKBIN-011")[0]?.timeout).toBe(75_000);
   });
 });
 
