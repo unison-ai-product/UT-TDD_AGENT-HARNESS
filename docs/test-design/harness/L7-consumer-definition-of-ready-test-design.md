@@ -15,7 +15,7 @@ issue: 1928
 
 対になる設計文書は `docs/design/harness/L6-function-design/consumer-definition-of-ready.md` である。共有の
 `docs/test-design/harness/L7-unit-test-design.md` には行を足さない (shared file の直列化規律)。本書が
-oracle の正本であり、`CANDIDATE-U-DOR-001`〜`026` を候補として宣言する。昇格・実装は別 PR である。
+oracle の正本であり、`CANDIDATE-U-DOR-001`〜`027` を候補として宣言する。昇格・実装は別 PR である。
 Red は `it.fails` で先に入れ、Green で `it` に戻す (設計書保護 gate)。
 
 ## 2. fixtures
@@ -71,6 +71,7 @@ Red は `it.fails` で先に入れ、Green で `it` に戻す (設計書保護 g
 | `CANDIDATE-U-DOR-024` | `dor-ok` と各 oracle の入力を、一時ディレクトリの実 file として置き、DoR の実行の前後で全 file の内容と mtime を比べる。git と ネットワークの呼び出し (`child_process` と `fetch`) に spy を付ける | 内容と mtime は同一。spy の呼び出し回数は 0 | 文書や ADR を書き換える / 署名の確認に git やネットワークを使う |
 | `CANDIDATE-U-DOR-025` | (a) `dor-ok` から L2 の文書を消す。(b) 別の入力で、L2 の `doc_type_id` を `DOC-L2-SCREENX` にする (どちらも L2 以外は元のまま、署名は元の文書で作ったまま) | (a) `dor.missing_doc:DOC-L2-SCREEN` と、波及の `dor.trace:dangling_reference:DOC-L1-REQUIREMENTS:R-002:展開先:SC-002` の 2 件だけ。(b) `dor.doc_type_mismatch:DOC-L2-SCREEN` と同じ波及の 1 件の 2 件だけ。どちらも L2 の `状態`・遷移・署名の UI 確定の finding と、`dor.signoff_stale:DOC-L2-SCREEN` は出ない (読めない文書の節を飛ばす) | 読めない文書の表を読もうとして例外になる / 読めない文書の `stale` を返す |
 | `CANDIDATE-U-DOR-026` | 順序の整合: `dor-ok` に対して、(1) 署名の記録を作る (4 文書は `draft`)。(2) 4 文書の frontmatter の `status` を全て `confirmed` にする (本文は不変)。(3) #894 の `findUnfilledTemplatePlaceholders` を、4 文書に実 status (`confirmed`) で適用する。(4) DoR を実行する | (3) の結果は 0 件。(4) は `pass`、`findings` は空。(2) の後も署名は有効 (`bodyDigest` は frontmatter を除くため)。さらに、4 文書のどれかの本文に記入欄を 1 つ足した入力で、(3) の一致の集合 (path・行・列) と (4) の `dor.placeholder` の集合が一致する (同じ関数を呼ぶ) | 凍結の操作で署名が無効になり、署名と凍結を同時に満たせない / DoR が #894 と違う基準で記入欄を数える |
+| `CANDIDATE-U-DOR-027` | 署名の記録の番号が重なる入力。`dor-ok` の `ADR-006-dor-signoff.md` を残し、`ADR-006-dor-old.md` を足す (同じ `## DoR 署名` の行を持ち、L2 の digest だけが違う。形は正しい)。(a) `list` が `ADR-006-dor-signoff.md` を先に返す。(b) `list` の順序を逆にする。(c) 別の入力で、`ADR-006-dor-old.md` から `## DoR 署名` の行を除く (同じ番号の file が 2 件で、署名の節を持つのは 1 件) | (a) `dor.signoff_ambiguous:ADR-006` の 1 件だけ (`dor.signoff_stale:*` も他の署名の finding も出さない)。(b) (a) と同じ 1 件だけ (`findings` の集合も状態も同一)。(c) `findings` は空 (`pass`。署名の節を持つ `ADR-006-dor-signoff.md` を使う) | 同番号の片方を `list` の順で選ぶ (順序で結果が変わる) / 曖昧でも stale を返す / 署名の節を持たない同番号の file を曖昧にする |
 
 ## 4. 範囲と実行
 

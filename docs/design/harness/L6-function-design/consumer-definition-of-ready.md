@@ -9,7 +9,7 @@ related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 issue: 1928
 ---
 
-> **L6 contract marker**: `evaluateDefinitionOfReady(input) => DorResult` (consumer の L0〜L3 の前提文書と署名の記録を、形だけ読んで finding の一覧を返す純関数。`src/lint/consumer-dor.ts` に置く) と、doctor profile `consumer-dor` は unit-test-granularity contract である (未実装の目標契約。関数名は実装で変えてよいが、契約の意味は変えない)。pre: `input` は読み取り関数 `read` / `exists` / `list` の 3 つで、文書を書き換えない。post: 結果の状態は `pass` / `warn` / `fail` / `not-applicable` の 4 つで、機械の検査が全て通っても「着手してよい」とは表示しない。invariant: 意味の判定はしない。oracle は `docs/test-design/harness/L7-consumer-definition-of-ready-test-design.md` の `CANDIDATE-U-DOR-001`〜`026` が固定する (正式 ID `U-DOR-*` への昇格は、src を含まない昇格 PR で行う)。
+> **L6 contract marker**: `evaluateDefinitionOfReady(input) => DorResult` (consumer の L0〜L3 の前提文書と署名の記録を、形だけ読んで finding の一覧を返す純関数。`src/lint/consumer-dor.ts` に置く) と、doctor profile `consumer-dor` は unit-test-granularity contract である (未実装の目標契約。関数名は実装で変えてよいが、契約の意味は変えない)。pre: `input` は読み取り関数 `read` / `exists` / `list` の 3 つで、文書を書き換えない。post: 結果の状態は `pass` / `warn` / `fail` / `not-applicable` の 4 つで、機械の検査が全て通っても「着手してよい」とは表示しない。invariant: 意味の判定はしない。oracle は `docs/test-design/harness/L7-consumer-definition-of-ready-test-design.md` の `CANDIDATE-U-DOR-001`〜`027` が固定する (正式 ID `U-DOR-*` への昇格は、src を含まない昇格 PR で行う)。
 
 # consumer の Definition of Ready (DoR) — 関数設計 (Issue #1928、親 #1927)
 
@@ -160,6 +160,7 @@ L1 との trace は §4.5 が持つ。ここでは L3 に足す 2 つの節を�
 
 **置き場は、consumer の ADR 1 件 (`docs/adr/ADR-<番号>-<題>.md`)**。既存の記録経路を使い、新しい保管方式は作らない (PO 承認の置き場は ADR と、既に `consumer-operations-controls.md` §7 が定めている。採択結果を ADR に残す規律は `skills/design-decision-elicitation.md` にある)。
 署名の記録は、`docs/adr/` の file のうち、行 `## DoR 署名` を持つもので、**ADR の番号が最大のもの**とする。署名し直したときは、番号が大きい新しい ADR を足す。古い ADR は履歴として残す (書き換えない)。
+**最大の番号の file が 2 件以上あるときは選ばず、拒否する**。行 `## DoR 署名` を持つ file の中で最大の ADR 番号を持つものが 2 件以上あれば、`dor.signoff_ambiguous:<ADR 番号>` (例: `dor.signoff_ambiguous:ADR-006`) の 1 件だけを返し、署名の検査 (下の表、`dor.signoff_stale`、§5.2) は行わない (Definition of Ready は満たさない)。同じ番号の file でも、行 `## DoR 署名` を持つのが 1 件以下なら曖昧ではない。結果は `list` が返す順序に依存しない (`list` の結果は番号で整列して扱う)。
 
 節 `## DoR 署名` は、列 `項目` `値` の表を持つ。
 
@@ -171,6 +172,7 @@ L1 との trace は §4.5 が持つ。ここでは L3 に足す 2 つの節を�
 | `非著者 review の記録` | 空でなく placeholder でない (PR の URL か receipt の path。実在は確かめない) | `dor.signoff_field_missing:非著者 review の記録` |
 
 - 記録が 1 件も無いと `dor.signoff_missing` を返し、§5.1 の表と §5.2 の検査は行わない。
+- 署名の finding の組は 3 通りの排他である。記録が無い (`dor.signoff_missing` の 1 件)、最大番号が曖昧 (`dor.signoff_ambiguous` の 1 件)、記録が 1 件に決まる (表と digest の finding)。
 - **digest の定義 (`bodyDigest`)**: 文書の本文から frontmatter (先頭の `---` から次の `---` の行まで。`consumer-trace.ts:128` と同じ正規表現) を除き、改行 `\r\n` を `\n` に揃え、UTF-8 の bytes の SHA-256 を `sha256:` + 16 進で表す。frontmatter を除くのは、署名の後に `status: draft` を `confirmed` へ変える (凍結する) 操作で署名を無効にしないためである。**本文**が変わると無効になる。
 - 4 つの文書それぞれの `bodyDigest` を再計算し、記録の値と違えば `dor.signoff_stale:<doc_type_id>` を返す。文書が読めないときは §4.0 の finding だけを返し、`stale` は返さない。
 - 署名者の本人確認、署名の真正性は機械で確かめない。**署名は PO が行い、記録を読むのは人である** (§5.3)。
@@ -283,4 +285,4 @@ L1 との trace は §4.5 が持つ。ここでは L3 に足す 2 つの節を�
 
 ## 13. oracle
 
-`CANDIDATE-U-DOR-001`〜`026` (`docs/test-design/harness/L7-consumer-definition-of-ready-test-design.md`。共有の `L7-unit-test-design.md` には足さない)。
+`CANDIDATE-U-DOR-001`〜`027` (`docs/test-design/harness/L7-consumer-definition-of-ready-test-design.md`。共有の `L7-unit-test-design.md` には足さない)。
