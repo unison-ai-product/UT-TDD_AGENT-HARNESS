@@ -43,6 +43,20 @@ fixture は一時 Git repo (tracked は `git ls-tree` で観測) を使う。
 | `U-PKBIN-015` | 013 の正しい C1 から、ビルド入力を 1 件だけ外す (他は全て在る) | `commit_entries_mismatch` (欠落したビルド入力を拒否) | ビルド入力を任意扱いにする |
 | `U-PKBIN-016` | 013 の正しい C1 で、ビルド入力 1 件の bytes だけを 1 byte 変える (path / mode / size は同じ) | `commit_entries_mismatch` | bytes の照合を path だけにする |
 | `U-PKBIN-017` | ビルド入力の path が artifact の出荷先 path と重なる (artifact の bytes は変換後で source と異なる) | 期待集合に当該 path が 1 件だけ在り、artifact の変換後の bytes を期待する。`build-input` の entry は足さない。C1 がその bytes ならば `attested` | 重なった path に source の bytes を期待する / 2 件並べる |
+| `U-PKBIN-018` | `U-PKBIN-008` と prefix が一致する登録済み test task を `ctx.task.suite.tasks` から取得 | 登録は 1 件だけで、`timeout` metadata が数値。`timeout === 75_000` を期待する (契約 PR + Red では `it.fails`) | 対象 test が標準 timeout のまま、または対象を特定できない |
+| `U-PKBIN-019` | `U-PKBIN-011` と prefix が一致する登録済み test task を `ctx.task.suite.tasks` から取得 | 登録は 1 件だけで、`timeout` metadata が数値。`timeout === 75_000` を期待する (契約 PR + Red では `it.fails`) | 対象 test が標準 timeout のまま、または対象を特定できない |
+
+## 2.1 Pack CLI テストの実行上限 (#1956)
+
+Windows 2/3 で、`U-PKBIN-008` は31.071秒、`U-PKBIN-011` は42.969秒で、いずれも既定の30秒上限に達した。#1949 の再実行では、それぞれ16.722秒と13.371秒で成功した。Windows の committed snapshot `46995742` では両方が30秒で失敗し、実測はそれぞれ51.063秒と36.650秒だった。
+
+この2件は `heavyIt` の `['pack', 75_000]` で登録し、`[hook-timing]` に実行時間を出す。75秒は観測された最大所要時間を約24秒上回る。子プロセスには `runDistribution` の既存の上限が適用される。
+
+Red では Vitest が登録した2件の timeout をテストコンテキストから取得する。通常テストが各 ID の登録1件と数値の timeout を確認し、018 と 019 が個別に75秒と比較する。Green では既存のシナリオと `[hook-timing]` のログも確認する。
+
+- [U-PKBIN-008 の30秒上限到達](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/actions/runs/45533194323/attempts/3)
+- [U-PKBIN-011 の30秒上限到達](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/actions/runs/45382094247/job/138403439892)
+- [2件が成功した試行](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/actions/runs/45533194323/attempts/5)
 
 ## 3. 範囲と実行
 

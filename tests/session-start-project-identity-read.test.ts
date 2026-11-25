@@ -139,7 +139,7 @@ describe("SessionStart project identity reads", () => {
     }
   });
 
-  it.fails("P-PMEMROOT-006: reads identity once in each of the three resolutions", () => {
+  it("P-PMEMROOT-006: reads identity once in each of the three resolutions", () => {
     const resolutions = summarizeRootReads(commandLog);
     expect(resolutions.map((git) => git.filter((command) => command === "show").length)).toEqual([
       1, 1, 1,
@@ -165,7 +165,7 @@ function ports(overrides: Partial<Parameters<typeof resolveProjectMemoryRootWith
 }
 
 describe("Project identity read boundaries", () => {
-  it.fails("U-PMEMROOT-010: revalidates identity on a separate root resolution", () => {
+  it("U-PMEMROOT-010: revalidates identity on a separate root resolution", () => {
     const identityReads: string[] = [];
     let identity: string | null = "owner/product";
     const resolverPorts = ports({
