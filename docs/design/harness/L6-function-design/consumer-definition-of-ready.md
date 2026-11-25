@@ -35,7 +35,7 @@ issue: 1928
 | doctor profile の登録 (`DoctorRunProfileId`、`DOCTOR_RUN_PROFILES`、`--profile`、`--profiles`) | `src/doctor/profiles.ts:3-8`、`:190-214`。`consumer-design-phase-doctor.md` §3 | profile `consumer-dor` を同じ仕組みで足す (§7) |
 | 段の名前 `baseline` / `advisory` / `ratchet` / `enforce` | `consumer-operations-controls.md` §3.1 / §6、`consumer-design-system.md` §7 | 本書は `advisory` と `enforce` だけを使う (§8) |
 | 段 0 へ戻る経路 (confirmed → fullback、`kind=reverse` + `forward_routing`) | `docs/governance/gate-design.md:61` | §6 で使う |
-| 方式の決定の置き場と判定 (L3 第9章の `DEC-NNN`、DoR が読む範囲) | `method-decision-placement.md` §3、§4、§7 (#1923) | §4.4 で読む。用語・判定の定義は再掲せず、そこへ従う |
+| 方式の決定の置き場・決定記録の書式・判定 (L3 第9章の `DEC-NNN`、DoR が読む範囲) | `method-decision-placement.md` §3 (書式は §3.4)、§4、§7、§9 `judgeDecisionRecords` (#1923) | §4.4 で読む。用語・書式・判定の定義は再掲せず、そこへ従う |
 | PO 承認の置き場 = consumer の ADR | `consumer-operations-controls.md` §7 | §5 の署名の記録に使う |
 
 ## 3. 入力の集合と読み方
@@ -58,7 +58,7 @@ DoR が読む文書は 4 つの core 文書だけである (L0、L1、L2、L3)�
 各 finding は文字列 1 つで、`dor.<種別>:<引数>` の形にする。結果は辞書順に並べ、同じ finding は 1 回だけ返す。**最初の 1 件で打ち切らず、全件返す**。
 各項目は「機械で確かめる形」と「人が見るもの」に分ける。人が見るものは §5.3 の checklist に出し、機械は合否を判定しない。
 
-### 4.0 全文書に共通
+**4.0 全文書に共通**
 
 | finding | 条件 |
 | --- | --- |
@@ -70,7 +70,7 @@ DoR が読む文書は 4 つの core 文書だけである (L0、L1、L2、L3)�
 - 記入欄の字句と HTML comment の除外は #894 §2 が正本で、本書は複製しない。除外は照合の前に行われる (説明用の HTML comment が一致に数えられないため、この順序が必要である)。
 - `dor.missing_doc` / `dor.doc_type_mismatch` が出た文書は、以降の節の検査を飛ばす (読めない文書の表を読まない)。
 
-### 4.1 L0 企画書
+**4.1 L0 企画書**
 
 | 機械で確かめる形 | finding |
 | --- | --- |
@@ -80,7 +80,7 @@ DoR が読む文書は 4 つの core 文書だけである (L0、L1、L2、L3)�
 
 人が見るもの: 採用した案とその理由が妥当か。**PO の署名** (§5)。
 
-### 4.2 L1 要求定義
+**4.2 L1 要求定義**
 
 | 機械で確かめる形 | finding |
 | --- | --- |
@@ -96,7 +96,7 @@ DoR が読む文書は 4 つの core 文書だけである (L0、L1、L2、L3)�
 
 人が見るもの: 要求と受入条件の妥当性。非著者 review。
 
-### 4.3 L2 画面一覧
+**4.3 L2 画面一覧**
 
 | 機械で確かめる形 | finding |
 | --- | --- |
@@ -109,18 +109,22 @@ DoR が読む文書は 4 つの core 文書だけである (L0、L1、L2、L3)�
 
 人が見るもの: **UI 確定の証拠** (§5.2)。画面の状態と遷移の妥当性。
 
-### 4.4 L3 機能要件
+**4.4 L3 機能要件**
 
 L1 との trace は §4.5 が持つ。ここでは L3 に足す 2 つの節を扱う。
 
-**方式の決定** (L3 の第9章「方式の決定」。置き場・用語・判定の正本は `method-decision-placement.md` §3 / §4 / §7 で、本書は再定義しない)。DoR が方式の決定について読むのは、**L3 第9章の決定記録 (`DEC-NNN`) と、それが参照する ADR の存在・status だけ**であり、L4 / L5 は読まない (placement §7。段 1 では L4 / L5 はまだ書かれていない)。
+**方式の決定** (L3 の第9章「方式の決定」。置き場・用語・決定記録の書式・判定の正本は `method-decision-placement.md` §3 / §3.4 / §4 / §7 / §9 で、本書は再定義しない)。DoR が方式の決定について読むのは、**現在の L3 第9章の決定記録 (`DEC-NNN`) と、それが参照する ADR の存在・status だけ**であり、L4 / L5 も Git も読まない (placement §7。段 1 では L4 / L5 はまだ書かれていない)。
+
+**読み方**: 第9章は、L3 の `#### 第9章 方式の決定` の見出しから次の `#### ` 見出しまでの範囲とする (章の範囲の読み方は §2 の表の読み取りと同じ)。その中の見出し `##### 9-N <日本語名> (論点 ID: <論点 ID>)` と決定記録の表は、**placement §3.4 の書式のとおりに読む** (見出し、2 列の表、`記録 ID` の行、承認と起草の値の読み方、数えない表の `decision_markup_invalid:<種別>`)。本書は書式を再定義しない。DoR は `judgeDecisionRecords` (placement §9) の判定をそのまま使い、読み取りの規則を複製しない。ADR の存在と status は、欄 7 の path を `exists` / `read` で確かめて判定へ渡す。
 
 | 機械で確かめる形 | finding |
 | --- | --- |
-| 必須論点 (`data-store` / `tenant-isolation` / `authn`、placement §4.2) のそれぞれが、`superseded` でない決定記録をちょうど 1 件持つ。欄がそろい (placement §4.1)、状態が `approved` で、承認の 4 項目 (placement §5.1) と有効な ADR 参照 (ADR が存在し status が `accepted`) を持つ | `dor.decision_not_ready:<論点 ID>` (満たさない論点ごとに 1 件。第9章が無いときも 3 論点それぞれに 1 件を返し、記録ごとの検査は重ねない) |
+| 必須論点 (`data-store` / `tenant-isolation` / `authn`、placement §4.2) のそれぞれが、`superseded` でない決定記録をちょうど 1 件持つ。欄がそろい (placement §4.1)、状態が `approved` で、承認の 4 項目 (placement §5.1) と有効な ADR 参照 (ADR が存在し status が `accepted`) を持つ。すなわち、その論点に `judgeDecisionRecords` が reason を 1 つも出さず、記録の状態が `approved` である | `dor.decision_not_ready:<論点 ID>` (満たさない論点ごとに 1 件。第9章が無いときも 3 論点それぞれに 1 件を返し、記録ごとの検査は重ねない) |
+
+- 論点を持つ reason (`decision_field_missing` `decision_alternatives_insufficient` `approval_incomplete` `approver_equals_drafter` `adr_ref_invalid`、記録の論点) と `required_topic_missing:<論点 ID>` / `decision_duplicate:<論点 ID>` を、その必須論点の `decision_not_ready` に写す。`decision_markup_invalid:<種別>` は論点を持たないので、それ自体では `decision_not_ready` の根拠にしない。数えない表 (placement §3.4) のために必須論点の記録が 0 件になれば、`required_topic_missing` を通じて `decision_not_ready` になる。必須論点でない論点の表の書式違反は、DoR は報告しない (必須論点以外は検査しない、下記)。
 
 - 「選んである」は、決定記録が `approved` で形がそろっていることだけを意味する。選んだ方式の妥当性と、AI の推奨との違いの理由 (placement §4.1 の欄 5) の妥当性は判定しない (人が見る)。選んだ方式の値は限定しない (`none-single-org` のような「要らない」という選択も適合、placement §4.2)。
-- 比較基準との照合 (承認後の欄 2〜4 の書き換え、placement §4.3) は Git 履歴を読むので、本書の `read` / `exists` / `list` だけの入力では行えない。扱いは §10 の O4 で決める。
+- **比較基準との照合 (承認後の欄 2〜4 の書き換え、placement §4.3) は DoR で行わない** (§10 の O4、決定済み)。Git 履歴を読むので、方式決定の検査 `judgeApprovedBaseline` が受け持つ (placement §4.3 / §7)。DoR は承認対象 revision が空でないこと (`approval_incomplete` の判定) だけを見て、解決できるか、記録が履歴と一致するかは見ない。このため、比較基準と食い違う記録や、Git で解決できない revision を持つ記録でも、形がそろっていれば DoR は ready のままである (`decision_not_ready` を出さない。placement の oracle 008 / 009 と整合)。
 - 必須論点以外に consumer が足した論点の決定記録は、本書では検査しない (placement §7 が DoR の読む範囲を必須論点に限るため)。
 
 **省略した optional 文書** (`##### 2-4 省略した optional 文書` の節。仮置き)。表は列 `番号` `文書名` `理由` を持つ。対象は optional のうち 3 つだけである (`DOR_CONSIDERED_OPTIONALS`)。範囲を広げるのは契約の改訂である。
@@ -139,9 +143,9 @@ L1 との trace は §4.5 が持つ。ここでは L3 に足す 2 つの節を�
 - 文書が存在する番号は、節に行が無くてよい (省略していない)。存在する文書の中身は DoR の対象外である。
 - path は setup が置く先 (`src/setup/vmodel-template-writer.ts:184`、`resolveDesignRoot(repoRoot)` の下の `optional/`。consumer layout では `docs/design/`) と同じである。
 
-人が見るもの: **方式の決定は PO の承認** (決定記録の承認は placement §5 の責任分担に従い、AI は承認の項目を埋めない。認可・PII・ライセンス・外部 AI の前提は、CLAUDE.md の高影響境界で、変更の前に PO の承認が要る。DoR のこの節での機械検査の範囲は §10 の O3)。省略の理由が妥当か。
+人が見るもの: **方式の決定は PO の承認** (決定記録の承認は placement §5 の責任分担に従い、AI は承認の項目を埋めない)。**認可・外部 AI へのデータの境界・PII・ライセンスの 4 項目は、必須論点に足さず、機械では読まない**。人の確認項目として §5.3 の 5 行目に残す (§10 の O3、決定済み。#1923 の control 決定 6。実導入で不足が出たら、必須論点の追加を別に起こす)。省略の理由が妥当か。
 
-### 4.5 L1 と L3 の trace (欠けがないこと)
+**4.5 L1 と L3 の trace (欠けがないこと)**
 
 - `analyzeConsumerG1Trace(read)` と `analyzeConsumerG3Trace(read)` の `violations` を取り込み、`dor.trace:<元の理由>` として返す。取り込むのは、理由の `doc_type_id` が `DOC-L1-REQUIREMENTS` / `DOC-L2-SCREEN` / `DOC-L3-FUNCTIONAL` で、種別が `missing_reference` / `dangling_reference` / `empty_required_set` / `invalid_range` / `required_table_missing` のものだけである。
 - **取り込まないもの**: `DOC-L12-ACCEPTANCE` の理由 (L12 は段 3 の成果物で、段 1 では無くてよい。G3 は L12 が無いと `missing_core_doc:DOC-L12-ACCEPTANCE` を返す)。`missing_core_doc` と `doc_type_mismatch` (§4.0 が先に報告する)。G1 と G3 が同じ理由を返したときは 1 件にする。
@@ -152,7 +156,7 @@ L1 との trace は §4.5 が持つ。ここでは L3 に足す 2 つの節を�
 
 ## 5. 署名と UI 確定の記録
 
-### 5.1 PO の署名の記録
+**5.1 PO の署名の記録**
 
 **置き場は、consumer の ADR 1 件 (`docs/adr/ADR-<番号>-<題>.md`)**。既存の記録経路を使い、新しい保管方式は作らない (PO 承認の置き場は ADR と、既に `consumer-operations-controls.md` §7 が定めている。採択結果を ADR に残す規律は `skills/design-decision-elicitation.md` にある)。
 署名の記録は、`docs/adr/` の file のうち、行 `## DoR 署名` を持つもので、**ADR の番号が最大のもの**とする。署名し直したときは、番号が大きい新しい ADR を足す。古い ADR は履歴として残す (書き換えない)。
@@ -171,7 +175,7 @@ L1 との trace は §4.5 が持つ。ここでは L3 に足す 2 つの節を�
 - 4 つの文書それぞれの `bodyDigest` を再計算し、記録の値と違えば `dor.signoff_stale:<doc_type_id>` を返す。文書が読めないときは §4.0 の finding だけを返し、`stale` は返さない。
 - 署名者の本人確認、署名の真正性は機械で確かめない。**署名は PO が行い、記録を読むのは人である** (§5.3)。
 
-### 5.2 UI 確定の証拠
+**5.2 UI 確定の証拠**
 
 同じ ADR の節 `## DoR UI 確定` に、列 `画面ID` `モックの参照` `承認者` `承認日` の表を置く。L2 の各画面に 1 行ずつ持つ。
 
@@ -182,11 +186,11 @@ L1 との trace は §4.5 が持つ。ここでは L3 に足す 2 つの節を�
 | `モックの参照` が、repo 内の相対 path で `exists` が真のもの (絶対 path と `..` を含む path は不可) か、`https://` で始まる URL のどちらか。URL は取得しない | `dor.ui_mock_unresolvable:<画面ID>` |
 | `承認者` が空でなく placeholder でなく、`承認日` が `YYYY-MM-DD` の形 | `dor.ui_approval_missing:<画面ID>` |
 
-- モックの置き場は新設しない。参照できる path か URL であればよい。参照先の中身、モックと画面の記述の一致は、機械で確かめない (§10 の O4)。
+- モックの置き場は新設しない。参照できる path か URL であればよい。参照先の中身、モックと画面の記述の一致は、機械で確かめない (§10 の O6)。
 - L2 の画面 ID が読めないとき (`dor.missing_doc` / `dor.doc_type_mismatch` / 画面が 0 件) は、この節の検査を行わない (画面の集合が決まらないため)。画面が 0 件のときは §4.5 の `dor.trace:empty_required_set` が報告する。
 - モックの参照先の file は digest に束縛しない。署名後にモックを差し替えても検出しない (残余リスク。人の review が見る)。
 
-### 5.3 人が見るもの (checklist)
+**5.3 人が見るもの (checklist)**
 
 結果には、機械の finding とは別に、次の 5 行を**常に**出す (合否の判定はしない)。機械の検査が全て通っても、状態 `pass` の表示は `machine-pass` とし (text 出力の先頭の語)、「着手してよい」とは表示しない。
 
@@ -194,7 +198,7 @@ L1 との trace は §4.5 が持つ。ここでは L3 に足す 2 つの節を�
 2. L1: 要求と受入条件の妥当性 (非著者 review)。
 3. L2: モックと画面の記述の一致、PO の UI 確定の承認。
 4. L3: L1 との整合と矛盾の有無 (非著者 review)。
-5. 方式の決定: L3 第9章の必須論点の決定記録 (選んだ方式の妥当性、AI の推奨との違いの理由)、省略した optional の理由の妥当性、PO の承認。
+5. 方式の決定: L3 第9章の必須論点の決定記録 (選んだ方式の妥当性、AI の推奨との違いの理由)、省略した optional の理由の妥当性、PO の承認。**認可・外部 AI へのデータの境界・PII・ライセンスの 4 項目** (高影響境界、機械では読まない。変更の前に PO の承認が要る)。
 
 ## 6. 要件の矛盾が見つかったときは段 0 へ戻す
 
@@ -244,16 +248,16 @@ L1 との trace は §4.5 が持つ。ここでは L3 に足す 2 つの節を�
 2. #894 の純関数 `findUnfilledTemplatePlaceholders` の Green。本書の実装 PR は、その merge の後に出す (`CANDIDATE-U-DOR-003` が依存する)。
 3. 実装 (`src/lint/consumer-dor.ts` と profile) は、本書を oracle の正本として、警告モードで別 PR で行う (#1927 の 3 つ目の子)。1 PR = 新規 source_module 1 個 + 対のテスト + 最小配線。テンプレートの変更は別 PR である。
 
-## 10. 未決の点 (実装前に決める)
+## 10. 未決の点と決定済みの点
 
 | ID | 内容 | 本書の仮の扱い |
 | --- | --- | --- |
 | O1 | 方式の決定の置き場は、#1923 の契約が L3 第9章と定めた (解決済み)。残る未決は、`受入条件` / `状態` の列と `2-4` の節を、どの変更が足すか | L1 と L2 の列、L3 の `2-4` を仮に置く。テンプレートの変更 (#1930 の系列) が別の置き場を定めたら、本書を改訂する |
 | O2 | 署名の記録の置き場。実測した既存の経路は、(a) harness 自身の gate 台帳 (`docs/process/gates.md` の `PO サインオフ` の行) と、(b) consumer の ADR (`consumer-operations-controls.md` §7) である。(a) は harness の台帳で、consumer が自分の台帳として持つ仕組みは見つからなかった | (b) の ADR を使う。署名を PR の approval や review custody の記録で行う案は、#1526 (consumer が正規の merge 経路と review custody を使えない) が解けてから検討する |
-| O3 | 旧版が 6 項目 (`データ方式` `テナント分離` `認可` `外部AIへのデータの境界` `PII` `ライセンス`) の `2-3` の表を検査していた。placement の必須論点は 3 つ (`data-store` `tenant-isolation` `authn`) で、`認可` `外部AIの境界` `PII` `ライセンス` の 4 つは、必須論点にも `authn` にも当たらない (`authn` は認証方式、`認可` は別の論点) | 本書は 3 つの必須論点だけを機械で読む。4 つの高影響境界を、consumer が足す論点として決定記録を要求するか (DoR の読む範囲の拡張は placement §7 の改訂)、別の記録で受けるか、人の checklist (§5.3) だけにするかは設計判断であり、本書では決めない |
-| O4 | placement §7 の 3 点目は、欄 2〜4 を承認対象 revision 時点の第9章と比べる (§4.3)。これは Git 履歴を読むが、本書は DoR にネットワークも git も使わせない (§3、§12)。また、第9章の決定記録の markup (見出しか表か) は placement が定めておらず、`read` だけで読む形が決まらない | 本書は比較基準の照合を行わず、決定記録の markup は oracle で固定しない (§4.4)。Git 読取りを DoR の入力に足すか、markup を placement かテンプレートで定めるかは、placement と本書の両方の契約改訂になるため、ここでは決めない |
-| O3 | 非著者 review の証跡は、consumer では review custody の receipt を使えない (#1526)。DoR は参照の有無しか見ない | 参照が空でないことだけを確かめる。実在と内容は人が見る |
-| O4 | UI のモックの置き場の規約。`consumer-design-system.md` (#1717) との関係は未確認 | path か `https://` の URL を許す。置き場の規約は作らない |
+| O3 | **決定済み** (#1923 の control 決定 6)。旧版は 6 項目 (`データ方式` `テナント分離` `認可` `外部AIへのデータの境界` `PII` `ライセンス`) の表を検査していた。placement の必須論点は 3 つ (`data-store` `tenant-isolation` `authn`) | 3 つの必須論点だけを機械で読む。`認可` `外部AIへのデータの境界` `PII` `ライセンス` の 4 項目は必須論点に足さず、人の確認項目 (§5.3 の 5 行目) のままにする。実導入で不足が出たら、必須論点の追加を別に起こす |
+| O4 | **決定済み** (#1923 の control 決定 5 と 1)。placement §4.3 の履歴との照合は Git を読む。第9章の markup は placement が未定義だった | DoR は Git を読まない。比較基準の照合は方式決定の検査 (`judgeApprovedBaseline`) が受け持ち、DoR は現在の第9章と ADR だけを読む (§4.4、placement §7)。第9章の markup は placement §3.4 が定めた書式に従い、本書は再定義しない |
+| O5 | 非著者 review の証跡は、consumer では review custody の receipt を使えない (#1526)。DoR は参照の有無しか見ない | 参照が空でないことだけを確かめる。実在と内容は人が見る |
+| O6 | UI のモックの置き場の規約。`consumer-design-system.md` (#1717) との関係は未確認 | path か `https://` の URL を許す。置き場の規約は作らない |
 
 ## 11. 範囲外
 
@@ -262,7 +266,7 @@ L1 との trace は §4.5 が持つ。ここでは L3 に足す 2 つの節を�
 - **自律オーケストレータ**。ADR-001 の決定 4 (1.0.0 では管理知能を作らない) に当たる。DoR は、既存の doctor の profile として、人または CI が呼ぶ純関数である。
 - 段 2 以降 (L4〜L6 の設計、実装、受入、本番反映) の自走の仕組み (#1927 の他の子)。#1526 (merge 経路) の解決。
 - テンプレート本文の変更 (別 PR)。デザインシステムの preset を必須にすること (#1927 の「やらないこと」)。
-- 高影響境界の承認 (本番インフラ・認可・PII・secret・ライセンス・外部 API の前提) の仕組みそのもの。DoR は、その承認が方式の決定に記録されていることの形を見るだけである。
+- 高影響境界の承認 (本番インフラ・認可・PII・secret・ライセンス・外部 API の前提) の仕組みそのもの。DoR は、必須論点 3 種の決定記録の形を見るだけで、これらの承認は人の確認項目 (§5.3) である。
 
 ## 12. 不変条件 (DbC)
 
