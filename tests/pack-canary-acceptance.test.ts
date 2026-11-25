@@ -7,6 +7,7 @@ import {
 import { createHash } from "node:crypto";
 import {
   copyFileSync,
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readdirSync,
@@ -1944,11 +1945,9 @@ describe("manual canary acceptance publish-record boundary", () => {
         };
       }
       if (cliArgs[0] === "gate" && cliArgs[1] === "G1") {
-        const negative = execFileSync("git", ["-C", root, "branch", "--show-current"], {
-          encoding: "utf8",
-        })
-          .trim()
-          .startsWith("ut-tdd-agent-e2e-negative-");
+        const negative = !existsSync(
+          join(root, "docs/design/L1-requirements/functional-requirements.md"),
+        );
         const static_gate = negative
           ? {
               gate: "G1",
