@@ -96,11 +96,11 @@ issue: <Issue 番号>
 
 | 関連元 | 関連先 | 多重度 |
 |---|---|---|
-| tenants | users | 1..N |
-| tenants | projects | 1..N |
+| tenants | users | 1..N (適用条件: tenant-isolation!=none-single-org のとき) |
+| tenants | projects | 1..N (適用条件: tenant-isolation!=none-single-org のとき) |
 | projects | tasks | 1..N |
-| tenants | subs | 1..N |
-| tenants | audit | 1..N |
+| tenants | subs | 1..N (適用条件: tenant-isolation!=none-single-org のとき) |
+| tenants | audit | 1..N (適用条件: tenant-isolation!=none-single-org のとき) |
 
 ### 移植元: ZIP-DOC-039 イベントスキーマ
 
