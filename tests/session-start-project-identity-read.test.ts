@@ -100,7 +100,7 @@ describe("SessionStart project identity reads", () => {
     if (root) removeTestTree(root);
   });
 
-  it("CANDIDATE-P-PMEMROOT-006: retains the session event, digest, and GitHub read", () => {
+  it("P-PMEMROOT-006: retains the session event, digest, and GitHub read", () => {
     expect({ status: start.status, signal: start.signal, stderr: start.stderr }).toMatchObject({
       status: 0,
       signal: null,
@@ -139,7 +139,7 @@ describe("SessionStart project identity reads", () => {
     }
   });
 
-  it.fails("CANDIDATE-P-PMEMROOT-006: reads identity once in each of the three resolutions", () => {
+  it.fails("P-PMEMROOT-006: reads identity once in each of the three resolutions", () => {
     const resolutions = summarizeRootReads(commandLog);
     expect(resolutions.map((git) => git.filter((command) => command === "show").length)).toEqual([
       1, 1, 1,
@@ -165,7 +165,7 @@ function ports(overrides: Partial<Parameters<typeof resolveProjectMemoryRootWith
 }
 
 describe("Project identity read boundaries", () => {
-  it.fails("CANDIDATE-U-PMEMROOT-010: revalidates identity on a separate root resolution", () => {
+  it.fails("U-PMEMROOT-010: revalidates identity on a separate root resolution", () => {
     const identityReads: string[] = [];
     let identity: string | null = "owner/product";
     const resolverPorts = ports({
@@ -206,7 +206,7 @@ describe("Project identity read boundaries", () => {
     { canonicalIdentity: "owner/product", expected: { ok: true, projectId: "owner/product" } },
     { canonicalIdentity: "owner/other", expected: { ok: false, reason: "project_identity_drift" } },
     { canonicalIdentity: null, expected: { ok: false, reason: "project_identity_unavailable" } },
-  ])("CANDIDATE-U-PMEMROOT-011: verifies both distinct paths (canonical identity: $canonicalIdentity)", ({
+  ])("U-PMEMROOT-011: verifies both distinct paths (canonical identity: $canonicalIdentity)", ({
     canonicalIdentity,
     expected,
   }) => {
