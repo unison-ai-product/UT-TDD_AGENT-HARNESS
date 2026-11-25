@@ -1,7 +1,8 @@
-import { fileURLToPath } from "node:url";
+import { join } from "node:path";
 import ts from "typescript";
 import { expect, it } from "vitest";
 import { HOOK_BOUND_MS } from "./support/hook-bounds.ts";
+import { headSnapshotRoot } from "./support/workspace-roots.ts";
 
 function directCalls(statements: readonly ts.Statement[]) {
   return statements
@@ -10,7 +11,7 @@ function directCalls(statements: readonly ts.Statement[]) {
     .filter(ts.isCallExpression);
 }
 
-const path = fileURLToPath(new URL("./gate-run-bootstrap-retry.test.ts", import.meta.url));
+const path = join(headSnapshotRoot(), "tests", "gate-run-bootstrap-retry.test.ts");
 const program = ts.createProgram([path], { noLib: true, noResolve: true, types: [] });
 const file = program.getSourceFile(path);
 if (!file || program.getSyntacticDiagnostics(file).length > 0) {
