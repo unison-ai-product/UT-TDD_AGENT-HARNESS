@@ -69,13 +69,13 @@ issue: <Issue 番号>
 
 ##### 9-1 データの保存方式の詳細
 
-参照する決定記録: DEC-<NNN> (論点 ID: data-store)
+参照する決定記録: <DEC-NNN> (論点 ID: data-store)
 
 - <項目を記入>
 
 ##### 9-2 テナント分離の詳細
 
-参照する決定記録: DEC-<NNN> (論点 ID: tenant-isolation)
+参照する決定記録: <DEC-NNN> (論点 ID: tenant-isolation)
 
 - <項目を記入>
 

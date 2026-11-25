@@ -36,7 +36,7 @@ issue: <Issue 番号>
 
 > ※ 分離方式の選択そのもの (選んだ方式・理由・却下した案) は L3 第9章の決定記録が正本で、ここには置かない。
 
-参照する決定記録: DEC-<NNN> (論点 ID: tenant-isolation)
+参照する決定記録: <DEC-NNN> (論点 ID: tenant-isolation)
 
 <本文を記入>
 
