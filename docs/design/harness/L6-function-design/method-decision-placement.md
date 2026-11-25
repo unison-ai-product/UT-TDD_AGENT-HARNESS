@@ -11,7 +11,7 @@ created: 2026-11-25
 issue: 1923
 ---
 
-> **L6 contract marker**: 本書は文書の契約であり、実装関数を持たない。契約の判定は `judgeDecisionRecords(l3Chapter, adrs) => DecisionJudgement`、`judgeApprovedBaseline(records, baselines) => BaselineJudgement`、`judgeDetailDocs(records, detailDocs) => DetailJudgement`、`judgeTemplateItems(items, records) => TemplateJudgement` という判定の形で書く (入力は consumer の文書の節、出力は適合 / 不適合と reason token)。oracle は `docs/test-design/harness/L7-method-decision-placement-test-design.md` の `CANDIDATE-U-METHODDEC-001`〜`023` が固定する。新しい管理機構・保管方式・gate は足さない (ADR-001 決定 4)。既存の ADR 運用、非著者 review、DoR (#1928) の読取りに乗せる。
+> **L6 contract marker**: 本書は文書の契約であり、実装関数を持たない。契約の判定は `judgeDecisionRecords(l3Chapter, adrs) => DecisionJudgement`、`judgeApprovedBaseline(records, baselines) => BaselineJudgement`、`judgeDetailDocs(records, detailDocs) => DetailJudgement`、`judgeTemplateItems(items, records) => TemplateJudgement` という判定の形で書く (入力は consumer の文書の節、出力は適合 / 不適合と reason token)。oracle は `docs/test-design/harness/L7-method-decision-placement-test-design.md` の `CANDIDATE-U-METHODDEC-001`〜`024` が固定する。新しい管理機構・保管方式・gate は足さない (ADR-001 決定 4)。既存の ADR 運用、非著者 review、DoR (#1928) の読取りに乗せる。
 
 # 方式の決定の置き場 - 機能設計 (Issue #1923)
 
