@@ -28,9 +28,9 @@ issue: 1490
 
 この準備 hook は既存の `heavyBeforeAll("db", ...)` を使う。上限は SQLite の準備に使う共有値180,000ミリ秒で、既存の `[hook-timing]` 形式で所要時間を出す。対象は `gate-run-bootstrap-retry.test.ts` の準備 hook 1個とする。
 
-| 候補 ID | 刺激 | 期待結果 |
+| ID | 刺激 | 期待結果 |
 | --- | --- | --- |
-| `CANDIDATE-U-GRBOOT-005` | TypeScript AST で `gate-run bootstrap retry oracles` の準備 hook の登録を読む | 登録は `heavyBeforeAll`、種別は `db`、共有の上限は180,000ミリ秒 |
+| `U-GRBOOT-005` | TypeScript AST で `gate-run bootstrap retry oracles` の準備 hook の登録を読む | 登録は `heavyBeforeAll`、種別は `db`、共有の上限は180,000ミリ秒 |
 
 Red は現行の `beforeAll` 登録で比較が失敗する。構文と対象の一意性はテストの比較より前に確かめる。Green では同じ比較、既存の5テスト、準備 hook の `[hook-timing]` 行を確かめる。
 
