@@ -38,7 +38,7 @@ issue: <Issue 番号>
 
 #### 第4章 物理設計・インデックス
 
-> ※ 適用条件: tenant-isolation!=none-single-org のとき (L3 第9章 `DEC-NNN`)、テナント識別列を先頭にしたインデックスを基本とする。行レベル分離に限る場合は、consumer が選んだ方式に合わせて条件を絞る。
+> ※ 適用条件: tenant-isolation=row-level のとき (L3 第9章 `DEC-NNN`)、テナント識別列を先頭にしたインデックスを基本とする。
 
 | テーブル | インデックス | 種別 | 目的 |
 |---|---|---|---|
@@ -83,11 +83,11 @@ issue: <Issue 番号>
 
 > trace: 基本設計 第6章
 
-> PK=主キー/FK=外部キー。適用条件: tenant-isolation!=none-single-org のときだけ、各テーブルにテナント識別列(FK)を足す (行レベル分離に限る場合は、consumer が選んだ方式に合わせて条件を絞る)。分離の方式は L3 第9章の `DEC-NNN` で決まっており、それが別の方式のときは、下の tenants とのテナント関連を分離の単位 (schema / DB の対応表) に読み替える。
+> PK=主キー/FK=外部キー。適用条件: tenant-isolation=row-level のときだけ、各テーブルにテナント識別列(FK)を足す。分離の方式は L3 第9章の `DEC-NNN` で決まっており、それが別の方式のときは、下の tenants とのテナント関連を分離の単位 (schema / DB の対応表) に読み替える。
 
 | エンティティ id | 名称 | フィールド |
 |---|---|---|
-| tenants | tenants テナント | PK id, name, plan |
+| tenants | tenants テナント (適用条件: tenant-isolation!=none-single-org のとき) | PK id, name, plan |
 | users | users ユーザー | PK id, email, role |
 | tasks | tasks タスク | PK id, FK project_id, status |
 | subs | subscriptions 契約 | PK id, status |
@@ -96,11 +96,11 @@ issue: <Issue 番号>
 
 | 関連元 | 関連先 | 多重度 |
 |---|---|---|
-| tenants | users | 1..N |
-| tenants | projects | 1..N |
+| tenants | users | 1..N (適用条件: tenant-isolation!=none-single-org のとき) |
+| tenants | projects | 1..N (適用条件: tenant-isolation!=none-single-org のとき) |
 | projects | tasks | 1..N |
-| tenants | subs | 1..N |
-| tenants | audit | 1..N |
+| tenants | subs | 1..N (適用条件: tenant-isolation!=none-single-org のとき) |
+| tenants | audit | 1..N (適用条件: tenant-isolation!=none-single-org のとき) |
 
 ### 移植元: ZIP-DOC-039 イベントスキーマ
 

@@ -56,7 +56,7 @@ issue: <Issue 番号>
 |---|---|---|---|---|---|---|
 | email形式 | ○ | ○ | ○ | ○ | ○ | ○ |
 | Money非負 | ○ | ○ | ○ | ○ | ○ | ○ |
-| TenantId必須 (適用条件: tenant-isolation!=none-single-org のとき。行レベル分離に限る場合は、consumer が選んだ方式に合わせて条件を絞る) | ○ | ○ | ○ | ○ | ○ | ○ |
+| TenantId必須 (適用条件: tenant-isolation=row-level のとき) | ○ | ○ | ○ | ○ | ○ | ○ |
 | TaskTitle長さ(1-120) | ○ | ○ | △ | ○ | ○ | ○ |
 | 状態遷移(TaskStatus) | △ | - | △ | ○ | ○ | ○ |
 | 席数がプラン上限内 | △ | - | △ | ○ | ○ | ○ |
