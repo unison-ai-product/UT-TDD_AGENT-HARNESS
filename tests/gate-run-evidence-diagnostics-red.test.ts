@@ -192,7 +192,7 @@ function assertWarningIsSanitized(
   expected: string,
   forbidden: string[],
 ): void {
-  expect.soft(warning).toBe(expected);
+  expect(warning).toBe(expected);
   for (const detail of forbidden) expect.soft(warning).not.toContain(detail);
 }
 
@@ -228,7 +228,7 @@ function observeDirectFailure(kind: FailureFixture) {
 }
 
 function expectWriterDiagnostic(observed: ReturnType<typeof observeDirectFailure>) {
-  expect.soft(observed.result.code).toBe("existing_evidence_scan_failed");
+  expect(observed.result.code).toBe("existing_evidence_scan_failed");
   expect.soft(observed.result.message).toBe(diagnosticPrefix + JSON.stringify(observed.path));
   expect.soft(observed.result.hasCause).toBe(false);
   for (const detail of observed.forbidden)

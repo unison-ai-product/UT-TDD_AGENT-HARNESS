@@ -126,6 +126,16 @@ export function buildGateRunEvidence(input: GateRunEvidenceInput): GateRunEviden
   };
 }
 
+const EXISTING_EVIDENCE_SCAN_FAILED = "existing_evidence_scan_failed";
+
+export function formatGateRunEvidenceWarning(error: unknown): string {
+  const detail =
+    error instanceof Error && "code" in error && error.code === EXISTING_EVIDENCE_SCAN_FAILED
+      ? error.message
+      : String(error);
+  return `gate run evidence write failed: ${detail}`;
+}
+
 function assertGateRunIdAvailable(repoRoot: string, dir: string, gateRunId: string): void {
   const existingFiles = readdirSync(dir).filter((name) => name.endsWith(".json"));
   for (const name of existingFiles) {
@@ -137,7 +147,7 @@ function assertGateRunIdAvailable(repoRoot: string, dir: string, gateRunId: stri
       };
       existingId = existing.gate_run_id;
     } catch {
-      const code = "existing_evidence_scan_failed";
+      const code = EXISTING_EVIDENCE_SCAN_FAILED;
       const relativePath = relative(repoRoot, existingPath).split(sep).join("/");
       throw Object.assign(new Error(`${code}: ${JSON.stringify(relativePath)}`), { code });
     }
