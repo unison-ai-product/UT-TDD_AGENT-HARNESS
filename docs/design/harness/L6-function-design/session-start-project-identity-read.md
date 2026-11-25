@@ -12,7 +12,7 @@ issue: 1938
 
 # SessionStart の project identity 読取 (Issue #1938)
 
-> **L6 contract marker**: `resolveProjectMemoryRootWithPorts(repoRoot, ports) => ProjectMemoryRootResult` の読取回数と再検証を、L7 の CANDIDATE-U-PMEMROOT-010・011 で検証する。
+> **L6 contract marker**: `resolveProjectMemoryRootWithPorts(repoRoot, ports) => ProjectMemoryRootResult` の読取回数と再検証を、L7 の U-PMEMROOT-010・011 で検証する。
 
 [Memory の canonical root 契約](memory.md#canonical-memory-root-resolver-の配置-issue-963)を補う。
 
