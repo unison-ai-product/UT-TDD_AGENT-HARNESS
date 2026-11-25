@@ -84,7 +84,7 @@
   "tests/memory-service.test.ts": { "lines": 738, "functionExcess": null },
   "tests/node-self-host-bootstrap.test.ts": { "lines": 725, "functionExcess": null },
   "tests/oracle-test-trace.test.ts": { "lines": 1769, "functionExcess": null },
-  "tests/pack-canary-acceptance.test.ts": { "lines": 2139, "functionExcess": null },
+  "tests/pack-canary-acceptance.test.ts": { "lines": 2154, "functionExcess": null },
   "tests/pack-consumer-runtime-release.test.ts": { "lines": 2132, "functionExcess": null },
   "tests/pack-internal-canary-boundary.test.ts": { "lines": 668, "functionExcess": null },
   "tests/pack-publication-adapter.test.ts": { "lines": 2666, "functionExcess": null },

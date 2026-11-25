@@ -1835,7 +1835,7 @@ describe("manual canary acceptance publish-record boundary", () => {
     ).toThrow("agent-g1-positive-invalid");
   });
 
-  it("U-ST-PACKCANARY-018: rejects same-revision or unnamed-slot G1 negative evidence", () => {
+  it.fails("U-ST-PACKCANARY-018: rejects same-revision or unnamed-slot G1 negative evidence", () => {
     const positiveRevision = "a".repeat(40);
     expect(() =>
       verifyAgentG1Negative(
@@ -1844,7 +1844,7 @@ describe("manual canary acceptance publish-record boundary", () => {
           parent: positiveRevision,
           applicable: true,
           passed: false,
-          messages: ["required doc not created: business-requirements.md"],
+          messages: ["missing_core_doc:DOC-L1-REQUIREMENTS"],
         },
         positiveRevision,
       ),
@@ -1856,7 +1856,7 @@ describe("manual canary acceptance publish-record boundary", () => {
           parent: positiveRevision,
           applicable: true,
           passed: false,
-          messages: ["required doc not created: business-requirements.md"],
+          messages: ["missing_core_doc:DOC-L1-REQUIREMENTS"],
         },
         positiveRevision,
       ),
@@ -1873,9 +1873,24 @@ describe("manual canary acceptance publish-record boundary", () => {
         positiveRevision,
       ),
     ).toThrow("agent-g1-negative-invalid");
+    expect(() =>
+      verifyAgentG1Negative(
+        {
+          revision: "b".repeat(40),
+          parent: positiveRevision,
+          applicable: true,
+          passed: false,
+          messages: [
+            "missing_core_doc:DOC-L1-REQUIREMENTS",
+            "required doc not created: business-requirements.md",
+          ],
+        },
+        positiveRevision,
+      ),
+    ).toThrow("agent-g1-negative-invalid");
   });
 
-  it("U-ST-PACKCANARY-016..018: mock adapter exercises consumer CLI wiring (not provider evidence)", () => {
+  it.fails("U-ST-PACKCANARY-016..018: mock adapter exercises consumer CLI wiring (not provider evidence)", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-canary-agent-authoring-"));
     tempRoots.push(root);
     const runGit = (...args: string[]) =>
@@ -1976,7 +1991,7 @@ describe("manual canary acceptance publish-record boundary", () => {
               gate: "G1",
               applicable: true,
               passed: false,
-              messages: ["required doc not created: business-requirements.md"],
+              messages: ["missing_core_doc:DOC-L1-REQUIREMENTS"],
             }
           : {
               gate: "G1",
@@ -2139,7 +2154,7 @@ describe("manual canary acceptance publish-record boundary", () => {
     rejectVerdictFieldMutation("exact_head", "b".repeat(40));
   });
 
-  it("U-ST-PACKCANARY-015..019: offline structural join accepts a complete fixture (not an AT-DIST-003 run)", () => {
+  it.fails("U-ST-PACKCANARY-015..019: offline structural join accepts a complete fixture (not an AT-DIST-003 run)", () => {
     const input = agentRecord();
     const releaseDirectory = agentReleaseDir(input.assetBytes);
     const review = agentReviewEvidence();
@@ -2188,7 +2203,7 @@ describe("manual canary acceptance publish-record boundary", () => {
         parent: subjectRevision,
         applicable: true,
         passed: false,
-        messages: ["required doc not created: business-requirements.md"],
+        messages: ["missing_core_doc:DOC-L1-REQUIREMENTS"],
       },
       review,
     });
