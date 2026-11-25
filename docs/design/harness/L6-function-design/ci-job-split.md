@@ -10,7 +10,7 @@ issue: 1981
 created: 2026-11-25
 ---
 
-> **L6 contract marker**: 本書は CI workflow の構造の契約であり、新しい実装関数を持たない。判定は、workflow YAML から取り出した実行計画 `extractExecutionPlan(workflow, lane, event) => CheckEntry[]` と、固定した manifest `tests/fixtures/ci/harness-check-contract.json` の比較で行う。pre: workflow は `.github/workflows/harness-check.yml`。post: 計画が manifest と集合で一致する (欠落・重複・条件の反転・環境の差はすべて不一致)。oracle は `docs/test-design/harness/L7-ci-job-split-test-design.md` の `CANDIDATE-CISPLIT-001`〜`012` が固定する。新しい管理機構は足さない (ADR-001 決定 4)。
+> **L6 contract marker**: 本書は CI workflow の構造の契約であり、新しい実装関数を持たない。判定は、workflow YAML から取り出した実行計画 `extractExecutionPlan(workflow, lane, event) => CheckEntry[]` と、固定した manifest `tests/fixtures/ci/harness-check-contract.json` の比較で行う。pre: workflow は `.github/workflows/harness-check.yml`。post: 計画が manifest と集合で一致する (欠落・重複・条件の反転・環境の差はすべて不一致)。oracle は `docs/test-design/harness/L7-ci-job-split-test-design.md` の `CANDIDATE-CISPLIT-001`〜`011` が固定する。新しい管理機構は足さない (ADR-001 決定 4)。
 
 # harness-check の Linux job を責務ごとに分ける - 機能設計 (Issue #1981)
 
@@ -32,17 +32,16 @@ created: 2026-11-25
 | job ID | 責務 | 実行する lane |
 |---|---|---|
 | `classify` | 変更ファイルを分類し lane を 1 回だけ決める。lane 証跡 (linux 脚) を書く | 常に実行 |
-| `harness-check-pr-discipline` | PR の作法 (oracle baseline ratchet、branch-type guard、design-protection) | 常に実行 |
-| `harness-check-static` | 静的検査 (typecheck、lint) | 常に実行 |
-| `harness-check-governance` | 統治 (privacy scan、audit quality、doc lane の検査) | 常に実行 |
-| `harness-check-linux` | Linux の回帰 (db rebuild、doctor、vitest 全回帰、job summary) | `full` のときだけ実行 |
+| `harness-check-pr-discipline` | PR の作法 (oracle baseline ratchet、branch-type guard、design-protection、privacy scan) | 常に実行 |
+| `harness-check-static` | 静的検査 (typecheck、lint、doc lane checks、doc lane source doctor、audit quality) | 常に実行 (step 単位で lane を見る) |
+| `harness-check-linux` | Linux の回帰 (db rebuild、doctor、vitest 全回帰、job summary) | 常に実行 (step 単位で lane を見る。doc lane でも skip しない) |
 | `harness-check-windows` | Windows の回帰。**変更しない** | 常に実行 (step 単位で lane を見る) |
 | `node-generation-linux` / `node-generation-windows` | Node generation。**変更しない** | 常に実行 |
 | `harness-check` | 集約。必須 check 名は変えない (§5) | 常に実行 (`if: always()`) |
 
 `harness-check-linux` の名前は回帰 job が引き継ぐ。名前を残す理由は、`src/lint/github-ci-policy.ts` の `HARNESS_LEGS` と aggregate の期待が、この名前を既に参照しているためである。
 
-`classify` 以外の 4 つの Linux job (pr-discipline / static / governance / linux) は、すべて `needs: [classify]` を持つ。互いには `needs` を持たず、並列に走る。
+Linux の job は `classify` / `harness-check-pr-discipline` / `harness-check-static` / `harness-check-linux` の 4 つである。「統治」を独立の job にしない (#1981 の決定。`doctor` が回帰の job に残るため、統治の job に入る検査が無くなる)。`classify` 以外の 3 つは、すべて `needs: [classify]` を持つ。互いには `needs` を持たず、並列に走る。
 
 ## 3. 現行 step から job への対応
 
@@ -59,30 +58,30 @@ created: 2026-11-25
 | 7 | `upload harness lane evidence` | - | `classify` (§4.3) |
 | 8 | `branch-type guard (commitlint / poc / hotfix)` | - | `harness-check-pr-discipline` |
 | 9 | `design-protection (実装 PR の設計書書き換え拒否、fail-close)` | `${{ github.event_name == 'pull_request' }}` | `harness-check-pr-discipline` |
-| 10 | `privacy scan (email の形、fail-close)` | - | `harness-check-governance` (未決 5) |
+| 10 | `privacy scan (email の形、fail-close)` | - | `harness-check-pr-discipline` (#1981 の決定。PR の内容が規則に合うかの検査で、ratchet・branch-type・design-protection と同じ性質) |
 | 11 | `typecheck (tsc --noEmit)` | `${{ steps.classify.outputs.lane == 'full' }}` | `harness-check-static` |
 | 12 | `db rebuild (deterministic projection)` | `${{ steps.classify.outputs.lane == 'full' }}` | `harness-check-linux` |
-| 13 | `doctor (governance hard gates)` | `${{ steps.classify.outputs.lane == 'full' }}` | `harness-check-linux` (未決 1) |
+| 13 | `doctor (governance hard gates)` | `${{ steps.classify.outputs.lane == 'full' }}` | `harness-check-linux` (#1981 の決定) |
 | 14 | `test — 全回帰 (vitest run)` | `${{ steps.classify.outputs.lane == 'full' }}` | `harness-check-linux` |
-| 15 | `doc lane checks (readability / rule-drift)` | `${{ steps.classify.outputs.lane == 'doc' }}` | `harness-check-governance` |
-| 16 | `doc lane source doctor` | `${{ steps.classify.outputs.lane == 'doc' }}` | `harness-check-governance` |
+| 15 | `doc lane checks (readability / rule-drift)` | `${{ steps.classify.outputs.lane == 'doc' }}` | `harness-check-static` |
+| 16 | `doc lane source doctor` | `${{ steps.classify.outputs.lane == 'doc' }}` | `harness-check-static` |
 | 17 | `lint (biome)` | - | `harness-check-static` |
-| 18 | `audit quality (gate findings)` | `${{ steps.classify.outputs.lane == 'full' }}` | `harness-check-governance` |
-| 19 | `job summary (UT-TDD projection)` | `${{ always() }}` | `harness-check-linux` (未決 2) |
+| 18 | `audit quality (gate findings)` | `${{ steps.classify.outputs.lane == 'full' }}` | `harness-check-static` |
+| 19 | `job summary (UT-TDD projection)` | `${{ always() }}` | `harness-check-linux` (#1981 の決定。doc lane でも job を skip しない) |
 
-分けた後の `if` の書き換えは次のとおりである。lane の参照は `steps.classify.outputs.lane` から `needs.classify.outputs.lane` へ変わる。意味は変えない。`github.event_name == 'pull_request'` と `always()` は変えない。`harness-check-linux` の job 自体は `if: needs.classify.outputs.lane == 'full'` を持つので、その中の step 11〜14 の step 単位の lane 条件は残してもよいが、残す場合も同じ意味でなければならない (manifest は条件を比べる。§6)。
+分けた後の `if` の書き換えは次のとおりである。lane の参照は `steps.classify.outputs.lane` から `needs.classify.outputs.lane` へ変わる。意味は変えない。`github.event_name == 'pull_request'` と `always()` は変えない。`harness-check-linux` の job 自体は lane で skip しない (doc lane でも実行する)。full 専用の step (12〜14) は、現行と同じ step の `if` で飛ばす。`job summary` は `if: always()` のまま doc lane でも走る。job ごと skip すると、走る検査の集合が変わるためである (#1981 の決定)。step の `if` の意味は manifest が比べる (§6)。
 
 **3.1 step 間のファイルと状態の受け渡し (現行 YAML から洗い出した)**
 
 | 生産する step | 消費する step | 受け渡しの中身 | 扱い |
 |---|---|---|---|
-| 13 `doctor` | 14 `test` | `${{ runner.temp }}/ut-tdd-doctor-result.json` (`UT_TDD_DOCTOR_RESULT_FILE`)。vitest の fence が doctor を二重実行せず消費する (PLAN-L7-461)。消費は宣言済みの surface が完全一致のときだけで、一致しなければ vitest が従来どおり自走する | 同じ job (`harness-check-linux`) に置く。未決 1 |
+| 13 `doctor` | 14 `test` | `${{ runner.temp }}/ut-tdd-doctor-result.json` (`UT_TDD_DOCTOR_RESULT_FILE`)。vitest の fence が doctor を二重実行せず消費する (PLAN-L7-461)。消費は宣言済みの surface が完全一致のときだけで、一致しなければ vitest が従来どおり自走する | 同じ job (`harness-check-linux`) に置く (#1981 の決定) |
 | 12 `db rebuild` | 13 `doctor`、14 `test`、19 `job summary` | `.ut-tdd/harness.db` の projection。`job summary` は `openHarnessDb` で読む (`src/github/job-summary.ts`) | 同じ job に置く |
 | 5 `classify` | 6、11〜16、18 | step output `lane` | job の outputs へ出し、`needs` で配る (§4) |
 | 6 `write harness lane evidence` | 7 `upload harness lane evidence` | `${{ runner.temp }}/lane-evidence.json` と step output `leg` | 同じ job (`classify`) に置く |
 | 8 `branch-type guard` | (同じ step 内) | `.ut-tdd-pr-body.txt` | step 内で完結する。分離の影響なし |
 
-`audit quality` (18) は `src/audit/quality.ts` がファイルだけを読むので、`db rebuild` に依らない (実測)。そのため `harness-check-governance` に置ける。
+`audit quality` (18) は `src/audit/quality.ts` がファイルだけを読むので、`db rebuild` に依らない (実測)。そのため `harness-check-static` に置ける。
 
 ## 4. lane の値
 
@@ -106,7 +105,7 @@ lane の値は `full` と `doc` の 2 値だけである。次の場合は、暗
 
 step 6 と 7 (lane 証跡の書き出しと upload) は `lane` の値を使うので、`classify` job に置く。artifact 名 `harness-lane-linux-attempt-<run_attempt>` と中身 (`leg: linux`) は変えない。集約 job の `scripts/windows-ci-shard-aggregate.mjs` は `REQUIRED_LEGS` に `linux` を要求し、`harness-lane-<leg>-attempt-<N>` の形の artifact を読むので、名前と leg が変わらなければ集約側の admission は変えずに済む (実測: 同 script と `src/lint/windows-ci-shard-admission.ts` の `LANE_LEGS`)。
 
-Windows の回帰 job は現状のまま、自分で `classify` する (job 間で output を共有しない現行方針を変えない)。Windows を `needs.classify` へ寄せるかどうかは本書の範囲外であり、決めない (未決 4)。
+Windows の回帰 job は現状のまま、自分で `classify` する (job 間で output を共有しない現行方針を変えない)。Windows を `needs.classify` へ寄せるかどうかは本書の範囲外であり、決めない (#1981 の決定: 変えない。非目標)。
 
 ## 5. 集約 job の判定
 
@@ -115,7 +114,7 @@ Windows の回帰 job は現状のまま、自分で `classify` する (job 間�
 判定は次の 3 段で、すべてを満たしたときだけ成功する。1 つでも外れたら失敗する。
 
 1. `needs.classify.result` が `success` で、`needs.classify.outputs.lane` が `full` か `doc` のどちらかである (§4.2)。
-2. lane に対応する §5.1 の表のとおり、**各 job の `result` が期待値と完全に一致する**。「`success` か `skipped` なら通す」という緩い判定にしない。期待が `success` の job が `skipped` なら失敗し、期待が `skipped` の job が `success` なら失敗する。
+2. lane に対応する §5.1 の表のとおり、**各 job の `result` が期待値と完全に一致する**。「`success` か `skipped` なら通す」という緩い判定にしない。期待は全 job が `success` だけであり、`skipped` を期待値に持たない。どの job でも `skipped` を見たら失敗する (§5.1)。
 3. `failure` と `cancelled` は、期待が何であっても失敗とする。
 
 現行の集約 job の後続 step (`admit exact Node generation run`、Windows の lane 証跡と shard 証跡の admission) は変えない。
@@ -127,13 +126,12 @@ Windows の回帰 job は現状のまま、自分で `classify` する (job 間�
 | `classify` | `success` | `success` |
 | `harness-check-pr-discipline` | `success` | `success` |
 | `harness-check-static` | `success` | `success` |
-| `harness-check-governance` | `success` | `success` |
-| `harness-check-linux` (回帰) | `success` | `skipped` |
+| `harness-check-linux` (回帰) | `success` | `success` |
 | `harness-check-windows` (3 shard の matrix 全体) | `success` | `success` |
 | `node-generation-linux` | `success` | `success` |
 | `node-generation-windows` | `success` | `success` |
 
-doc lane で `skipped` を期待するのは `harness-check-linux` だけである。`harness-check-static` と `harness-check-governance` は doc lane でも job 自体は実行され、中の step の `if` で full 専用の step (typecheck、audit quality) だけが skip される。job の結果は `success` である。
+どちらの lane でも期待は全 job が `success` である (#1981 の決定)。doc lane でも、`harness-check-static` と `harness-check-linux` は job として実行され、full 専用の step (typecheck、audit quality、db rebuild、doctor、vitest) だけが step の `if` で skip される。`job summary` は `if: always()` で doc lane でも走る。集約は `skipped` を期待値に持たず、どの job でも `skipped` を見たら失敗にする。
 
 ## 6. 検査の契約 manifest
 
@@ -187,14 +185,3 @@ manifest は、検査 1 件を 1 つのエントリとする配列を、`lane` (
 - oracle baseline ratchet の shell (約 90 行) を `scripts/` の薄い入口へ出す整理は、#1981 の別 PR で行う。整理の PR は、manifest の `command` の記述を同じ PR で更新して比較を通す。
 - branch protection の設定変更。必須 check 名は `harness-check` のままである。
 - 実装 (job の分割) は Green PR で行う。本書は契約だけである。
-
-## 9. 未決 (control の判断を待つ)
-
-起草時に現行 YAML から見つけた、決定済みの方針だけでは置き場が決まらない点である。本書は暫定の置き場を書いたが、確定していない。
-
-1. **`doctor` と `db rebuild` の置き場。** `doctor` (step 13) の出力ファイルを `test` (step 14) の fence が消費する (PLAN-L7-461)。`doctor` を「統治」job へ出すと、回帰 job の vitest は envelope を受け取れず自走する。自走は fail-close で正しいが、doctor 相当の再実行が回帰側に増え、時間が増える可能性がある (未計測)。本書は「同じ job に置く」規則に従い、暫定で `db rebuild`・`doctor`・`test` を `harness-check-linux` に置いた。統治 job は privacy scan・audit quality・doc lane の検査だけを持つ。`doctor` を統治へ出す場合は、envelope の受け渡し (artifact 経由) か、自走を認めるかの判断が要る。
-2. **`job summary` (step 19) の置き場。** `if: always()` で `harness.db` を読む。`db rebuild` と同じ job に置くのを暫定とした。doc lane では `harness-check-linux` が skip されるので、doc lane では summary が出ない。これを許すか、別の job に置くかは未決である。
-3. **lane 証跡 (step 6・7) を `classify` に置く点。** 決定の文面は classify の責務を「lane の分類」としか書いていない。証跡は lane の値から作るので `classify` に置いたが、判断は control が確認する。
-4. **Windows の回帰が自分で classify する現状を、`needs.classify` へ寄せるか。** 決定は「Windows の回帰は変更しない」である。寄せるかは本書で決めない。
-5. **`privacy scan` (step 10) を「統治」に置いた点。** 決定は 4 つの責務の名前だけを示し、各 step の割り当ては書いていない。privacy scan は lane に依らない常時検査で、PR の作法 (PR か否かで条件が変わる step の群) とは性質が違うので統治に置いた。確認が要る。
-6. **job ID の名前。** §2 の `harness-check-pr-discipline` / `-static` / `-governance` は暫定である。
