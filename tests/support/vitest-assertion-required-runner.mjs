@@ -1,4 +1,4 @@
-import { TestRunner } from "../node_modules/vitest/dist/index.js";
+import { TestRunner } from "../../node_modules/vitest/dist/index.js";
 import { testExpectScope } from "./vitest-assertion-required-expect.mjs";
 
 export default class AssertionRequiredRunner extends TestRunner {

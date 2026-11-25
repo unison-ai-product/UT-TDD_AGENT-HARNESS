@@ -1,5 +1,5 @@
 import { AsyncLocalStorage } from "node:async_hooks";
-import { expect as originalExpect } from "../node_modules/vitest/dist/index.js";
+import { expect as originalExpect } from "../../node_modules/vitest/dist/index.js";
 
 export const testExpectScope =
   globalThis[Symbol.for("ut-tdd.vitest.assertion-required.expect-scope")] ??=

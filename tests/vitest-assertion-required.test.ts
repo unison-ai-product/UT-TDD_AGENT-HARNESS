@@ -112,6 +112,7 @@ function oracle(
       expectSound(run, names);
     });
     it(`${id} 契約`, () => {
+      expect(run.parsed, run.raw.slice(0, 300)).toBe(true);
       contract(run);
     });
   });

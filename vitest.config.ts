@@ -2,10 +2,10 @@ import { defineConfig } from "vitest/config";
 import { fileURLToPath } from "node:url";
 
 const assertionRequiredRunner = fileURLToPath(
-  new URL("./scripts/vitest-assertion-required-runner.mjs", import.meta.url),
+  new URL("./tests/support/vitest-assertion-required-runner.mjs", import.meta.url),
 );
 const assertionRequiredExport = fileURLToPath(
-  new URL("./scripts/vitest-assertion-required-export.mjs", import.meta.url),
+  new URL("./tests/support/vitest-assertion-required-export.mjs", import.meta.url),
 );
 
 export default defineConfig({
