@@ -47,9 +47,9 @@ issue: 1527
 
 この1件は `heavyIt` の `['db', 40_000]` で登録し、既存の `[hook-timing]` 形式で実行時間を出す。40秒は観測した最大の所要時間を約20秒上回る。CLI の exit 0、`ok: true`、`toolchain-pin` の成功、`plan-governance` の診断がないことを、既存シナリオで引き続き検証する。
 
-| 候補 ID | 刺激 | 期待結果 |
+| ID | 刺激 | 期待結果 |
 | --- | --- | --- |
-| `CANDIDATE-U-CDPD-013` | 独立した HEAD snapshot から、上記 test の一意な登録を TypeScript AST で読む | `heavyIt` の種別が `db`、当該 test の上限が40,000ミリ秒 |
+| `U-CDPD-013` | 独立した HEAD snapshot から、上記 test の一意な登録を TypeScript AST で読む | `heavyIt` の種別が `db`、当該 test の上限が40,000ミリ秒 |
 
 Red は現行の `it` と20,000ミリ秒の登録で比較が失敗する。構文と登録の一意性は比較前に確かめる。Green はこの比較、既存の CLI シナリオ、実行時間のログを検証する。
 
