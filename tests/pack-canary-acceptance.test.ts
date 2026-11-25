@@ -1837,56 +1837,19 @@ describe("manual canary acceptance publish-record boundary", () => {
 
   it.fails("U-ST-PACKCANARY-018: rejects same-revision or unnamed-slot G1 negative evidence", () => {
     const positiveRevision = "a".repeat(40);
-    expect(() =>
+    const core = "missing_core_doc:DOC-L1-REQUIREMENTS";
+    const verify = (revision: string, messages: string[]) =>
       verifyAgentG1Negative(
-        {
-          revision: "b".repeat(40),
-          parent: positiveRevision,
-          applicable: true,
-          passed: false,
-          messages: ["missing_core_doc:DOC-L1-REQUIREMENTS"],
-        },
+        { revision, parent: positiveRevision, applicable: true, passed: false, messages },
         positiveRevision,
-      ),
-    ).not.toThrow();
+      );
+    expect(() => verify("b".repeat(40), [core])).not.toThrow();
+    expect(() => verify(positiveRevision, [core])).toThrow("agent-g1-negative-invalid");
+    expect(() => verify("b".repeat(40), ["required doc not created: another-slot.md"])).toThrow(
+      "agent-g1-negative-invalid",
+    );
     expect(() =>
-      verifyAgentG1Negative(
-        {
-          revision: positiveRevision,
-          parent: positiveRevision,
-          applicable: true,
-          passed: false,
-          messages: ["missing_core_doc:DOC-L1-REQUIREMENTS"],
-        },
-        positiveRevision,
-      ),
-    ).toThrow("agent-g1-negative-invalid");
-    expect(() =>
-      verifyAgentG1Negative(
-        {
-          revision: "b".repeat(40),
-          parent: positiveRevision,
-          applicable: true,
-          passed: false,
-          messages: ["required doc not created: another-slot.md"],
-        },
-        positiveRevision,
-      ),
-    ).toThrow("agent-g1-negative-invalid");
-    expect(() =>
-      verifyAgentG1Negative(
-        {
-          revision: "b".repeat(40),
-          parent: positiveRevision,
-          applicable: true,
-          passed: false,
-          messages: [
-            "missing_core_doc:DOC-L1-REQUIREMENTS",
-            "required doc not created: business-requirements.md",
-          ],
-        },
-        positiveRevision,
-      ),
+      verify("b".repeat(40), [core, "required doc not created: business-requirements.md"]),
     ).toThrow("agent-g1-negative-invalid");
   });
 
