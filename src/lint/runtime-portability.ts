@@ -31,6 +31,7 @@ const ALLOWED_NODE_SCRIPT_ENTRYPOINTS = new Set([
   "scripts/build-node.mjs",
   "scripts/node-generation-ci.mjs",
   "scripts/node-generation-ci-aggregate.mjs",
+  "scripts/oracle-baseline-ratchet.mjs",
   "scripts/pack-canary-acceptance.mjs",
   "scripts/windows-ci-shard-aggregate.mjs",
   "scripts/windows-ci-shard-evidence.mjs",
