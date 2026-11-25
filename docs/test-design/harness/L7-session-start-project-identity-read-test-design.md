@@ -13,13 +13,13 @@ issue: 1938
 
 上位の契約は `docs/design/harness/L6-function-design/session-start-project-identity-read.md`。 [既存の project-scoped Memory root テスト設計](L7-project-scoped-memory-root-test-design.md)も併せて実行する。
 
-## 1. 候補 oracle と負荷診断
+## 1. oracle と負荷診断
 
-| 候補 ID | 刺激と観測 |
-|---|---|
-| CANDIDATE-U-PMEMROOT-010 | 同じ実パスを返す root 解決で identity loader の引数と回数を記録し、成功時は読取が1回で、project namespace / corpus / bus が従来どおりであることを確認する。直後の解決で loader が identity 欠落を返すように変え、再度1回呼ばれて `project_identity_unavailable` になることを確認する。Red は最初の重複読取を検出する。 |
-| CANDIDATE-U-PMEMROOT-011 | 実パスが異なる linked worktree と canonical root に検証済みの同一 ID、異なる ID、片側欠落を順に与える。各解決は両パスを1回ずつ読み、成功、`project_identity_drift`、`project_identity_unavailable` を返す。既存の実 Git、origin 不一致、パス逸脱の回帰も実行する。 |
-| CANDIDATE-P-PMEMROOT-006 | identity を commit した通常 checkout から実 `session start` action を実行する。隔離 consumer と固定した PR 応答を用い、Git と gh の起動を分類し、各 Memory root 解決で Git topology と HEAD identity loader に由来する起動を別に数える。既存の解決境界ごとの topology と loader の初回読取を観測し、各境界で同じ実パスを二度読む起動が消えることを比較する。gh の呼び出し数、同じ session ID の event と digest、終了状態が比較前後で一致することを確認する。 |
+| Oracle ID | 刺激 | 期待結果 |
+|---|---|---|
+| U-PMEMROOT-010 | 同じ実パスを返す root 解決で identity loader の引数と回数を記録する。直後の解決では loader が identity 欠落を返すように変える。 | 成功時は読取が1回で、project namespace / corpus / bus が従来どおりであることを確認する。直後の解決で loader が再度1回呼ばれて `project_identity_unavailable` になることを確認する。Red は最初の重複読取を検出する。 |
+| U-PMEMROOT-011 | 実パスが異なる linked worktree と canonical root に検証済みの同一 ID、異なる ID、片側欠落を順に与える。 | 各解決は両パスを1回ずつ読み、成功、`project_identity_drift`、`project_identity_unavailable` を返す。既存の実 Git、origin 不一致、パス逸脱の回帰も実行する。 |
+| P-PMEMROOT-006 | identity を commit した通常 checkout から実 `session start` action を実行する。隔離 consumer と固定した PR 応答を用い、Git と gh の起動を分類し、各 Memory root 解決で Git topology と HEAD identity loader に由来する起動を別に数える。 | 既存の解決境界ごとの topology と loader の初回読取を観測し、各境界で同じ実パスを二度読む起動が消えることを比較する。gh の呼び出し数、同じ session ID の event と digest、終了状態が比較前後で一致することを確認する。 |
 
 診断では、同じ consumer と計測条件で従来版・修正版を比較する。対象の source / bundle /
 設定と Node プロセス数を記録し、各 Memory root 解決の回数、Git と gh の起動数、hook 全体の

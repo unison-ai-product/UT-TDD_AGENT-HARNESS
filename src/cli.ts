@@ -48,7 +48,7 @@ import { appendDesignDecision, DESIGN_DECISION_LOG_PATH } from "./elicitation/re
 import { computeSkillMetrics } from "./feedback/engine.ts";
 import { registerForwardWorkflowCommands } from "./forward/adapters/cli-registrar.ts";
 import { evaluateGateReview, loadReviewChecklistIfPresent } from "./gate/review-tier.ts";
-import { writeGateRunEvidence } from "./gate/run-evidence.ts";
+import { formatGateRunEvidenceWarning, writeGateRunEvidence } from "./gate/run-evidence.ts";
 import { evaluateStaticGate } from "./gate/static.ts";
 import { runChangeLaneClassification, SystemGitDiffNamesPort } from "./github/change-lane.ts";
 import { runDesignProtectionCommand } from "./github/design-protection.ts";
@@ -2600,7 +2600,7 @@ program
           gate_run_id: written.evidence.gate_run_id,
         };
       } catch (error) {
-        gateRunEvidenceWarning = `gate run evidence write failed: ${String(error)}`;
+        gateRunEvidenceWarning = formatGateRunEvidenceWarning(error);
       }
       const output = {
         ...result,
