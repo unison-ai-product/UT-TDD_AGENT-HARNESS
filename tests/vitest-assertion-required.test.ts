@@ -235,10 +235,10 @@ it("has assertions none", () => { expect.hasAssertions(); });
   ["mismatch three", "assertions two none", "has assertions none"],
   (run) => {
     expect(messagesOf(run, "mismatch three")).toMatch(
-      /expected 3 assertions to be called but got 2/,
+      /expected number of assertions to be 3, but got 2/,
     );
     expect(messagesOf(run, "assertions two none")).toMatch(
-      /expected 2 assertions to be called but got 0/,
+      /expected number of assertions to be 2, but got 0/,
     );
     expect(messagesOf(run, "has assertions none")).toMatch(/expected any number of assertion/);
   },
