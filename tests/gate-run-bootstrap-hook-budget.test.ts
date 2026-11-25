@@ -53,7 +53,7 @@ const registration = {
   timeoutMs: hookClass === "db" ? HOOK_BOUND_MS.db : null,
 };
 
-it.fails("CANDIDATE-U-GRBOOT-005: suite preparation uses the shared db hook bound", () => {
+it("CANDIDATE-U-GRBOOT-005: suite preparation uses the shared db hook bound", () => {
   expect(registration).toEqual({
     name: "heavyBeforeAll",
     hookClass: "db",
