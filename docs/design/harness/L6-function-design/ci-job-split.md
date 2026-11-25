@@ -10,7 +10,7 @@ issue: 1981
 created: 2026-11-25
 ---
 
-> **L6 contract marker**: 本書は CI workflow の構造の契約であり、新しい実装関数を持たない。判定は、workflow YAML から取り出した実行計画 `extractExecutionPlan(workflow, lane, event) => CheckEntry[]` と、固定した manifest `tests/fixtures/ci/harness-check-contract.json` の比較で行う。pre: workflow は `.github/workflows/harness-check.yml`。post: 計画が manifest と集合で一致する (欠落・重複・条件の反転・環境の差はすべて不一致)。oracle は `docs/test-design/harness/L7-ci-job-split-test-design.md` の `CANDIDATE-U-CISPLIT-001`〜`011` が固定する。新しい管理機構は足さない (ADR-001 決定 4)。
+> **L6 contract marker**: 本書は CI workflow の構造の契約であり、新しい実装関数を持たない。判定は、workflow YAML から取り出した実行計画 `extractExecutionPlan(workflow, lane, event) => CheckEntry[]` と、固定した manifest `tests/fixtures/ci/harness-check-contract.json` の比較で行う。pre: workflow は `.github/workflows/harness-check.yml`。post: 計画が manifest と集合で一致する (欠落・重複・条件の反転・環境の差はすべて不一致)。oracle は `docs/test-design/harness/L7-ci-job-split-test-design.md` の `CANDIDATE-U-CISPLIT-001`〜`012` が固定する。新しい管理機構は足さない (ADR-001 決定 4)。
 
 # harness-check の Linux job を責務ごとに分ける - 機能設計 (Issue #1981)
 
@@ -145,7 +145,7 @@ Windows の回帰 job は現状のまま、自分で `classify` する (job 間�
 
 ### 6.2 形
 
-manifest は、検査 1 件を 1 つのエントリとする配列を、`lane` (`full` / `doc`) と `event` (`pull_request` / `push`) の組ごとに持つ。エントリの欄は次の 5 つである。
+manifest は、検査 1 件を 1 つのエントリとする配列を、`lane` (`full` / `doc`) と `event` (`pull_request` / `push`) の組ごとに持つ。エントリの欄は次の 6 つである。
 
 | 欄 | 内容 |
 |---|---|
@@ -154,6 +154,7 @@ manifest は、検査 1 件を 1 つのエントリとする配列を、`lane` (
 | `condition` | その lane・event で実行されるかどうか。step の `if` と job の `if` を、lane と event を代入して評価した結果 (実行する / しない) |
 | `env` | step の `env` のキーと値の式 (`${{ ... }}` は式のまま) |
 | `shell` | 明示された shell。無ければ空 |
+| `continue_on_error` | step の `continue-on-error` の値。YAML に無ければ `false`。現行の `harness-check.yml` には `continue-on-error` を持つ step が 1 つも無い (実測: `grep` で 0 件) ので、固定する値は全エントリで `false` である |
 
 準備の 3 step (`checkout`、`setup node`、`install deps`) は manifest に入れない (§8)。
 
@@ -164,7 +165,8 @@ manifest は、検査 1 件を 1 つのエントリとする配列を、`lane` (
 - manifest にあって計画に無い検査 (欠落) は不一致である。
 - 計画にあって manifest に無い検査は不一致である。
 - 同じ `check_id` が計画に 2 回以上現れる (重複) は不一致である。
-- `check_id` が同じでも、`command`・`condition`・`env`・`shell` のどれかが違えば不一致である。
+- `check_id` が同じでも、`command`・`condition`・`env`・`shell`・`continue_on_error` のどれかが違えば不一致である。lint などが失敗しても job を成功させる `continue-on-error: true` の追加は、検査を弱める変更なので、この欄で不一致になる。
+- job の `continue-on-error`: 分割後の workflow のどの job も、`continue-on-error` を持たないか `false` でなければならない (job の `continue-on-error: true` は、step が失敗しても job を成功させる)。manifest を比べるテストが、同じ parse 結果の job のキーを読んで確かめる。集約 job の `result` の照合 (§5) だけでは、job 内で失敗が隠されるので防げない。
 - 実行される job の置き場 (どの job に属すか) は比べない。置き場は §3 の表と §5.1 の表で別に確かめる。
 
 ## 7. 既存の参照の追従 (Green PR で扱う)
