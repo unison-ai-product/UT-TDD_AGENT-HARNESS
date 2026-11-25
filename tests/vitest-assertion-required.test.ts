@@ -111,7 +111,7 @@ function oracle(
     it("fixture 実行が健全 (反転しない)", () => {
       expectSound(run, names);
     });
-    it.fails(`${id} 契約`, () => {
+    it(`${id} 契約`, () => {
       contract(run);
     });
   });
