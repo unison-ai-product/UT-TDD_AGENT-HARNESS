@@ -1,10 +1,20 @@
-import { spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, realpathSync } from "node:fs";
+import { type SpawnSyncReturns, spawnSync } from "node:child_process";
+import { existsSync, mkdtempSync, readdirSync, readFileSync, realpathSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { describe, expect, it } from "vitest";
-import { resolveProjectMemoryRootWithPorts } from "../src/runtime/project-memory-root.ts";
+import { scanPostMergeBackstop } from "../src/feedback/post-merge-backstop.ts";
+import {
+  buildClaudeProviderReviewInboxEntry,
+  claudeWorkspaceId,
+  publishClaudeInboxEntry,
+  waitForClaudeMemory,
+} from "../src/runtime/claude-memory-wake.ts";
+import {
+  resolveProjectMemoryRoot,
+  resolveProjectMemoryRootWithPorts,
+} from "../src/runtime/project-memory-root.ts";
 import { defaultHarnessDbPath, openHarnessDb } from "../src/state-db/index.ts";
 import { migrate } from "../src/state-db/migration.ts";
 import { heavyAfterAll, heavyBeforeAll } from "./support/hook-bounds.ts";
@@ -26,6 +36,93 @@ const IDENTITY_READ = [
   "remote get-url origin",
 ];
 const SESSION_ID = "session-start-identity-read";
+const SESSION_MEMORY = {
+  memory_id: "memory:session-start-observation",
+  kind: "project" as const,
+  title: "SessionStart observation",
+  body: "SessionStart observation fixture",
+  tags: ["session-start"],
+  source_path: ".ut-tdd/memory/session-start-observation.md",
+  updated_at: "2026-11-26T00:00:00.000Z",
+  content_hash: "e".repeat(64),
+};
+
+interface SessionRun {
+  root: string;
+  sessionId: string;
+  start: SpawnSyncReturns<string>;
+  commands: Command[];
+  inbox: Array<{ path: string; bytes: Buffer }>;
+}
+
+function sessionRun(pendingCount: number, suffix: string, ghMode = "available"): SessionRun {
+  const root = realpathSync(mkdtempSync(join(tmpdir(), `ut-session-start-observation-${suffix}-`)));
+  const sessionId = `session-start-observation-${suffix}`;
+  ensureTrackedProjectIdentity(root, `fixture/session-start-observation-${suffix}`);
+  const project = resolveProjectMemoryRoot(root);
+  if (!project.ok) throw new Error(project.reason);
+  const inbox = Array.from({ length: pendingCount }, (_, index) => {
+    const digest = String(index + 1).padStart(16, "0");
+    const entry = buildClaudeProviderReviewInboxEntry({
+      memory: {
+        ...SESSION_MEMORY,
+        memory_id: `memory:session-start-observation-${suffix}-${index}`,
+      },
+      projectId: project.projectId,
+      operationId: `session-start-observation-${suffix}-${index}`,
+      workspaceId: claudeWorkspaceId(root),
+      producer: { provider: "codex", sessionId: `codex-observation-${suffix}` },
+      target: { scope: "session", provider: "claude", sessionId },
+      requestDigest: digest,
+      requestPath: `.ut-tdd/review/requests/${digest}.json`,
+      pr: 1900 + index,
+      exactHead: "c".repeat(40),
+      reviewRevision: `review-observation-${suffix}-${index}`,
+      authorFamily: "codex",
+    });
+    const path = publishClaudeInboxEntry(root, entry);
+    return { path, bytes: readFileSync(path) };
+  });
+  const db = openHarnessDb(defaultHarnessDbPath(root), { repoRoot: root });
+  try {
+    migrate(db);
+  } finally {
+    db.close();
+  }
+  const start = spawnSync(
+    process.execPath,
+    [
+      "--import",
+      pathToFileURL(resolve("tests/support/session-start-identity-preload.mjs")).href,
+      resolve("src/cli.ts"),
+      "session",
+      "start",
+      "--session",
+      sessionId,
+    ],
+    {
+      cwd: root,
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        CLAUDE_PROJECT_DIR: "",
+        UT_TDD_PROJECT_DIR: root,
+        UT_TDD_SKIP_UPDATE_CHECK: "1",
+        UT_TDD_TEST_GH_MODE: ghMode,
+        GIT_CONFIG_COUNT: "0",
+      },
+      stdio: ["ignore", "pipe", "pipe"],
+      windowsHide: true,
+      timeout: 60_000,
+    },
+  );
+  if (start.error) throw start.error;
+  const commands = readFileSync(join(root, "session-start-commands.jsonl"), "utf8")
+    .trim()
+    .split(/\r?\n/)
+    .map((line) => JSON.parse(line) as Command);
+  return { root, sessionId, start, commands, inbox };
+}
 
 function summarizeRootReads(commands: Command[]): string[][] {
   const resolutions: string[][] = [];
@@ -48,6 +145,7 @@ describe("SessionStart project identity reads", () => {
   let root: string;
   let commandLog: Command[];
   let start: ReturnType<typeof startSession>;
+  let observationRuns: SessionRun[];
 
   function startSession(cwd: string) {
     return spawnSync(
@@ -94,13 +192,19 @@ describe("SessionStart project identity reads", () => {
       .trim()
       .split(/\r?\n/)
       .map((line) => JSON.parse(line) as Command);
+    observationRuns = [];
+    for (const count of [0, 1, 3]) {
+      observationRuns.push(sessionRun(count, `pending-${count}`));
+    }
+    observationRuns.push(sessionRun(1, "github-unavailable", "unavailable"));
   });
 
   heavyAfterAll("teardown", () => {
     if (root) removeTestTree(root);
+    for (const run of observationRuns ?? []) removeTestTree(run.root);
   });
 
-  it("P-PMEMROOT-006: retains the session event, digest, and GitHub read", () => {
+  it("P-PMEMROOT-006: retains the session event and digest", () => {
     expect({ status: start.status, signal: start.signal, stderr: start.stderr }).toMatchObject({
       status: 0,
       signal: null,
@@ -122,20 +226,131 @@ describe("SessionStart project identity reads", () => {
     expect(events).toContainEqual(
       expect.objectContaining({ event_type: "session_start", session_id: SESSION_ID }),
     );
-    expect(commandLog.filter(({ file }) => file === "gh")).toEqual([
-      {
-        file: "gh",
-        args: [
-          "api",
-          expect.stringMatching(/^repos\/fixture\/session-start-identity\/pulls\?.*&page=1$/),
-        ],
-      },
-    ]);
 
     const resolutions = summarizeRootReads(commandLog);
     expect(resolutions).toHaveLength(3);
     for (const git of resolutions) {
       expect(git.slice(0, 2 + IDENTITY_READ.length)).toEqual([...TOPOLOGY, ...IDENTITY_READ]);
+    }
+  });
+
+  it("CANDIDATE-U-SSOBS-001 fixture: pending inbox and GitHub-unavailable SessionStart remain valid", () => {
+    for (const run of observationRuns) {
+      expect(run.start.status).toBe(0);
+      expect(run.start.signal).toBeNull();
+      expect(run.start.stdout).toContain(`session-log: start ${run.sessionId}`);
+      expect(run.start.stdout).toContain(
+        "session-start digest (source=harness.db + HEAD + HARNESS memory)",
+      );
+      const expectedInbox =
+        run.inbox.length === 0
+          ? "inbox: no unclaimed Claude payload"
+          : `inbox: pending=${run.inbox.length}`;
+      expect(run.start.stdout).toContain(expectedInbox);
+      const backstopLine = run.start.stdout
+        .split(/\r?\n/)
+        .find((line) => line.includes("post-merge backstop:"));
+      expect(backstopLine).toBeDefined();
+      const eventPath = join(run.root, ".ut-tdd", "logs", "session", `${run.sessionId}.jsonl`);
+      const events = readFileSync(eventPath, "utf8")
+        .trim()
+        .split(/\r?\n/)
+        .map((line) => JSON.parse(line));
+      expect(events).toContainEqual(
+        expect.objectContaining({ event_type: "session_start", session_id: run.sessionId }),
+      );
+      for (const entry of run.inbox) {
+        expect(existsSync(entry.path)).toBe(true);
+        expect(readFileSync(entry.path)).toEqual(entry.bytes);
+        const siblings = readdirSync(dirname(entry.path));
+        const name = entry.path.split(/[\\/]/).at(-1)?.slice(0, -".json".length);
+        expect(siblings).not.toContain(`${name}.claim`);
+        expect(siblings).not.toContain(`${name}.terminal.json`);
+      }
+    }
+  });
+
+  it.fails("CANDIDATE-U-SSOBS-001: SessionStart starts no GitHub commands and marks both reads unobserved", () => {
+    const violations = observationRuns.flatMap((run) => {
+      const issues: string[] = [];
+      const ghCalls = run.commands.filter(({ file }) => file === "gh");
+      if (ghCalls.length > 0) {
+        issues.push(`${run.sessionId}: SessionStart launched gh: ${JSON.stringify(ghCalls)}`);
+      }
+      if (!run.start.stdout.includes("inbox PR state: not checked (pending reviews retained)")) {
+        issues.push(`${run.sessionId}: inbox PR state is not marked unobserved`);
+      }
+      const backstopLine = run.start.stdout
+        .split(/\r?\n/)
+        .find((line) => line.includes("post-merge backstop:"));
+      if (backstopLine !== "  post-merge backstop: not checked") {
+        issues.push(`${run.sessionId}: post-merge status is not marked unobserved`);
+      }
+      if (/post-merge backstop:.*count=0/i.test(run.start.stdout)) {
+        issues.push(`${run.sessionId}: digest reports a zero-detection backstop`);
+      }
+      return issues;
+    });
+    expect(violations).toEqual([]);
+  });
+
+  it("CANDIDATE-U-SSOBS-002: wake and feedback GitHub observations remain independent", async () => {
+    const root = realpathSync(
+      mkdtempSync(join(tmpdir(), "ut-session-start-independent-observation-")),
+    );
+    ensureTrackedProjectIdentity(root, "fixture/session-start-independent-observation");
+    const project = resolveProjectMemoryRoot(root);
+    if (!project.ok) throw new Error(project.reason);
+    const entry = buildClaudeProviderReviewInboxEntry({
+      memory: SESSION_MEMORY,
+      projectId: project.projectId,
+      operationId: "session-start-independent-observation",
+      workspaceId: claudeWorkspaceId(root),
+      producer: { provider: "codex", sessionId: "codex-observation" },
+      target: { scope: "session", provider: "claude", sessionId: "wake-observation" },
+      requestDigest: "a".repeat(16),
+      requestPath: ".ut-tdd/review/requests/wake-observation.json",
+      pr: 1998,
+      exactHead: "c".repeat(40),
+      reviewRevision: "wake-observation",
+      authorFamily: "codex",
+    });
+    publishClaudeInboxEntry(root, entry);
+    try {
+      let observedPr = 0;
+      const wake = await waitForClaudeMemory({
+        repoRoot: root,
+        sessionId: "wake-observation",
+        pollIntervalMs: 10,
+        maxWaitMs: 10,
+        sleep: async () => undefined,
+        pullRequestState: (pr) => {
+          observedPr = pr;
+          return { pr, state: "MERGED", headSha: entry.exactHead };
+        },
+      });
+      expect(wake.kind).toBe("timeout");
+      expect(observedPr).toBe(entry.pr);
+
+      const commands: Array<{ file: string; args: readonly string[] }> = [];
+      const backstop = scanPostMergeBackstop({
+        repoRoot: root,
+        execFileSync: ((file: string, args: readonly string[]) => {
+          commands.push({ file, args });
+          return file === "git"
+            ? "https://github.com/fixture/session-start-independent-observation.git"
+            : "[]";
+        }) as typeof import("node:child_process").execFileSync,
+      });
+      expect(backstop).toMatchObject({ ok: true, pagesScanned: 1 });
+      expect(commands.filter(({ file }) => file === "gh")).toEqual([
+        {
+          file: "gh",
+          args: ["api", expect.stringMatching(/\/pulls\?state=closed.*&page=1$/)],
+        },
+      ]);
+    } finally {
+      removeTestTree(root);
     }
   });
 
