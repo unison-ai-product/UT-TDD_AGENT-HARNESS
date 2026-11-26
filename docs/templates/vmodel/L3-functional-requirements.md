@@ -39,7 +39,7 @@ issue: <Issue 番号>
 
 ##### 2-1 テナントモデル
 
-<本文を記入>
+(適用条件: tenant-isolation!=none-single-org のとき) <本文を記入>
 
 ##### 2-2 ロールと権限(RBAC)
 
@@ -116,13 +116,13 @@ issue: <Issue 番号>
 
 | 欄 | 記入 |
 |---|---|
-| 記録 ID | DEC-<NNN> |
+| 記録 ID | <DEC-NNN> |
 | 論点 | data-store |
-| 選んだ方式 | <方式コード (小文字 ASCII の kebab-case)>: <説明> |
+| 選んだ方式 | <方式コード (小文字 ASCII の kebab-case): 説明> |
 | 理由 | <この要件・制約にどう合うか。要件 ID か制約を 1 つ以上引く> |
 | 却下した案 | <案とその却下の理由。選んだ方式と合わせて 2 案以上を比較する> |
 | 起草 | <起草者 (AI の場合はモデル名)> / AI の推奨: <推奨した方式コード> |
-| 承認 | 承認者: <PO の識別子> / 承認日: <日付> / 承認対象 revision: <commit SHA> / 承認根拠: <Issue / PR コメントの URL> |
+| 承認 | <承認者: PO の識別子 / 承認日: 日付 / 承認対象 revision: commit SHA / 承認根拠: Issue / PR コメントの URL> |
 | ADR 参照 | <docs/adr/ 配下の ADR への path> |
 | 詳細の置き場 | <DOC-L5-PHYSICAL-DATA など> |
 | 状態 | proposed |
@@ -132,13 +132,13 @@ issue: <Issue 番号>
 
 | 欄 | 記入 |
 |---|---|
-| 記録 ID | DEC-<NNN> |
+| 記録 ID | <DEC-NNN> |
 | 論点 | tenant-isolation |
-| 選んだ方式 | <方式コード (小文字 ASCII の kebab-case)>: <説明> |
+| 選んだ方式 | <方式コード (小文字 ASCII の kebab-case): 説明> |
 | 理由 | <この要件・制約にどう合うか。要件 ID か制約を 1 つ以上引く> |
 | 却下した案 | <案とその却下の理由。選んだ方式と合わせて 2 案以上を比較する> |
 | 起草 | <起草者 (AI の場合はモデル名)> / AI の推奨: <推奨した方式コード> |
-| 承認 | 承認者: <PO の識別子> / 承認日: <日付> / 承認対象 revision: <commit SHA> / 承認根拠: <Issue / PR コメントの URL> |
+| 承認 | <承認者: PO の識別子 / 承認日: 日付 / 承認対象 revision: commit SHA / 承認根拠: Issue / PR コメントの URL> |
 | ADR 参照 | <docs/adr/ 配下の ADR への path> |
 | 詳細の置き場 | <DOC-L5-PHYSICAL-DATA など> |
 | 状態 | proposed |
@@ -148,13 +148,13 @@ issue: <Issue 番号>
 
 | 欄 | 記入 |
 |---|---|
-| 記録 ID | DEC-<NNN> |
+| 記録 ID | <DEC-NNN> |
 | 論点 | authn |
-| 選んだ方式 | <方式コード (小文字 ASCII の kebab-case)>: <説明> |
+| 選んだ方式 | <方式コード (小文字 ASCII の kebab-case): 説明> |
 | 理由 | <この要件・制約にどう合うか。要件 ID か制約を 1 つ以上引く> |
 | 却下した案 | <案とその却下の理由。選んだ方式と合わせて 2 案以上を比較する> |
 | 起草 | <起草者 (AI の場合はモデル名)> / AI の推奨: <推奨した方式コード> |
-| 承認 | 承認者: <PO の識別子> / 承認日: <日付> / 承認対象 revision: <commit SHA> / 承認根拠: <Issue / PR コメントの URL> |
+| 承認 | <承認者: PO の識別子 / 承認日: 日付 / 承認対象 revision: commit SHA / 承認根拠: Issue / PR コメントの URL> |
 | ADR 参照 | <docs/adr/ 配下の ADR への path> |
 | 詳細の置き場 | <DOC-L4-SECURITY など> |
 | 状態 | proposed |

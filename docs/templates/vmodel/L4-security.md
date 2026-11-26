@@ -105,6 +105,6 @@ issue: <Issue 番号>
 
 ##### 10-1 認証方式の詳細
 
-参照する決定記録: DEC-<NNN> (論点 ID: authn)
+参照する決定記録: <DEC-NNN> (論点 ID: authn)
 
 - <項目を記入>
