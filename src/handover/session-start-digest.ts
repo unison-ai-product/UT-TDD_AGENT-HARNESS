@@ -10,6 +10,11 @@ import type { MemoryEntry } from "../memory/index.ts";
 import type { ClaudeInboxBacklogSummary } from "../runtime/claude-memory-wake.ts";
 import type { HarnessDb } from "../state-db/index.ts";
 
+export const EXTERNAL_OBSERVATIONS_NOT_CHECKED = [
+  "  inbox PR state: not checked (pending reviews retained)",
+  "  post-merge backstop: not checked",
+] as const;
+
 export interface GateRunDigestRow {
   gate_id: string;
   status: string;
@@ -120,8 +125,7 @@ export function renderSessionStartDigest(digest: SessionStartDigest): string {
   }
   for (const line of digest.escalation_lines) lines.push(`  escalation: ${line}`);
   if (digest.external_observations_status === "not_checked") {
-    lines.push("  inbox PR state: not checked (pending reviews retained)");
-    lines.push("  post-merge backstop: not checked");
+    lines.push(...EXTERNAL_OBSERVATIONS_NOT_CHECKED);
   }
   if (digest.post_merge_backstop) {
     lines.push(`  ${formatPostMergeBackstop(digest.post_merge_backstop)}`);

@@ -66,6 +66,7 @@ import {
 import { loadRelationGraphSourceSet } from "./graph/loader.ts";
 import { checkHandoverBypass, nodeHandoverDeps, runHandover } from "./handover/index.ts";
 import {
+  EXTERNAL_OBSERVATIONS_NOT_CHECKED,
   renderSessionStartDigest,
   selectSessionStartDigest,
 } from "./handover/session-start-digest.ts";
@@ -566,7 +567,6 @@ function surfaceSessionStartDigestToStdout(
         memory,
         error,
         headCommits: recentHeadCommits(repoRoot),
-        externalObservationsStatus: "not_checked",
       }),
     );
   }
@@ -577,20 +577,16 @@ function renderDegradedSessionStartDigest(input: {
   memory: MemoryReadResult;
   error: unknown;
   headCommits: string[];
-  externalObservationsStatus?: "not_checked";
 }): string {
-  const { memory, error, headCommits, externalObservationsStatus } = input;
+  const { memory, error, headCommits } = input;
   const reason = error instanceof Error ? error.message : String(error);
   const lines = [
     "session-start digest DEGRADED — harness.db 由来の段 (state/gates, actionable) を読めなかった",
     `  reason: ${reason}`,
     "  → 「引き継ぎ情報が無い」ではなく「index が読めなかった」。DB 復旧まで判断の根拠にしない",
+    ...EXTERNAL_OBSERVATIONS_NOT_CHECKED,
+    "[2/4 head]",
   ];
-  if (externalObservationsStatus === "not_checked") {
-    lines.push("  inbox PR state: not checked (pending reviews retained)");
-    lines.push("  post-merge backstop: not checked");
-  }
-  lines.push("[2/4 head]");
   if (headCommits.length === 0) lines.push("  - unavailable");
   for (const commit of headCommits) lines.push(`  - ${commit}`);
   lines.push("[4/4 memory] (source=.ut-tdd/memory 正本ファイル)");
