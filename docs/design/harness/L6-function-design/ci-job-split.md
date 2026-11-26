@@ -10,7 +10,7 @@ issue: 1981
 created: 2026-11-25
 ---
 
-> **L6 contract marker**: 本書は CI workflow の構造の契約であり、新しい実装関数を持たない。判定は、workflow YAML から取り出した実行計画 `extractExecutionPlan(workflow, lane, event) => CheckEntry[]` と、固定した manifest `tests/fixtures/ci/harness-check-contract.json` の比較で行う。pre: workflow は `.github/workflows/harness-check.yml`。post: 計画が manifest と集合で一致する (欠落・重複・条件の反転・環境の差はすべて不一致)。oracle は `docs/test-design/harness/L7-ci-job-split-test-design.md` の `CANDIDATE-U-CISPLIT-001`〜`012` が固定する。新しい管理機構は足さない (ADR-001 決定 4)。
+> **L6 contract marker**: 本書は CI workflow の構造の契約であり、新しい実装関数を持たない。判定は、workflow YAML から取り出した実行計画 `extractExecutionPlan(workflow, lane, event) => CheckEntry[]` と、固定した manifest `tests/fixtures/ci/harness-check-contract.json` の比較で行う。pre: workflow は `.github/workflows/harness-check.yml`。post: 計画が manifest と集合で一致する (欠落・重複・条件の反転・環境の差はすべて不一致)。oracle は `docs/test-design/harness/L7-ci-job-split-test-design.md` の `U-CISPLIT-001`〜`012` が固定する。新しい管理機構は足さない (ADR-001 決定 4)。
 
 # harness-check の Linux job を責務ごとに分ける - 機能設計 (Issue #1981)
 
