@@ -36,7 +36,7 @@ related_issues: [1330, 593]
 - 社内の consumer project (非公開、以下 A) で次の 3 件がすでに起きている (#1327 / #1330 のコメント、2026-10-23)。
   - 同じ repo を 2 台の PC で進めたところ、PC2 の Codex が PC1 のレビューのチケットを拾い、返事が PC2 の inbox にだけ届いた。
   - 操作者の識別が無く、利用者が会話ごとに slot 番号を渡していた。
-  - 同時に動かす数を PC をまたいで数えられない。
+  - 同時に動かす数を PC をまたいで数えられない (今回の契約外。別 Issue #<N> で扱う)。
   - 面ごと (編集画面・公開 Web・管理画面) の共有部品の正本が無く、PC 用とスマホ用で同一内容のファイルが 15 組重複している。
   - 別 repo の成果物を参照する仕組みが無く、前の repo を丸ごと複製して参照している。
 - v4 要件 (候補、`docs/governance/candidates/ut-tdd-concept-v4-requirements.md`) のうち、本書が従うもの:
@@ -92,9 +92,7 @@ git の ref による排他 (§4.2 の review request の一意性が使う方�
   チケットの claim は GitHub の assignee (login 単位) で行うので、`machine_id` は使わない。
   stop refresh の lease は `hostname` の比較を `machine_id` の比較に寄せるが、別 PC の owner の生存判定が TTL であることは
   変わらない (改善するのは持ち主の同定だけ)。
-- 同時実行数の上限 8 (表 §2 #10) は PC の資源を守るためのものなので、PC 単位で数える。provider の利用上限 (A の
-  「Codex 3 本」など) は provider の account、つまり `principal` 単位の制約であり、`principal` が assignee の Issue から PC をまたいで数えて
-  advisory として表示する。上限で止める仕組みは作らない。
+- 並列上限 8 (表 §2 #10、`agent-slots`) は PC の資源を守るためのものなので、PC 単位で数える。
 
 ## §4 共有状態の正本
 
