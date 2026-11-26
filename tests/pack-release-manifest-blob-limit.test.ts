@@ -16,7 +16,7 @@ import {
   digestConsumerRuntimeBytes,
   digestMaterializedReleaseEntries,
 } from "../src/setup/index.ts";
-import { it } from "./support/hook-bounds.ts";
+import { expect, it } from "./support/hook-bounds.ts";
 
 function git(root: string, ...args: string[]): string {
   return execFileSync("git", ["-C", root, ...args], {
@@ -69,7 +69,7 @@ function commitManifest(root: string, tag: string, content: string): void {
   git(root, "tag", tag);
 }
 
-it.fails("Issue #1997: accepts a valid C2 manifest over 1 MiB and retains missing/invalid rejection", async () => {
+it("Issue #1997: accepts a valid C2 manifest over 1 MiB and retains missing/invalid rejection", async () => {
   const root = mkdtempSync(join(tmpdir(), "ut-tdd-pack-manifest-limit-"));
   const outDir = join(root, "out");
   try {
