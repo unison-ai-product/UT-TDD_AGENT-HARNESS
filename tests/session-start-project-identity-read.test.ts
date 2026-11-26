@@ -1,7 +1,7 @@
 import { type SpawnSyncReturns, spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readdirSync, readFileSync, realpathSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, realpathSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { describe, expect, it } from "vitest";
 import { scanPostMergeBackstop } from "../src/feedback/post-merge-backstop.ts";
@@ -122,6 +122,10 @@ function sessionRun(pendingCount: number, suffix: string, ghMode = "available"):
     .split(/\r?\n/)
     .map((line) => JSON.parse(line) as Command);
   return { root, sessionId, start, commands, inbox };
+}
+
+function inboxMarkerPath(entryPath: string, suffix: ".claim" | ".terminal.json"): string {
+  return join(dirname(dirname(entryPath)), basename(entryPath, ".json") + suffix);
 }
 
 function summarizeRootReads(commands: Command[]): string[][] {
@@ -262,10 +266,8 @@ describe("SessionStart project identity reads", () => {
       for (const entry of run.inbox) {
         expect(existsSync(entry.path)).toBe(true);
         expect(readFileSync(entry.path)).toEqual(entry.bytes);
-        const siblings = readdirSync(dirname(entry.path));
-        const name = entry.path.split(/[\\/]/).at(-1)?.slice(0, -".json".length);
-        expect(siblings).not.toContain(`${name}.claim`);
-        expect(siblings).not.toContain(`${name}.terminal.json`);
+        expect(existsSync(inboxMarkerPath(entry.path, ".claim"))).toBe(false);
+        expect(existsSync(inboxMarkerPath(entry.path, ".terminal.json"))).toBe(false);
       }
     }
   });
@@ -316,7 +318,7 @@ describe("SessionStart project identity reads", () => {
       reviewRevision: "wake-observation",
       authorFamily: "codex",
     });
-    publishClaudeInboxEntry(root, entry);
+    const entryPath = publishClaudeInboxEntry(root, entry);
     try {
       let observedPr = 0;
       const wake = await waitForClaudeMemory({
@@ -332,18 +334,14 @@ describe("SessionStart project identity reads", () => {
       });
       expect(wake.kind).toBe("timeout");
       expect(observedPr).toBe(entry.pr);
-      const inboxRoot = join(project.runtimeBusRoot, "claude-memory-wake");
-      const markers = readdirSync(inboxRoot).filter((name) => name.endsWith(".terminal.json"));
-      expect(
-        markers.map((name) => JSON.parse(readFileSync(join(inboxRoot, name), "utf8"))),
-      ).toEqual([
-        expect.objectContaining({
-          reason: "pr_merged",
-          requestDigest,
-          pr: entry.pr,
-          exactHead: entry.exactHead,
-        }),
-      ]);
+      const marker = JSON.parse(readFileSync(inboxMarkerPath(entryPath, ".terminal.json"), "utf8"));
+      expect(marker).toMatchObject({
+        entryId: entry.id,
+        reason: "pr_merged",
+        requestDigest,
+        pr: entry.pr,
+        exactHead: entry.exactHead,
+      });
 
       const commands: Array<{ file: string; args: readonly string[] }> = [];
       const backstop = scanPostMergeBackstop({
