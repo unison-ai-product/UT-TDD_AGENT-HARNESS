@@ -45,6 +45,7 @@ their workflow.
 - `docs/governance/ut-tdd-agent-harness-extraction-plan_v0.1.md` - extraction / cutover plan from the source snapshot
 - `docs/adr/ADR-001-ut-tdd-harness-redesign-and-language.md` - redesign policy and TypeScript/Node implementation language
 - `docs/governance/README.md` - canonical / reference / archive boundary under governance
+- `docs/governance/operating-rules-review-merge.md` / `operating-rules-delegation-routing.md` / `operating-rules-general.md` - rule text moved verbatim out of `CLAUDE.md` (PO 2026-11-26); `CLAUDE.md` keeps headings and one-line pointers. Read the one a pointer names when its condition applies; they are canonical for both runtimes.
 
 Migration snapshots and inventories are not Core Reads. Read `docs/migration/`
 only when migration, gap audit, or regression-source inspection requires it. Do
