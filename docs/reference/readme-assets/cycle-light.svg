@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 260" width="960" height="260" role="img" aria-label="Drive, V-model, harness.db, Gate loop">
+<title>Drive, V-model, harness.db, Gate loop</title>
+<style>
+:root{--fg:#1f2937;--mute:#6b7280;--a1:#2563eb;--a2:#b45309}
+text{font-family:system-ui,'Segoe UI',sans-serif;fill:var(--fg);font-size:20px;font-weight:600}
+.sub{font-size:14px;font-weight:400;fill:var(--mute)}
+.box{fill:none;stroke:var(--mute);stroke-width:1.5}
+.glow{fill:var(--a1);opacity:0;animation:glow 6s ease-in-out infinite}
+.gate{fill:var(--a2)}
+.flow{fill:none;stroke:var(--a1);stroke-width:2;stroke-linecap:round;stroke-dasharray:6 8;animation:flow 4s linear infinite}
+.back{stroke:var(--a2)}
+@keyframes flow{to{stroke-dashoffset:-56}}
+@keyframes glow{0%{opacity:0}10%{opacity:.22}25%{opacity:0}100%{opacity:0}}
+@media (prefers-reduced-motion:reduce){*{animation:none !important}}
+</style>
+<path class="flow" d="M205 150 H265 M475 150 H535 M745 150 H805"/>
+<path class="flow back" d="M870 118 C870 20 120 20 120 118"/>
+<g><rect class="box" x="35" y="118" width="170" height="64" rx="12"/><rect class="glow" x="35" y="118" width="170" height="64" rx="12"/><text x="120" y="146" text-anchor="middle">Drive</text><text class="sub" x="120" y="168" text-anchor="middle">Forward / Reverse</text></g>
+<g><rect class="box" x="265" y="118" width="210" height="64" rx="12"/><rect class="glow" style="animation-delay:1.5s" x="265" y="118" width="210" height="64" rx="12"/><text x="370" y="146" text-anchor="middle">V-model</text><text class="sub" x="370" y="168" text-anchor="middle">L0 → L14</text></g>
+<g><rect class="box" x="535" y="118" width="210" height="64" rx="12"/><rect class="glow" style="animation-delay:3s" x="535" y="118" width="210" height="64" rx="12"/><text x="640" y="146" text-anchor="middle">harness.db</text><text class="sub" x="640" y="168" text-anchor="middle">projection</text></g>
+<g><rect class="box" x="805" y="118" width="130" height="64" rx="12"/><rect class="glow gate" style="animation-delay:4.5s" x="805" y="118" width="130" height="64" rx="12"/><text x="870" y="146" text-anchor="middle">Gate</text><text class="sub" x="870" y="168" text-anchor="middle">fail-close</text></g>
+</svg>
