@@ -22,6 +22,7 @@ issue: 1970
 - **読取専用の基準状態**: inbox entry 本文、`.claim`、terminal、ACK、receipt、Memory、DB の bytes / row 数を実行前後で比較する。既存 inbox の全 entry を対象にし、通知対象外の別 session entry も sentinel として含める。実 inbox、実利用者の session、実 project state は fixture に使わない。
 - **timeout / process 観測**: hook host の開始から stdout / exit 応答までを同じ時計で測る。子 process 起動、Git、GitHub / network、DB 接続は instrument し、呼び出しがあれば記録する。host による timeout は環境・試験条件として記録し、単体の関数時間を代用しない。
 - テストは同一 project 内の別 session、別 project、空 inbox、壊れた / 欠落 metadata を個別に作り、同時に複数の入力条件を変えない。本文中の任意文字列が stdout / context に漏れないよう、entry 本文・sender・ID に固有 sentinel を置く。
+- 宛先を確定できる fixture と、worktree の場所だけが一致して宛先を確認できない fixture を分ける。候補 003 は後者の通知が0件で、foreign path の I/O が発生しないことを確かめる。linked worktree の宛先の供給手段は L6 の判断後に fixture 化する。
 
 ## 3. 候補 oracle
 

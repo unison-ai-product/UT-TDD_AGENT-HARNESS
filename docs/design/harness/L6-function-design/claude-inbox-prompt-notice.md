@@ -41,6 +41,7 @@ Codex lane は [#1970 の判断依頼](https://github.com/unison-ai-product/UT-T
 - 未読判定は通知専用の宛先別 metadata に限る。stat が使えない、metadata が無い・不正・未対応、event / session / workspace 入力が不正、または対象が空である場合は通知しない。欠損や不正から宛先・未読・通知成功を推測しない。
 - 通知 metadata は通知と同一セッションの重複抑止にだけ使う。delivery / ACK の正本や認可情報として使わない。保存形式、保存先、原子的更新方式、寿命、session と unread state の結合方法は本書では定めない。
 - `requireProjectMemoryRoot` は Git を起動し得る。prompt ごとの外部 Git / GitHub / API 起動を新設せず、これを無条件に呼ぶことを実装前提にしない。既存の trusted workspace / root 検証の意味を保ち、hot path は通知 metadata の確認に限定する。
+- 共通 inbox の保存先は、worktree の場所だけでなく、コミット済みの project ID と Git 共通ディレクトリで決まる。launcher の `UT_TDD_REPO_ROOT` は worktree の場所を示す。起動元から通知用の宛先を確定できない場合は無通知とする。通知側で事前に検証した宛先を参照する案は §8 で扱う。[project memory の保存先](../../../../src/memory/project-memory-root.ts)
 
 ## 3. 通知の契約
 
@@ -108,6 +109,7 @@ hook の時間は Node / helper の部分時間ではなく、#1938 と同じ ho
 以下は設計判断の採択後に L6 と対の L7 を同時に改訂する。ここを実装者の推測で埋めない。
 
 - 通知 metadata の schema、配置、更新 / 削除方法、障害復旧
+- linked worktree と通常の導入先で、宛先の検証結果を同期 hook の外から渡す場合の供給元、有効範囲および失効条件
 - 重複抑止の単位と、同一 session の複数 prompt / 同時 prompt の競合規則
 - 新着、既読・clear、session resume 後に再通知する条件
 - `CANDIDATE-U-CPNOTICE-005` が固定する re-notification の具体的 oracle
