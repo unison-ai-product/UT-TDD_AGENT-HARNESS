@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { parse as parseYaml } from "yaml";
-import { headSnapshotRoot } from "./workspace-roots.ts";
+import { workspaceRead } from "./workspace-roots.ts";
 
 export type ManifestEntry = {
   check_id: string;
@@ -32,7 +32,11 @@ export type WorkflowJob = {
   "continue-on-error"?: unknown;
 };
 export type Workflow = { env?: Record<string, unknown>; jobs: Record<string, WorkflowJob> };
-const repoRoot = headSnapshotRoot();
+const repoRoot = workspaceRead({
+  id: "ci-job-split-workflow-manifest",
+  mode: "head_snapshot",
+  reason: "split-job oracle compares the immutable workflow and manifest from the same exact HEAD",
+});
 export const workflow = parseYaml(
   readFileSync(join(repoRoot, ".github", "workflows", "harness-check.yml"), "utf8"),
 ) as Workflow;

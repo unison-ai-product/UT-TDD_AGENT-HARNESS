@@ -1,5 +1,6 @@
 import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import {
   cloneWorkflow,
@@ -10,7 +11,7 @@ import {
   type Workflow,
   workflow,
 } from "./ci-job-split-fixture.ts";
-import { headSnapshotRoot } from "./workspace-roots.ts";
+import { workspaceRead } from "./workspace-roots.ts";
 
 export type ShellResult = { error?: Error; status: number | null; stdout: string; stderr: string };
 const AGGREGATE_ALWAYS = "$" + "{{ always() }}";
@@ -43,7 +44,7 @@ const bashExecutable = (() => {
 const bashPreflight = spawnSync(
   bashExecutable,
   ["--noprofile", "--norc", "-e", "-o", "pipefail", "-c", "exit 0"],
-  { cwd: process.cwd(), encoding: "utf8" },
+  { cwd: tmpdir(), encoding: "utf8" },
 );
 if (bashPreflight.error || bashPreflight.status !== 0)
   throw new Error(
@@ -87,7 +88,7 @@ export function runAggregateGate(
   const result = spawnSync(
     bashExecutable,
     ["--noprofile", "--norc", "-e", "-o", "pipefail", "-c", bind(aggregateRun(parsed))],
-    { cwd: process.cwd(), encoding: "utf8", env: { ...process.env, ...env } },
+    { cwd: tmpdir(), encoding: "utf8", env: { ...process.env, ...env } },
   );
   return {
     error: result.error,
@@ -213,8 +214,13 @@ export const continueOnErrorMutations = continueOnErrorMutationFixtures();
 export const githubTrackedPreflight = execFileSync("git", ["--version"], {
   encoding: "utf8",
 }).trim();
+const repoRoot = workspaceRead({
+  id: "ci-job-split-tracked-github-files",
+  mode: "head_snapshot",
+  reason: "aggregate oracle checks tracked GitHub workflow files from the immutable exact HEAD",
+});
 export const trackedGithubFiles = execFileSync("git", ["ls-files", ".github"], {
-  cwd: headSnapshotRoot(),
+  cwd: repoRoot,
   encoding: "utf8",
 })
   .split(/\r?\n/)
