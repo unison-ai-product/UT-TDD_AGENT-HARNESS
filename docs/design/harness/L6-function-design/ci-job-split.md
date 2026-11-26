@@ -43,6 +43,8 @@ created: 2026-11-25
 
 Linux の job は `classify` / `harness-check-pr-discipline` / `harness-check-static` / `harness-check-linux` の 4 つである。「統治」を独立の job にしない (#1981 の決定。`doctor` が回帰の job に残るため、統治の job に入る検査が無くなる)。`classify` 以外の 3 つは、すべて `needs: [classify]` を持つ。互いには `needs` を持たず、並列に走る。
 
+要件 UTV4-FR-064 の「単位」は、本書では `harness-check-pr-discipline`・`harness-check-static`・`harness-check-linux`・`harness-check-windows`・`node-generation-linux`・`node-generation-windows` の 6 つの job を指す。`classify` は単位を選ぶ前段、`harness-check` は単位の結果を束ねる集約であり、どちらも単位ではない (受入 UTV4-AC-077 の (f) は §5 の集約が受ける)。
+
 ## 3. 現行 step から job への対応
 
 現行の `harness-check-linux` の step は 19 個である。次の表は各 step を **ちょうど 1 回** 配置する (準備の 3 step だけは、方針により各 job に複製し、まとめない。§8)。`if` 欄は現行 YAML の値を原文のまま写している。`-` は `if` が無いことを表す。
