@@ -32,7 +32,23 @@ reviewer の verdict.txt は `VERDICT: PASS` を含んだが、封筒の先頭�
 
 ## 3. 原因 (origin/main で実測)
 
-原因の実測 (3.1〜3.5) は責務ごとに `docs/design/harness/L6-function-design/review-verdict-rejection-cause.md` へ分けた。本書の §4 以降はその節番号 (§3.1〜§3.5) を参照する。要点は、拒否理由が JSON にだけ入り人の目に出ないこと (3.1)、拒否の記録の結果が捨てられていること (3.2)、再試行の機構はすでにあること (3.3)、別 request の PASS では pending が閉じないこと (3.4)、旧 request の audit は未確認であること (3.5) である。
+### 3.1 拒否の理由と記録の結果が、人にも呼び出し側にも届かない
+
+`executeAdapterPlanForCli` (`src/cli/delegation.ts:179`) は `projectReviewVerdict` の結果を `reviewResult` に持ち (`:223`)、`ok === false` なら終了コードを 1 にする (`:288`)。理由 (`reviewResult.reason`) は戻り値の `review` に入るだけで、stderr へは書かれない (`:259` 以降に書く箇所が無い)。`--json` 以外の呼び出しでは、呼び出し側は「exit 1」しか分からない。
+
+`projectReviewVerdict` (`src/feedback/review-attestation.ts:449`) の拒否は `rejectedVerdict` (`:367`) を通り、`recordStrictVerdictRejection` (`:329`) が `recordReviewAttemptVerdictRejection` (`review-verdict-custody.ts:383`) を呼んで `attempt_verdict_rejected` を書く。**この戻り値 (`ReviewAttemptOutcomeResult`) は捨てられ、関数は常に `undefined` を返す** (`:350` 付近の呼び出しのあと `return undefined`)。書き込みが失敗しても (`attempt_outcome_indeterminate`、`verdict_path_identity_mismatch`、`invalid_attempt_outcome` 等) 呼び出し側は検知できず、元の拒否理由だけが返る。
+
+### 3.2 再試行の機構はすでにある
+
+`beginReviewAttempt` (`review-verdict-custody.ts:522`) は、前 attempt の outcome が 1 件で `isRetryableAttemptEvent` を満たすとき (`attempt_verdict_rejected` は `isAttemptFailureEvent`、`:296` 以降、で `exitCode === 0` かつ `digestFile(verdictPath) === verdictDigest` を要求)、`superseded_attempt` (`reason: "retry"`、`oldAttemptDigest` つき) を追記して attempt 番号を 1 進める。旧 attempt の verdict.txt は消さない。terminal receipt (valid な `attempt_completed` つき) があれば `review_receipt_already_exists` で拒否する。
+
+つまり新しい状態は要らない。足りないのは (a) 拒否の outcome が確実に残ったかの確認 (§3.1)、(b) 再試行できる条件と手順の明文化である。
+
+### 3.3 別 request の PASS では pending は閉じない
+
+request の identity digest は `schemaVersion / memoryId / pr / exactHead / authorFamily` で決まり (`reviewIdentityObject`、`review-verdict-custody.ts:62`)、`reviewRevision` はその digest から導く `rv1-<digest>` である (`canonicalReviewRevision`、`:84`。`issueReviewRequest` は `review-attestation.ts:399`)。merge gate は exact HEAD の entry に verdict の無いものが 1 件でもあると `pending_request_for_head` を積む (`review-merge-gate.ts:237`)。memoryId が違う request は別の entry であり、その PASS は古い pending を閉じない。事象 (§2) で後続の PASS が効かなかった理由の候補はこれである。
+
+実際の事象の旧 request に、有効な `attempt_verdict_rejected` が残っていたか (上の書き込みが成功していたか) は**未確認**である。旧 request の audit は #1977 の checkout を読まないと確かめられない。確認は実装 PR の前に行い、結果を Issue #1986 へ記録する。成功していなければ、本書の §4.2 (記録の確認) が直接の修正になる。
 
 ## 4. 方式
 
@@ -120,7 +136,7 @@ reviewer に封筒を書かせず実行側が付ける方式は、run ごとの 
 
 ## 7. 実装順序 (別 PR、1 PR = 1 論点)
 
-1. 原因文書 §3.5 の確認 (旧 request の audit)。Issue へ記録。
+1. §3.1 の未確認事項の確認 (旧 request の audit)。Issue へ記録。
 2. L7 oracle の Red (`it.fails`)。
 3. §4.2 (`recordStrictVerdictRejection` の戻り値) と §4.1 (表示)。既存の source_module 内の最小変更で、新しいファイルは作らない。
 4. §4.3 は既存機構であり、oracle 005〜010 が既存の振る舞いを固定できなければ、その差分だけを別 PR とする。
