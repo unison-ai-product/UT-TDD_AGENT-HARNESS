@@ -48,7 +48,7 @@ reviewer の verdict.txt は `VERDICT: PASS` を含んだが、封筒の先頭�
 
 request の identity digest は `schemaVersion / memoryId / pr / exactHead / authorFamily` で決まり (`reviewIdentityObject`、`review-verdict-custody.ts:62`)、`reviewRevision` はその digest から導く `rv1-<digest>` である (`canonicalReviewRevision`、`:84`。`issueReviewRequest` は `review-attestation.ts:399`)。merge gate は exact HEAD の entry に verdict の無いものが 1 件でもあると `pending_request_for_head` を積む (`review-merge-gate.ts:237`)。memoryId が違う request は別の entry であり、その PASS は古い pending を閉じない。事象 (§2) で後続の PASS が効かなかった理由の候補はこれである。
 
-実際の事象の旧 request に、有効な `attempt_verdict_rejected` が残っていたか (上の書き込みが成功していたか) は**未確認**である。旧 request の audit は #1977 の checkout を読まないと確かめられない。確認は実装 PR の前に行い、結果を Issue #1986 へ記録する。成功していなければ、本書の §4.2 (記録の確認) が直接の修正になる。
+実際の事象の旧 request に、有効な `attempt_verdict_rejected` が残っていたか (§3.1 の書き込みが成功していたか) は**未確認**である。旧 request の audit は #1977 の checkout を読まないと確かめられない。確認は実装 PR の前に行い、結果を Issue #1986 へ記録する。成功していなければ、本書の §4.2 (記録の確認) が直接の修正になる。
 
 ## 4. 方式
 
@@ -136,7 +136,7 @@ reviewer に封筒を書かせず実行側が付ける方式は、run ごとの 
 
 ## 7. 実装順序 (別 PR、1 PR = 1 論点)
 
-1. §3.1 の未確認事項の確認 (旧 request の audit)。Issue へ記録。
+1. §3.3 末尾の未確認事項の確認 (旧 request の audit)。Issue へ記録。
 2. L7 oracle の Red (`it.fails`)。
 3. §4.2 (`recordStrictVerdictRejection` の戻り値) と §4.1 (表示)。既存の source_module 内の最小変更で、新しいファイルは作らない。
 4. §4.3 は既存機構であり、oracle 005〜010 が既存の振る舞いを固定できなければ、その差分だけを別 PR とする。
