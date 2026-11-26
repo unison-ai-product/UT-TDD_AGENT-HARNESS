@@ -51,11 +51,7 @@ ADR-001 に従い、UT-TDD の実装言語は TypeScript/Node とする。旧 W1
 
 ### PO 指示の解釈 (PO ルール)
 
-- 「改善する」は**実装すること**を指す。調査・提案で止めない (§教訓はメモリではなく仕組みにして改善する)。
-- 工程は記録のために必ず通す。近道で省略しない (§運用規律の再締結 1)。
-- Recovery は本線であり、傍流の後回し作業として扱わない。
-- 強制停止 (作業の即時中断を要する事態) は最高 severity として扱う。担当作業の完了時には handover が必要である
-  (機構は `docs/design/` の forced-stop-feedback / handover-mechanism が正本)。
+本文は docs/governance/operating-rules-general.md §PO 指示の解釈 (PO 指示の解釈に迷うとき)。
 
 ### GitHub 記載言語 (PO ルール 2026-09-16)
 
@@ -72,7 +68,9 @@ GitHub の Issue / PR / Discussion のタイトル、本文、コメント、レ
 
 #### PO 判断への反射的エスカレーション禁止 (PO ルール 2026-08-05)
 
-本文は docs/governance/operating-rules-general.md §PO 判断への反射的エスカレーション禁止 (「PO 判断必須」と書いて止まる前)。
+「PO 判断必須」「PO 承認待ち」「PO が決める」と記載して作業を止める前に、必ず `ut-tdd advisor --decision <kind> --current-model <current-model> --execute --task "<判断内容>"` で第三者判断を得る。production infrastructure、destructive data operation、authentication/authorization、payment、PII、secret、licensing、外部API前提の変更は高影響境界であり、advisor 回答にかかわらず変更前に PO 承認を得る。advisor 相談は承認の代替ではない。
+
+全文は docs/governance/operating-rules-general.md §PO 判断への反射的エスカレーション禁止 (「PO 判断必須」と書いて止まる前)。
 
 ## Canonical Docs
 
@@ -80,20 +78,7 @@ GitHub の Issue / PR / Discussion のタイトル、本文、コメント、レ
 
 ## Architecture Boundary
 
-- `docs/`: governance, requirements, ADRs, plans, design, test design, migration, archive
-- `src/`: TypeScript/Node harness core
-- `tests/`: Vitest tests
-- `scripts/`: thin OS entrypoints only
-- `.ut-tdd/`: UT-TDD runtime state and audit/handover evidence
-- `.claude/`: Claude Code runtime / hook policy
-- `legacy local state/`: historical source state, not UT-TDD state
-
-V-model artifacts must stay separated:
-
-- design: `docs/design/`
-- implementation: `src/`
-- test design: `docs/test-design/`
-- tests: `tests/`
+本文は docs/governance/operating-rules-general.md §Architecture Boundary (ディレクトリの責務を確かめるとき)。
 
 ## Rule Placement Convention (ルールをどのファイルに書くか)
 
@@ -132,9 +117,9 @@ V-model artifacts must stay separated:
 - Push at coherent task boundaries when requested.
 - CI is `harness-check`: typecheck, Vitest, Biome lint, and doctor.
 - Review evidence is required before confirmation gates where applicable.
-- PR merge は必ず `ut-tdd pr merge --pr <N>` 経由とし、`gh pr merge` の直叩きで迂回しない。
 - merge 後の確認・Green の偽装禁止・「merge しない」指示の優先は docs/governance/operating-rules-review-merge.md §Git Rules (merge 後の確認) (merge するとき)。
-- **他ランタイムの commit を `reset` / `revert` / `checkout` / force で破棄・デグレさせない**。
+- PR merge は必ず `ut-tdd pr merge --pr <N>` 経由とし、`gh pr merge` の直叩きで迂回しない。closing review の PASS verdict 受領前に merge しない (例外なし)。
+- Hybrid commit 協調の核心: history を書き換える前に `git log` / `git reflog` を確認する。**他ランタイムの commit を `reset` / `revert` / `checkout` / force で破棄・デグレさせない**。自分の意図ファイルだけを path 明示で stage し (`git add -A` / `git add .` 禁止)、commit 直前に `git status` + `git diff --staged` を確認する。
 - メモリは必ず `ut-tdd memory add` 経由で書く (手書き禁止。docs/governance/operating-rules-review-merge.md §引き継ぎ・検証の基準点 = HEAD)。
 
 ### 運用規律の再締結 (PO ルール 2026-08-03、両ランタイム共通)

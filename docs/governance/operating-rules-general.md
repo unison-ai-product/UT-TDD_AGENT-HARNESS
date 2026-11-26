@@ -207,3 +207,28 @@ one-shot 消費 / memory add 必須 / doctor singleton / effort ladder。矛盾�
 - Reverse: `R0` → `R1` → `R2` → `R3` → `R4` → Forward への合流 (`docs/process/modes/reverse.md`)
 - Scrum / PoC: `S0 backlog` -> `S1 plan` -> `S2 poc` -> `S3 verify` -> `S4 decide`
 - Handover: check `.ut-tdd/handover/CURRENT.json` if present and non-stale.
+
+## PO 指示の解釈 (PO ルール)
+
+- 「改善する」は**実装すること**を指す。調査・提案で止めない (§教訓はメモリではなく仕組みにして改善する)。
+- 工程は記録のために必ず通す。近道で省略しない (§運用規律の再締結 1)。
+- Recovery は本線であり、傍流の後回し作業として扱わない。
+- 強制停止 (作業の即時中断を要する事態) は最高 severity として扱う。担当作業の完了時には handover が必要である
+  (機構は `docs/design/` の forced-stop-feedback / handover-mechanism が正本)。
+
+## Architecture Boundary
+
+- `docs/`: governance, requirements, ADRs, plans, design, test design, migration, archive
+- `src/`: TypeScript/Node harness core
+- `tests/`: Vitest tests
+- `scripts/`: thin OS entrypoints only
+- `.ut-tdd/`: UT-TDD runtime state and audit/handover evidence
+- `.claude/`: Claude Code runtime / hook policy
+- `legacy local state/`: historical source state, not UT-TDD state
+
+V-model artifacts must stay separated:
+
+- design: `docs/design/`
+- implementation: `src/`
+- test design: `docs/test-design/`
+- tests: `tests/`
