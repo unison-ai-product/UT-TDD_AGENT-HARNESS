@@ -65,7 +65,7 @@ related_issues: [1330, 593]
 | PC2 の Codex が PC1 のレビューのチケットを拾った | CANDIDATE-ST-TEAM-003、CANDIDATE-ST-TEAM-004、CANDIDATE-ST-TEAM-008 |
 | 返事が PC2 の inbox にだけ届いた | CANDIDATE-ST-TEAM-007 |
 | 操作者の識別が無く、slot 番号を手で渡していた | CANDIDATE-ST-TEAM-001、CANDIDATE-ST-TEAM-002 |
-| 同時に動かす数を PC をまたいで数えられない | 今回の契約外 (CANDIDATE-ST-TEAM-012 は撤回。別 Issue #<N> で扱う) |
+| 同時に動かす数を PC をまたいで数えられない | 今回の契約外 (CANDIDATE-ST-TEAM-012 は撤回。別 Issue #1996 で扱う) |
 | 共有部品の正本が無く、PC 用とスマホ用で重複 | CANDIDATE-ST-MREPO-003 (repo 分割後。1 repo の中の面どうしの重複は本書の範囲外) |
 | 別 repo の成果物を複製して参照している | CANDIDATE-ST-MREPO-002、CANDIDATE-ST-MREPO-003 |
 | (新しい repo 分割後) サーバー → WEB → アプリの順の変更 | CANDIDATE-ST-MREPO-004、CANDIDATE-ST-MREPO-005 |
