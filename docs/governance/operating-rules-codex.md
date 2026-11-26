@@ -34,80 +34,59 @@ PO への質問は **設計判断 (trade-off が実在する方式選択 / spec 
 
 ## Core Reads の補足段落 (Codex 規律)
 
-Migration snapshots and inventories are not Core Reads. Read `docs/migration/`
-only when migration, gap audit, or regression-source inspection requires it. Do
-not treat it as UT-TDD runtime state or execution paths.
+移行時のスナップショットと棚卸し表は Core Reads ではない。`docs/migration/` は、移行・ギャップ監査・回帰元の確認が必要なときだけ読む。
+これを UT-TDD の実行時状態や実行経路として扱わない。
 
-Do not load `docs/design/harness/L3-functional/roadmap.md` as a normal startup
-read. The verification roadmap is read dynamically only at V-model freeze
-boundaries when a verification cycle is being run. Normal work follows the
-Forward descent path from L0 to L14.
+`docs/design/harness/L3-functional/roadmap.md` を通常の起動時の読み取りに含めない。検証ロードマップは、V-model の freeze 境界で検証サイクルを回すときだけ動的に読む。通常の作業は、L0 から L14 への Forward の降下経路に従う。
 
-ADR-001 is binding: The previous framework is a design source only. UT-TDD core implementation is
-TypeScript/Node. old W1-W3a Python is not ported as product runtime.
-Thin `.ps1` / `.sh` entrypoints may call the compiled or Node-based TypeScript
-core. The language of repositories governed by UT-TDD is independent of the
-harness implementation language.
+ADR-001 は拘束力を持つ。以前のフレームワークは設計の参照元にすぎない。UT-TDD の中核実装は TypeScript/Node である。旧 W1-W3a の Python は製品の実行時として移植しない。
+薄い `.ps1` / `.sh` の入口が、コンパイル済みまたは Node ベースの TypeScript core を呼んでよい。UT-TDD が管理するリポジトリの言語は、ハーネスの実装言語とは独立である。
 
-`docs/archive/` is not canonical; it is historical material only. The HELIX
-vendor snapshot has been removed now that the fork is complete (see
-`docs/migration/helix-fork-completion-plan.md` §11).
+`docs/archive/` は正本ではなく、履歴資料にすぎない。fork が完了したため、HELIX の vendor スナップショットは削除済みである (`docs/migration/helix-fork-completion-plan.md` §11 を参照)。
 
 ## TL Driven Mode (Codex 規律)
 
-When Codex CLI is used without another active runtime, act as the technical lead
-for the current slice. This does not replace Claude Code; it means Codex can
-execute, verify, and make gate decisions in `codex-only` or `standalone` modes.
+Codex CLI を他の有効なランタイム無しで使うときは、その slice の technical lead として振る舞う。これは Claude Code の代わりになるものではなく、`codex-only` または `standalone` のモードで Codex が実行・検証・ゲート判断を行えるという意味である。
 
-- Carry design, implementation, review, tests, and verification through when
-  feasible.
-- Read relevant existing files before editing.
-- Match existing structure, naming, and test placement.
-- State gate outcomes in the final response when the change size requires them.
-- Escalate before changing production infrastructure, authentication,
-  authorization, payment, PII, secrets, licensing, external APIs, or other
-  high-impact environment assumptions.
+- 可能なら、設計・実装・レビュー・テスト・検証を通して進める。
+- 編集の前に、関連する既存ファイルを読む。
+- 既存の構造・命名・テストの置き場所に合わせる。
+- 変更の規模が求めるときは、最終応答でゲートの結果を述べる。
+- 本番インフラ・認証・認可・決済・PII・secret・ライセンス・外部 API・その他の影響の大きい環境前提を変える前に、エスカレーションする。
 
 ## UT-TDD Workflow (Codex 規律)
 
 - Forward: `plan` -> `pair-freeze` -> `implement` -> `trace-freeze` -> `review` -> `accept`
 - Reverse: `R0` → `R1` → `R2` → `R3` → `R4` → Forward への合流 (`docs/process/modes/reverse.md`)
 - Scrum / PoC: `S0 backlog` -> `S1 plan` -> `S2 poc` -> `S3 verify` -> `S4 decide`
-- Additive change: preserve existing design and add deltas through `add-design`
-  / `add-impl`.
-- Handover: use `.ut-tdd/handover/` as the session / cross-runtime handover
-  source.
+- 追加変更: 既存の設計を保ち、`add-design` / `add-impl` で差分を足す。
+- Handover: `.ut-tdd/handover/` をセッション間・ランタイム間の引き継ぎ元として使う。
 
 ## Codex / Claude Code Harness (Codex 規律)
 
-Codex and Claude Code are managed by UT-TDD Agent Harness through contract
-plans, local CLIs, and hooks. They are not direct API calls in this product.
+Codex と Claude Code は、契約 plan・ローカル CLI・hook を通じて UT-TDD Agent Harness が管理する。この製品では API の直接呼び出しではない。
 
-Runtime modes:
+ランタイム mode:
 
 - `standalone`
 - `claude-only`
 - `codex-only`
 - `hybrid`
 
-Canonical commands:
+正規コマンド:
 
-- Codex execution: `ut-tdd codex --role <role> --task "..."`
-- Claude prompt generation: `ut-tdd claude --role <role> --task "..."` (without `--execute` it is a dry run)
-- Team delegation: `ut-tdd team run --definition .ut-tdd/teams/<team>.yaml`
-- Task classification: `ut-tdd task classify --text "..."`
-- Skill recommendation: `ut-tdd skill suggest --text "..."`
-- Review packet: `ut-tdd review --uncommitted`
+- Codex 実行: `ut-tdd codex --role <role> --task "..."`
+- Claude の prompt 生成: `ut-tdd claude --role <role> --task "..."` (`--execute` 無しは dry run)
+- チームへの委譲: `ut-tdd team run --definition .ut-tdd/teams/<team>.yaml`
+- タスク分類: `ut-tdd task classify --text "..."`
+- skill の推薦: `ut-tdd skill suggest --text "..."`
+- レビュー packet: `ut-tdd review --uncommitted`
 - Handover: `ut-tdd handover`
 - Status: `ut-tdd status`
 - Doctor: `ut-tdd doctor`
 
-When multiple AI runtimes are available, separate creation from judgement.
-Design decisions, judgement gates, and R4 merge decisions should go through a
-different runtime / model family (MUST in `hybrid`; same-family reviewers are
-rejected, `same_family_reviewer_denied` in `src/feedback/review-admission-check.ts`).
-In single-runtime modes, record
-`intra_runtime_subagent` as the review substitute and leave evidence.
+複数の AI ランタイムが使えるときは、創出と判断を分ける。設計判断・判断ゲート・R4 の merge 判断は、別のランタイム / モデル family を通す (`hybrid` では MUST。同 family の reviewer は拒否される。`src/feedback/review-admission-check.ts` の `same_family_reviewer_denied`)。
+単一ランタイムの mode では、レビューの代替として `intra_runtime_subagent` を記録し、証跡を残す。
 
 lane 間の依頼 (止まったら待たずに control / ほかの lane / PO へ依頼をかける) は
 `CLAUDE.md` §lane 間の依頼 が正本。
@@ -136,31 +115,15 @@ Codex 側で使うモデルは GPT-6 の Astra / Sol / Terra / Luna の 4 つだ
 
 ### Blind review role (`--role blind-reviewer`) (Codex 規律)
 
-`ut-tdd codex --role blind-reviewer --task "<packet>"` is the Codex side of blind
-review. `blind-reviewer` / `blind-review` are read-only delegation roles: the
-review session must stay non-destructive (review-guard enforces it), so the role
-inspects and reports — it never implements or edits off-task.
+`ut-tdd codex --role blind-reviewer --task "<packet>"` は blind review の Codex 側である。`blind-reviewer` / `blind-review` は読み取り専用の委譲 role であり、レビュー session は非破壊でなければならない (review-guard が強制する)。そのため、この role は調べて報告するだけで、task の範囲外の実装や編集は決してしない。
 
-The role judges the artifact, not the author's account. When you build the packet,
-withhold the author's claims, self-assessment, stated intent, prior verdicts, and
-identity/runtime. Run two lanes and report them separately:
+この role は、著者の説明ではなく成果物を判定する。packet を組むときは、著者の主張・自己評価・述べられた意図・過去の verdict・著者の identity / ランタイムを渡さない。2 つの lane を回し、別々に報告する。
 
-- **claim-blind (main)**: artifact + spec/AC + tests you run yourself. Judge
-  whether the artifact satisfies the spec regardless of what the author claims.
-  Prose claims (`N green`, `blast radius 0`, `fully covered`) are not evidence
-  (`coding ≠ substance`, PLAN-L7-89); if they appear in the packet, flag and
-  disregard them and re-derive the verdict from spec + test results.
-- **spec-blind (safety net)**: artifact only, spec withheld too. Judge internal
-  soundness (self-contradiction, obvious bugs, uncovered boundaries, dead code).
-  Requirement satisfaction is out of scope for this lane.
+- **claim-blind (main)**: 成果物 + spec/AC + 自分で流したテスト。著者の主張に関わらず、成果物が spec を満たすかを判定する。
+  散文の主張 (`N green`、`blast radius 0`、`fully covered`) は証拠ではない (`coding ≠ substance`、PLAN-L7-89)。packet に現れた場合は、指摘して無視し、spec + テスト結果から verdict を導き直す。
+- **spec-blind (safety net)**: 成果物だけを見て、spec も渡さない。内部の健全性 (自己矛盾・明白なバグ・覆われていない境界・dead code) を判定する。要件を満たすかどうかは、この lane の範囲外である。
 
-Use the valid-attack taxonomy and citation-only refutation from
-`skills/adversarial-review.md`; verdict is FLAG (an
-un-refuted attack), PASS (all attacks refuted by citation), or PASS-WEAK (no
-attack found, with a trial log of at least three attempted attacks). In `hybrid`,
-route blind review to the provider that did not author the change so
-attacker/defender providers stay separated. The Claude counterpart is
-`ut-tdd claude --role blind-reviewer` (a delegation-path role, not an Agent tool subagent; the harness keeps no subagent definition files, #1002).
+`skills/adversarial-review.md` の valid-attack の分類と、引用だけによる反駁を使う。verdict は、FLAG (反駁されない attack がある)、PASS (すべての attack を引用で反駁した)、PASS-WEAK (attack が見つからず、試した attack が 3 つ以上の試行ログを添える) のいずれかである。`hybrid` では、変更を書いていない provider へ blind review を回し、attacker と defender の provider が分かれたままにする。Claude 側の対応は `ut-tdd claude --role blind-reviewer` である (委譲経路の role であり、Agent tool の subagent ではない。ハーネスは subagent 定義ファイルを持たない、#1002)。
 
 FLAG 後の**軽作業の是正は同 PR 内で往復する** (PO ルール 2026-09-14、正本: `CLAUDE.md`
 §FLAG 後の限定是正と merge)。Codex 著 PR では Claude Opus が FLAG → Codex (Luna、別 session)
@@ -188,9 +151,7 @@ Model / effort routing defaults (task-kind ベース、PO rule 2026-07-14):
   「xhigh 以上はモデルを上げたほうがいい」)。ラダー外 (haiku 等) は従来既定
   (Claude `high` / GPT `middle`)。明示 `--effort xhigh` は有効で、UI/UX は
   task-kind 例外 (PO rule 2026-07-08)。
-- Design/implementation review uses a top reviewer model: GPT frontier
-  (`gpt-6.1-sol`) or Claude Opus (`claude-opus-5-5`) or above, behind the
-  explicit frontier gate.
+- 設計・実装のレビューは、最上位の reviewer モデル (GPT frontier の `gpt-6.1-sol`、または Claude Opus の `claude-opus-5-5` かそれ以上) で行い、明示の frontier gate の背後に置く。
 - 正規委譲経路 (`ut-tdd codex/claude --role <role>`) は上記 routing を機械強制する
   (PLAN-L7-255、`src/team/delegation-routing.ts`): 未登録 role は fail-close、
   判断ゲート role (reviewer / blind-reviewer / qa / tl 等) は族内 frontier reviewer tier
@@ -205,57 +166,38 @@ Model / effort routing defaults (task-kind ベース、PO rule 2026-07-14):
   迷う場合は `ut-tdd advisor --task "..." --current-model <model>` を使い、
   実相談は `--execute` を付ける。
 
-Do not add legacy commands as current company/product execution paths.
+旧コマンドを、現在の社内・製品の実行経路として加えない。
 
 ## Skills (Codex 規律)
 
-- Read only the relevant `SKILL.md` for matching triggers.
-- Do not bulk-load all skills.
-- Resolve `references/` relative to the skill directory.
-- Pack / runtime skill content lives under root `skills/` so runnable skill
-  assets are separated from explanatory `docs/` content.
-- `src/skill-engine/` is TypeScript implementation code for skill
-  recommendation / injection / scaffolding. It is not a skill content directory
-  and should stay under `src/` with the rest of the harness core.
-- Legacy-derived skill material under `docs/skills/` is source-repo reference /
-  migration material unless a task explicitly targets it. Do not treat it as the
-  Pack runtime skill root.
+- 合致する trigger の `SKILL.md` だけを読む。
+- すべての skill を一括で読み込まない。
+- `references/` は、skill の directory からの相対で解決する。
+- Pack / runtime の skill の中身は root の `skills/` に置く。実行できる skill 資産を、説明用の `docs/` の内容から分けるためである。
+- `src/skill-engine/` は、skill の推薦・注入・scaffold のための TypeScript 実装コードである。skill の中身の directory ではなく、ハーネス core の他のコードと同じく `src/` の下に置く。
+- `docs/skills/` の下にある旧来由来の skill 資料は、task が明示的に対象にしない限り、source リポジトリの参照・移行資料である。Pack の runtime skill root として扱わない。
 
 ## Distribution Repository (Codex 規律)
 
-- Source development repo: `unison-ai-product/UT-TDD_AGENT-HARNESS`.
-- Clean distribution Pack repo:
-  `unison-ai-product/UT-TDD_AGENT-HARNESS-Pack`
-  (`https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS-Pack`).
-- When publishing clean Pack artifacts, push/export to the Pack repo, not back
-  into the source development repo.
-- Standard local propagation from this source repo to an existing Pack checkout
-  is `ut-tdd distribution sync-pack --repo-dir <Pack checkout>`.
-  Use `--prune-local` only when intentionally removing local files that are not
-  part of the clean Pack artifact set. The command must not commit or push;
-  inspect its output and perform any Pack repo commit / push as a separate,
-  human-reviewed step.
+- 開発元リポジトリ: `unison-ai-product/UT-TDD_AGENT-HARNESS`。
+- クリーンな配布 Pack リポジトリ: `unison-ai-product/UT-TDD_AGENT-HARNESS-Pack` (`https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS-Pack`)。
+- クリーンな Pack の成果物を公開するときは、Pack リポジトリへ push / export し、開発元リポジトリへ戻さない。
+- この開発元リポジトリから既存の Pack checkout への標準のローカル反映は、`ut-tdd distribution sync-pack --repo-dir <Pack checkout>` である。
+  `--prune-local` は、クリーンな Pack の成果物の集合に含まれないローカルファイルを意図して削除するときだけ使う。このコマンドは commit も push もしてはならない。出力を確認し、Pack リポジトリの commit / push は、人が review する別の手順として行う。
 
 ## Editing Rules (Codex 規律)
 
-- Read target files before editing them.
-- When reading tracked prose or source through PowerShell, specify UTF-8 explicitly
-  (for example `Get-Content -Encoding utf8`) or use Node filesystem reads.
-  Do not trust bare `Get-Content` / ANSI-default output for Japanese text; display
-  mojibake can become real file corruption if copied back into docs. Repository
-  gates enforce UTF-8 no-BOM and mojibake fail-close through `readability`.
-- Match existing code structure, naming, and test placement.
+- 対象のファイルを、編集する前に読む。
+- 追跡対象の散文やソースを PowerShell で読むときは、UTF-8 を明示する (例: `Get-Content -Encoding utf8`)。または Node のファイル読み取りを使う。
+  日本語の文を、何も指定しない `Get-Content` や ANSI 既定の出力で信用しない。表示上の文字化けを docs へ貼り戻すと、実際のファイル破損になりうる。リポジトリの gate は、UTF-8 BOM 無しと文字化けの fail-close を `readability` で強制する。
+- 既存のコード構造・命名・テストの置き場所に合わせる。
 - 最小実装を優先する: 要件を満たす最短の解を選び、投機的な型・契約・層・機能の積み増し (over-engineering) をしない。object-oriented DDD はドメインを小さく凝集させ code 量を減らすための手段であって ceremony を増やすためではない。DDD が code を膨張させているなら設計を疑う。正本は `docs/governance/coding-rules.md` の「最小実装原則」。
-- Treat existing uncommitted changes and **commits made by the other runtime
-  (Claude)** as legitimate work; do not revert/reset/checkout them without
-  explicit instruction.
-- Do not write secrets, PII, or credentials into docs, rules, examples, or audit
-  evidence.
+- 既存の未 commit の変更と、**もう一方のランタイム (Claude) が作った commit** を、正当な作業として扱う。明示の指示なしに revert / reset / checkout しない。
+- secret・PII・credential を、docs・規則・例・監査証跡に書かない。
 
 ## Git Rules (hybrid 多ランタイム協調) (Codex 規律)
 
-- Use Conventional Commits. Stage explicit paths only (`git add <path>`; never
-  `git add -A` / `git add .`).
+- Conventional Commits を使う。path を明示して stage する (`git add <path>`。`git add -A` / `git add .` は使わない)。
 - PR merge は必ず `ut-tdd pr merge --pr <N>` 経由とし、`gh pr merge` の直叩きで迂回しない。
 - **history を書き換える前に `git log` / `git reflog` を確認**し、もう一方のランタイム
   (Claude) の commit を `reset` / `revert` / `checkout` / force で破棄・デグレさせない。
@@ -303,11 +245,8 @@ doctor の共有動作と書き込み境界は、root `CLAUDE.md` の §Shared G
 
 ## Test Rules (Codex 規律)
 
-- Docs changes: use `rg` to check old assumptions such as WSL2-required wording,
-  migration-source-as-current wording, personal absolute paths, and mojibake
-  markers.
-- Bash changes: `bash -n <changed-script>`.
-- PowerShell changes: `powershell -NoProfile -ExecutionPolicy Bypass -File <changed-script>`.
-- TypeScript core changes: `tsc --noEmit` plus targeted `vitest`.
-- CLI / hook changes: smoke test Windows PowerShell and POSIX shell paths when
-  relevant.
+- docs の変更: `rg` で、WSL2 必須とする記述・移行元を現行として扱う記述・個人の絶対パス・文字化けの marker といった古い前提を確かめる。
+- Bash の変更: `bash -n <changed-script>`。
+- PowerShell の変更: `powershell -NoProfile -ExecutionPolicy Bypass -File <changed-script>`。
+- TypeScript core の変更: `tsc --noEmit` に加えて、対象を絞った `vitest`。
+- CLI / hook の変更: 関係するときは、Windows PowerShell と POSIX shell の両方の経路で smoke test を行う。
