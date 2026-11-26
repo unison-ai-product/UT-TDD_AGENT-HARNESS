@@ -33,21 +33,7 @@ ADR-001 に従い、UT-TDD の実装言語は TypeScript/Node とする。旧 W1
 
 ## Purpose
 
-UT-TDD Agent Harness is the verification and development foundation for safely
-using AI implementation agents in internal product development. The harness is
-not the end product; it is the ground on which other product work runs.
-
-Design and implementation should be judged by these pillars:
-
-1. Foundation first: the harness must make downstream product development safer.
-2. Document-first plus machine enforcement: workflow rules must be backed by
-   schema, lint, doctor, hooks, or tests where appropriate.
-3. Automatic state and feedback: `.ut-tdd/` state and harness DB projections
-   should make progress, gaps, and drift visible.
-4. Dynamic context / skill injection: load only relevant context and skills.
-5. Practical orchestration: split work across roles/runtimes only where it
-   reduces risk or cost.
-6. Strict verification: no completion claim without tests or explicit evidence.
+本文は docs/governance/operating-rules-general.md §Purpose (設計・実装を判断するとき)。
 
 ## コミュニケーション (報連相)
 
@@ -82,43 +68,15 @@ GitHub の Issue / PR / Discussion のタイトル、本文、コメント、レ
 
 ### 設計判断エリシテーション (PO ルール 2026-07-13)
 
-PO への質問は **設計判断 (trade-off が実在する方式選択 / spec 未確定点) に限る**。
-進捗確認・実行許可・自力で確定できる事実は聞かない (可逆作業は進める)。聞き方は
-`docs/governance/design-decision-elicitation.md` の共通フォーマットに従う: 前提 2〜3 行 +
-選択肢 2〜4 個 + 各 trade-off + 推奨 1 つ (先頭、理由 1 行)。Claude の対話セッションでは
-AskUserQuestion をこの用途に限って使ってよい (必要なら preview 付き)。非対話セッションと
-Codex では `## 設計判断依頼` の markdown 選択肢表で等価に出力して停止する。採択結果は
-設計文書、GitHub Issue または ADR に記録する (skill: `skills/design-decision-elicitation.md`)。
+本文は docs/governance/operating-rules-general.md §設計判断エリシテーション (PO へ設計判断を仰ぐとき)。
 
 #### PO 判断への反射的エスカレーション禁止 (PO ルール 2026-08-05)
 
-「PO 判断必須」「PO 承認待ち」「PO が決める」と記載して作業を止める前に、必ず
-`ut-tdd advisor --decision <kind> --current-model <current-model> --execute --task "<判断内容>"`
-で第三者判断を得る。設計・進行・優先順位・UI/UX は
-`claude-fable-5-2`、実装方式・技術的トラブルシュートは `gpt-6.1-sol` へrouteする
-(正規の `--decision design|progress|uiux|implementation|troubleshooting` を使う)。
-advisor結果は前提をrepo実測で検証し、下記の高影響境界に該当せず、既存の層・責務・契約から
-一意に決まるなら、AIランタイムが技術判断として決定・記録して作業を継続する。advisor相談を
-POへの責任転送の前置きにしてはならない。
-
-production infrastructure、destructive data operation、authentication/authorization、payment、
-PII、secret、licensing、外部API前提の変更は高影響境界であり、trade-offの有無やadvisor回答に
-かかわらず変更前にPO承認を得る。advisor相談は承認の代替ではない。それ以外でPOへ上げてよいのは、
-advisor相談と実測後にも複数案の実在するtrade-offが残り、product scopeなどPO権限を要する判断に
-限る。その場合も、相談したadvisor/model、検証した事実、解消できなかったtrade-off、推奨案を
-`docs/governance/design-decision-elicitation.md` の形式で提示する。
-単なる事実確認、既存責務から導ける所有境界、可逆な実装順序、進捗報告をPO判断にしてはならない。
-Fable/Solの双方が利用不能なら相談attemptとfailureを記録し、判断を捏造しない。高影響境界は
-advisor unavailableの証跡を添えてPOへ上げる。高影響境界に該当せず既存契約から一意に決まる判断は
-継続し、advisorを要する未解決trade-offだけを利用可能になるまで保留する。
+本文は docs/governance/operating-rules-general.md §PO 判断への反射的エスカレーション禁止 (「PO 判断必須」と書いて止まる前)。
 
 ## Canonical Docs
 
-- `docs/governance/ut-tdd-agent-harness-concept_v3.1.md`
-- `docs/governance/ut-tdd-agent-harness-requirements_v1.2.md`
-- `docs/governance/ut-tdd-agent-harness-extraction-plan_v0.1.md`
-- `docs/adr/ADR-001-ut-tdd-harness-redesign-and-language.md`
-- `docs/governance/repository-structure.md`
+本文は docs/governance/operating-rules-general.md §Canonical Docs (正本文書の一覧が要るとき)。
 
 ## Architecture Boundary
 
@@ -139,35 +97,17 @@ V-model artifacts must stay separated:
 
 ## Rule Placement Convention (ルールをどのファイルに書くか)
 
-**共通ルールは本ファイル (`CLAUDE.md`) のみに書く。** アダプタファイルはランタイム固有
-事項に限る (`.claude/CLAUDE.md` = Claude Code の hook / subagent / tool 呼び出し、
-`AGENTS.md` = Codex CLI 固有の経路と手順)。同じルールを 2 箇所に書けばそこが drift 源に
-なる (2026-07-28 実測: 片側欠落が 5 topic — Parallel Task Limit / foreign-edit override の
-one-shot 消費 / memory add 必須 / doctor singleton / effort ladder。矛盾ではなく欠落であり、
-`rule-drift` はマーカー節しか見ないので機械の視野外だった)。
-
-前提: **`AGENTS.md` の Core Reads は本ファイルを含む** (Codex が共通ルールに到達できる
-ことが規約の成立条件)。既存の重複記述は当面残す — 一部は `rule-drift` の必須マーカーに
-なっており、整理のために gate を壊すのは本末転倒だからである。規約は**新規ルールの置き場所**
-に適用する。
-
-判定に迷ったら「もう一方のランタイムでも成り立つか」で決める。成り立つなら共通 =
-本ファイル。成り立たないならアダプタ固有。
+共通ルールの正本は本ファイル (`CLAUDE.md`) と、本ファイルが名指しする `docs/governance/` の文書である。
+本ファイルの 1 行索引 (「本文は …」) は参照先を示す pointer であり、規範ではない。アダプタファイルは
+ランタイム固有事項に限る (`.claude/CLAUDE.md` = Claude Code の hook / subagent / tool 呼び出し、
+`AGENTS.md` = Codex CLI 固有の経路と手順)。同じルールを 2 箇所に書けばそこが drift 源になる。
+`AGENTS.md` の Core Reads は本ファイルと名指し先の文書を含む。判定に迷ったら「もう一方のランタイムでも
+成り立つか」で決める。成り立つなら共通 (本ファイルまたは名指し先)、成り立たないならアダプタ固有。
+本文の分割は PO が 2026-11-26 に指示した。分割前の本節は operating-rules-general.md に残す。
 
 ## 定期棚卸し (EOD close-out)
 
-セッション終了時に以下を流す。新規機構は作らず、既存コマンド 1 本ずつで済ませる
-(2026-07-28 実測: open issue 29 件に対し triage 機構は存在せず、`issue triage` 系の記述は
-grep 0 件だった)。
-
-- `gh issue list --state open` — 起票したまま棚卸しされていない issue を数える。
-- advisor 発火の spot-check (`.claude/CLAUDE.md` §着手前 advisor 合意形成 のコマンド)。
-- 未 push commit と open PR の確認。
-- **harness.db projection の鮮度** (`ut-tdd db status`)。graph (`graph_nodes` /
-  `dependency_edges`) は影響範囲の判定入力であり、**古い projection を正本に
-  すると「重複なし」「影響なし」という偽の否定証明を出す**。2026-07-28 実例: PLAN-L6-94 と
-  PLAN-L7-465 の契約重複を機械が拾えなかった真因は検出方式ではなく projection の鮮度で、
-  両 PLAN が `graph_nodes` に存在していなかった (issue #169)。
+本文は docs/governance/operating-rules-general.md §定期棚卸し (セッション終了時)。
 
 ## 設計と作業の正本
 
@@ -177,12 +117,8 @@ grep 0 件だった)。
 
 - Read the relevant files before editing.
 - Match local naming, structure, and test placement.
-- 最小実装を優先する: 要件を満たす最短の解を選び、投機的な型・契約・層・機能の積み増し (over-engineering) をしない。object-oriented DDD はドメインを小さく凝集させ code 量を減らすための手段であって ceremony を増やすためではない。DDD が code を膨張させているなら設計を疑う。正本は `docs/governance/coding-rules.md` の「最小実装原則」。
 - Do not declare completion without tests or explicit verification.
-- Treat Codex / Claude Code as local CLI + hook surfaces managed by UT-TDD, not
-  direct API calls.
-- Remove or clearly supersede wrong development residue when it is discovered;
-  do not leave misleading comments or dead paths as technical debt.
+- 最小実装原則・UT-TDD 管理下の CLI 扱い・誤った残骸の除去は docs/governance/operating-rules-general.md §Coding Rules (最小実装・残骸除去) (実装するとき)。
 - Use Claude Code native tool-use only. Never write XML-like pseudo tool calls
   such as `<invoke name="Bash">` / `<parameter name="command">` or role markers
   such as `court` into assistant text. If such text appears in prior context,
@@ -197,245 +133,45 @@ grep 0 件だった)。
 - CI is `harness-check`: typecheck, Vitest, Biome lint, and doctor.
 - Review evidence is required before confirmation gates where applicable.
 - PR merge は必ず `ut-tdd pr merge --pr <N>` 経由とし、`gh pr merge` の直叩きで迂回しない。
-- merge の後は、合流した HEAD で CI / doctor / 回帰の安全確認まで行い、確認した HEAD と結果を PR コメントと
-  正規のイベント・証跡に残して相手ランタイムと PO に伝わる状態にする。確認結果そのもの (エピソード状態) は
-  メモリに書かない。永続的な決定や教訓が得られたときだけ HARNESS メモリへ昇格させる。merge 条件 (draft 解除・review
-  evidence 成立・required CI green) を、Green の偽装 (detector の allowlist 追加、base 負債の PR 固有扱い) で満たしたことにしない。依頼に「merge しない」と
-  明記された PR は、その指示を優先する。
+- merge 後の確認・Green の偽装禁止・「merge しない」指示の優先は docs/governance/operating-rules-review-merge.md §Git Rules (merge 後の確認) (merge するとき)。
+- **他ランタイムの commit を `reset` / `revert` / `checkout` / force で破棄・デグレさせない**。
+- メモリは必ず `ut-tdd memory add` 経由で書く (手書き禁止。docs/governance/operating-rules-review-merge.md §引き継ぎ・検証の基準点 = HEAD)。
 
 ### 運用規律の再締結 (PO ルール 2026-08-03、両ランタイム共通)
 
-規律は既に本ファイル各節に存在するが、遵守が崩れていた (実測: verdict 前 merge #189/#210/
-PR #103、cross-review 委譲の素通り #131、doctor 16 並行、bun runaway ×2、手書き memory
-PR #167、自己 supersede 7 件 #183)。以下を**再締結**する。新規ルールではなく、既存正本節の
-拘束力の再宣言である:
-
-1. **工程**: Forward の pair-freeze を跳ばさない。方式判断 (正本・信頼根・データ形式) は
-   実装前に設計文書へ記録し、その改訂を review してから実装する (§UT-TDD Workflow、
-   §設計判断エリシテーション)。**独自方式のその場開発を禁止する** — 契約に無い方式が
-   必要になったら実装を止めて契約改訂へ戻る。
-2. **merge**: closing review の PASS verdict 受領前に merge しない (exact-HEAD プロトコル、
-   §Hybrid 多ランタイム commit 協調)。例外なし。
-3. **review**: closing review (再検を含む) は成果物を書いていない family の frontier tier で行い、
-   委譲は正規経路 (`ut-tdd codex|claude --role <role>`) のみ (§委譲と判断層)。FLAG 後の
-   **軽作業の是正は同 PR 内で author family が行い、同じ非著者 reviewer が exact head を再検する**。
-   close→再出や契約改訂へ戻すのは上流契約の齟齬だけ (§FLAG 後の限定是正と merge)。
-4. **資源**: doctor singleton / 並列上限 8 / foreign-edit override one-shot
-   (§Shared Guard Discipline)。exit 2 は待つ。別形式での再起動をしない。
-5. **メモリ**: `ut-tdd memory add` 経由のみ。手書き禁止。エピソード状態を書かない
-   (§Hybrid 多ランタイム commit 協調)。
-6. **検証**: 基準点は HEAD のみ。共有 tree の transient を計測・帰責しない
-   (§引き継ぎ・検証の基準点)。
-
-**違反時の扱い**: 上記から外れた PR / merge / 委譲は、内容の当否に関わらず
-process violation FLAG とし、feedback メモリ (`ut-tdd memory add --kind feedback`) に記録する。遵守の spot-check は
-§定期棚卸し (EOD close-out) に載せる (新規機構は建てない — 未計測のままゲート化しない)。
+本文は docs/governance/operating-rules-review-merge.md §運用規律の再締結 (工程・merge・review の規律を確かめるとき)。
 
 ### PR スコープ規律 (PO ルール 2026-08-03、両ランタイム共通)
 
-PR 肥大と方式の場当たり発明の再発防止 (実測: PR #219 は D3 未完のまま D2 を着工し、
-receipt 置き場を PR 内で自作した結果、gate / CLI / 保管方式 / audit の複数論点が混入して
-close された)。新規機構は作らず、既存工程の遵守を規律として固定する:
-
-1. **順序契約の厳守**: GitHub Issue に記録した実装順序 (例: D1→D3→D2) に従い、依存する正本が
-   閉じる前に下流を着工しない。
-2. **契約 freeze が実装 PR の前提** (pair-freeze の復元): 正本・信頼根・データ形式などの
-   方式判断は実装 PR の中で発明・変更しない。先に設計文書へ方式を記録し、
-   その改訂を cross-review してから実装 PR を出す。実装中に方式変更が必要になったら
-   PR を close して契約改訂へ戻る (積み増し禁止)。
-3. **1 PR = 1 論点**: 新規 source_module 1 個 + 対になるテスト + 最小配線まで。
-   CLI surface / audit / 別 consumer は別 PR。
-4. **scope 構造を指す FLAG は close→分割再出が既定**。同一 PR への是正 commit
-   積み増しで応じない (ここで禁じるのは scope 構造 FLAG への積み増し。軽作業の是正 commit は
-   §FLAG 後の限定是正と merge に従い author family が同 PR 内に積む)。
-5. **TDD は Red → Green → Refactor の順で、Refactor を飛ばさない** (PO 指摘 2026-10-13、issue #968。
-   実測: 直近の実装 PR 19 本のうち `refactor:` commit を持つのは 1 本)。Red は契約 PR + Red
-   (`it.fails`、設計書保護 gate §10.2) で先に入れる。実装 PR の commit は Green (`feat:` / `fix:`、
-   `it.fails` を `it` に戻す最小実装) → Refactor (`refactor:`) の順にする。Refactor の commit は
-   `tests/` の内容差分 0 (rename だけ可) でテスト設計にも触れず、commit ごとに full suite を流す。
-   直す余地が無いときは PR 本文に「Refactor なし (理由)」と書く。その理由を認める条件と判定者は
-   `docs/governance/coding-rules.md` §量・分割・Refactor の目安 を正本とする。大きな構造変更は
-   Refactor Issue (ラベル `refactor`) と設計文書へ回す。非著者 reviewer は commit の順と Refactor commit の `tests/` 差分 0 を確かめ、判定を verdict の行頭 `REFACTOR:` 欄 (`commit-ok` / `none-ok` / `not-applicable` / `commit-tests-changed` / `none-rejected`) に必ず書く。実装 PR (`src/` か `scripts/` を変える PR) では、この欄を `ut-tdd pr merge` が機械で確かめる gate は契約済み (欄の形と規則は `docs/design/harness/L6-function-design/merge-gate-refactor-stage.md`) だが未実装であり、実装は #1300 が持つ。実装されるまで、欄の確認は非著者 reviewer と control の手順である。
-   手順の正本は `skills/test-driven-development.md`。
-
-6. **WIP 上限 (slot 単位) と共有文書の直列化** (PO 指摘 2026-10-14、2026-10-23 に slot 単位へ改訂): WIP は
-   lane 全体ではなく slot ごとに数える。自分の open PR に FLAG・CI 赤・衝突が残っている slot は、是正が済むまで
-   新しい作業を拾わない (他の slot は動き続けてよい)。`docs/test-design/harness/L7-unit-test-design.md`、
-   `function-spec.md`、`tests/gate-static.test.ts` のような共有の文書・テストを変える作業は直列にし、
-   同じファイルを並行する複数の PR に分けない (1 本 merge するたびに残りが衝突して再検になる)。この直列化は
-   直列ボックスで実現する。並列にしてよいのは、変更するファイルが重ならない範囲だけである。ボックスと slot の
-   運用 (実装・control・検収の全 lane に同じ型を当てる) は `docs/governance/github-issue-hierarchy.md` §6.1。初回の FLAG 率が高い作業は、worker を
-   増やす前に手順書を直す。
-
-この規律から外れた PR は内容の当否に関わらず FLAG (process violation) とする
-(宣言の初出: issue #218、2026-08-03)。
+本文は docs/governance/operating-rules-review-merge.md §PR スコープ規律 (PR を切る・分割するとき)。
 
 ### FLAG 後の限定是正と merge (PO ルール 2026-09-14、両ランタイム共通)
 
-FLAG のたびに PR を close→再出したり契約改訂へ戻したりすると、CI (13〜14 分) → request → consume →
-receipt の往復が FLAG の数だけ発生して収束しない (実測: PR #572 は r1〜r4 で CI 11 run、PR #574 は
-簿記 red 2 回 + FLAG 6 件)。PO 判断 (2026-09-14): 「レビューが差し戻すと永遠に詰まる。merge のための
-軽作業まで戻す意味はない。上流齟齬でそもそも違う以外は返さない」。issue #579。
-
-judgement の族分離は concept v3.1 (hybrid の worker / reviewer 別 runtime は MUST) と canonical merge
-dispatch (same-family verdict は `same_family_reviewer` で拒否) が機械強制しており、本節はそれを
-緩めない。収束させるのは **差し戻し先** であって review の族ではない。
-
-1. **同 PR 内で往復する**: 非著者 family の frontier reviewer (Codex 著 = Claude Opus、Claude 著 =
-   Codex Sol) が FLAG を出したら、**author family が同 PR 内で軽作業を是正** し、**同じ非著者
-   reviewer が新 exact head を再検** する。blocking 0 なら author 側 control lane が正規経路
-   (`ut-tdd pr merge`) で merge する。close→再出も、契約改訂への差し戻しも、軽作業では行わない。
-2. **軽作業の定義**: FLAG 是正のうち (a) 上位契約 (設計文書 / test-design の
-   凍結 oracle) の変更を伴わない、(b) 新規 source_module を追加しない、(c) 是正 3 回以内で
-   blocking 0 に収束する、の全てを満たすもの。(c) を超えたら close→分割再出 (§PR スコープ規律 4)。
-3. **差し戻しは契約齟齬だけ**: 上位契約そのものが違うと reviewer が判定した場合は PR 内で直さず、
-   契約改訂 (設計文書の pair-freeze) へ戻す。これが設計 owner へ返す唯一の経路であり、
-   実装の手直しを返す経路ではない。
-4. **再検の担保**: 再検 packet は author claim・自己評価・前回 verdict を除いて control 側が組む
-   (blind packet)。再検は新 exact head に束縛し (receipt の再利用禁止)、反証試行を verdict に残す
-   (反証ゼロの PASS は PASS-WEAK)。receipt の evidence tier は従来どおり `cross_agent`。
-5. **是正 commit は常に author family が積む**: biome format 等の機械的是正であっても reviewer family は
-   commit しない (成果物を書いた時点で非著者ではなくなり、再検の族分離が壊れる)。reviewer は FLAG の
-   `FINDING:` 行で是正内容を指し、author family が同 PR 内に path 明示 stage・history 非破壊 (reset / force
-   禁止) で積み、PR コメントに是正内容を記録する。§Hybrid 多ランタイム commit 協調の例外は設けない。
-6. **Codex worker の役割**: 初回実装 + 自 PR の軽作業是正 + 契約齟齬時の契約改訂。
-7. **収束規律** (PO 2026-09-17): 再検の判定対象は「前回 FINDING が直ったか」と「是正で新たに壊れた回帰」
-   だけにする。再検で見つけた新規の探索指摘は non-blocking observation として記録し、別 issue へ回す
-   (blocking にできるのは前回 FINDING の未是正と是正起因の回帰だけ)。是正 3 回 (2c) で blocking 0 に
-   ならなければ close→分割再出を執行する。契約改訂は著者 family が書いて非著者 family が review し、
-   依頼が再度来ても所有権を再判定せず同じ回答を返す。
-8. **rebase は GitHub が CONFLICTING を返す時だけ**行う。base が古いだけ (MERGEABLE) なら不要である。
-   exact-head review は PR head の内容に束縛され、merge は現 main と結合されるので、rebase しても
-   CI と両 family review の往復が 1 回増えるだけになる。rebase した場合は新 head で request を 1 本だけ出す。
+本文は docs/governance/operating-rules-review-merge.md §FLAG 後の限定是正と merge (review・merge・FLAG 是正のとき)。
 
 ### Hybrid 多ランタイム commit 協調 (Claude ↔ Codex、必須)
 
-実運用では **Codex (もう一方のランタイム) が並行に作業を進め、コミットまで完了させる**。Claude は
-その成果を絶対にデグレさせてはならない ([[feedback-commit-finished-codex-work-dont-abandon]])。
-
-- **history を書き換える前に必ず `git log` / `git reflog` を確認**し、自分が作っていない commit
-  (相手ランタイムの成果) が無いか調べる。**他ランタイムの commit を `reset` / `revert` / `checkout` /
-  force で破棄・デグレさせない**。working tree の foreign 変更は **既定で「相手ランタイムの正規作業」と
-  みなす** (overstep と決めつけない)。判断が付かなければ revert せず PO へ確認する。
-- 自分の成果は **相手の commit の上に積む** (rebase/stack)。相手のファイルには触れず、自分の意図ファイル
-  のみを path 明示で stage する (`git add <path>`、`git add -A` / `git add .` 禁止)。FLAG 後の
-  是正 commit も author family が積む (§FLAG 後の限定是正と merge 5。reviewer family の代理 commit は
-  認めない)。
-- **commit 直前に `git status` + `git diff --staged` (or `ut-tdd review --staged` / `--uncommitted`) を
-  確認**し、自分が authored した意図ファイルのみが staged であることを検証する。
-- push は origin と相手の commit を含めて整合する状態でのみ行う。push 済み履歴は決して破壊しない。
-- 真に off-task な overstep (相手ランタイムの作業でも自分の作業でもない net-new) と疑う場合でも、
-  **revert する前に PO 確認**を取り、IMP で記録する (完了済み成果を捨てる誤判定を防ぐ)。
+本文は docs/governance/operating-rules-review-merge.md §Hybrid 多ランタイム commit 協調 (commit・push・他ランタイムの変更に触れるとき)。
 
 ### 委譲した成果物の検収 (両ランタイム共通)
 
-- **worker が生成した manifest / JSON** は、CLI や harness DB へ投入する前に root が内容を読み、
-  `JSON.parse` と実 shell での再現を通す。worker の「作成した」「通った」は検収の根拠にしない。根拠は
-  正規 receipt (`.ut-tdd/review/receipts/`) と git diff の実物である。worker は自分が走る shell
-  (cmd.exe / PowerShell / Git Bash) を誤認し、heredoc・単一引用符・パイプで誤りやすい。worker の草案は
-  破棄せず、root が有効な JSON を作り直して正規経路で投入し、失敗した manifest は誤再利用を防ぐため削除する。
-- **ドキュメント範囲の縮小を委譲するとき**は「削除」と書かず、改訂する節を名指しして「改訂」と指示する。
-  置き換え後の文章またはその形を示し、frontmatter と他の節は残すことを明示する (曖昧な「削除」は
-  ファイル全体の削除として返ってくる)。
-- **共有 worktree へ書き込みを委譲する前**に、worktree の実 HEAD (`git rev-parse HEAD`) と PR の HEAD を
-  比較する。PR HEAD だけを見て「停滞している」と判断しない。ローカル worktree は PR HEAD を動かさずに進む
-  ことがあり、実 HEAD が食い違っていれば別セッションが同じブランチを操作中の兆候なので、書き込みを止める。
+本文は docs/governance/operating-rules-review-merge.md §委譲した成果物の検収 (worker の成果物を受け取るとき)。
 
 ### 引き継ぎ・検証の基準点 = HEAD (共有 tree を測るな、必須)
 
-引き継ぎ (session takeover) と検証の基準点は **commit/push 済の HEAD ただ一つ**。hybrid では
-working tree を相手ランタイムが常時書き換えるため、full tree の計測値 (テスト件数等) は transient で
-非正本。これを「repo の状態」として報告するな。
-
-- **検証は HEAD (+ 自分の意図変更のみ) に固定**する。他ランタイムの未コミット scratch を基準へ混ぜない。
-  測定値が動いたら、相手を疑う前に「自分が動く面を測っていないか」を先に疑う (foreign tree の transient を
-  相手の退行と帰責するのは誤り)。
-- **引き継ぎ feedback は harness.db から受け取る** (`feedback_events`、SessionStart で surface、
-  PLAN-L7-110)。stale 化する prose handover を現状把握の正本にしない。CURRENT.json / prose は補助。
-- **永続教訓は共有 HARNESS メモリへ昇格する** (`ut-tdd memory add`、正本 `.ut-tdd/memory/`、
-  PLAN-L7-189)。PO ルール・教訓・落とし穴をランタイム私的メモリや chat 止まりにしない。
-  **メモリファイルの手書き作成は禁止** — frontmatter (memory_id/kind/title/tags/updated_at)
-  欠落は db rebuild が fail-close し CI が赤化する (2026-07-28 実例: PR #167)。必ず
-  `ut-tdd memory add` 経由で書く。
-  既存メモリの扱いは次のとおり (`src/memory/service.ts` の `writeMemoryEntry`)。同じ kind と title は同じ
-  memory_id・同じファイルに解決される。同じ内容 (body・tags) の登録し直しは既存 entry をそのまま返す。
-  body が異なる登録は、既存ファイルが残っている間は例外で拒否される。本文を変えるときは、既存ファイルを
-  `git rm` してから、kind / title / tags を保ったまま変更後の body を `memory add --body-file` に渡す。
-  新しい `updated_at` で書き直される。この手順を通らない body の変更は手編集であり、レビュアは
-  「body が変わったのに `updated_at` が変わっていない」commit を手編集として検出できる。
-  エピソード状態 (進捗・次の一手) はメモリに書かず、DB/HEAD 由来の digest に任せる
-  (stale 化する層を作らない)。
+本文は docs/governance/operating-rules-review-merge.md §引き継ぎ・検証の基準点 = HEAD (引き継ぎ・検証・メモリ記録のとき)。
 
 ### 教訓はメモリではなく仕組みにして改善する (PO ルール 2026-10-13、両ランタイム共通)
 
-PO: 「原則プロバイダー個別メモリじゃなくてハーネスメモリを使う、メモリに書いて改善ではなく仕組みにして改善すること。」
-
-- **書く先は HARNESS メモリだけ**: 教訓・PO ルール・落とし穴は `ut-tdd memory add` で共有 HARNESS メモリへ書く。
-  プロバイダー個別のメモリ (Claude の auto-memory、Codex の私的メモリなど) に書かない。もう一方のランタイムからは
-  見えず、規律の正本からも外れるためである。
-- **改善は仕組みで行う**: メモリへの記録は、改善の完了ではなく、仕組みにするまでの一時置きである。同じ失敗を
-  防ぐ手段は、次の順で選ぶ: (1) 機構 (hook・CLI・lint / doctor・テスト)、(2) 規律の正本 (本ファイル・AGENTS.md
-  の該当節、機械照合できるなら rule-drift の marker)。機構にも正本にもしないまま、メモリだけで再発防止とは
-  しない。
-- 仕組みにしたら、その教訓のメモリに昇格先 (path・PR) を書いて退避する。棚卸しと昇格の進め方は #998 が持つ。
-- プロバイダーの標準メモリへの書き込みは、最終的に hook guard で拒否して `ut-tdd memory add` へ誘導する
-  (PO 2026-10-13、#998)。標準メモリは、もう一方のランタイムからも harness.db の学習機構 (feedback_events /
-  memory projection) からも見えないためである。guard が入るまでは、本節を規律として守る。
-- 2026-10-13 時点で、共有 HARNESS メモリの feedback は 132 件ある。同じ教訓が何度も記録され、そのたびに
-  同じ事故が繰り返されていた (#998 の表)。control lane も、教訓を Claude の私的メモリに書いていた。
+本文は docs/governance/operating-rules-delegation-routing.md §教訓はメモリではなく仕組みにして改善する (教訓を記録するとき)。
 
 ### runtime 間のやりとりは GUI lane (PO ルール 2026-10-08、両ランタイム共通)
 
-Claude と Codex の間の作業依頼・closing review の依頼・結果の受け渡しは、常駐の GUI lane (Claude の
-VS Code session と Codex の GUI root lane) で、Issue / PR コメントと HARNESS メモリを通して行う
-(#733 comment 6050530566)。
-
-- `ut-tdd codex|claude --role ... --execute` などの CLI 委譲は補助であり、使ってよいのは局所の穴埋め
-  review と、下の例外だけとする。使った回数は数えられるようにする (週次の利用上限の内側で使う)。
-- **例外 (#907 が閉じるまで)**: review custody (request → verdict → receipt) を封印できるのは、今は
-  CLI 委譲の経路 (`src/cli/delegation.ts`) だけである。GUI lane の判定は PR コメントに残るだけで、
-  `ut-tdd pr merge` から見ると review が無い状態になる。判定をコメントから custody へ書き写すのは
-  捏造なので禁止する。そのため、merge に使う closing review は、#907 で GUI 経路の封印ができるまで
-  CLI 委譲の正規経路で行ってよい。並行させるときは、review ごとに別の clean worktree から実行する
-  (review-guard は実行した checkout の作業ツリーだけを見るので、他レーンの書き込みで receipt が
-  落ちるのを避けられる。2026-10-13 に 4 本並列で全 receipt を確認)。
-- **review request は control lane だけが出す** (#700、2026-09-25)。同じ exact head に control lane と
-  Codex lane の request が重なると、verdict の無い request が 1 件でも残る限り merge gate
-  (`src/feedback/review-merge-gate.ts`) が merge を拒否し、request を取り下げる正規の手段が無いため
-  2 件とも review しないと merge できない。Codex lane は是正を push したら PR コメントで報告して止まる。
-  1 つの作業は、control lane が発注した 1 本だけを進める (同じ PR の並行再起票も同じ原因で詰まる)。
-- レーンの中の並列 (Luna の subagent、Claude の Agent tool) は手を動かす層の話であり、closing の権限を持たない。本節は制限しない。上限は
-  §Shared Guard Discipline の 8 のまま。
-
-2026-10-08 の決定は Claude の私的メモリと #733 にしか無く、規律の正本に入っていなかった。その間に、
-control lane は補助のはずの CLI 経路を記録なしに常用していた (2026-10-13、#998 の昇格対象の実例)。
+本文は docs/governance/operating-rules-delegation-routing.md §runtime 間のやりとりは GUI lane (Claude と Codex の間で依頼・review を渡すとき)。
 
 ### lane 間の依頼 (待たずに依頼をかける)
 
-PO 指摘 (2026-10-29、#1465): 「ほかのレーンが能動的に働きかけるようにさせたほうがいい。永遠に待機しやがる」。
-control lane の合図を待つことを基本にせず、止まったら相手に依頼をかける。両ランタイム共通で、導入先の lane も同じ。
-
-- **待機を状態として使わない**。自分の作業が他の lane や control で止まったら、待たずに相手へ依頼をかける。
-- **依頼に書くもの**: (1) 何をしてほしいか、(2) 対象の Issue / PR と exact HEAD、(3) それが済むと自分が何を
-  始めるか、(4) 依頼を出した時刻。
-- **依頼の相手**:
-  - control: review の request、merge、割り当て、順序、設計判断、高影響境界。
-  - ほかの lane: その PR / Issue に直接コメントする。
-  - PO: §PO 判断への反射的エスカレーション禁止 の条件を満たす判断だけ (advisor 相談と実測のあとにも残る、PO の
-    権限を要する trade-off と、高影響境界)。止まっている時間や督促の回数だけを理由に、PO 判断へ移さない。
-- **手が空いて割り当てが無いとき**は、control に割り当てを依頼する。候補 2〜3 件と推奨 1 件を添える。
-- **返事が無ければ督促する**。仮の値は「30 分ごとに督促し、2 回督促しても返事が無ければ止まっている依頼として
-  上げる」。「上げる」は、止まっている依頼を control の一覧と、PO が見える Issue のコメントで知らせることであり、
-  PO に判断を依頼することではない。これは仮の値であり、間隔と回数は #1465 で決める。
-- **禁止**: 中身の無い確認 (「進捗どうですか」) と、同じ状態報告の繰り返し。
-- **返事を待つ間も、手元で進められる作業を進める**。
-- **決まった順序の次の作業**は、前提 (先の PR の merge など) がそろったら依頼を待たずに着手し、着手したことを
-  1 回だけ報告する。
-
-根拠 (2026-10-29 実測、#1465): Codex lane は「空きメモリが開始条件に届かない」という同じ報告を条件が変わらない
-まま繰り返し、「CI 完了・review お願い」と「進捗の確認」が同じ状態について何回も届いた。朝に割り当てた #1357 と
-#1247 は、昼まで control の合図を待って着手されなかった。仕組み (依頼・督促・止まっている依頼の一覧) と Pack への
-配布は #1465 の後続で扱い、本節は規律だけを定める。
+本文は docs/governance/operating-rules-delegation-routing.md §lane 間の依頼 (作業が他 lane や control で止まったとき)。
 
 ## GitHub Issue Hierarchy
 
@@ -449,134 +185,21 @@ control lane の合図を待つことを基本にせず、止まったら相手�
 
 ## Canonical Commands
 
-- Setup: `ut-tdd setup`
-- Status: `ut-tdd status`
-- Doctor: `ut-tdd doctor`
-- Review: `ut-tdd review --uncommitted`
-- Codex delegation: `ut-tdd codex --role <role> --task "..."`
-- Claude prompt generation: `ut-tdd claude --role <role> --task "..."` (`--execute` なしが dry run)
-- Team run: `ut-tdd team run --definition .ut-tdd/teams/<team>.yaml`
-- Task classification: `ut-tdd task classify --text "..."`
-- Skill suggestion: `ut-tdd skill suggest --text "..."`
-
-When multiple AI runtimes are available, separate creation from judgement. In
-single-runtime modes, record `intra_runtime_subagent` review evidence as the
-fallback.
+本文は docs/governance/operating-rules-general.md §Canonical Commands (ut-tdd の正規コマンドを確かめるとき)。
 
 ## Model / Effort Routing
 
-正規委譲経路 (`ut-tdd codex/claude --role <role>`) は role 検証 + routing を機械強制する
-(PLAN-L7-255、`src/team/delegation-routing.ts`): 未登録 role は fail-close。判断ゲート role
-(reviewer / blind-reviewer / qa / tl / security 等) は族内 frontier reviewer tier
-(codex=`gpt-6.1-sol` / claude=`claude-opus-5-5`) へ固定し、worker role は intent 推定
-(`selectTeamModel`) で創出=ROI 寄せの既定へ流す。明示 `--model`/`--effort` は常に優先。
-effort は codex にも argv (`-c model_reasoning_effort=...`) で実注入される。
-判断側の族分離 (`same_model_approval: forbidden`) は routing で破らない。
-
-Task-kind ベースの割当 (PO rule 2026-07-14、旧 tier 記述を supersede):
-
-- Codex (GPT-6 の 4 モデルだけ、PO 2026-10-09 / 2026-10-27): 実装/テスト実装/ドキュメント修正/軽量探索 =
-  Luna (`gpt-6-luna`、effort `high`); 検証/設計/判断 = Sol (`gpt-6.1-sol`、effort `low`);
-  GUI lane の指揮 = Terra (`gpt-6.1-terra`。フロントエンド・UI と設計の判断だけ Sol に相談する);
-  超局所の難所の相談だけ = Astra (`gpt-6-astra`、常用しない)。指揮モデル別の振る舞いは
-  `AGENTS.md` §Codex / Claude Code Harness の「あなたが○○なら」の表。
-- Claude: 担当は次のとおり (PO 2026-11-11: 原則 Sonnet か Haiku へ振り、指揮は orchestration を原則とする。
-  発見を判断して処理することに専念するほうが価値が高い。Haiku 5.5 は性能が上がったので主力に押し上げ、
-  難所の worker に Sonnet を置き、Opus は判断と検証、Fable は PO 前のエスカレーションと大規模設計の相談役にする。
-  目的はコストを下げ、速度と精度を上げること)。指揮モデル別の相談先と委譲先は `.claude/CLAUDE.md` §委譲と判断層 の
-  「あなたが○○なら」の表を参照する。
-  - Fable (`claude-fable-5-2`): PO 前のエスカレーションと大規模設計の相談役 (`ut-tdd advisor`)。
-  - Opus (`claude-opus-5-5`): 指揮のときは振り分けと検収に専念する。計画と判断 (順序・方式・FLAG の扱い) は Fable へ投げ、手を動かす作業は Sonnet と Haiku へ振る (PO 2026-11-24)。
-    成果物は自分で書き下ろさない。UI デザインの判断も Fable へ投げる。UI を含む PR の closing review は委譲経路で担う。
-  - Sonnet (`claude-sonnet-5-5`): **難所の worker**。自明でない実装、設計ドキュメントの起草、
-    基準が全部は明示できない編集、決まった UI デザインの実装。
-  - Haiku (`claude-haiku-5-5`): **手を動かす作業の主力 (既定の worker)**。web 検索、doc パッチ、
-    状態確認、grep / diff の確認、計測、CI ログの失敗の要約、Issue / PR / CI の状態確認、発注文や報告に入れる事実の収集、
-    決まった型の PR / Issue 本文・返信・handover、通常の文書修正、基準が明示できるコード・テストの編集。
-    例は行番号・引用の確認、対象行が明示された文書編集、PR の差分と変更 path の重なりの確認、
-    commit の一覧・diff の範囲・ファイルの有無の収集。
-    この既定は Agent tool で worker を出すときの運用の既定である。正規委譲経路 (`ut-tdd claude --role <role>`) の worker の機械の既定は `selectTeamModel` (`src/team/model-policy.ts`) のままで、実装・テストは Sonnet、設計は Opus に振られる。正規委譲経路で Haiku か Sonnet を使うときは `--model` で明示する。
-  - 指揮モデル (Fable / Opus) は、手を動かす作業を自分で行わず、既定では Haiku、難所は Sonnet へ委ねる。
-  - 委譲するのは、独立した作業が複数あるとき、または 1 つのコンテキストに収まらない量を読むときである。
-    1 本の依存した鎖や、すでに自分のコンテキストにある内容で済む作業は委譲せず、自分で行う
-    (subagent は文脈を作り直し、報告を読み直す分の費用がかかる)。
-    この形の作業で費用を下げる手段は、委譲ではなく effort である。下の基準ラダーより高い effort で走っているなら
-    基準へ戻し、基準で足りる作業の effort を上げない (公式の計測では、この形の作業は、指揮モデル単独で effort を
-    下げたほうが、安い worker との組より得だった)。
-  - 依頼には、1 回で足りるように目的・対象の path / ID・判定の基準・返してほしい形を書く。
-    返ってきた結果は作り直さず、抜き取りで検収する。
-  - Haiku へ渡す文脈は 10 万トークン以内に収める (超えると単価が 5 倍になる。100 万トークンあたり
-    $0.10 / $0.50 が $0.50 / $2.50)。
-  - 変えない線引き: 意味の判定と完了の判定は上位モデルか control が確定し、成果物は非著者 review を通す。
-    なお 2026-11-02 の実測 (読み取り 3 本で誤り 0、実編集は対象 10 行を正解し誤書き換え 0。一方、前段の棚卸しは 7 行を
-    誤分類し、Issue 完了判定 68 件は 3 件誤り) を根拠にした「コードの worker 標準にする根拠はまだ無い」という制限は、
-    PO 2026-11-11 の決定で置き換えた。基準が明示できるコード・テストの編集も Haiku の既定 (Agent tool の運用の既定。機械の routing は上記のとおり) とし、基準が全部は明示できない
-    作業と意味の判定は Sonnet か上位モデルへ上げる。誤りの件数は引き続き数える。
-  - 根拠 (#1599): Anthropic の公式文書 (Choosing the right model / Optimizing for cost and intelligence、
-    2026-11-10 確認) は、Haiku 5.5 の用途に subagent の作業を挙げ、指揮モデルと安い worker の組が単独より
-    得になった計測は「独立した作業が多いとき」と「1 コンテキストに収まらない量のとき」だけだとしている。
-    この数字は Anthropic 社内の計測で、この repo では未計測である。運用で誤りの件数を数えてから、担当の範囲を見直す。
-- 作業の守り方は 2 層に分ける (契約: `docs/design/harness/L6-function-design/agent-guard-delegation-boundary.md` §9)。
-  **判断する層** (closing review・advisor・merge) は委譲経路 (`ut-tdd claude|codex --role <role>`)・
-  review-guard・review custody・`ut-tdd pr merge` だけが持つ。**手を動かす層** (レーン内の並列、草稿・調査・編集)
-  は Luna の subagent と Claude の Agent tool の汎用の型 (`general-purpose` / `Explore` / `Plan` / `claude`、
-  model 必須・fable 不可) が担う。**Agent tool の subagent は closing の権限を持たず**、その出力は PR の verdict にも
-  receipt にも使えない。subagent 定義ファイルは持たず、専門性は作業ごとに skill・判断パック・設計抜粋を task に渡して
-  与える。並列の軽量レーンは Luna の subagent と Claude Haiku が担う。
-- Effort はモデル別基準ラダー (PO rule 2026-07-28) が既定: Sol/Fable = `low`、
-  Opus/Sonnet = `middle`、Luna = `high`。回答が浅い時は
-  **まず effort を 1 段、その先はモデルを上げる** (`escalateShallowResponse`):
-  Sol/Fable → `middle`、Opus/Sonnet → `high`、そこでも浅ければ
-  Sonnet→Opus `middle` / Opus・Luna・Fable→Sol `low`。**`xhigh` は既定として配らない** (PO rule 2026-07-28:
-  「xhigh 以上はモデルを上げたほうがいい」)。ラダー外 (haiku 等) は従来既定
-  (Claude `high` / GPT `middle`)。明示 `--effort xhigh` は有効で、UI/UX は
-  task-kind 例外 (PO rule 2026-07-08)。
-- Implementation work in `hybrid` is cross-executed and cross-reviewed: the
-  non-orchestrating provider executes, and review returns to the other
-  provider (tier-router implementation lane, PO rule 2026-07-08). FLAG 後の
-  軽作業の是正は同 PR 内で author family が行い、同じ非著者 reviewer が exact head を
-  再検する (PO rule 2026-09-14、§FLAG 後の限定是正と merge)。
-- Design/implementation review uses a top reviewer model: GPT frontier
-  (`gpt-6.1-sol`) or Claude Opus (`claude-opus-5-5`) or above, behind the
-  explicit frontier gate.
-- advisor (PO rule 2026-07-29、2026-07-14 の行列を supersede): **技術判断**
-  (実装方式 / トラブルシューティング) は `gpt-6.1-sol` 一次 (fallback Fable)、
-  **設計・進行判断** (設計方式 / レーン選択 / 優先順位 / 段取り) と
-  **デザイン/UI 判断** は `claude-fable-5-2` 一次 (次点 `gpt-6.1-sol`)。
-  判断種別は `--decision design|progress|implementation|troubleshooting|uiux`
-  で明示でき、省略時は task 文から推論する (進行語は technical 語より優先)。
-  迷う場合は `ut-tdd advisor --task "..." --current-model <model>` を使い、
-  実相談は `--execute` を付ける。
+本文は docs/governance/operating-rules-delegation-routing.md §Model / Effort Routing (モデル・effort・委譲先を選ぶとき)。
 
 ## Skills
 
-- Load only relevant skills; do not bulk-load the full catalog.
-- Pack / runtime skill content lives under root `skills/`.
-- `src/skill-engine/` is TypeScript implementation code for skill
-  recommendation / injection / scaffolding. It is not a skill content directory.
-- Legacy-derived skill material under `docs/skills/` is source-repo reference /
-  migration material unless a task explicitly targets it. Do not treat it as the
-  Pack runtime skill root.
+本文は docs/governance/operating-rules-general.md §Skills (skill を読み込む・配置するとき)。
 
 ## Distribution Repository
 
-- Source development repo: `unison-ai-product/UT-TDD_AGENT-HARNESS`.
-- Clean distribution Pack repo:
-  `unison-ai-product/UT-TDD_AGENT-HARNESS-Pack`
-  (`https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS-Pack`).
-- When publishing clean Pack artifacts, push/export to the Pack repo, not back
-  into the source development repo.
-- Standard local propagation from this source repo to an existing Pack checkout
-  is `ut-tdd distribution sync-pack --repo-dir <Pack checkout>`.
-  Use `--prune-local` only when intentionally removing local files that are not
-  part of the clean Pack artifact set. The command must not commit or push;
-  inspect its output and perform any Pack repo commit / push as a separate,
-  human-reviewed step.
+本文は docs/governance/operating-rules-general.md §Distribution Repository (Pack repo へ配布・同期するとき)。
 
 ## Shared Guard Discipline (both runtimes)
-
-配置規約に従い、両ランタイムで成り立つ guard 規律は本節が正本 (2026-07-28 時点で
-片側のアダプタにしか無かった 3 件を集約した)。
 
 - **doctor は singleton** (PLAN-L7-442)。二重起動は exit 2 + holder pid で fail-fast する。
   exit 2 を見たら**待つ**。retry も別形式 (`node -e` / `--json` / 直接 `runDoctor`) での
@@ -586,24 +209,7 @@ Task-kind ベースの割当 (PO rule 2026-07-14、旧 tier 記述を supersede)
   初回投影や整合する行の更新を行う。`source-doc-lane` と toolchain プロファイルでは
   この検査を実行しない。CLI は実行時に singleton lock を使用し、`--result-file` 指定時には
   要求された出力を書き出す。
-- **並列 subagent は既定上限 8** (`DEFAULT_MAX_PARALLEL`、`src/runtime/agent-slots.ts`)。
-  `agent-slots` が fire/release を記録し上限到達を警告する (fail-open advisory であって
-  fail-close gate ではない)。
-- **Vitest の snapshot guard を env で迂回しない**。raw Vitest が global-setup に拒否されたとき、
-  `UT_TDD_TEST_EXECUTION_ROOT` / `UT_TDD_TEST_FENCE_ROOT` / `UT_TDD_HEAD_SNAPSHOT_ROOT` を dirty な
-  worktree へ手設定して再実行しない。その実行は Red / Green やレビューの証拠にならない
-  (Issue #890 の実例)。Red テストを先に通常 commit し、`npm run test:vitest-snapshot` 系
-  (`scripts/run-vitest-snapshot.ts`) を committed HEAD に対して流す。
-- **Docker Desktop は使っていないときは停止する** (PO 2026-10-01)。Linux 受入の使い捨て container
-  など必要な作業の前に `docker desktop start` で起動し、作業と証跡の退避が終わったら
-  `docker desktop stop` で落とす。
-- **foreign-edit override は one-shot**。`.ut-tdd/state/foreign-edit-override` に非空の理由を
-  書いた場合のみ 1 回通り、その編集で消費 (削除) される。空 marker は通さない (理由なき
-  silent override を作らない)。bypass は `.ut-tdd/logs/foreign-edit-overrides.jsonl` へ監査
-  記録される。marker は**書いたセッションに紐付かない** — 消費前に読んだ任意のプロセスが
-  使えてしまう first-come-first-served であり、実際に別セッションが他セッションの marker を
-  消費した観測がある (2026-07-17T01:33:51)。env の `UT_TDD_ALLOW_FOREIGN_EDIT=1` は
-  human 管理で消費されない。
+- doctor 以外の本文は docs/governance/operating-rules-general.md §Shared Guard Discipline (並列上限・Vitest snapshot・Docker・foreign-edit に触れるとき)。
 
 ## Safety Boundaries
 
@@ -617,40 +223,15 @@ Task-kind ベースの割当 (PO rule 2026-07-14、旧 tier 記述を supersede)
 
 ### ゼロトラストダウンロード原則 (PO ルール 2026-11-17、両ランタイム共通)
 
-外から取ってくるものは、取った時点では信頼しない。対象は npm パッケージ、GitHub Action、バイナリ、
-スクリプト、archive、container image、`curl` などで取ったファイル、`npx` で一時的に動かすツールのすべてである。
-
-1. **版を固定する**: npm は exact version と lockfile の integrity、GitHub Action は commit SHA、
-   container image は digest で指す。範囲指定 (`^` / `~`)・`latest`・タグだけの参照は使わない。
-2. **公開から 14 日以上たった版を使う**: 公開の直後は、乗っ取られた版が見つかる前に入ってしまう。
-   脆弱性の修正で急ぐときだけ、PO 承認で例外にする。
-3. **完全性を確かめる**: lockfile の integrity、配布元が公開する sha256、署名や provenance があればそれを
-   検証する。検証できないものは入れない。
-4. **取得するときに実行しない**: `npm install` / `npm ci` には `--ignore-scripts` を付ける。`curl ... | sh` の
-   ように、取ってすぐ実行しない。取得物は新しい空のディレクトリに置き、そのディレクトリの中でインタプリタや
-   ビルドを動かさない (同じディレクトリにある `json.py` などが読み込まれるため)。Python で読むときは `-I` を付ける。
-5. **入れる前に審査して記録する**: ライセンス、保守の状況、直接の依存の数、install script の有無を確かめ、
-   PR 本文に書く。新しい依存の追加はサプライチェーンの高影響境界であり、PO 承認を取る。
-6. **権限を渡さない**: 取得物を動かす CI の job には、必要最小の `permissions` だけを与え、secret を渡さない。
-
-いまある仕組みは一部だけである。Node と npm の版と hash の固定 (`src/lint/toolchain-pin.ts` の `NODE_TOOLCHAIN_POLICY`
-と `packageManager` の検査。npm の exact version と hash は `package.json` の `packageManager` に持つ)、Biome と
-esbuild の版の固定 (同じ file)、`.github/workflows/security.yml` の Action の SHA 固定と `npm ci --ignore-scripts` である。
-依存全体の exact pin、全 workflow の Action の SHA 固定、`harness-check.yml` の `npm ci` への `--ignore-scripts` はまだ無い。機械で確かめていない項目は #1741 で仕組みにする。
+本文は docs/governance/operating-rules-general.md §ゼロトラストダウンロード原則 (外部の依存・Action・バイナリを取得するとき)。
 
 ## UT-TDD Workflow
 
-- Forward: `plan` -> `pair-freeze` -> `implement` -> `trace-freeze` -> `review` -> `accept`
-- Reverse: `R0` → `R1` → `R2` → `R3` → `R4` → Forward への合流 (`docs/process/modes/reverse.md`)
-- Scrum / PoC: `S0 backlog` -> `S1 plan` -> `S2 poc` -> `S3 verify` -> `S4 decide`
-- Handover: check `.ut-tdd/handover/CURRENT.json` if present and non-stale.
+本文は docs/governance/operating-rules-general.md §UT-TDD Workflow (Forward / Reverse / Scrum の工程を確かめるとき)。
 
 ## Instruction Files
 
-- Shared project context: `CLAUDE.md`
-- Claude Code runtime / hook policy: `.claude/CLAUDE.md`
-- Codex CLI project rules: `AGENTS.md`
-- Personal overrides: `CLAUDE.local.md` / `AGENTS.override.md`
+本文は docs/governance/operating-rules-general.md §Instruction Files (指示ファイルの置き場を確かめるとき)。
 
 ## UT-TDD Adapter Rule Markers
 
