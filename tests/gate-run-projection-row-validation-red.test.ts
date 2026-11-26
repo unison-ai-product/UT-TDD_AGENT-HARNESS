@@ -1,17 +1,23 @@
 import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterAll, describe, expect, it, vi } from "vitest";
+import { isDeepStrictEqual } from "node:util";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { loadGateRunCoverageStats } from "../src/doctor/gate-run-coverage-reconciliation.ts";
 import { stableId } from "../src/stable-id.ts";
 import * as stateDb from "../src/state-db/index.ts";
 import { defaultHarnessDbPath, openHarnessDb } from "../src/state-db/index.ts";
+import { migrate } from "../src/state-db/migration.ts";
 import * as projectionWriter from "../src/state-db/projection-writer.ts";
+import { SqliteProjectionStore } from "../src/state-db/sqlite-projection-store.ts";
 import { removeTestTree } from "./support/temp-tree.ts";
 
 const EVIDENCE_PATH = ".ut-tdd/gate_runs/gate-run.json";
 const CHECKED_AT = "2026-11-26T00:00:00.000Z";
 const SYNTHETIC_REJECTED_VALUE = `ghp_${"0".repeat(20)}`;
+
+const GATE_RUN_ID = "gate-run:gprv-fixture";
+const WORKFLOW_RUN_ID = stableId("gate-workflow", GATE_RUN_ID);
 
 type WriteKind =
   | "workflow_runs:DELETE"
@@ -30,7 +36,7 @@ function writeEvidence(repoRoot: string, gateId = "G4"): void {
     path,
     `${JSON.stringify({
       schema_version: 1,
-      gate_run_id: "gate-run:gprv-fixture",
+      gate_run_id: GATE_RUN_ID,
       gate_id: gateId,
       plan_id: null,
       status: "passed",
@@ -47,9 +53,10 @@ function writeEvidence(repoRoot: string, gateId = "G4"): void {
   );
 }
 
-function seedStaleProjection(repoRoot: string): void {
+function seedStaleProjection(repoRoot: string, conflictingWorkflow = false): void {
   const db = openHarnessDb(defaultHarnessDbPath(repoRoot), { repoRoot });
   try {
+    migrate(db);
     const gateRunId = "gate-run:gprv-stale";
     db.prepare(
       "INSERT INTO gate_runs (gate_run_id, gate_id, plan_id, status, checked_at, evidence_path) VALUES (?, ?, ?, ?, ?, ?)",
@@ -57,10 +64,10 @@ function seedStaleProjection(repoRoot: string): void {
     db.prepare(
       "INSERT INTO workflow_runs (workflow_run_id, plan_id, drive_run_id, workflow, phase, ready_status, blocked_reason, human_required, checked_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
     ).run(
-      stableId("gate-workflow", gateRunId),
+      conflictingWorkflow ? WORKFLOW_RUN_ID : stableId("gate-workflow", gateRunId),
       null,
       "",
-      "routine-gate",
+      conflictingWorkflow ? "other-workflow" : "routine-gate",
       "G3",
       "passed",
       "",
@@ -74,17 +81,13 @@ function seedStaleProjection(repoRoot: string): void {
 
 function projectionRows(repoRoot: string): {
   gateRuns: Record<string, unknown>[];
-  routineGateWorkflows: Record<string, unknown>[];
+  workflowRuns: Record<string, unknown>[];
 } {
   const db = openHarnessDb(defaultHarnessDbPath(repoRoot), { repoRoot });
   try {
     return {
       gateRuns: db.prepare("SELECT * FROM gate_runs ORDER BY gate_run_id").all(),
-      routineGateWorkflows: db
-        .prepare(
-          "SELECT * FROM workflow_runs WHERE workflow = 'routine-gate' ORDER BY workflow_run_id",
-        )
-        .all(),
+      workflowRuns: db.prepare("SELECT * FROM workflow_runs ORDER BY workflow_run_id").all(),
     };
   } finally {
     db.close();
@@ -101,193 +104,185 @@ function observeProjectionWrites(): {
   const open = stateDb.openHarnessDb;
   const spy = vi.spyOn(stateDb, "openHarnessDb").mockImplementation((path, options) => {
     const db = open(path, options);
-    return new Proxy(db, {
-      get(target, property) {
-        if (property === "prepare") {
-          return (sql: string) => {
-            const statement = target.prepare(sql);
-            const kind: WriteKind | undefined = /^\s*DELETE\s+FROM\s+workflow_runs\b/i.test(sql)
-              ? "workflow_runs:DELETE"
-              : /^\s*DELETE\s+FROM\s+gate_runs\b/i.test(sql)
-                ? "gate_runs:DELETE"
-                : /^\s*INSERT\s+INTO\s+gate_runs\b/i.test(sql)
-                  ? "gate_runs:INSERT"
-                  : /^\s*INSERT\s+INTO\s+workflow_runs\b/i.test(sql)
-                    ? "workflow_runs:INSERT"
-                    : undefined;
-            if (!kind) return statement;
-            return new Proxy(statement, {
-              get(statementTarget, statementProperty) {
-                if (statementProperty === "run") {
-                  return (...values: unknown[]) => {
-                    attempts.push(kind);
-                    const run = Reflect.get(statementTarget, "run", statementTarget) as (
-                      ...args: unknown[]
-                    ) => unknown;
-                    const result = Reflect.apply(run, statementTarget, values);
-                    writes.push(kind);
-                    return result;
-                  };
-                }
-                const value = Reflect.get(statementTarget, statementProperty, statementTarget);
-                return typeof value === "function" ? value.bind(statementTarget) : value;
-              },
-            });
-          };
-        }
-        const value = Reflect.get(target, property, target);
-        return typeof value === "function" ? value.bind(target) : value;
+    return {
+      ...db,
+      prepare(sql) {
+        const statement = db.prepare(sql);
+        const operation = /^\s*(DELETE\s+FROM|INSERT\s+INTO)\s+(gate_runs|workflow_runs)\b/i.exec(
+          sql,
+        );
+        if (!operation) return statement;
+        const kind = [operation[2], operation[1]?.split(/\s+/)[0]].join(":") as WriteKind;
+        return {
+          ...statement,
+          run(...values) {
+            attempts.push(kind);
+            statement.run(...values);
+            writes.push(kind);
+          },
+        };
       },
-    });
+    };
   });
   return { attempts, writes, restore: () => spy.mockRestore() };
 }
 
-function thrownMessage(action: () => unknown): string | undefined {
+function captureError(action: () => unknown): Error | undefined {
   try {
     action();
   } catch (error) {
-    return error instanceof Error ? error.message : String(error);
+    if (!(error instanceof Error)) throw error;
+    return error;
   }
   return undefined;
 }
 
-describe("CANDIDATE-U-GPRV-001 raw projection INSERT rejection", () => {
-  const roots: string[] = [];
+const ALL_WRITES: WriteKind[] = [
+  "workflow_runs:DELETE",
+  "gate_runs:DELETE",
+  "gate_runs:INSERT",
+  "workflow_runs:INSERT",
+];
+
+describe.each([
+  { table: "gate_runs", field: "gate_id", priorWriteCount: 2 },
+  { table: "workflow_runs", field: "checked_at", priorWriteCount: 3 },
+])("CANDIDATE-U-GPRV-001 rejects $table before INSERT", ({ table, field, priorWriteCount }) => {
+  let root: string;
+  let before: ReturnType<typeof projectionRows>;
+  let after: ReturnType<typeof projectionRows>;
+  let error: Error | undefined;
+  let observer: ReturnType<typeof observeProjectionWrites>;
+
+  beforeAll(() => {
+    root = newRepo(table);
+    writeEvidence(root, table === "gate_runs" ? SYNTHETIC_REJECTED_VALUE : "G4");
+    seedStaleProjection(root);
+    before = projectionRows(root);
+
+    const collect = projectionWriter.collectGateRunEvidenceProjection;
+    const collectSpy =
+      table === "workflow_runs"
+        ? vi
+            .spyOn(projectionWriter, "collectGateRunEvidenceProjection")
+            .mockImplementation((path) => {
+              const projection = collect(path);
+              const [workflow] = projection.workflowRuns;
+              if (projection.workflowRuns.length !== 1 || !workflow) {
+                throw new Error("fixture requires one workflow projection row");
+              }
+              workflow.checked_at = SYNTHETIC_REJECTED_VALUE;
+              return projection;
+            })
+        : undefined;
+    observer = observeProjectionWrites();
+    try {
+      error = captureError(() => loadGateRunCoverageStats(root));
+    } finally {
+      observer.restore();
+      collectSpy?.mockRestore();
+    }
+    after = projectionRows(root);
+  });
 
   afterAll(() => {
-    for (const root of roots) removeTestTree(root);
+    if (root) removeTestTree(root);
   });
 
-  // Red remains green in CI while it records the two expected pre-implementation failures.
-  it.fails("rejects a synthetic secret-like gate row after stale-row deletes and rolls back", () => {
-    const root = newRepo("gate-reject");
-    roots.push(root);
-    writeEvidence(root, SYNTHETIC_REJECTED_VALUE);
-    seedStaleProjection(root);
-    const before = projectionRows(root);
-    const observer = observeProjectionWrites();
-
-    let message: string | undefined;
+  it("runs the seeded reconciliation and isolates the known Red from fixture errors", () => {
+    const db = openHarnessDb(":memory:");
     try {
-      message = thrownMessage(() => loadGateRunCoverageStats(root));
-    } finally {
-      observer.restore();
-    }
+      migrate(db);
+      const validatorError = captureError(() =>
+        new SqliteProjectionStore(db).record({
+          table,
+          id: "validator-fixture",
+          row: { [field]: SYNTHETIC_REJECTED_VALUE },
+        }),
+      );
+      expect(validatorError?.message).toBe(
+        ["secret-like value is not allowed in harness.db projection column", field].join(": "),
+      );
+      expect(before.gateRuns).toHaveLength(1);
+      expect(before.workflowRuns).toHaveLength(1);
 
-    expect({
-      rejected: message !== undefined,
-      messageLeaksRejectedValue: message?.includes(SYNTHETIC_REJECTED_VALUE) ?? false,
-      attempts: observer.attempts,
-      successfulWrites: observer.writes,
-      projectionRestored: JSON.stringify(projectionRows(root)) === JSON.stringify(before),
-    }).toEqual({
-      rejected: true,
-      messageLeaksRejectedValue: false,
-      attempts: ["workflow_runs:DELETE", "gate_runs:DELETE", "gate_runs:INSERT"],
-      successfulWrites: ["workflow_runs:DELETE", "gate_runs:DELETE"],
-      projectionRestored: true,
-    });
+      if (error) {
+        expect(error.message.includes(SYNTHETIC_REJECTED_VALUE)).toBe(false);
+        expect(error.message).toBe(validatorError?.message);
+        expect(observer.attempts).toEqual(ALL_WRITES.slice(0, priorWriteCount));
+        expect(observer.writes).toEqual(ALL_WRITES.slice(0, priorWriteCount));
+        expect(isDeepStrictEqual(after, before)).toBe(true);
+      } else {
+        expect(observer.attempts).toEqual(ALL_WRITES);
+        expect(observer.writes).toEqual(ALL_WRITES);
+        const rows = table === "gate_runs" ? after.gateRuns : after.workflowRuns;
+        expect(rows[0]?.[field] === SYNTHETIC_REJECTED_VALUE).toBe(true);
+      }
+    } finally {
+      db.close();
+    }
   });
 
-  it.fails("rejects a synthetic secret-like workflow row after a successful gate insert and rolls back", () => {
-    const root = newRepo("workflow-reject");
-    roots.push(root);
-    writeEvidence(root);
-    seedStaleProjection(root);
-    const before = projectionRows(root);
-    const collect = projectionWriter.collectGateRunEvidenceProjection;
-    const collectSpy = vi
-      .spyOn(projectionWriter, "collectGateRunEvidenceProjection")
-      .mockImplementation((repoRoot) => {
-        const projection = collect(repoRoot);
-        const [first, ...rest] = projection.workflowRuns;
-        if (!first) throw new Error("fixture requires one workflow projection row");
-        projection.workflowRuns = [{ ...first, checked_at: SYNTHETIC_REJECTED_VALUE }, ...rest];
-        return projection;
-      });
-    const observer = observeProjectionWrites();
-
-    let message: string | undefined;
-    try {
-      message = thrownMessage(() => loadGateRunCoverageStats(root));
-    } finally {
-      observer.restore();
-      collectSpy.mockRestore();
-    }
-
-    expect({
-      rejected: message !== undefined,
-      messageLeaksRejectedValue: message?.includes(SYNTHETIC_REJECTED_VALUE) ?? false,
-      attempts: observer.attempts,
-      successfulWrites: observer.writes,
-      projectionRestored: JSON.stringify(projectionRows(root)) === JSON.stringify(before),
-    }).toEqual({
-      rejected: true,
-      messageLeaksRejectedValue: false,
-      attempts: [
-        "workflow_runs:DELETE",
-        "gate_runs:DELETE",
-        "gate_runs:INSERT",
-        "workflow_runs:INSERT",
-      ],
-      successfulWrites: ["workflow_runs:DELETE", "gate_runs:DELETE", "gate_runs:INSERT"],
-      projectionRestored: true,
-    });
+  // Green changes this to a normal assertion and removes the known-Red branch above.
+  it.fails("rejects the row through the public coverage entry point", () => {
+    expect(error !== undefined).toBe(true);
   });
 });
 
 describe("CANDIDATE-U-GPRV-002 preserves normal rows and SQLite duplicate rejection", () => {
-  it("stores a normal pair and rejects duplicate primary keys without changing either row", () => {
-    const root = newRepo("normal-and-duplicate");
+  it("stores all expected columns, including the repo-relative evidence path", () => {
+    const root = newRepo("normal");
     try {
       writeEvidence(root);
-      const stats = loadGateRunCoverageStats(root);
-      expect(stats.gateRuns).toBe(1);
-      expect(stats.workflowRuns).toBe(1);
-      const before = projectionRows(root);
-      const gate = before.gateRuns[0];
-      const workflow = before.routineGateWorkflows[0];
-      expect(gate).toBeDefined();
-      expect(workflow).toBeDefined();
+      seedStaleProjection(root);
+      loadGateRunCoverageStats(root);
+      expect(projectionRows(root)).toEqual({
+        gateRuns: [
+          {
+            gate_run_id: GATE_RUN_ID,
+            gate_id: "G4",
+            plan_id: null,
+            status: "passed",
+            checked_at: CHECKED_AT,
+            evidence_path: EVIDENCE_PATH,
+          },
+        ],
+        workflowRuns: [
+          {
+            workflow_run_id: WORKFLOW_RUN_ID,
+            plan_id: null,
+            drive_run_id: "",
+            workflow: "routine-gate",
+            phase: "G4",
+            ready_status: "passed",
+            blocked_reason: "",
+            human_required: 0,
+            checked_at: CHECKED_AT,
+          },
+        ],
+      });
+    } finally {
+      removeTestTree(root);
+    }
+  });
 
-      const db = openHarnessDb(defaultHarnessDbPath(root), { repoRoot: root });
+  it("rolls back when the workflow INSERT conflicts with an existing primary key", () => {
+    const root = newRepo("duplicate");
+    try {
+      writeEvidence(root);
+      seedStaleProjection(root, true);
+      const before = projectionRows(root);
+      const observer = observeProjectionWrites();
+      let error: Error | undefined;
       try {
-        expect(() =>
-          db
-            .prepare(
-              "INSERT INTO gate_runs (gate_run_id, gate_id, plan_id, status, checked_at, evidence_path) VALUES (?, ?, ?, ?, ?, ?)",
-            )
-            .run(
-              gate?.gate_run_id,
-              gate?.gate_id,
-              gate?.plan_id,
-              gate?.status,
-              gate?.checked_at,
-              gate?.evidence_path,
-            ),
-        ).toThrow();
-        expect(() =>
-          db
-            .prepare(
-              "INSERT INTO workflow_runs (workflow_run_id, plan_id, drive_run_id, workflow, phase, ready_status, blocked_reason, human_required, checked_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            )
-            .run(
-              workflow?.workflow_run_id,
-              workflow?.plan_id,
-              workflow?.drive_run_id,
-              workflow?.workflow,
-              workflow?.phase,
-              workflow?.ready_status,
-              workflow?.blocked_reason,
-              workflow?.human_required,
-              workflow?.checked_at,
-            ),
-        ).toThrow();
+        error = captureError(() => loadGateRunCoverageStats(root));
       } finally {
-        db.close();
+        observer.restore();
       }
 
+      expect(error?.message).toMatch(/UNIQUE constraint failed: workflow_runs\.workflow_run_id/);
+      expect(observer.attempts).toEqual(ALL_WRITES.slice(1));
+      expect(observer.writes).toEqual(ALL_WRITES.slice(1, 3));
       expect(projectionRows(root)).toEqual(before);
     } finally {
       removeTestTree(root);
