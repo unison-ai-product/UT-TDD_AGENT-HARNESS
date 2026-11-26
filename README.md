@@ -9,6 +9,15 @@
 
 <p align="center">AI の「完了しました」を、テストと機械 gate で検証し直す基盤です。</p>
 
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/reference/readme-assets/story-dark.svg">
+    <img src="docs/reference/readme-assets/story-light.svg" alt="書き手とレビュー役のキャラクターが成果物を運び、差し戻しと CI の門を越えて、たくさんのチームの成果が城と城下町になっていくアニメーション" width="100%">
+  </picture>
+</p>
+
+1 つのセルの中で、書き手が作ったものを別の家系のレビュー役が確かめ、差し戻されたら同じ PR の中で直します。たくさんのセルの成果が CI の門を通って積み上がり、城になります。
+
 ## 🧭 何か
 
 AI の「完了しました」を、テスト・証跡・機械 gate で検証し直す基盤です。
