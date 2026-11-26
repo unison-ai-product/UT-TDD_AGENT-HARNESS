@@ -149,7 +149,7 @@ describe("SessionStart project identity reads", () => {
   let root: string;
   let commandLog: Command[];
   let start: ReturnType<typeof startSession>;
-  let observationRuns: SessionRun[];
+  const observationRuns: SessionRun[] = [];
 
   function startSession(cwd: string) {
     return spawnSync(
@@ -196,16 +196,20 @@ describe("SessionStart project identity reads", () => {
       .trim()
       .split(/\r?\n/)
       .map((line) => JSON.parse(line) as Command);
-    observationRuns = [];
-    for (const count of [0, 1, 3]) {
+  });
+
+  for (const count of [0, 1, 3]) {
+    heavyBeforeAll("db", () => {
       observationRuns.push(sessionRun(count, `pending-${count}`));
-    }
+    });
+  }
+  heavyBeforeAll("db", () => {
     observationRuns.push(sessionRun(1, "github-unavailable", "unavailable"));
   });
 
   heavyAfterAll("teardown", () => {
     if (root) removeTestTree(root);
-    for (const run of observationRuns ?? []) removeTestTree(run.root);
+    for (const run of observationRuns) removeTestTree(run.root);
   });
 
   it("P-PMEMROOT-006: retains the session event and digest", () => {
