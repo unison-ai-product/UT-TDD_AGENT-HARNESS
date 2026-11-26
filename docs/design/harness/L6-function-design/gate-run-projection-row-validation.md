@@ -20,6 +20,18 @@ issue: 1490
 
 ## 2. 契約
 
+### 2.1 照合計画の適用
+
+`applyReconciliation(db: HarnessDb, plan: ReconciliationPlan) => void` は照合計画の追加・削除を、`loadGateRunCoverageStats(repoRoot: string) => GateRunCoverageStats` が開いた SQLite transaction 内で適用する。`plan.addGateRows` は `gate_runs` の期待行、`plan.addWorkflowRows` は `workflow_runs` の routine-gate 期待行であり、各行の値が保存前検査への入力となる。
+
+| Function | Signature | pre | post | invariant | oracle |
+| --- | --- | --- | --- | --- | --- |
+| `applyReconciliation` | `(db: HarnessDb, plan: ReconciliationPlan) => void` | `db` は `runSqliteTransaction` の有効な transaction 内にあり、`plan` は evidence と既存行の突合後に組み立てられている。追加行は `GateRunRow` の6列または `ExpectedWorkflowRow` の9列を持つ。 | 各追加行の全列名・値が共通行検査を通った場合だけ、それぞれの raw `INSERT` が行われる。拒否または INSERT 制約違反は失敗を transaction 境界へ伝え、transaction 開始時の DB 状態へ rollback する。 | 検査対象は実際に各 INSERT へ渡す全列である。検査拒否の診断・保存先に拒否値を含めず、検査失敗後に処理を継続しない。upsert は使わない。 | `CANDIDATE-U-GPRV-001`, `CANDIDATE-U-GPRV-002` |
+
+`CANDIDATE-U-GPRV-001` の secret-like 入力は、JSON 証跡から `gate_runs` / `workflow_runs` の各保存列へ投影された値を指す。各経路で削除を先行させ、`workflow_runs` のケースでは先行する正常な `gate_runs` 追加も行わせたうえで拒否し、rollback 後の両テーブルの列値が開始時と同一であることを確認する。`CANDIDATE-U-GPRV-002` は通常の repo-relative `evidence_path` を含む期待行の保存と、同一主キーの `INSERT` 拒否および既存行不変を確認する。両 oracle は対になる L7 にケースごとの fixture と観測条件を定める。
+
+### 2.2 保存前の行検査
+
 照合 transaction 内で `insertGateRun` または `insertRoutineGate` が行を追加する前に、INSERT に渡す全列名と値を `SqliteProjectionStore` の行検査と同一の検査へ通す。raw `INSERT` は維持する。検査は投影 writer の `recordProjectionEvent` 経由へ書き換えず、照合専用の別判定も作らない。
 
 | 書き込み先 | 検査する全列 | 入力の由来 |
