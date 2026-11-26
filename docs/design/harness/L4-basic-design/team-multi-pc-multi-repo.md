@@ -7,7 +7,7 @@ pair_artifact: docs/test-design/harness/L9-team-multi-pc-multi-repo-test-design.
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 next_pair_freeze: L9
 created: 2026-10-26
-updated: 2026-11-02
+updated: 2026-11-25
 issue: 1327
 related_issues: [1330, 593]
 ---
@@ -36,15 +36,21 @@ related_issues: [1330, 593]
 - 社内の consumer project (非公開、以下 A) で次の 3 件がすでに起きている (#1327 / #1330 のコメント、2026-10-23)。
   - 同じ repo を 2 台の PC で進めたところ、PC2 の Codex が PC1 のレビューのチケットを拾い、返事が PC2 の inbox にだけ届いた。
   - 操作者の識別が無く、利用者が会話ごとに slot 番号を渡していた。
-  - 同時に動かす数を PC をまたいで数えられない。
+  - 同時に動かす数を PC をまたいで数えられない (今回の契約外。別 Issue #1996 で扱う)。
   - 面ごと (編集画面・公開 Web・管理画面) の共有部品の正本が無く、PC 用とスマホ用で同一内容のファイルが 15 組重複している。
   - 別 repo の成果物を参照する仕組みが無く、前の repo を丸ごと複製して参照している。
 - v4 要件 (候補、`docs/governance/candidates/ut-tdd-concept-v4-requirements.md`) のうち、本書が従うもの:
-  - UTV4-FR-004: チケット本文の正本は repo の tracked ファイル。GitHub は一方向の投影で、正本へ読み戻さない。
-  - UTV4-FR-005: 同じチケットの二重着手は claim で防ぐ。2 件目の claim は deny。claim は書き込み権限の根拠にしない。
+  - UTV4-FR-004 (2026-11-12 簡素化): チケットの正本は GitHub Issue / Sub-issue / PR である。ハーネス独自のチケット store・
+    tracked 記録・投影・ずれ検出は作らない。Issue は作業の許可であって権限を持たない。
+  - UTV4-FR-005 (2026-11-12 簡素化): 二重着手の防止は Issue の self-assign (claim) で行い、assign 済みへの 2 人目の assign を
+    lint または bot で拒否する。claim は二重着手の防止だけに使い、書き込み権限の根拠にしない。review request の一意性は
+    この規則の適用面として維持する (§4.2)。
   - UTV4-FR-006: 機械が遷移させる記録は 1 記録 = 1 ファイルの正本。harness.db は正本から作り直せる索引で、DB にしか無い状態は 0 件。
-  - UTV4-FR-030: 担当替えは claim の付け替えの記録 (旧 owner・新 owner・理由・引き取り時の HEAD) を伴い、記録の無い引き取りは deny。
+  - UTV4-FR-030 (2026-11-12 撤回): 担当替えの記録は GitHub の assignee 変更の timeline に残る (理由と HEAD はコメント 1 行)。
+    本書は担当替えの記録の仕組みを作らない。
   - path lease は V4D-056 で撤回済みである (requests の撤回表、acceptance の撤回表 AC-008 / AC-009)。本書は lease を作らない。
+  - 2026-11-12 の簡素化より前の版は、チケット本文を tracked ファイルとし、claim を origin の調整用 ref の CAS としていた。
+    この 2 点は撤回した (§4.1、§9)。review の request / receipt の調整用 ref (§4.2、#530) は別の機構であり、維持する。
 - #593 (利用者・権限 registry) は人間 principal の source を GitHub の login にする。本書の操作者の識別はこれに合わせる。
   本書は識別だけを定め、権限 (authorization) は変えない。権限を変える実装は #593 の規則どおり、着手前に PO の承認を取る。
 
@@ -63,18 +69,18 @@ related_issues: [1330, 593]
 | 9 | Cursor 起床の `wake-cursor-agent.ps1` は `~/.claude/settings.json` の Stop hook、返事の表示 `agent-inbox-check.mjs` は `~/.agent-inbox` を読む個人の仕組みである | `~/.claude/settings.json` の `hooks.Stop`、`~/.claude/hooks/` |
 | 10 | 並列 subagent の上限 8 は PC ローカルの記録 (`.ut-tdd/state/agent-slots.json`) で数える | `src/runtime/agent-slots.ts:56` |
 
-git の ref による排他は、ローカルの bare repo で確かめた。2 つの clone から
-`git push origin HEAD:refs/ut-tdd/claims/issue-1 --force-with-lease=refs/ut-tdd/claims/issue-1:` を順に実行すると、
+git の ref による排他 (§4.2 の review request の一意性が使う方式) は、ローカルの bare repo で確かめた。2 つの clone から
+`git push origin HEAD:refs/ut-tdd/<名前> --force-with-lease=refs/ut-tdd/<名前>:` を順に実行すると、
 1 本目は exit 0、2 本目は `rejected (stale info)` で exit 1 になった (git 2.52.0)。GitHub 実機での同時 push は未検証であり、
-L9 の受入 oracle (CANDIDATE-ST-TEAM-004) で確かめる。
+#530 の実機確認 (§4.2) で確かめる。
 
 ## §3 識別子
 
 | 識別子 | 形 | 保存場所 | 決め方 | 解決できないとき |
 |---|---|---|---|---|
-| 操作者 (`principal`) | `github:<login>` (login は小文字に正規化) | 保存しない。session の開始時に解決し、session の記録に持つ | `gh api user` の login。git の `user.name` / `user.email` は自由に書けるので識別に使わず、表示にだけ使う | claim・review request・宛先付き通知の送信を fail-close (`actor_unresolved`)。読み取りだけの操作は続けてよい |
+| 操作者 (`principal`) | `github:<login>` (login は小文字に正規化) | 保存しない。session の開始時に解決し、session の記録に持つ | `gh api user` の login。git の `user.name` / `user.email` は自由に書けるので識別に使わず、表示にだけ使う | review request・宛先付き通知の送信を fail-close (`actor_unresolved`)。読み取りだけの操作は続けてよい |
 | AI lane (`lane`) | `{ provider: "claude" \| "codex", session_id }` | 既存の session の記録 | 既存どおり | 既存どおり。ただし PC をまたぐ操作では `principal` と `machine_id` が必須で、`cli:unknown-session` だけの送り手は認めない |
-| PC (`machine_id`) | random UUID v4。表示名 `label` は作成時の hostname | `~/.ut-tdd/machine.json` (`{ schema_version: "ut-tdd.machine/v1", machine_id, label, alias?, created_at }`) | 初回に自動で作る。手動の登録は要らない。`alias` (例: `pc1`) は、特定の PC に作業を振り分けたい場合だけ利用者が付ける | ファイルが壊れていたら fail-close し、作り直しの手順を出す (黙って作り直すと別の PC になり、その PC の claim を失う) |
+| PC (`machine_id`) | random UUID v4。表示名 `label` は作成時の hostname | `~/.ut-tdd/machine.json` (`{ schema_version: "ut-tdd.machine/v1", machine_id, label, alias?, created_at }`) | 初回に自動で作る。手動の登録は要らない。`alias` (例: `pc1`) は、特定の PC に作業を振り分けたい場合だけ利用者が付ける | ファイルが壊れていたら fail-close し、作り直しの手順を出す (黙って作り直すと別の PC になり、その PC が発行した request と宛先付き通知の持ち主が分からなくなる) |
 | repo | 既存の `repository_identity` (`owner/name`) | 既存の tracked `ut-tdd.project.json` (strict v1 のまま変えない) | 既存どおり | 既存どおり |
 | プロダクト | home repo の `repository_identity` | §6 の `ut-tdd.product.json` | 複数 repo のときだけ宣言する。1 repo のプロダクトは何も書かず、repo = プロダクトとみなす | 宣言の食い違いは fail-close (§6) |
 
@@ -82,12 +88,11 @@ L9 の受入 oracle (CANDIDATE-ST-TEAM-004) で確かめる。
 
 - 範囲は「PC 上の 1 OS ユーザ」である。同じ PC の WSL や Docker container は別の machine になる。1 つの PC で同じ repo を
   複数 clone する運用は対象外とし、worktree を使う (runtime bus が clone 単位なので、clone が 2 つあると inbox が 2 つに割れる)。
-- 使い道は 4 つ: claim の持ち主、宛先付き通知の宛先、PC 単位の同時実行数、stop refresh の lease の持ち主の同定。
+- 使い道は 4 つ: review request の発行元、宛先付き通知の宛先、PC 単位の同時実行数、stop refresh の lease の持ち主の同定。
+  チケットの claim は GitHub の assignee (login 単位) で行うので、`machine_id` は使わない。
   stop refresh の lease は `hostname` の比較を `machine_id` の比較に寄せるが、別 PC の owner の生存判定が TTL であることは
   変わらない (改善するのは持ち主の同定だけ)。
-- 同時実行数の上限 8 (表 §2 #10) は PC の資源を守るためのものなので、PC 単位で数える。provider の利用上限 (A の
-  「Codex 3 本」など) は provider の account、つまり `principal` 単位の制約であり、§4 の claim から PC をまたいで数えて
-  advisory として表示する。上限で止める仕組みは作らない。
+- 並列上限 8 (表 §2 #10、`agent-slots`) は PC の資源を守るためのものなので、PC 単位で数える。
 
 ## §4 共有状態の正本
 
@@ -95,31 +100,27 @@ L9 の受入 oracle (CANDIDATE-ST-TEAM-004) で確かめる。
 
 | 分類 | 対象 | 正本 | PC をまたぐ伝わり方 |
 |---|---|---|---|
-| 本文 | チケット・設計文書・テスト設計・共有契約 | repo の tracked ファイル (main) | git main を同期点にする (UTV4-FR-004、V4D-068) |
-| 排他・一意の調整状態 | チケットの claim、exact head ごとの review request の一意性 | origin の調整用 ref (`refs/ut-tdd/...`) が指す commit の中の JSON 1 ファイル | `git ls-remote` / 明示の refspec での fetch。GitHub の Issue / PR コメントへ一方向に投影する |
+| チケット | 本文と着手 (claim) | GitHub Issue / Sub-issue / PR (UTV4-FR-004、2026-11-12 簡素化) | GitHub 上の正本をそのまま読む。ハーネス独自の store・tracked 記録・投影は作らない |
+| 本文 | 設計文書・テスト設計・共有契約 | repo の tracked ファイル (main) | git main を同期点にする (V4D-068) |
+| 排他・一意の調整状態 | exact head ごとの review request の一意性と、review の receipt (§4.2、#530) | origin の調整用 ref (`refs/ut-tdd/...`) が指す commit の中の JSON 1 ファイル | `git ls-remote` / 明示の refspec での fetch。GitHub の PR コメントへ一方向に投影する |
 | 通知 | 起床・依頼・返事の知らせ | 正本を持たない (通知は事実の伝達路であり、受け手は正本を読み直して判断する) | 宛先付きの Issue / PR コメント |
 
-### §4.1 claim
+### §4.1 チケットと claim
 
-- ref は `refs/ut-tdd/claims/<ticket>` とする。`<ticket>` は今の運用では `issue-<number>`、tracked なチケット record
-  (UTV4-FR-004) に移った後は `ticket-<ticket_id>` とする。ref はチケットの属する repo の origin に置く。
-- ref は、`claim.json` だけを持つ commit の鎖を指す。鎖の 1 commit が 1 記録である (UTV4-FR-006 の 1 記録 = 1 ファイル)。
-  `claim.json` は `schema_version: "ut-tdd.claim/v1"`、`ticket`、`state` (`claimed` / `transferred` / `released`)、
-  `principal`、`lane`、`machine_id`、`machine_label`、`at` を持ち、`transferred` のときは `previous` (旧 principal と旧
-  machine_id)、`reason`、`head` (引き取り時の HEAD) を必須にする。
-- 操作は次の 3 つで、すべて `--force-with-lease=<ref>:<期待する oid>` による compare-and-swap で ref を進める。
-  - claim: ref が無い、または先頭が `released` のときだけ進める。先頭が `claimed` / `transferred` なら deny し、持ち主の
-    `principal` と `machine_label` を返す (UTV4-FR-005)。
-  - transfer (担当替え): 先頭の oid を期待値にして進める。`reason` と `head` が無ければ deny する (UTV4-FR-030)。
-  - release: 持ち主、または PR の merge / close 時に control lane が進める。
-- ref は削除しない。鎖そのものが付け替えの監査記録になる。
-- claim は書き込み権限の根拠にしない (UTV4-FR-005)。claim の無い編集を止める仕組みも作らない。
-- origin に届かないときは claim を fail-close する。手元の編集は止めない。
-- harness.db は ref の鎖から作り直せる (DB を消して作り直した前後で、claim の索引が一致する)。
-- tracked なチケット record が入った後は、PR の merge 時に鎖の先頭 oid をチケット record に書き、main の上でも claim の
-  結末を読めるようにする。
-- `refs/ut-tdd/*` は branch の ruleset の対象外で、書き込み権限のある人は削除できる。claim は信頼できる書き手どうしの
-  調整であり、安全機構ではない。投影と ref の食い違い (ref が消えた等) は doctor の advisory にする。
+- チケットの正本は GitHub Issue / Sub-issue / PR である (UTV4-FR-004)。ハーネス独自のチケット store、tracked なチケット
+  記録、GitHub への投影、ずれの検出は作らない。必須 field (「やること」「ゴールの検証」「親の参照」) は Issue テンプレートで
+  持つ。Issue は作業の許可であって権限を持たない。
+- claim は、Issue の GitHub self-assign で行う (UTV4-FR-005)。assign 済みの Issue への 2 人目の assign は、lint または bot が
+  拒否する。拒否の理由には、現在の assignee を示す。拒否の手段 (lint か bot か) と実装は §10 の sub-issue で決める。
+  本書が凍結するのは、「assign が claim であり、2 人目を機械が拒否する」という規則だけである。
+- claim は二重着手の防止だけに使い、書き込み権限の根拠にしない。claim の無い編集を止める仕組みも作らない。
+- 担当替えは GitHub の assignee 変更の timeline に残る (理由と HEAD はコメント 1 行、UTV4-FR-030 の 2026-11-12 撤回)。
+  担当替えの記録を持つ ref や記録は作らない。再検討の条件は、5 人超、または引き取りの争いが起きたときである。
+- 触る path の担当は、path → 担当の表 (CODEOWNERS 相当、advisory) で示す (UTV4-FR-005)。表の置き方は本書で決めない。
+- GitHub に届かないときは、claim (assign) ができない。手元の編集は止めない。GitHub 停止時の縮退は #902 で扱う。
+- claim の持ち主は GitHub の login で分かる。どの PC が持っているかは、claim の記録に持たない。
+- 旧版の「origin の調整用 ref の CAS (`refs/ut-tdd/claims/<ticket>`)」と、claim の鎖・transfer・release の記録は撤回した。
+  claim に調整用 ref を使わないので、claim 専用の harness.db の索引も持たない。
 
 ### §4.2 review の依頼
 
@@ -133,7 +134,8 @@ L9 の受入 oracle (CANDIDATE-ST-TEAM-004) で確かめる。
   レビューの有効性の条件にはしない。完成した custody を公開してから merge を許可し、公開失敗は拒否する。同じ記録 ID の別内容への
   置換、欠落、競合、digest 不一致、失効した request は fail-close とする。`.ut-tdd/` と harness.db は取得キャッシュ・索引で、
   新規 clone から ref だけで再構築できなければならない。create-only と CAS は協調するクライアントの競合対策であり、書き込み権限を
-  持つ人による削除・改変は防げない (§4.1 と同じ限界)。
+  持つ人による削除・改変は防げない。`refs/ut-tdd/*` は branch の ruleset の対象外で、書き込み権限のある人は削除できる。
+  この ref は信頼できる書き手どうしの調整であり、安全機構ではない。ref が消えた等の食い違いは doctor の advisory にする。
 - 公開と別 PC の merge gate: `ut-tdd pr merge` は origin から現行 request と対応する custody を明示 fetch し、repo・PR・
   exact head・request digest・発行元・非著者 family・verdict・失効を照合する。現行 request のレビューと CI が揃ったときだけ、
   head 条件付きで merge する。origin に届かないとき、または共有証跡が欠けているときは、古いローカル PASS へ fallback しない。
@@ -146,7 +148,7 @@ L9 の受入 oracle (CANDIDATE-ST-TEAM-004) で確かめる。
 - custody のある PC が失われた場合の引き取り (transfer) は、次の契約に従う。前提として、現行の merge gate は同じ head の
   request を全件判定し、verdict の無い request が 1 件でもあれば `pending_request_for_head` で拒否する
   (`src/feedback/review-merge-gate.ts:230-242`)。PC の一致だけでは、どの request が現行かを選べない。
-  - **ref の鎖**: review request の ref も §4.1 と同じく `request.json` の commit の鎖にする。先頭が現行の request である。
+  - **ref の鎖**: review request の ref は `request.json` だけを持つ commit の鎖にする (1 commit が 1 記録、UTV4-FR-006)。先頭が現行の request である。
     「2 本目は deny」は「先頭が有効な request のときに、transfer 以外の操作で ref を進めることを deny する」の意味である。
   - **CAS で置き換えてよい条件**: 先頭の oid を期待値にした CAS であること、`reason` と `head` (引き取り時の PR の HEAD) を
     持つこと、`head` が ref の head sha と一致すること、新しい `request.json` が旧 request の digest と旧 `machine_id` を
@@ -262,10 +264,10 @@ advisor との相談は 2 回行った (`ut-tdd advisor --decision design --curr
 | 論点 | 採択 | 却下した案と理由 |
 |---|---|---|
 | `machine_id` の保存場所 | `~/.ut-tdd/machine.json` の random UUID (表示名 hostname) | hostname のハッシュ: 名前の衝突と改名に弱い。clone 単位 (`<gitCommonDir>/ut-tdd-runtime/`): 既存の置き場に乗るが、PC 単位の同時実行数と stop refresh の生存判定ドメインを表せない (advisor は使い道の定義を条件に (a) を許容した。使い道は §3 に限定した) |
-| claim の正本 | origin の調整用 ref が指す `claim.json` の commit の鎖 (CAS) | GitHub の assignee / コメント: 原子性が無く、2 件目の deny (UTV4-AC-008) を保証できない。main の tracked ファイル: claim のたびに PR と review が要り遅すぎる |
+| claim の正本 | GitHub Issue の self-assign と、2 人目の assign を拒否する lint / bot (UTV4-FR-005、2026-11-12 簡素化。2026-11-25 に旧方式から置き換え) | 旧採択の「origin の調整用 ref が指す `claim.json` の commit の鎖 (CAS)」: チケットの正本を GitHub Issue にした簡素化で、独自の claim store を作らない方針と合わなくなり撤回した。main の tracked ファイル: claim のたびに PR と review が要り遅すぎる |
 | claim と lease の関係 | lease を作らない | advisor の 1 回目は「V4D-056 の path lease と二重機構になる」と反論したが、V4D-056 は lease を撤回した決定である (requests / acceptance の撤回表)。この実測を突き返し、2 回目で advisor が撤回した |
-| claim の監査 | ref の commit の鎖に記録し、ref を削除しない | 投影コメントにだけ監査を残す案: 投影は正本へ読み戻さない (UTV4-FR-004) ので、記録の無い引き取りを deny する判定 (UTV4-FR-030) の入力にならない (advisor 2 回目の指摘を採択) |
-| claim の期限 | 期限を持たない。解放は release と transfer | TTL・heartbeat: 期限切れ lease の受入 (旧 AC-009) は行ごと廃止されている |
+| claim の監査 | GitHub の assignee 変更の timeline に任せる (UTV4-FR-030 は 2026-11-12 に撤回) | ref の鎖に記録して記録の無い引き取りを deny する旧案 (2026-10-26 に採択): FR-030 の撤回で deny する対象が無くなり、claim 専用の store も作らないので撤回した |
+| claim の期限 | 期限を持たない。解放は assignee の外し (unassign) | TTL・heartbeat: 期限切れ lease の受入 (旧 AC-009) は廃止されている |
 | review の custody | 正本は `refs/ut-tdd/receipts/` の commit 内 JSON (V4D-102)。実装と実機確認までは PC ローカルのまま、`machine_id` で merge の PC を束縛する | main への bookkeeping commit や dev/records/ への収録: exact head を動かすか、main の保護を変える必要が出る |
 | merge gate のネットワーク依存 | 許す (fail-close) | advisor の 1 回目は「merge gate が新たにネットワーク依存になる」と反論したが、`review-merge-gate.ts:566` がすでに `gh pr view` を呼んでいる。突き返し、2 回目で advisor が撤回した |
 | member の登録先 | 新しい `ut-tdd.product.json` | `ut-tdd.project.json` に key を足す案: strict v1 decoder (`project-identity.ts:228`) が読めなくなる。GitHub Projects v2 をプロダクトにする案: 投影を正本にすることになる (UTV4-FR-004 / FR-006) |
@@ -279,7 +281,7 @@ advisor との相談は 2 回行った (`ut-tdd advisor --decision design --curr
 本書の凍結後に、1 sub-issue = 1 論点で起票する。順序は上から。
 
 1. `machine_id` と `principal` の解決 (§3)
-2. 調整用 ref の claim (§4.1) と、その harness.db への投影
+2. claim の lint / bot (§4.1: assign 済みへの 2 人目の assign を拒否する)
 3. review request の一意性と custody の PC 束縛 (§4.2)。既存の merge gate (`src/feedback/review-merge-gate.ts`) も
    変える: 同じ head の request を全件判定する代わりに、ref の先頭の digest と一致する request だけを入力にし、鎖の中で
    失効した request を除く。あわせて `review_custody_on_other_machine` と `review_request_superseded` の拒否を足す
@@ -293,5 +295,5 @@ advisor との相談は 2 回行った (`ut-tdd advisor --decision design --curr
 
 - 互換期間の強制 (§8 末尾) を作るかどうかは、プロダクトの運用方針 (どこまで lockstep を許すか) に属する。本書では
   advisory に留め、A の運用で必要が出たときに PO に諮る。
-- 権限 (authorization) は本書で変えない。他人の claim の transfer を誰に許すかを権限として絞る場合は、#593 の
+- 権限 (authorization) は本書で変えない。他人の assign の付け替えを誰に許すかを権限として絞る場合は、#593 の
   registry の実装と同時に、着手前に PO の承認を取る。
