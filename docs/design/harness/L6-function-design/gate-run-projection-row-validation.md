@@ -37,7 +37,7 @@ issue: 1490
 | 書き込み先 | 検査する全列 | 入力の由来 |
 | --- | --- | --- |
 | `gate_runs` | `gate_run_id`, `gate_id`, `plan_id`, `status`, `checked_at`, `evidence_path` | 合成された期待行の値。通常の証跡では JSON 証跡から投影された値と証跡パスを含む。 |
-| `workflow_runs` | `workflow_run_id`, `plan_id`, `drive_run_id`, `workflow`, `phase`, `ready_status`, `blocked_reason`, `human_required`, `checked_at` | 対応する routine-gate 期待行の値。gate の ID・状態・時刻、照合対象の PLAN から合成される。検査単体の拒否確認では L7 が制御する期待行を使う。 |
+| `workflow_runs` | `workflow_run_id`, `plan_id`, `drive_run_id`, `workflow`, `phase`, `ready_status`, `blocked_reason`, `human_required`, `checked_at` | 対応する routine-gate 期待行の値。gate の ID・状態・時刻、照合対象の PLAN から合成される。 |
 
 JSON 証跡から上記の列へ取り込んだ文字列は検査対象である。テーブル列へ保存しない証跡 payload はこの行検査の対象外であり、既存の証跡入力検証の責務を変えない。正常なリポジトリ相対 `evidence_path` などの通常値は誤拒否しない。
 
