@@ -189,7 +189,7 @@ describe.each([
     if (root) removeTestTree(root);
   });
 
-  it("runs the seeded reconciliation and isolates the known Red from fixture errors", () => {
+  it("rolls back the seeded reconciliation with the shared diagnostic", () => {
     const db = openHarnessDb(":memory:");
     try {
       migrate(db);
@@ -206,25 +206,17 @@ describe.each([
       expect(before.gateRuns).toHaveLength(1);
       expect(before.workflowRuns).toHaveLength(1);
 
-      if (error) {
-        expect(error.message.includes(SYNTHETIC_REJECTED_VALUE)).toBe(false);
-        expect(error.message).toBe(validatorError?.message);
-        expect(observer.attempts).toEqual(ALL_WRITES.slice(0, priorWriteCount));
-        expect(observer.writes).toEqual(ALL_WRITES.slice(0, priorWriteCount));
-        expect(isDeepStrictEqual(after, before)).toBe(true);
-      } else {
-        expect(observer.attempts).toEqual(ALL_WRITES);
-        expect(observer.writes).toEqual(ALL_WRITES);
-        const rows = table === "gate_runs" ? after.gateRuns : after.workflowRuns;
-        expect(rows[0]?.[field] === SYNTHETIC_REJECTED_VALUE).toBe(true);
-      }
+      expect(error?.message.includes(SYNTHETIC_REJECTED_VALUE)).toBe(false);
+      expect(error?.message).toBe(validatorError?.message);
+      expect(observer.attempts).toEqual(ALL_WRITES.slice(0, priorWriteCount));
+      expect(observer.writes).toEqual(ALL_WRITES.slice(0, priorWriteCount));
+      expect(isDeepStrictEqual(after, before)).toBe(true);
     } finally {
       db.close();
     }
   });
 
-  // Green changes this to a normal assertion and removes the known-Red branch above.
-  it.fails("rejects the row through the public coverage entry point", () => {
+  it("rejects the row through the public coverage entry point", () => {
     expect(error !== undefined).toBe(true);
   });
 });
