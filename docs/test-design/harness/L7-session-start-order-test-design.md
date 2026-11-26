@@ -63,7 +63,7 @@ append試行は維持し、event durable性は実配布受入で別に検証す�
 - U-SLOG-005は既存のappend/fail-open oracle。正式IDとtest labelの対応は上の宣言表に記す。U-835-001は既存release-consumer共有fixture/buildを再利用し、U-835-003..006はcaptured real Commander instanceを通じて実CLI command routeを実行する。既存testを置換せず、対応関係を補足する。
 - `session start` actionの既存境界は `requireRuntimeRepoRoot` によるroot解決。`requireProjectMemoryRoot` → `resolveProjectMemoryRoot` → `loadProjectIdentityFromHead` はこの実経路に含まれないため、identity admissionとして契約へ持ち込まない。
 - `PLAN-L7-531` owns actual Pack/AT-DIST-003 consumer path. `PLAN-L7-422` owns F2 digest-missing visibility and is only referenced.
-- Existing SESSION start fail-open, current-plan resolution, forced-stop current-ID exclusion, skill work, digest behavior, and other delegation/team entrypoints stay unchanged.
+- SessionStart の fail-open、current-plan resolution、forced-stop の current-ID exclusion、skill work、その他 delegation/team entrypoints は維持する。Issue #1938 が定める inbox の PR state と post-merge backstop の2観測だけは未照合を表示し、それ以外の digest behavior は維持する。
 
 ## Rollback / remeasurement
 
