@@ -80,29 +80,27 @@ hook の時間は Node / helper の部分時間ではなく、#1938 と同じ ho
 
 ## 7. DbC と oracle
 
-| 契約点 | 不変条件 |
-|---|---|
-| pre | 現在の Claude `UserPromptSubmit` event、非空 session ID、trusted workspace / project scope が検証される。対象判定は既存 `isClaudeMemoryWakeTarget` の VS Code 条件と disable env 条件を維持する |
-| pre | unread 判定に使う情報は現在の受信 session 宛ての通知専用 metadata だけであり、inbox entry の本文を開かない |
-| post (通知) | 未読かつ通知可能な場合だけ、成功形 JSON と固定 1 行の `additionalContext` を出し exit 0 とする |
-| post (無通知) | 入力不正・未対応・空・不一致・metadata / stat error・内部エラー・既通知では stdout 空、exit 0 とする。host の起動失敗や timeout は host の入力継続で判定する |
-| invariant | 通知に body、entry count、raw ID、送信者や review 内容を含めない。entry 本文・claim・terminal・ACK は読み書きせず、delivery state を変えない |
-| invariant | hook は通知判定以外の作業を起こさず、外部 Git / GitHub / API を prompt ごとに起動しない。予算は host 開始から応答まで 5 秒以内を目標にする |
-| oracle | `CANDIDATE-U-CPNOTICE-001`〜`009` は対の L7 に定める。009 は配布設定で起動する hook process の境界を検査する。実 Windows / VS Code の host 応答は別に観測する |
+この節のシグネチャは Claude Code の hook process protocol を記述する記法である。実装関数名、export API、内部の関数分割を定めない。
+
+| Function | Signature | pre | post | invariant | oracle |
+|---|---|---|---|---|---|
+| Claude `UserPromptSubmit` hook protocol | `UserPromptSubmit(event, session, workspace) => ClaudeHookProcessResult` | event が現在の `UserPromptSubmit` であり、session が非空の現 session ID、workspace が trusted project scope を表す場合に限って通知を評価する。これらの値の供給・検証方法は未決事項の範囲を越えて固定しない。target 条件は既存 `isClaudeMemoryWakeTarget` の VS Code 条件と disable env 条件を保つ | 現 session 宛ての未読通知があり未通知なら exit 0 と固定形 JSON stdout。その他の通常結果は exit 0・stdout 空。host の launch failure / timeout は hook process result ではなく host 側の入力継続で扱う | 未読判定は宛先別通知 metadata のみから行う。本文・raw ID を出さず、entry 本文・claim・terminal・ACK・receipt / delivery state を読み書きしない。prompt ごとに外部 Git / GitHub / API / DB を起動しない | `CANDIDATE-U-CPNOTICE-001`〜`009`。詳細な trace は下表 |
+
+`ClaudeHookProcessResult` は protocol 上の観測値で、hook の応答を `exitCode` と stdout bytes で表す。成功時 stdout は JSON object 1 個だけで、その `hookSpecificOutput.hookEventName` は `UserPromptSubmit`、`hookSpecificOutput.additionalContext` は §3 の固定 1 行である。無通知時 stdout は空とする。両方とも exit code は 0。起動失敗と host timeout はプロセスが結果を返せない場合を含むため、unit result に合成せず host-level coverage とする。
 
 候補 oracle と本契約の対応は次のとおり。候補の具体的な test level / fixture / 反例は L7 が定める。
 
-| 候補 oracle | L6 の対象 |
-|---|---|
-| `CANDIDATE-U-CPNOTICE-001` | §3 の有効通知時の固定出力・exit 0 |
-| `CANDIDATE-U-CPNOTICE-002` | §2.2・§3 の空 inbox、入力不正 / 未対応、通知なし時の stdout 空・exit 0 |
-| `CANDIDATE-U-CPNOTICE-003` | §2.2・§7 の本文 / claim / terminal / ACK を読まないこと、foreign scope を通知対象にしないこと |
-| `CANDIDATE-U-CPNOTICE-004` | §2.1・§8 の同一 session 重複 / 並行抑止 (具体的 dedup 単位は未決) |
-| `CANDIDATE-U-CPNOTICE-005` | §2.1・§8 の新着 / clear / resume 時の再通知範囲 (未決) |
-| `CANDIDATE-U-CPNOTICE-006` | §3・§4 の失敗・timeout 時 fail-open |
-| `CANDIDATE-U-CPNOTICE-007` | §5 の fresh / legacy Pack 設定互換と Codex に hook を加えないこと |
-| `CANDIDATE-U-CPNOTICE-008` | §4・§7 の 5 秒 host 上限、hot-path 制約 |
-| `CANDIDATE-U-CPNOTICE-009` | §3 の設定された hook command の process 境界と `additionalContext` の出力判定。実 host は L7 §4 で検証する |
+| 候補 oracle | L6 の契約点 | L7 の追跡先 |
+|---|---|---|
+| `CANDIDATE-U-CPNOTICE-001` | §3、protocol post: 有効通知の固定出力・exit 0 | L7 §3、unit / hook-process fixture |
+| `CANDIDATE-U-CPNOTICE-002` | §2.2・§3、protocol pre/post: 空・不正・未対応時の無通知 | L7 §3、unit / hook-process fixture |
+| `CANDIDATE-U-CPNOTICE-003` | §2.2・protocol invariant: 本文等を読まず、foreign scope を通知対象にしない | L7 §2〜§3、I/O と状態差分の観測 |
+| `CANDIDATE-U-CPNOTICE-004` | §2.1・§8: 同一 session の重複 / 並行抑止 (具体的 dedup 単位は未決) | L7 §3、順次・同時 hook-process fixture |
+| `CANDIDATE-U-CPNOTICE-005` | §2.1・§8: 新着 / clear / resume 時の再通知範囲 (未決) | L7 §3、未決扱い。判断後に期待値を追加 |
+| `CANDIDATE-U-CPNOTICE-006` | §3・§4、protocol post と host-level failure: fail-open | L7 §3〜§4、例外 fixture と host 起動失敗 / timeout |
+| `CANDIDATE-U-CPNOTICE-007` | §5: fresh / legacy Pack 設定と Codex 非追加 | L7 §3、source / Pack / mirror 構成検査 |
+| `CANDIDATE-U-CPNOTICE-008` | §4・protocol invariant: 5 秒提案値と hot-path 制約 | L7 §3、設定・依存境界検査 |
+| `CANDIDATE-U-CPNOTICE-009` | §3・protocol post: 配布設定経由の process 出力 | L7 §3 の子 process 検査、実 Windows / VS Code host は L7 §4 の別証跡 |
 
 ## 8. 未決事項
 
