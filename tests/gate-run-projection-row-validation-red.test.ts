@@ -147,7 +147,7 @@ const ALL_WRITES: WriteKind[] = [
 describe.each([
   { table: "gate_runs", field: "gate_id", priorWriteCount: 2 },
   { table: "workflow_runs", field: "checked_at", priorWriteCount: 3 },
-])("CANDIDATE-U-GPRV-001 rejects $table before INSERT", ({ table, field, priorWriteCount }) => {
+])("U-GPRV-001 rejects $table before INSERT", ({ table, field, priorWriteCount }) => {
   let root: string;
   let before: ReturnType<typeof projectionRows>;
   let after: ReturnType<typeof projectionRows>;
@@ -229,7 +229,7 @@ describe.each([
   });
 });
 
-describe("CANDIDATE-U-GPRV-002 preserves normal rows and SQLite duplicate rejection", () => {
+describe("U-GPRV-002 preserves normal rows and SQLite duplicate rejection", () => {
   it("stores all expected columns, including the repo-relative evidence path", () => {
     const root = newRepo("normal");
     try {
