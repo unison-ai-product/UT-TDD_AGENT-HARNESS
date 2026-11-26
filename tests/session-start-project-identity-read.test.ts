@@ -276,7 +276,7 @@ describe("SessionStart project identity reads", () => {
     }
   });
 
-  it.fails("CANDIDATE-U-SSOBS-001: SessionStart starts no GitHub commands and marks both reads unobserved", () => {
+  it("CANDIDATE-U-SSOBS-001: SessionStart starts no GitHub commands and marks both reads unobserved", () => {
     const violations = observationRuns.flatMap((run) => {
       const issues: string[] = [];
       const ghCalls = run.commands.filter(({ file }) => file === "gh");
