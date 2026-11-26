@@ -66,6 +66,7 @@ import {
 import { loadRelationGraphSourceSet } from "./graph/loader.ts";
 import { checkHandoverBypass, nodeHandoverDeps, runHandover } from "./handover/index.ts";
 import {
+  EXTERNAL_OBSERVATIONS_NOT_CHECKED,
   renderSessionStartDigest,
   selectSessionStartDigest,
 } from "./handover/session-start-digest.ts";
@@ -536,10 +537,7 @@ function surfaceSessionStartDigestToStdout(
   const memory = readMemoryThroughService(repoRoot, { limit: 5 });
   let unclaimedInbox: ReturnType<typeof recoverAndSummarizeClaudeInboxForSessionStart> | undefined;
   try {
-    unclaimedInbox = recoverAndSummarizeClaudeInboxForSessionStart({
-      repoRoot,
-      pullRequestState: (pr) => observeClaudeInboxPullRequest(repoRoot, pr),
-    });
+    unclaimedInbox = recoverAndSummarizeClaudeInboxForSessionStart({ repoRoot });
   } catch {
     unclaimedInbox = undefined;
   }
@@ -549,6 +547,7 @@ function surfaceSessionStartDigestToStdout(
       const block = renderSessionStartDigest(
         selectSessionStartDigest(db, recentHeadCommits(repoRoot), {
           escalationLines: escalationBlock.trim().split(/\r?\n/).filter(Boolean),
+          externalObservationsStatus: "not_checked",
           memory: memory.entries,
           unclaimedInbox,
         }),
@@ -585,6 +584,7 @@ function renderDegradedSessionStartDigest(input: {
     "session-start digest DEGRADED — harness.db 由来の段 (state/gates, actionable) を読めなかった",
     `  reason: ${reason}`,
     "  → 「引き継ぎ情報が無い」ではなく「index が読めなかった」。DB 復旧まで判断の根拠にしない",
+    ...EXTERNAL_OBSERVATIONS_NOT_CHECKED,
     "[2/4 head]",
   ];
   if (headCommits.length === 0) lines.push("  - unavailable");
