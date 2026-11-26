@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 300" width="960" height="300" role="img" aria-label="task to team suggest to se, tl, qa, harness.db">
+<title>task to team suggest to se, tl, qa, harness.db</title>
+<style>
+:root{--fg:#e5e7eb;--mute:#9ca3af;--a1:#60a5fa;--a2:#fbbf24}
+text{font-family:system-ui,'Segoe UI',sans-serif;fill:var(--fg);font-size:19px;font-weight:600}
+.sub{font-size:14px;font-weight:400;fill:var(--mute)}
+.box{fill:none;stroke:var(--mute);stroke-width:1.5}
+.glow{fill:var(--a1);opacity:0;animation:glow 7s ease-in-out infinite}
+.claude{fill:var(--a2)}
+.flow{fill:none;stroke:var(--a1);stroke-width:2;stroke-linecap:round;stroke-dasharray:6 8;animation:flow 4s linear infinite}
+.alt{stroke:var(--a2)}
+@keyframes flow{to{stroke-dashoffset:-56}}
+@keyframes glow{0%{opacity:0}8%{opacity:.22}20%{opacity:0}100%{opacity:0}}
+@media (prefers-reduced-motion:reduce){*{animation:none !important}}
+</style>
+<path class="flow" d="M130 110 H165 M295 110 H330 M460 110 H495 M625 110 H660 M790 110 H825"/>
+<path class="flow alt" d="M560 138 C560 230 890 230 890 138"/>
+<text class="sub" x="725" y="246" text-anchor="middle">tl → harness.db</text>
+<g><rect class="box" x="25" y="80" width="105" height="60" rx="12"/><rect class="glow" x="25" y="80" width="105" height="60" rx="12"/><text x="77" y="116" text-anchor="middle">task</text></g>
+<g><rect class="box" x="165" y="80" width="130" height="60" rx="12"/><rect class="glow" style="animation-delay:1s" x="165" y="80" width="130" height="60" rx="12"/><text x="230" y="108" text-anchor="middle">team</text><text class="sub" x="230" y="128" text-anchor="middle">suggest</text></g>
+<g><rect class="box" x="330" y="80" width="130" height="60" rx="12"/><rect class="glow" style="animation-delay:2s" x="330" y="80" width="130" height="60" rx="12"/><text x="395" y="108" text-anchor="middle">se</text><text class="sub" x="395" y="128" text-anchor="middle">Codex</text></g>
+<g><rect class="box" x="495" y="80" width="130" height="60" rx="12"/><rect class="glow claude" style="animation-delay:3s" x="495" y="80" width="130" height="60" rx="12"/><text x="560" y="108" text-anchor="middle">tl</text><text class="sub" x="560" y="128" text-anchor="middle">Claude</text></g>
+<g><rect class="box" x="660" y="80" width="130" height="60" rx="12"/><rect class="glow" style="animation-delay:4s" x="660" y="80" width="130" height="60" rx="12"/><text x="725" y="108" text-anchor="middle">qa</text><text class="sub" x="725" y="128" text-anchor="middle">verify</text></g>
+<g><rect class="box" x="825" y="80" width="110" height="60" rx="12"/><rect class="glow" style="animation-delay:5s" x="825" y="80" width="110" height="60" rx="12"/><text x="880" y="108" text-anchor="middle">harness</text><text class="sub" x="880" y="128" text-anchor="middle">.db</text></g>
+</svg>

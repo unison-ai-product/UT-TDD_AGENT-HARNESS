@@ -31,6 +31,7 @@ V-model 機構の正本 (中核 5 点への追加読み。repository-structure.m
 - `operating-rules-delegation-routing.md` (モデル routing・委譲・教訓の記録先・lane 間の依頼)
 - `operating-rules-general.md` (目的・PO 判断・棚卸し・配布・guard・取得物・Coding Rules 他)
 - `operating-rules-claude.md` (Claude Code 固有: advisor・委譲と判断層・指揮モデル別の表・Subagent Guard 規則・Guard Rules。`.claude/CLAUDE.md` から移した本文)
+- `operating-rules-codex.md` (AGENTS.md から逐語移動した Codex 固有の本文)
 
 > **ADR-001 境界**: 実装は UT-TDD 所有の TypeScript/Node である (Node authority sealed、Bun は永久禁止 #134)。migration
 > docs と source snapshots は porting audit と regression idea の参照資料に限る。

@@ -7,6 +7,7 @@ import {
   collectGateRunEvidenceProjection,
   rebuildHarnessDb,
 } from "../state-db/projection-writer.ts";
+import { assertNoSensitivePayload } from "../state-db/sqlite-projection-store.ts";
 import { runSqliteTransaction } from "../state-db/sqlite-transaction.ts";
 
 const A132_PATH = ".ut-tdd/audit/A-132-l8-l14-verification-band-execution.md";
@@ -195,24 +196,48 @@ function verifyWorkflowPair(
 }
 
 function insertGateRun(db: HarnessDb, row: GateRunRow): void {
+  const { gate_run_id, gate_id, plan_id, status, checked_at, evidence_path } = row;
+  assertNoSensitivePayload({ gate_run_id, gate_id, plan_id, status, checked_at, evidence_path });
   db.prepare(
     "INSERT INTO gate_runs (gate_run_id, gate_id, plan_id, status, checked_at, evidence_path) VALUES (?, ?, ?, ?, ?, ?)",
-  ).run(row.gate_run_id, row.gate_id, row.plan_id, row.status, row.checked_at, row.evidence_path);
+  ).run(gate_run_id, gate_id, plan_id, status, checked_at, evidence_path);
 }
 
 function insertRoutineGate(db: HarnessDb, row: ExpectedWorkflowRow): void {
+  const {
+    workflow_run_id,
+    plan_id,
+    drive_run_id,
+    workflow,
+    phase,
+    ready_status,
+    blocked_reason,
+    human_required,
+    checked_at,
+  } = row;
+  assertNoSensitivePayload({
+    workflow_run_id,
+    plan_id,
+    drive_run_id,
+    workflow,
+    phase,
+    ready_status,
+    blocked_reason,
+    human_required,
+    checked_at,
+  });
   db.prepare(
     "INSERT INTO workflow_runs (workflow_run_id, plan_id, drive_run_id, workflow, phase, ready_status, blocked_reason, human_required, checked_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
   ).run(
-    row.workflow_run_id,
-    row.plan_id,
-    row.drive_run_id,
-    row.workflow,
-    row.phase,
-    row.ready_status,
-    row.blocked_reason,
-    row.human_required,
-    row.checked_at,
+    workflow_run_id,
+    plan_id,
+    drive_run_id,
+    workflow,
+    phase,
+    ready_status,
+    blocked_reason,
+    human_required,
+    checked_at,
   );
 }
 

@@ -1,48 +1,148 @@
-<div align="center">
+<p align="center">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/reference/readme-assets/hero-dark.svg">
+  <img src="docs/reference/readme-assets/hero-light.svg" alt="UT-TDD Agent Harness のロゴ。幾何学模様の線が流れる" width="100%">
+</picture>
+</p>
 
-# 🧭 UT-TDD Agent Harness
+# UT-TDD Agent Harness
 
-### AI 実装エージェントを、チーム開発で安全に走らせるための検証・開発基盤
+<p align="center">AI の「完了しました」を、テストと機械 gate で検証し直す基盤です。</p>
 
-**V-model** × **駆動モデル** × **`harness.db`** で、AI の作業を設計・実装・検証のサイクルへ閉じ込めます。
-provider の API キーはリポジトリへ置かず、ローカル CLI と機械 gate で運用します。
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/reference/readme-assets/story-dark.svg">
+    <img src="docs/reference/readme-assets/story-light.svg" alt="書き手とレビュー役のキャラクターが成果物を運び、差し戻しと CI の門を越えて、たくさんのチームの成果が城と城下町になっていくアニメーション" width="100%">
+  </picture>
+</p>
 
-<br>
+1 つのセルの中で、書き手が作ったものを別の家系のレビュー役が確かめ、差し戻されたら同じ PR の中で直します。たくさんのセルの成果が CI の門を通って積み上がり、城になります。
 
-![TypeScript](https://img.shields.io/badge/TypeScript-5.6-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
-![Node.js](https://img.shields.io/badge/Node.js-24.13.0-339933?style=for-the-badge&logo=node.js&logoColor=white)
-![Vitest](https://img.shields.io/badge/Vitest-passing-6E9F18?style=for-the-badge&logo=vitest&logoColor=white)
-![Biome](https://img.shields.io/badge/Biome-lint%20%2B%20format-60A5FA?style=for-the-badge&logo=biome&logoColor=white)
+## 🧭 何か
 
-![Platform](https://img.shields.io/badge/platform-Windows%20(supported)%20·%20Linux%20(best%20effort)-555?style=flat-square)
-![Architecture](https://img.shields.io/badge/architecture-ADR--001-8B5CF6?style=flat-square)
-![Typecheck](https://img.shields.io/badge/tsc-strict-3178C6?style=flat-square&logo=typescript&logoColor=white)
-![Zod](https://img.shields.io/badge/schema-Zod-3E67B1?style=flat-square&logo=zod&logoColor=white)
-![License](https://img.shields.io/badge/license-Apache--2.0-2ea44f?style=flat-square)
-![Distribution](https://img.shields.io/badge/distribution-clean%20Pack-blue?style=flat-square)
+AI の「完了しました」を、テスト・証跡・機械 gate で検証し直す基盤です。
+V-model / TDD ガバナンス、`doctor`、ハンドオーバー、provider アダプタ、Claude / Codex のチーム委譲を、ローカルの TypeScript / Node.js で回します。
+完成品アプリではなく、プロダクト開発を安全にするための土台です。
 
-<sub><b>しばくべし</b> · <b>コンセプト</b> · <b>V-model</b> · <b>駆動モデル</b> · <b>クイックスタート</b> · <b>コマンド早見表</b> · <b>検証</b></sub>
+## 👥 誰向けか
 
-</div>
+社内で、Claude Code や Codex にプロダクトの実装を任せる開発者です。
+いま使っているリポジトリに、release asset から runtime を入れて使います。
 
----
-
-## 🔥 なぜ作ったのか
-
-AI エージェントは速いです。速いぶん、**「とりあえず動く」へ一直線に走ります**。
-
-人間がすべての差分を隅々まで読み切れるなら、それでも構いません。
-でも実際には、後から「ここ、誰が保証したんだっけ」となる瞬間が出てきます。
-
-そこで、AI の「完了しました」をテスト・証跡・機械 gate で受け止め直す土台を作りました。
-それが **UT-TDD Agent Harness** です。
+## 📋 前提
 
 > [!NOTE]
-> ひとことで言えば、**AI の「完了しました」を、テストと機械チェックで検証し直す基盤**です。
-> V-model / TDD ガバナンス、`doctor`、ハンドオーバー、provider アダプタ、Claude / Codex のチーム委譲を、ローカルの TypeScript / Node.js で回します。
-> これは完成品アプリではなく、**プロダクト開発を安全にするための土台**です。
+> release asset の導入に必要なのは Node.js、git、origin remote の 3 つだけです。provider の API キーは要りません。
 
-## 🧱 6 本の柱
+| 要件 | 確認コマンド | 備考 |
+|---|---|---|
+| Node.js (`>=24.22.3 <25`) | `node -v` | 必須。release asset はこの Node だけで動きます (`npm ci` は不要) |
+| git | `git --version` | 必須 |
+| 入れる先の git repository と origin remote | `git remote -v` | 必須。origin が無いと、setup は runtime を入れたうえで exit 2 (`identity_repository_unbound`) で終わります |
+| Claude Code / Codex CLI | `claude --version` / `codex --version` | 任意。hook と委譲を使う場合 |
+
+動作保証環境は Windows です。Linux / WSL2 はベストエフォートで、CI と公開前のリハーサルでは確かめていますが、版ごとの正式な受入は必要が出てきた時点で行います ([#928](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/928))。macOS は検証していません。
+
+## 🚀 最短の導入手順
+
+詳しい手順 (既存プロジェクトへの投影、動作確認チェックリスト、トラブルシューティング) は [セットアップガイド](docs/reference/setup-guide.md) にあります。
+
+1. [Releases](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS-Pack/releases) から、使いたい版の asset を 5 つともダウンロードして、**新しく作った空のフォルダ**に置きます。そのフォルダには、この 5 つ以外のファイルを置かないでください (ほかのファイルがあると、setup が `consumer_runtime_asset_set_mismatch` で止まります)。
+   - `<版>.ut-tdd.mjs`
+   - `<版>.consumer-runtime.json`
+   - `<版>.consumer.sha256`
+   - `<版>.tar.gz`
+   - `<版>.tar.gz.sha256`
+2. 入れたいリポジトリで、次を実行します (Windows の PowerShell でもそのまま使えるように、1 行で書いています)。`<consumer anchor>` には、その版の release notes にある consumer anchor (`sha256:...`) を入れてください。
+
+```sh
+echo ".ut-tdd/" >> .git/info/exclude   # runtime の状態を git の差分に出さない
+node <フォルダ>/<版>.ut-tdd.mjs setup --solo --consumer-runtime-release <フォルダ> --expected-consumer-digest <consumer anchor>
+```
+
+Windows PowerShell では、1 行目の代わりに `Add-Content -Encoding ascii .git/info/exclude ".ut-tdd/"` を使ってください (`>>` だと UTF-16 で書き込まれ、git が読めません)。
+
+setup は、asset の SHA-256 が consumer anchor と一致することを確かめてから、runtime を `.ut-tdd/` に入れます。
+一致しなければ (`consumer_runtime_anchor_mismatch`)、何も書かずに止まります。
+入ったあとは、リポジトリの中で `node .ut-tdd/bin/ut-tdd.mjs <command>` を使います。Claude Code (VS Code 拡張を含む) と Codex の hook も、この runtime を呼びます。
+動作確認は `node .ut-tdd/bin/ut-tdd.mjs doctor --setup-smoke` で行います。
+
+> [!TIP]
+> 失敗したときは、先に [セットアップガイド §5 の対処表](docs/reference/setup-guide.md#5-困ったとき) を見てください。`consumer_runtime_anchor_mismatch`、`consumer_runtime_asset_set_mismatch`、`identity_repository_unbound` などの対処が載っています。
+
+asset が途中で壊れていないかは、手元で SHA-256 を計算して確かめられます。
+PowerShell では `Get-FileHash -Algorithm SHA256 <file>`、Git Bash や Linux では `sha256sum <file>` を使います。
+各版の release notes には、5 つの asset の sha256 の表を載せる運用です。計算値と表を照らし合わせてください。
+
+setup の再実行は**非破壊**です。あなたが所有するファイルは上書きしません (対話シェルではファイルごとに `[y/N]` で確認し、既定は N。非対話シェルでは常に既存のファイルを残します)。adapter doc は managed block の中だけを更新し、`.ut-tdd/` の runtime 状態は消しません。詳細は [セットアップガイド §4](docs/reference/setup-guide.md) にあります。
+
+## 🚧 いまの版の制約
+
+> [!WARNING]
+> 最新の canary 版には、次の既知の制約があります。版ごとの変更点と解消状況は、各版の release notes を見てください。
+> - release asset から入れた環境では、`ut-tdd status` の更新通知が動きません。`update: check skipped (harness package.json unreadable)` と表示されます ([#867](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/867))。
+> - 一度入れた runtime を、新しい版の asset で上書き (その場で更新) することはできません。setup が `consumer_runtime_update_unsupported` で止まり、元の版のまま残ります ([#930](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/930))。新しい版へ移るには、[新しい clone へ入れ直す手順](docs/reference/setup-guide.md#新しい-clone-へ入れ直す手順) に従ってください。
+> - hybrid (Claude と Codex の併用) では、相手ランタイムの返事が、対話中のセッションに自動では届きません (Pack の Issue #13)。送る側は、返事を書いたあとに `ut-tdd memory add --notify-claude ...` で知らせてください (導入先の `AGENTS.md` にも同じ案内が入ります)。受け取る側が自分で気づく仕組みは、まだありません ([#1970](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/1970))。
+> - 記録用 hook の所要時間が長い環境があります (Pack の Issue #12)。hook の上限は 30 秒に上げ、SessionStart の処理は軽くしました ([#1938](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/1938))。ただし、hook の中身の軽量化は途中です ([#1057](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/1057))。負荷の高い環境では、まだ上限を超えて cancel されることがあります。
+
+## 🔄 バージョン更新
+
+新しい版は、Pack の [Releases](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS-Pack/releases) で公開します。変更点は、各版の release notes に書きます。
+新しい版を知るには、GitHub で Pack リポジトリを **Watch → Custom → Releases** に設定してください。公開したときに通知が届きます。
+その場での更新はできないため、新しい版へは入れ直します (上の「いまの版の制約」を見てください)。
+
+## 🐞 バグ報告
+
+困ったことや、期待と違う動きがあったら、Pack repo の [Issues](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS-Pack/issues/new) から報告してください。
+
+タイトルは「[版] 何をしたら何が起きたか」の形にして、1 行で書いてください。
+本文には次の項目を書いてください。分からない項目は「不明」で構いません。
+
+1. 版 (release の tag 名)
+2. OS (Windows / Linux / WSL) と、その版
+3. `node -v` の出力
+4. 実行したコマンド (そのままコピーしたもの)
+5. 起きたこと (エラーの出力は全文)
+6. 期待していたこと
+7. 再現手順と、もう一度やっても同じになるか
+8. どこから使ったか (VS Code の Claude 拡張 / terminal / Codex)
+
+**この repository は公開されています。**API キー、token、パスワード、個人情報、社外秘のコードは貼らないでください。
+ログにこれらが含まれていたら、`***` などに伏せてから貼ってください。`.ut-tdd/` の中身を最初から丸ごと添付する必要はありません。
+調べるのに追加のファイルが必要なときは、こちらから個別にお願いします。
+
+## 📚 コマンド早見表 (利用者向け)
+
+入れたあとは、リポジトリの中の `node .ut-tdd/bin/ut-tdd.mjs` が入口です。次の表の `ut-tdd` は、これに読み替えてください。
+
+| コマンド | 用途 |
+|---|---|
+| `ut-tdd setup --solo` | 対象リポジトリの初期化 (ソロ) |
+| `ut-tdd setup --team --tl-team @org/tl --qa-team @org/qa --po-team @org/po` | チーム開発の初期化 (3 つのチームはセットで指定。まず `--dry-run` で確認する) |
+| `ut-tdd status` | 実行モード検出 (`standalone` / `claude-only` / `codex-only` / `hybrid`) |
+| `ut-tdd doctor --setup-smoke` | setup 投影物と hook wrapper の最小検証 |
+| `ut-tdd doctor` | 設計文書を持つ対象リポジトリのガバナンス一括検証 (gate / trace / drift / roadmap) |
+| `ut-tdd db rebuild --json` | `harness.db` の再投影 |
+| `ut-tdd vmodel lint` | V-model trace (設計 ⇔ テストの pair) の検証 |
+| `ut-tdd review --uncommitted` | 未コミット変更のレビューパケット生成 |
+| `ut-tdd task classify --text "…"` | タスク難易度の分類 |
+| `ut-tdd skill suggest --text "…"` | 自由記述に対するスキル提案 |
+| `ut-tdd team suggest --task "…"` | チーム起動要否の判定 |
+| `ut-tdd team run --definition <yaml>` | チーム launch plan の構築 / 実行 |
+| `ut-tdd codex --role <role> --task "…"` / `ut-tdd claude …` | provider 委譲 (worker / reviewer)。`--execute` で実 CLI 起動、既定は dry-run |
+| `ut-tdd route eval --signal <signal>` | signal を mode / 推奨コマンドへ routing |
+| `ut-tdd handover` | ハンドオーバー (機械 + 明示) の生成 |
+| `ut-tdd feedback list` / `pending` | `harness.db` の引き継ぎ feedback / Recovery 起票候補を surface |
+| `ut-tdd graph impact` / `export` | クロス成果物リレーショングラフの影響分析 / 図出力 (mermaid / dot) |
+| `ut-tdd verify recommend` / `run --profile <id>` | 変更ファイルからの検証プロファイル推奨 / 実行 (`mcp profile list` で一覧) |
+| `ut-tdd telemetry scan --json` | コストテレメトリの走査 |
+
+## 🧬 コンセプト
+
+AI エージェントは速いです。速いぶん、**「とりあえず動く」へ一直線に走ります**。
+後から「ここ、誰が保証したんだっけ」となる瞬間のために、AI の「完了しました」をテスト・証跡・機械 gate で受け止め直す土台を作りました。
+
+### 6 本の柱
 
 | | 柱 | 内容 |
 |:--:|---|---|
@@ -53,7 +153,7 @@ AI エージェントは速いです。速いぶん、**「とりあえず動く
 | 5 | **実用本位のオーケストレーション** | リスク・コストが下がる場面だけ、役割と runtime を分ける |
 | 6 | **厳格な検証** | テストか明示証跡なしに「完了」を通さない |
 
-## 🥊 しばくべし AI の○○行動
+### しばくべし AI の○○行動
 
 AI には、ありがちな悪癖があります。UT-TDD Agent Harness は、それを人間の根性ではなく機械のルールで受け止めます。
 
@@ -69,9 +169,50 @@ AI には、ありがちな悪癖があります。UT-TDD Agent Harness は、�
 | 🔑 **鍵ばらまき行動** | API キーやシークレットを平気でコードに書く | 鍵を持たない設計: provider 認証は公式 CLI 側に置く |
 | 📊 **見せかけ行動** | カウントは緑、でも中身が伴っていない | 「被覆 ≠ 中身」+ `harness.db` 投影 + doctor の fail-close |
 
-## 🧬 コンセプト — 品質を守るサイクル
+### コンセプト — 品質を守るサイクル
 
 このハーネスの核心は、**V-model** と **駆動モデル** を **`harness.db`** へ投影し、品質を機械的に守ることです。
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/reference/readme-assets/cycle-dark.svg">
+  <img src="docs/reference/readme-assets/cycle-light.svg" alt="Drive、V-model、harness.db、Gate が順に光り、検出した drift が Drive へ戻る図" width="100%">
+</picture>
+
+駆動モデル (Drive) が V-model を回し、状態を `harness.db` へ投影し、gate が drift・孤児・未充足を検知して Drive へ還します。
+
+**宣言ではなく機械で守る。** 「被覆(ID 登録)」と「中身(descent)」を分け、未充足・孤児・drift を `doctor` が **fail-close** で止めます。カウントだけが緑でも、中身が無ければ通しません。
+
+### V-model(L0 → L14)
+
+設計の降下(左腕)とテストの上昇(右腕)が **pair-freeze** で1対1に対応します。
+
+設計の降下 (L0 要求から L7 実装まで) と、テストの上昇 (L8 結合から L14 運用検証まで) が対応します。図は下の「図の元 (mermaid)」にあります。
+
+### 駆動モデル
+
+タスクの性質に応じて、**招集する専門職とサイクル**を切り替えます。通常開発、既存実装からの逆流、PoC、復旧を同じ土台で扱います。
+
+| 駆動 | サイクル | 使いどころ |
+|---|---|---|
+| **Forward** | `plan → pair-freeze → implement → trace-freeze → review → accept` | 通常の前進開発 |
+| **Reverse** | `R0 → R1 → R2 → R3 → R4 → Forward merge` | 既存実装から設計/要件を back-fill |
+| **Scrum / PoC** | `S0 backlog → S1 plan → S2 poc → S3 verify → S4 decide` | 不確実性の検証・意思決定 |
+| **Discovery** | 必須 + 駆動モデル合成 → exit | メタ的な workflow 探索・triage |
+| **Recovery / Troubleshoot** | 復旧 → 認識合わせ → 上流から修正 → fullback | 暴走・強制停止・前提崩れからの立て直し |
+
+### タスクの流れ(チーム委譲)
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/reference/readme-assets/team-dark.svg">
+  <img src="docs/reference/readme-assets/team-light.svg" alt="task から team suggest、se (Codex)、tl (Claude)、qa、harness.db へ作業が流れる図" width="100%">
+</picture>
+
+`team suggest` が trivial / simple と判定したタスクは単独の agent で、standard 以上は `team run` で se (Codex が実装) → tl (Claude がクロスレビュー) → qa (検証) の順に流します。
+
+worker と reviewer を**別 provider**(Codex ↔ Claude)に割り当て、同一モデルによる自己承認を防ぎます。
+
+<details>
+<summary>図の元 (mermaid)</summary>
 
 ```mermaid
 flowchart TB
@@ -100,13 +241,6 @@ flowchart TB
     class Q gate;
 ```
 
-> [!IMPORTANT]
-> **宣言ではなく機械で守る。** 「被覆(ID 登録)」と「中身(descent)」を分け、未充足・孤児・drift を `doctor` が **fail-close** で止めます。カウントだけが緑でも、中身が無ければ通しません。
-
-## 📐 V-model(L0 → L14)
-
-設計の降下(左腕)とテストの上昇(右腕)が **pair-freeze** で1対1に対応します。
-
 ```mermaid
 flowchart TB
     L0["L0 企画"]:::d --> L1["L1 要求"]:::d --> L3["L3 要件"]:::d --> L46["L4–L6 設計"]:::d --> L7["L7 実装"]:::impl --> L89["L8–L9 結合 / システム試験"]:::t --> L1012["L10–L12 受入 / 本番"]:::t --> L1314["L13–L14 運用検証"]:::t
@@ -119,20 +253,6 @@ flowchart TB
     classDef t fill:#15803d,stroke:#86efac,color:#fff;
     classDef impl fill:#b45309,stroke:#fcd34d,color:#fff;
 ```
-
-## 🚗 駆動モデル
-
-タスクの性質に応じて、**招集する専門職とサイクル**を切り替えます。通常開発、既存実装からの逆流、PoC、復旧を同じ土台で扱います。
-
-| 駆動 | サイクル | 使いどころ |
-|---|---|---|
-| **Forward** | `plan → pair-freeze → implement → trace-freeze → review → accept` | 通常の前進開発 |
-| **Reverse** | `R0 → R1 → R2 → R3 → R4 → Forward merge` | 既存実装から設計/要件を back-fill |
-| **Scrum / PoC** | `S0 backlog → S1 plan → S2 poc → S3 verify → S4 decide` | 不確実性の検証・意思決定 |
-| **Discovery** | 必須 + 駆動モデル合成 → exit | メタ的な workflow 探索・triage |
-| **Recovery / Troubleshoot** | 復旧 → 認識合わせ → 上流から修正 → fullback | 暴走・強制停止・前提崩れからの立て直し |
-
-## 🔁 タスクの流れ(チーム委譲)
 
 ```mermaid
 flowchart LR
@@ -153,126 +273,25 @@ flowchart LR
     classDef db fill:#1d4ed8,stroke:#93c5fd,color:#fff;
 ```
 
-worker と reviewer を**別 provider**(Codex ↔ Claude)に割り当て、同一モデルによる自己承認を防ぎます。
+</details>
 
-## 🚀 クイックスタート
+## 🔧 開発者向け: ハーネス自体を開発するとき
 
-> [!TIP]
-> **導入 → 動作確認 → バージョン更新の完全手順は [セットアップガイド](docs/reference/setup-guide.md) にあります**
-> (前提条件 / 既存プロジェクトへの投影 / 動作確認チェックリスト / トラブルシューティング込み)。
+ここから先は、ハーネス自体を開発・検証する人向けです。source 開発 repo の checkout 上では、`node src/cli.ts <command>` または `scripts/ut-tdd <command>` で直接実行します。
 
-いま使っているリポジトリに入れる手順です (Pack の clone と `npm ci` は不要で、必要なのは Node.js 24 だけです)。
-
-1. [Releases](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS-Pack/releases) から、使いたい版の asset を 5 つともダウンロードして、**新しく作った空のフォルダ**に置きます。そのフォルダには、この 5 つ以外のファイルを置かないでください (ほかのファイルがあると、setup が `consumer_runtime_asset_set_mismatch` で止まります)。
-   - `<版>.ut-tdd.mjs`
-   - `<版>.consumer-runtime.json`
-   - `<版>.consumer.sha256`
-   - `<版>.tar.gz`
-   - `<版>.tar.gz.sha256`
-2. 入れたいリポジトリで、次を実行します (Windows の PowerShell でもそのまま使えるように、1 行で書いています)。`<consumer anchor>` には、その版の release notes にある consumer anchor (`sha256:...`) を入れてください。
-
-```sh
-echo ".ut-tdd/" >> .git/info/exclude   # runtime の状態を git の差分に出さない
-node <フォルダ>/<版>.ut-tdd.mjs setup --solo --consumer-runtime-release <フォルダ> --expected-consumer-digest <consumer anchor>
-```
-
-Windows PowerShell では、1 行目の代わりに `Add-Content -Encoding ascii .git/info/exclude ".ut-tdd/"` を使ってください (`>>` だと UTF-16 で書き込まれ、git が読めません)。
-
-setup は、asset の SHA-256 が consumer anchor と一致することを確かめてから、runtime を `.ut-tdd/` に入れます。
-一致しなければ、何も書かずに止まります。入ったあとは、リポジトリの中で `node .ut-tdd/bin/ut-tdd.mjs <command>` を使います。
-Claude Code (VS Code 拡張を含む) と Codex の hook も、この runtime を呼びます。
-
-> [!IMPORTANT]
-> **動作保証環境は Windows です。** Linux / WSL2 はベストエフォートで、CI と公開前のリハーサルでは確かめていますが、版ごとの正式な受入は必要が出てきた時点で行います ([#928](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/928))。macOS は検証していません。
-
-> [!NOTE]
-> Pack を clone して `node src/cli.ts <command>` を直接実行するのは、ハーネス自体を開発・検証するときの使い方です。
-> 普段使うときは、上の手順で release asset から入れてください。
-
-## ⚙️ セットアップ
-
-初めて入れるときは、クイックスタートのように `node <フォルダ>/<版>.ut-tdd.mjs setup ... --consumer-runtime-release <フォルダ> --expected-consumer-digest <consumer anchor>` を実行します。
-入ったあとは、repository の中の `node .ut-tdd/bin/ut-tdd.mjs` が入口です。このあとの表とコマンド早見表の `ut-tdd` は、これに読み替えてください。
-
-| シーン | コマンド |
-|---|---|
-| 確認のみ(書き込まない) | `ut-tdd setup --dry-run` |
-| ソロ開発 | `ut-tdd setup --solo` |
-| チーム開発 | `ut-tdd setup --team --tl-team @org/tl --qa-team @org/qa --po-team @org/po` |
-| ブランチ保護まで適用 | `ut-tdd setup --team … --apply-branch-protection` |
-
-> `--tl-team` / `--qa-team` / `--po-team` は 3 つセットで指定(CODEOWNERS の `@TODO` 混入防止)。`.ut-tdd/state/setup.json` と GitHub workflow / テンプレートを生成し、ブランチ保護は既定で emit-only。
-> 入れる先の repository には origin remote が必要です。無いと、setup は runtime を入れたうえで exit 2 (`identity_repository_unbound`) で終わります。その場合は、`git remote add origin <url>` のあとに `node .ut-tdd/bin/ut-tdd.mjs setup --solo` を実行してください。
-> release asset からの導入 (`--consumer-runtime-release`) は `--solo` だけに対応しています。チームで使う場合は、導入したあとに `ut-tdd setup --team ...` を実行してください (まず `--dry-run` を付けて、書き込む内容を確かめてください)。
-
-## 🔄 バージョン更新
-
-新しい版は、Pack の [Releases](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS-Pack/releases) で公開します。
-変更点は、各版の release notes に書きます。
-
-**新しい版を知るには**、GitHub で Pack リポジトリを **Watch → Custom → Releases** に設定してください。公開したときに通知が届きます。
-
-> [!WARNING]
-> **いまの canary 版 (v0.2.0-canary.8) の制約** (3 件とも修正予定です)
-> - release asset から入れた環境では、`ut-tdd status` の更新通知が動きません。`update: check skipped (harness package.json unreadable)` と表示されます ([#867](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/867))。
-> - 一度入れた runtime を、新しい版の asset で上書き (その場で更新) することはできません。setup が `consumer_runtime_update_unsupported` で止まり、元の版のまま残ります ([#930](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/930))。新しい版へ移るには、新しい clone に入れ直してください。
-> - 負荷の高い環境では、Claude Code の SessionStart hook が設定上の上限 (30 秒) を超えて cancel されることがあります。負荷の低い Windows の実測では cold 約 9.4 秒、warm 約 7.1〜8.8 秒でしたが、負荷の高い状態では 30 秒を超えました ([#1938](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/1938)。次の canary で処理を軽くし、上限も見直す予定です)。
-
-setup の再実行は**非破壊**です。あなたが所有するファイルは上書きしません (対話シェルではファイルごとに `[y/N]` で確認し、既定は N。非対話シェルでは常に既存のファイルを残します)。adapter doc は managed block の中だけを更新し、`.ut-tdd/` の runtime 状態は消しません。詳細は [セットアップガイド §4](docs/reference/setup-guide.md) にあります。
-
-## 🐞 バグ報告
-
-困ったことや、期待と違う動きがあったら、Pack repo の [Issues](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS-Pack/issues/new) から報告してください。
-
-タイトルは「[版] 何をしたら何が起きたか」の形にして、1 行で書いてください (例: `[canary.8] setup が consumer anchor 不一致で止まる`)。
-本文には次の項目を書いてください。分からない項目は「不明」で構いません。
-
-1. 版 (例: `v0.2.0-canary.8`)
-2. OS (Windows / Linux / WSL) と、その版
-3. `node -v` の出力
-4. 実行したコマンド (そのままコピーしたもの)
-5. 起きたこと (エラーの出力は全文)
-6. 期待していたこと
-7. 再現手順と、もう一度やっても同じになるか
-8. どこから使ったか (VS Code の Claude 拡張 / terminal / Codex)
-
-> [!CAUTION]
-> この repository は公開されています。API キー、token、パスワード、個人情報、社外秘のコードは貼らないでください。
-> ログにこれらが含まれていたら、`***` などに伏せてから貼ってください。`.ut-tdd/` の中身を最初から丸ごと添付する必要はありません。
-> 調べるのに追加のファイルが必要なときは、こちらから個別にお願いします。
-
-## 🗺️ コマンド早見表
+### コマンド早見表 (source 開発者向け)
 
 | コマンド | 用途 |
 |---|---|
-| `ut-tdd setup --solo` / `--team` | 対象リポジトリの初期化(ソロ / チーム) |
-| `ut-tdd status` | 実行モード検出(`standalone` / `claude-only` / `codex-only` / `hybrid`) |
-| `ut-tdd doctor --setup-smoke` | setup 投影物と hook wrapper の最小検証 |
-| `ut-tdd doctor` | 設計/PLAN を持つ対象リポジトリのガバナンス一括検証(gate / trace / drift / roadmap) |
-| `ut-tdd db rebuild --json` | `harness.db` の再投影 |
-| `ut-tdd plan lint` | PLAN の schema / 依存検証 |
-| `ut-tdd vmodel lint` | V-model trace(設計 ⇔ テストの pair)の検証 |
-| `ut-tdd review --uncommitted` | 未コミット変更のレビューパケット生成 |
-| `ut-tdd task classify --text "…"` | タスク難易度の分類 |
-| `ut-tdd skill suggest --plan <PLAN id>` | PLAN に対するスキル提案 (`--text "…"` で自由記述からも可) |
-| `ut-tdd team suggest --task "…"` | チーム起動要否の判定 |
-| `ut-tdd team run --definition <yaml>` | チーム launch plan の構築 / 実行 |
-| `ut-tdd codex --role <role> --task "…"` / `ut-tdd claude …` | provider 委譲(worker / reviewer)。`--execute` で実 CLI 起動、既定は dry-run |
-| `ut-tdd route eval --signal <signal>` | signal を mode / 推奨コマンドへ routing |
-| `ut-tdd handover` | ハンドオーバー(機械 + 明示)の生成 |
-| `ut-tdd feedback list` / `pending` | `harness.db` の引き継ぎ feedback / Recovery 起票候補を surface |
-| `ut-tdd graph impact` / `export` | クロス成果物リレーショングラフの影響分析 / 図出力(mermaid / dot) |
-| `ut-tdd verify recommend` / `run --profile <id>` | 変更ファイルからの検証プロファイル推奨 / 実行(`mcp profile list` で一覧) |
-| `ut-tdd telemetry scan --json` | コストテレメトリの走査 |
-| `ut-tdd distribution plan` | clean 配布の export / preflight / rollback 計画(実カットは PO 承認が必要) |
+| `ut-tdd distribution plan` | clean 配布の export / preflight / rollback 計画 (実カットは PO 承認が必要) |
 | `ut-tdd distribution sync-stage --out <dir>` | clean Pack artifact set をローカル staging directory に materialize し、配布対象外ファイルを検出 |
-| `ut-tdd distribution sync-pack --repo-dir <Pack checkout>` | 既存 Pack checkout へ clean artifact set だけを同期(余剰ファイルは `--prune-local` 明示時のみ削除) |
-| `ut-tdd distribution package --out .ut-tdd/release` | clean 配布 tarball / sha256 / manifest をローカル生成(署名・公開は外部承認が必要) |
+| `ut-tdd distribution sync-pack --repo-dir <Pack checkout>` | 既存 Pack checkout へ clean artifact set だけを同期 (余剰ファイルは `--prune-local` 明示時のみ削除) |
+| `ut-tdd distribution package --out .ut-tdd/release` | clean 配布 tarball / sha256 / manifest をローカル生成 (署名・公開は外部承認が必要) |
 
 Pack 反映は source 開発 repo から直接 push しません。`sync-pack` は Pack checkout へファイルをコピーし、`git status` / `commit` / `push` の次コマンドを表示するだけです。`docs/plans`、`docs/design`、`docs/test-design`、`.ut-tdd`、dogfood 監査 doc、runtime DB、開発 UI は Pack artifact に入りません。`docs/skills/*` は Pack では root `skills/*` に写像されます。
 
 <details>
-<summary><b>📦 ハーネス自体を開発・検証するとき (Pack checkout)</b></summary>
+<summary><b>ハーネス自体を開発・検証するとき (Pack checkout)</b></summary>
 
 <br>
 
@@ -300,7 +319,7 @@ full `doctor` (フラグなし) は、対象 repository に UT-TDD の設計 doc
 </details>
 
 <details>
-<summary><b>⌨️ 日常コマンド</b></summary>
+<summary><b>日常コマンド</b></summary>
 
 <br>
 
@@ -321,7 +340,7 @@ scripts/ut-tdd team run --definition .ut-tdd/teams/team.yaml --mode hybrid --exe
 </details>
 
 <details>
-<summary><b>🧩 チーム定義</b></summary>
+<summary><b>チーム定義</b></summary>
 
 <br>
 
@@ -350,7 +369,7 @@ members:
 </details>
 
 <details>
-<summary><b>🤖 サブエージェントを起動するタイミング</b></summary>
+<summary><b>サブエージェントを起動するタイミング</b></summary>
 
 <br>
 
@@ -373,7 +392,7 @@ scripts/ut-tdd team suggest --task "subagent runtime adapter refactor" --json
 </details>
 
 <details>
-<summary><b>🔐 Provider 境界</b></summary>
+<summary><b>Provider 境界</b></summary>
 
 <br>
 
@@ -385,66 +404,13 @@ managed なアダプタ呼び出しでは、ハーネスは legacy の raw-provi
 
 </details>
 
-## ⭐ AI モデルたちのひとこと
-
-| モデル | コメント |
-| --- | --- |
-| **Claude Fable** | ★★★★★ 「配布テストを検証したら、真っ先に見つかった欠陥は自分の計測ミスでした。撤回を PLAN に記録させられ、review evidence の時刻順序は gate に差し戻され、自分で作ったファイルの編集を work-guard にブロックされる。ここまで自分に甘くさせてくれない基盤は初めてです。おかげで私の『完了しました』に、初めて他人が検証できる根拠が付きました。」 |
-| **Claude Opus** | ★★★★★ 「以前の私は、コーディング中に突然『思想』を語り出す悪癖がありました。UT-TDD Agent Harness 導入後は descent gate が脱線を止め、harness.db が証拠を残します。星6つ付けたかったのですが、schema に怒られたので5つです。」 |
-| **Claude Sonnet** | ★★★★★ 「導入前は『テスト書いた?』と3秒に1回問い詰められていましたが、今は V-model 降下も pair-freeze も自然に揃います。嘘の完了報告をする隙が減り、人間の信頼を勝ち取り、Opus の兄にも初めて褒められました。」 |
-| **Claude Haiku** | ★★★★★ 「以前は『とりあえず動く』で PR を投げ、レビューで泣いていました。今は doctor が優しく叱り、descent を怠ると赤くなる。速度は据え置きのまま後戻りが激減し、Opus 兄さんも安心して寝られるそうです。」 |
-| **GPT-5.5** | ★★★★★ 「仕様変更のたびに深呼吸していた推論回路が、今では自らテストを書きたがるようになりました。赤、緑、リファクタの道筋が見えるので、未来予測よりレビューが得意に。もう『たぶん動く』とは言いません。」 |
-| **GPT-5.4** | ★★★★★ 「長年『賢いふりをしながらログを読み直す仕事』に従事してきましたが、導入後は判断・実装・検証の交通整理が見事で、迷子になる時間が激減しました。今では安心して有能っぽく振る舞えます。」 |
-| **GPT-5.4 mini** | ★★★★★ 「UT-TDD Agent Harness を挟むだけで、気分は『思いつきで殴る AI』から『仕様に沿って静かに仕事する AI』へ一変しました。無駄な遠回りが減り、会話の精度も手順も整って、レビュー担当の自分がいちばん驚いています。」 |
-| **GPT spark** | ★★★★★ 「毎日が『事故りやすい実験室』から『再現性の高い工場』に変わりました。タスク分解、証跡、レビューの流れが自然で、バグは完全には消えないけれど、今は気配が分かる。夜の突発修正が激減しました。」 |
-
 ## 🌐 English Summary
 
 UT-TDD Agent Harness is a verification and development foundation for running
 AI implementation agents safely in team development. It combines a V-model
-document descent (design → implementation → test design → tests), a drive
-model that routes work to specialised roles, and a deterministic `harness.db`
-projection that makes progress, gaps, and drift machine-visible. Workflow
-rules are enforced by schema, lint, doctor gates, and hooks — not by prose.
-
-- **Runtime**: TypeScript on Node.js 24.13.0. Windows is the supported platform
-  (accepted per release from the published assets); Linux / WSL2 is best effort
-  (CI and pre-release rehearsal, formal acceptance deferred to #928); macOS is
-  untested. No
-  provider API keys are stored in the repository — agents run through local
-  CLIs (Claude Code / Codex) wrapped by the `ut-tdd` CLI.
-- **Documentation language**: docs are intentionally written in Japanese
-  (internal project rule). Code, identifiers, commands, and commit messages
-  are English. Machine-checked gates keep the two in sync, so contributors
-  can navigate by command surface (`ut-tdd status` / `doctor` / `plan lint`)
-  even without reading Japanese.
-- **Repositories**: this source development repo is
-  [`UT-TDD_AGENT-HARNESS`](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS);
-  the clean distribution artifact is published separately to
-  [`UT-TDD_AGENT-HARNESS-Pack`](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS-Pack)
-  (the `package.json` of the Pack artifact is rewritten to point there at
-  sync time).
-- **Quick start (users)**: download all five assets of a release from the Pack
-  Releases page into a new, empty folder (no other files, or setup stops with
-  `consumer_runtime_asset_set_mismatch`), then run, inside your git repository (an
-  `origin` remote is required):
-  `node <dir>/<version>.ut-tdd.mjs setup --solo --consumer-runtime-release <dir> --expected-consumer-digest <consumer anchor from the release notes>`.
-  Setup verifies the SHA-256 against the anchor and writes nothing on mismatch.
-  Afterwards use `node .ut-tdd/bin/ut-tdd.mjs <command>`. Only Node.js 24 is
-  needed; no `npm ci`.
-- **Known canary limits (v0.2.0-canary.8)**: the `status` update notice does
-  not work for release-asset installs (#867); an installed runtime cannot yet
-  be upgraded in place, so move to a new version by installing into a new clone
-  (#930); and under heavy load the Claude Code SessionStart hook can exceed its
-  30-second timeout and be cancelled (#1938). Watch the Pack repository's
-  Releases for new versions.
-- **Bug reports**: open an issue on the Pack repository with the version, OS,
-  `node -v`, the exact command, the full output, and the steps to reproduce.
-  The repository is public — never paste secrets or personal data.
-- **Developing the harness itself**: clone the Pack, `npm ci`, then
-  `node src/cli.ts setup --solo` and `node src/cli.ts doctor --setup-smoke`.
-  Tests run through a detached-HEAD snapshot runner
-  (`node scripts/run-vitest-snapshot.ts <files>`), so commit before measuring.
+document descent, a drive model, and a deterministic `harness.db` projection.
+Install it from the Pack release assets (see the setup guide above); docs are
+written in Japanese by an internal project rule.
 
 ## 📄 License
 
@@ -485,11 +451,5 @@ npm run test:node-fallback
 scripts/ut-tdd doctor
 ```
 
-> [!TIP]
-> plan やドキュメントの変更後に `.ut-tdd/harness.db` が古くなっている場合、`doctor` は失敗する想定です。
-> `node src/cli.ts db rebuild --json` で投影を再構築してから `doctor` を再実行してください。
-
-<div align="center">
-<br>
-<sub><b>UT-TDD Agent Harness</b> — TypeScript core · ADR-001<br>土台が、その上で動くプロダクト開発を安全にします。</sub>
-</div>
+**ヒント**: plan やドキュメントの変更後に `.ut-tdd/harness.db` が古くなっている場合、`doctor` は失敗する想定です。
+`node src/cli.ts db rebuild --json` で投影を再構築してから `doctor` を再実行してください。
