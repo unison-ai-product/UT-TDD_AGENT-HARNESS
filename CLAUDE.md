@@ -1,5 +1,7 @@
 # UT-TDD Agent Harness
 
+索引行の記号: G = `docs/governance/operating-rules-general.md`、R = `docs/governance/operating-rules-review-merge.md`、D = `docs/governance/operating-rules-delegation-routing.md`。「同名の節」は本ファイルと同じ見出しの節で、移動先では見出しに括弧書きの付記が付く場合がある。
+
 ## Claude Code Read Order
 
 Claude Code treats the following as canonical in this repository:
@@ -33,7 +35,7 @@ ADR-001 に従い、UT-TDD の実装言語は TypeScript/Node とする。旧 W1
 
 ## Purpose
 
-本文は docs/governance/operating-rules-general.md §Purpose (設計・実装を判断するとき)。
+本文は G の同名の節 (設計・実装を判断するとき)。
 
 ## コミュニケーション (報連相)
 
@@ -51,34 +53,45 @@ ADR-001 に従い、UT-TDD の実装言語は TypeScript/Node とする。旧 W1
 
 ### PO 指示の解釈 (PO ルール)
 
-本文は docs/governance/operating-rules-general.md §PO 指示の解釈 (PO 指示の解釈に迷うとき)。
+本文は G の同名の節 (PO 指示の解釈に迷うとき)。
 
 ### GitHub 記載言語 (PO ルール 2026-09-16)
 
-GitHub の Issue / PR / Discussion のタイトル、本文、コメント、レビュー記録、ラベル説明、リリースノートは、
-**日本語を原則**とする。タイトルも例外にしない。コード・関数名・型名・変数名・CLI コマンド・Issue / PR ID・
-パス・URL・ログ・機械生成フィールド・外部仕様の引用は、正確性を優先して英語または原語のまま記載してよい。
-英語の技術用語を含める場合は、周囲の説明と判断理由を日本語で書く。外部引用やログを原文のまま貼る場合も、
-要点と対応内容を日本語で併記する。Claude / Codex のどちらが起票・更新してもこの規則を適用し、既存記載を更新する際は
-無関係なスコープを広げず、変更対象のタイトル・本文・コメントだけを日本語化する。
+本文は G の同名の節 (GitHub の Issue / PR / コメントを書くとき)。
 
 ### 設計判断エリシテーション (PO ルール 2026-07-13)
 
-本文は docs/governance/operating-rules-general.md §設計判断エリシテーション (PO へ設計判断を仰ぐとき)。
+本文は G の同名の節 (PO へ設計判断を仰ぐとき)。
 
 #### PO 判断への反射的エスカレーション禁止 (PO ルール 2026-08-05)
 
-「PO 判断必須」「PO 承認待ち」「PO が決める」と記載して作業を止める前に、必ず `ut-tdd advisor --decision <kind> --current-model <current-model> --execute --task "<判断内容>"` で第三者判断を得る。production infrastructure、destructive data operation、authentication/authorization、payment、PII、secret、licensing、外部API前提の変更は高影響境界であり、advisor 回答にかかわらず変更前に PO 承認を得る。advisor 相談は承認の代替ではない。
+「PO 判断必須」「PO 承認待ち」「PO が決める」と記載して作業を止める前に、必ず
+`ut-tdd advisor --decision <kind> --current-model <current-model> --execute --task "<判断内容>"`
+で第三者判断を得る。設計・進行・優先順位・UI/UX は
+`claude-fable-5-2`、実装方式・技術的トラブルシュートは `gpt-6.1-sol` へrouteする
+(正規の `--decision design|progress|uiux|implementation|troubleshooting` を使う)。
+advisor結果は前提をrepo実測で検証し、下記の高影響境界に該当せず、既存の層・責務・契約から
+一意に決まるなら、AIランタイムが技術判断として決定・記録して作業を継続する。advisor相談を
+POへの責任転送の前置きにしてはならない。
 
-全文は docs/governance/operating-rules-general.md §PO 判断への反射的エスカレーション禁止 (「PO 判断必須」と書いて止まる前)。
+production infrastructure、destructive data operation、authentication/authorization、payment、
+PII、secret、licensing、外部API前提の変更は高影響境界であり、trade-offの有無やadvisor回答に
+かかわらず変更前にPO承認を得る。advisor相談は承認の代替ではない。それ以外でPOへ上げてよいのは、
+advisor相談と実測後にも複数案の実在するtrade-offが残り、product scopeなどPO権限を要する判断に
+限る。その場合も、相談したadvisor/model、検証した事実、解消できなかったtrade-off、推奨案を
+`docs/governance/design-decision-elicitation.md` の形式で提示する。
+単なる事実確認、既存責務から導ける所有境界、可逆な実装順序、進捗報告をPO判断にしてはならない。
+Fable/Solの双方が利用不能なら相談attemptとfailureを記録し、判断を捏造しない。高影響境界は
+advisor unavailableの証跡を添えてPOへ上げる。高影響境界に該当せず既存契約から一意に決まる判断は
+継続し、advisorを要する未解決trade-offだけを利用可能になるまで保留する。
 
 ## Canonical Docs
 
-本文は docs/governance/operating-rules-general.md §Canonical Docs (正本文書の一覧が要るとき)。
+本文は G の同名の節 (正本文書の一覧が要るとき)。
 
 ## Architecture Boundary
 
-本文は docs/governance/operating-rules-general.md §Architecture Boundary (ディレクトリの責務を確かめるとき)。
+本文は G の同名の節 (ディレクトリの責務を確かめるとき)。
 
 ## Rule Placement Convention (ルールをどのファイルに書くか)
 
@@ -88,11 +101,12 @@ GitHub の Issue / PR / Discussion のタイトル、本文、コメント、レ
 `AGENTS.md` = Codex CLI 固有の経路と手順)。同じルールを 2 箇所に書けばそこが drift 源になる。
 `AGENTS.md` の Core Reads は本ファイルと名指し先の文書を含む。判定に迷ったら「もう一方のランタイムでも
 成り立つか」で決める。成り立つなら共通 (本ファイルまたは名指し先)、成り立たないならアダプタ固有。
+本文中の裸の `§<見出し>` は、本ファイルの同じ見出しを起点に解決する (索引行が移動先を示す)。path 付きの § はそのファイル、本ファイルに無い見出しは `.claude/CLAUDE.md` のものである。
 本文の分割は PO が 2026-11-26 に指示した。分割前の本節は operating-rules-general.md に残す。
 
 ## 定期棚卸し (EOD close-out)
 
-本文は docs/governance/operating-rules-general.md §定期棚卸し (セッション終了時)。
+本文は G の同名の節 (セッション終了時)。
 
 ## 設計と作業の正本
 
@@ -118,71 +132,66 @@ GitHub の Issue / PR / Discussion のタイトル、本文、コメント、レ
 - CI is `harness-check`: typecheck, Vitest, Biome lint, and doctor.
 - Review evidence is required before confirmation gates where applicable.
 - merge 後の確認・Green の偽装禁止・「merge しない」指示の優先は docs/governance/operating-rules-review-merge.md §Git Rules (merge 後の確認) (merge するとき)。
-- PR merge は必ず `ut-tdd pr merge --pr <N>` 経由とし、`gh pr merge` の直叩きで迂回しない。closing review の PASS verdict 受領前に merge しない (例外なし)。
+- PR merge は必ず `ut-tdd pr merge --pr <N>` 経由とし、`gh pr merge` の直叩きで迂回しない。
+- closing review の PASS verdict 受領前に merge しない (例外なし)。
 - Hybrid commit 協調の核心: history を書き換える前に `git log` / `git reflog` を確認する。**他ランタイムの commit を `reset` / `revert` / `checkout` / force で破棄・デグレさせない**。自分の意図ファイルだけを path 明示で stage し (`git add -A` / `git add .` 禁止)、commit 直前に `git status` + `git diff --staged` を確認する。
 - メモリは必ず `ut-tdd memory add` 経由で書く (手書き禁止。docs/governance/operating-rules-review-merge.md §引き継ぎ・検証の基準点 = HEAD)。
 
 ### 運用規律の再締結 (PO ルール 2026-08-03、両ランタイム共通)
 
-本文は docs/governance/operating-rules-review-merge.md §運用規律の再締結 (工程・merge・review の規律を確かめるとき)。
+本文は R の同名の節 (工程・merge・review の規律を確かめるとき)。
 
 ### PR スコープ規律 (PO ルール 2026-08-03、両ランタイム共通)
 
-本文は docs/governance/operating-rules-review-merge.md §PR スコープ規律 (PR を切る・分割するとき)。
+本文は R の同名の節 (PR を切る・分割するとき)。
 
 ### FLAG 後の限定是正と merge (PO ルール 2026-09-14、両ランタイム共通)
 
-本文は docs/governance/operating-rules-review-merge.md §FLAG 後の限定是正と merge (review・merge・FLAG 是正のとき)。
+本文は R の同名の節 (review・merge・FLAG 是正のとき)。
 
 ### Hybrid 多ランタイム commit 協調 (Claude ↔ Codex、必須)
 
-本文は docs/governance/operating-rules-review-merge.md §Hybrid 多ランタイム commit 協調 (commit・push・他ランタイムの変更に触れるとき)。
+本文は R の同名の節 (commit・push・他ランタイムの変更に触れるとき)。
 
 ### 委譲した成果物の検収 (両ランタイム共通)
 
-本文は docs/governance/operating-rules-review-merge.md §委譲した成果物の検収 (worker の成果物を受け取るとき)。
+本文は R の同名の節 (worker の成果物を受け取るとき)。
 
 ### 引き継ぎ・検証の基準点 = HEAD (共有 tree を測るな、必須)
 
-本文は docs/governance/operating-rules-review-merge.md §引き継ぎ・検証の基準点 = HEAD (引き継ぎ・検証・メモリ記録のとき)。
+本文は R の同名の節 (引き継ぎ・検証・メモリ記録のとき)。
 
 ### 教訓はメモリではなく仕組みにして改善する (PO ルール 2026-10-13、両ランタイム共通)
 
-本文は docs/governance/operating-rules-delegation-routing.md §教訓はメモリではなく仕組みにして改善する (教訓を記録するとき)。
+本文は D の同名の節 (教訓を記録するとき)。
 
 ### runtime 間のやりとりは GUI lane (PO ルール 2026-10-08、両ランタイム共通)
 
-本文は docs/governance/operating-rules-delegation-routing.md §runtime 間のやりとりは GUI lane (Claude と Codex の間で依頼・review を渡すとき)。
+本文は D の同名の節 (Claude と Codex の間で依頼・review を渡すとき)。
 
 ### lane 間の依頼 (待たずに依頼をかける)
 
-本文は docs/governance/operating-rules-delegation-routing.md §lane 間の依頼 (作業が他 lane や control で止まったとき)。
+本文は D の同名の節 (作業が他 lane や control で止まったとき)。
 
 ## GitHub Issue Hierarchy
 
-- 正本は `docs/governance/github-issue-hierarchy.md`。
-- 新規 Issue の前に既存の成果目標を検索し、bounded slice は GitHub の正式な sub-issue にする。
-- top-level Issue は独立した成果目標だけに限定し、`Related` や本文の `Parent: #N` を親子関係の
-  代替にしない。
-- canonical parent は 1 件。別系統は横断リンクに留め、無関係な移行をブロッカー化しない。
-- 親 Issue は必須子 Issue と親固有 AC の両方が完了するまで close しない。
-- PR 本文の `Closes #N` と `Refs #N` の使い分けは正本 §4 に従う (本ファイルへ本文を複製しない)。
+本文は G の同名の節 (Issue を起票・分割するとき)。
 
 ## Canonical Commands
 
-本文は docs/governance/operating-rules-general.md §Canonical Commands (ut-tdd の正規コマンドを確かめるとき)。
+本文は G の同名の節 (ut-tdd の正規コマンドを確かめるとき)。
 
 ## Model / Effort Routing
 
-本文は docs/governance/operating-rules-delegation-routing.md §Model / Effort Routing (モデル・effort・委譲先を選ぶとき)。
+本文は D の同名の節 (モデル・effort・委譲先を選ぶとき)。
 
 ## Skills
 
-本文は docs/governance/operating-rules-general.md §Skills (skill を読み込む・配置するとき)。
+本文は G の同名の節 (skill を読み込む・配置するとき)。
 
 ## Distribution Repository
 
-本文は docs/governance/operating-rules-general.md §Distribution Repository (Pack repo へ配布・同期するとき)。
+本文は G の同名の節 (Pack repo へ配布・同期するとき)。
 
 ## Shared Guard Discipline (both runtimes)
 
@@ -208,15 +217,15 @@ GitHub の Issue / PR / Discussion のタイトル、本文、コメント、レ
 
 ### ゼロトラストダウンロード原則 (PO ルール 2026-11-17、両ランタイム共通)
 
-本文は docs/governance/operating-rules-general.md §ゼロトラストダウンロード原則 (外部の依存・Action・バイナリを取得するとき)。
+本文は G の同名の節 (外部の依存・Action・バイナリを取得するとき)。
 
 ## UT-TDD Workflow
 
-本文は docs/governance/operating-rules-general.md §UT-TDD Workflow (Forward / Reverse / Scrum の工程を確かめるとき)。
+本文は G の同名の節 (Forward / Reverse / Scrum の工程を確かめるとき)。
 
 ## Instruction Files
 
-本文は docs/governance/operating-rules-general.md §Instruction Files (指示ファイルの置き場を確かめるとき)。
+本文は G の同名の節 (指示ファイルの置き場を確かめるとき)。
 
 ## UT-TDD Adapter Rule Markers
 

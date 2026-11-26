@@ -7,6 +7,7 @@ Related: `CLAUDE.md` (索引のみ)、`AGENTS.md`
 
 本書は root `CLAUDE.md` から本文を逐語で移した節を収める (PO 指示 2026-11-26)。
 節の見出しは移動前と同一であり、`CLAUDE.md §<見出し>` の参照は本書の同名の節を指す。
+本文中の裸の `§<見出し>` は、`CLAUDE.md` の同じ見出しを起点に解決する (`CLAUDE.md` の索引行が移動先を示す)。path 付きの § はそのファイルの見出しを指し、`CLAUDE.md` に無い見出し (例: §委譲と判断層) は `.claude/CLAUDE.md` のものである。
 
 ## Purpose
 
@@ -45,26 +46,24 @@ AskUserQuestion をこの用途に限って使ってよい (必要なら preview
 Codex では `## 設計判断依頼` の markdown 選択肢表で等価に出力して停止する。採択結果は
 設計文書、GitHub Issue または ADR に記録する (skill: `skills/design-decision-elicitation.md`)。
 
-## PO 判断への反射的エスカレーション禁止 (PO ルール 2026-08-05)
+## GitHub 記載言語 (PO ルール 2026-09-16)
 
-「PO 判断必須」「PO 承認待ち」「PO が決める」と記載して作業を止める前に、必ず
-`ut-tdd advisor --decision <kind> --current-model <current-model> --execute --task "<判断内容>"`
-で第三者判断を得る。設計・進行・優先順位・UI/UX は
-`claude-fable-5-2`、実装方式・技術的トラブルシュートは `gpt-6.1-sol` へrouteする
-(正規の `--decision design|progress|uiux|implementation|troubleshooting` を使う)。
-advisor結果は前提をrepo実測で検証し、下記の高影響境界に該当せず、既存の層・責務・契約から
-一意に決まるなら、AIランタイムが技術判断として決定・記録して作業を継続する。advisor相談を
-POへの責任転送の前置きにしてはならない。
+GitHub の Issue / PR / Discussion のタイトル、本文、コメント、レビュー記録、ラベル説明、リリースノートは、
+**日本語を原則**とする。タイトルも例外にしない。コード・関数名・型名・変数名・CLI コマンド・Issue / PR ID・
+パス・URL・ログ・機械生成フィールド・外部仕様の引用は、正確性を優先して英語または原語のまま記載してよい。
+英語の技術用語を含める場合は、周囲の説明と判断理由を日本語で書く。外部引用やログを原文のまま貼る場合も、
+要点と対応内容を日本語で併記する。Claude / Codex のどちらが起票・更新してもこの規則を適用し、既存記載を更新する際は
+無関係なスコープを広げず、変更対象のタイトル・本文・コメントだけを日本語化する。
 
-production infrastructure、destructive data operation、authentication/authorization、payment、 PII、secret、licensing、外部API前提の変更は高影響境界であり、trade-offの有無やadvisor回答に
-かかわらず変更前にPO承認を得る。advisor相談は承認の代替ではない。それ以外でPOへ上げてよいのは、
-advisor相談と実測後にも複数案の実在するtrade-offが残り、product scopeなどPO権限を要する判断に
-限る。その場合も、相談したadvisor/model、検証した事実、解消できなかったtrade-off、推奨案を
-`docs/governance/design-decision-elicitation.md` の形式で提示する。
-単なる事実確認、既存責務から導ける所有境界、可逆な実装順序、進捗報告をPO判断にしてはならない。
-Fable/Solの双方が利用不能なら相談attemptとfailureを記録し、判断を捏造しない。高影響境界は
-advisor unavailableの証跡を添えてPOへ上げる。高影響境界に該当せず既存契約から一意に決まる判断は
-継続し、advisorを要する未解決trade-offだけを利用可能になるまで保留する。
+## GitHub Issue Hierarchy
+
+- 正本は `docs/governance/github-issue-hierarchy.md`。
+- 新規 Issue の前に既存の成果目標を検索し、bounded slice は GitHub の正式な sub-issue にする。
+- top-level Issue は独立した成果目標だけに限定し、`Related` や本文の `Parent: #N` を親子関係の
+  代替にしない。
+- canonical parent は 1 件。別系統は横断リンクに留め、無関係な移行をブロッカー化しない。
+- 親 Issue は必須子 Issue と親固有 AC の両方が完了するまで close しない。
+- PR 本文の `Closes #N` と `Refs #N` の使い分けは正本 §4 に従う (本ファイルへ本文を複製しない)。
 
 ## Canonical Docs (正本文書の一覧)
 
