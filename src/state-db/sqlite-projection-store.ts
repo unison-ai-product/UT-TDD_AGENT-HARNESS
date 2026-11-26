@@ -169,7 +169,7 @@ function normalizeRow(table: TableDef, event: ProjectionEvent): Record<string, u
   return row;
 }
 
-function assertNoSensitivePayload(row: Record<string, unknown>): void {
+export function assertNoSensitivePayload(row: Record<string, unknown>): void {
   for (const [key, value] of Object.entries(row)) {
     if (RAW_PAYLOAD_KEYS.has(key)) {
       throw new Error(`raw/sensitive payload column is not allowed in harness.db: ${key}`);
