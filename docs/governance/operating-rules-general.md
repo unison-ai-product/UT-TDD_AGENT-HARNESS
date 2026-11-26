@@ -10,12 +10,20 @@ Related: `CLAUDE.md` (索引のみ)、`AGENTS.md`
 
 ## Purpose
 
+(原文は英語。逐語で収める)
+```
 UT-TDD Agent Harness is the verification and development foundation for safely
 using AI implementation agents in internal product development. The harness is
 not the end product; it is the ground on which other product work runs.
+```
 
+(原文は英語。逐語で収める)
+```
 Design and implementation should be judged by these pillars:
+```
 
+(原文は英語。逐語で収める)
+```
 1. Foundation first: the harness must make downstream product development safer.
 2. Document-first plus machine enforcement: workflow rules must be backed by
    schema, lint, doctor, hooks, or tests where appropriate.
@@ -25,6 +33,7 @@ Design and implementation should be judged by these pillars:
 5. Practical orchestration: split work across roles/runtimes only where it
    reduces risk or cost.
 6. Strict verification: no completion claim without tests or explicit evidence.
+```
 
 ## 設計判断エリシテーション (PO ルール 2026-07-13)
 
@@ -47,8 +56,7 @@ advisor結果は前提をrepo実測で検証し、下記の高影響境界に該
 一意に決まるなら、AIランタイムが技術判断として決定・記録して作業を継続する。advisor相談を
 POへの責任転送の前置きにしてはならない。
 
-production infrastructure、destructive data operation、authentication/authorization、payment、
-PII、secret、licensing、外部API前提の変更は高影響境界であり、trade-offの有無やadvisor回答に
+production infrastructure、destructive data operation、authentication/authorization、payment、 PII、secret、licensing、外部API前提の変更は高影響境界であり、trade-offの有無やadvisor回答に
 かかわらず変更前にPO承認を得る。advisor相談は承認の代替ではない。それ以外でPOへ上げてよいのは、
 advisor相談と実測後にも複数案の実在するtrade-offが残り、product scopeなどPO権限を要する判断に
 限る。その場合も、相談したadvisor/model、検証した事実、解消できなかったtrade-off、推奨案を
@@ -58,7 +66,7 @@ Fable/Solの双方が利用不能なら相談attemptとfailureを記録し、判
 advisor unavailableの証跡を添えてPOへ上げる。高影響境界に該当せず既存契約から一意に決まる判断は
 継続し、advisorを要する未解決trade-offだけを利用可能になるまで保留する。
 
-## Canonical Docs
+## Canonical Docs (正本文書の一覧)
 
 - `docs/governance/ut-tdd-agent-harness-concept_v3.1.md`
 - `docs/governance/ut-tdd-agent-harness-requirements_v1.2.md`
@@ -81,7 +89,7 @@ grep 0 件だった)。
   PLAN-L7-465 の契約重複を機械が拾えなかった真因は検出方式ではなく projection の鮮度で、
   両 PLAN が `graph_nodes` に存在していなかった (issue #169)。
 
-## Canonical Commands
+## Canonical Commands (正規コマンド)
 
 - Setup: `ut-tdd setup`
 - Status: `ut-tdd status`
@@ -93,12 +101,17 @@ grep 0 件だった)。
 - Task classification: `ut-tdd task classify --text "..."`
 - Skill suggestion: `ut-tdd skill suggest --text "..."`
 
+(原文は英語。逐語で収める)
+```
 When multiple AI runtimes are available, separate creation from judgement. In
 single-runtime modes, record `intra_runtime_subagent` review evidence as the
 fallback.
+```
 
 ## Skills
 
+(原文は英語。逐語で収める)
+```
 - Load only relevant skills; do not bulk-load the full catalog.
 - Pack / runtime skill content lives under root `skills/`.
 - `src/skill-engine/` is TypeScript implementation code for skill
@@ -106,9 +119,12 @@ fallback.
 - Legacy-derived skill material under `docs/skills/` is source-repo reference /
   migration material unless a task explicitly targets it. Do not treat it as the
   Pack runtime skill root.
+```
 
-## Distribution Repository
+## Distribution Repository (配布リポジトリ)
 
+(原文は英語。逐語で収める)
+```
 - Source development repo: `unison-ai-product/UT-TDD_AGENT-HARNESS`.
 - Clean distribution Pack repo:
   `unison-ai-product/UT-TDD_AGENT-HARNESS-Pack`
@@ -121,6 +137,7 @@ fallback.
   part of the clean Pack artifact set. The command must not commit or push;
   inspect its output and perform any Pack repo commit / push as a separate,
   human-reviewed step.
+```
 
 ## Shared Guard Discipline (both runtimes) (doctor singleton 以外)
 
@@ -189,24 +206,33 @@ one-shot 消費 / memory add 必須 / doctor singleton / effort ladder。矛盾�
 ## Coding Rules (最小実装・残骸除去)
 
 - 最小実装を優先する: 要件を満たす最短の解を選び、投機的な型・契約・層・機能の積み増し (over-engineering) をしない。object-oriented DDD はドメインを小さく凝集させ code 量を減らすための手段であって ceremony を増やすためではない。DDD が code を膨張させているなら設計を疑う。正本は `docs/governance/coding-rules.md` の「最小実装原則」。
+(原文は英語。逐語で収める)
+```
 - Treat Codex / Claude Code as local CLI + hook surfaces managed by UT-TDD, not
   direct API calls.
 - Remove or clearly supersede wrong development residue when it is discovered;
   do not leave misleading comments or dead paths as technical debt.
+```
 
-## Instruction Files
+## Instruction Files (指示ファイル)
 
+(原文は英語。逐語で収める)
+```
 - Shared project context: `CLAUDE.md`
 - Claude Code runtime / hook policy: `.claude/CLAUDE.md`
 - Codex CLI project rules: `AGENTS.md`
 - Personal overrides: `CLAUDE.local.md` / `AGENTS.override.md`
+```
 
 ## UT-TDD Workflow
 
 - Forward: `plan` -> `pair-freeze` -> `implement` -> `trace-freeze` -> `review` -> `accept`
 - Reverse: `R0` → `R1` → `R2` → `R3` → `R4` → Forward への合流 (`docs/process/modes/reverse.md`)
+(原文は英語。逐語で収める)
+```
 - Scrum / PoC: `S0 backlog` -> `S1 plan` -> `S2 poc` -> `S3 verify` -> `S4 decide`
 - Handover: check `.ut-tdd/handover/CURRENT.json` if present and non-stale.
+```
 
 ## PO 指示の解釈 (PO ルール)
 
@@ -216,8 +242,10 @@ one-shot 消費 / memory add 必須 / doctor singleton / effort ladder。矛盾�
 - 強制停止 (作業の即時中断を要する事態) は最高 severity として扱う。担当作業の完了時には handover が必要である
   (機構は `docs/design/` の forced-stop-feedback / handover-mechanism が正本)。
 
-## Architecture Boundary
+## Architecture Boundary (構成の境界)
 
+(原文は英語。逐語で収める)
+```
 - `docs/`: governance, requirements, ADRs, plans, design, test design, migration, archive
 - `src/`: TypeScript/Node harness core
 - `tests/`: Vitest tests
@@ -225,8 +253,12 @@ one-shot 消費 / memory add 必須 / doctor singleton / effort ladder。矛盾�
 - `.ut-tdd/`: UT-TDD runtime state and audit/handover evidence
 - `.claude/`: Claude Code runtime / hook policy
 - `legacy local state/`: historical source state, not UT-TDD state
+```
 
+(原文は英語。逐語で収める)
+```
 V-model artifacts must stay separated:
+```
 
 - design: `docs/design/`
 - implementation: `src/`

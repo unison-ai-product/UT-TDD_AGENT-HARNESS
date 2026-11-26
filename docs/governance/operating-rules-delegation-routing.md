@@ -79,7 +79,7 @@ control lane の合図を待つことを基本にせず、止まったら相手�
 #1247 は、昼まで control の合図を待って着手されなかった。仕組み (依頼・督促・止まっている依頼の一覧) と Pack への
 配布は #1465 の後続で扱い、本節は規律だけを定める。
 
-## Model / Effort Routing
+## Model / Effort Routing (モデルと effort の割当)
 
 正規委譲経路 (`ut-tdd codex/claude --role <role>`) は role 検証 + routing を機械強制する
 (PLAN-L7-255、`src/team/delegation-routing.ts`): 未登録 role は fail-close。判断ゲート role
@@ -147,14 +147,20 @@ Task-kind ベースの割当 (PO rule 2026-07-14、旧 tier 記述を supersede)
   「xhigh 以上はモデルを上げたほうがいい」)。ラダー外 (haiku 等) は従来既定
   (Claude `high` / GPT `middle`)。明示 `--effort xhigh` は有効で、UI/UX は
   task-kind 例外 (PO rule 2026-07-08)。
+(原文は英語。逐語で収める)
+```
 - Implementation work in `hybrid` is cross-executed and cross-reviewed: the
   non-orchestrating provider executes, and review returns to the other
+```
   provider (tier-router implementation lane, PO rule 2026-07-08). FLAG 後の
   軽作業の是正は同 PR 内で author family が行い、同じ非著者 reviewer が exact head を
   再検する (PO rule 2026-09-14、§FLAG 後の限定是正と merge)。
+(原文は英語。逐語で収める)
+```
 - Design/implementation review uses a top reviewer model: GPT frontier
   (`gpt-6.1-sol`) or Claude Opus (`claude-opus-5-5`) or above, behind the
   explicit frontier gate.
+```
 - advisor (PO rule 2026-07-29、2026-07-14 の行列を supersede): **技術判断**
   (実装方式 / トラブルシューティング) は `gpt-6.1-sol` 一次 (fallback Fable)、
   **設計・進行判断** (設計方式 / レーン選択 / 優先順位 / 段取り) と
