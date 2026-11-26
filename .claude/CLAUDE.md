@@ -1,5 +1,7 @@
 # Claude Code Runtime Policy - UT-TDD Agent Harness
 
+本ファイルは 10,000 文字以下に保つ (PO 指示 2026-11-26)。移した節の本文は `docs/governance/operating-rules-claude.md` にある (以下 `C`)。Hooks 一覧・Allowlist・Adapter Rule Markers は機械照合のためここに原文で残す。
+
 ## Active Runtime Boundary
 
 This repository's Claude Code runtime is part of UT-TDD Agent Harness.
@@ -35,23 +37,9 @@ fail-close するので、hook を足す・変える場合は両方を同時に�
 
 hook・CLI・検査の実行系は Node.js とする (`package.json` の `utTdd.nodeToolchain.nodeAuthority`、#134)。
 
-Historical behavior may be referenced for migration, but implementation must
-live in UT-TDD-owned paths.
-
 ## Doctor Invocation Discipline (PLAN-L7-442)
 
-`ut-tdd doctor` is a long-running **singleton** inspection. A second
-concurrent run fails fast with exit 2 and the holder's pid.
-
-For shared doctor behavior and its write boundary, see the doctor bullet in the
-root `CLAUDE.md` §Shared Guard Discipline.
-
-- exit 2 (already running) means **wait for the running doctor**; do not retry,
-  do not re-launch with a different invocation form (`node -e`, `--json`, direct
-  `runDoctor`). Retry storms starve the machine (2026-07-16 incident: 16
-  concurrent doctors, 31MB free RAM).
-- Prefer scoped/targeted checks (`--scope toolchain`, direct check functions in
-  tests) when you only need a slice.
+`ut-tdd doctor` is a singleton: exit 2 means another run is active, so **wait**; never retry or re-launch in another form. Use `--scope` for a slice. 本文は C §Doctor Invocation Discipline (PLAN-L7-442) の本文 (doctor を起動するとき)。
 
 ## 設計と作業の正本
 
@@ -80,102 +68,23 @@ can be recorded.
 
 ## 着手前 advisor 合意形成 (PO ルール 2026-07-28、Claude 固有)
 
-Opus が orchestration を担当するとき、**設計・実装・修正の方式判断は着手前に
-`ut-tdd advisor` で合意形成する**。Fable が指揮するときは、設計・進行・UI の判断は自分で決めて記録し
-(advisor の一次が自分自身のため)、技術判断だけ `ut-tdd advisor` で Sol に掛ける。Sonnet が指揮するときの
-相談先は Opus であり、advisor は使わない (§委譲と判断層 の「あなたが○○なら」の表)。対象は「trade-off が実在する方式選択」に限る
-(`docs/governance/design-decision-elicitation.md` と同じ線引き。自明な修正・可逆な作業・
-自力で確定できる事実は対象外)。
-
-- 実行: `ut-tdd advisor --decision <kind> --current-model <model> --execute --task "..."`
-  技術判断 (implementation / troubleshooting) は `gpt-6.1-sol` 一次、設計・進行判断 (design / progress) と
-  デザイン/UI は `claude-fable-5-2` 一次 (Model / Effort Routing 節、PO 2026-07-29)。
-  レーン選択・着手順・優先順位は **progress** であって技術判断ではない。
-- **advisor の回答を鵜呑みにしない**。前提が事実か実測で確かめ、食い違ったら実測を突き返す
-  (2026-07-28 実例: doctor 二重実行の方式判断で、memo 共有テストが 1 件でなく 19 件という
-  実測を差し戻して初回推奨が撤回された)。
-- 採択結果は対応する設計文書または GitHub Issue へ記録する。推奨と異なる決定 (override) をした場合は、
-  その根拠となる実測 (run URL / テスト名 / 計測値) を併記する。
-
-これは運用上の規則である。遵守は既存の発火ログで随時 spot-check できる。`ut-tdd advisor` は
-`.ut-tdd/logs/session/advisor-<provider>-<ts>.jsonl` を書き、`projectHookEvents` が
-harness.db の `hook_events` へ投影する。session_id は `advisor-` で始まる。
-
-```bash
-# 既存ログの advisor 発火件数を数える
-node -e "const fs=require('fs'),d='.ut-tdd/logs/session';let n=0;for(const f of fs.readdirSync(d).filter(x=>x.startsWith('advisor-')))for(const l of fs.readFileSync(d+'/'+f,'utf8').split(/\r?\n/)){if(l.trim()&&JSON.parse(l).event_type==='tool_use')n++}console.log(n)"
-```
+設計・実装・修正の方式判断は着手前に `ut-tdd advisor` で合意形成する。本文は C §着手前 advisor 合意形成 (方式判断をするとき)。
 
 ## 委譲と判断層 (PO ルール 2026-07-28、Claude 固有)
 
-**作業は下位モデルへ委ねて判断層を厚くする。** orchestrator (Fable / Opus) が自分で
-書き下ろすのではなく、創出は worker tier、判断は frontier tier に置く。Sonnet が指揮するときも
-通常の作業は Haiku へ振り、難所だけ自分で行う (「あなたが○○なら」の表の Sonnet 行)。
-
-- 手を動かす作業の主力 = Haiku (`claude-haiku-5-5`)。難所 (自明でない実装・設計文書の起草) = Sonnet
-  (`claude-sonnet-5-5`)。実装 = Codex 側 worker (Luna `gpt-6-luna`)。範囲の正本は `../CLAUDE.md` §Model / Effort Routing。
-- orchestrator (Fable / Opus) は orchestration を原則とし、発見を判断して処理することに専念する。
-  Opus は判断と検証、Fable は PO 前のエスカレーションと大規模設計の相談役である。
-- 判断ゲート (review / blind-review / qa / tl / security) は族内 frontier tier。
-  正規委譲経路 (`ut-tdd codex|claude --role <role>`) がこの routing を機械強制する
-  (`src/team/delegation-routing.ts`、未登録 role は fail-close)。
-
-**review は成果物を書いていない family の上位モデルで行う** (attacker/defender 分離):
-
-- Codex が実装 → **Claude** が review。Claude が実装 → **Codex** が review。
-- closing review の証跡は、対象の PR と同じ head に結び付いた review custody の receipt に残す。
-- 単一 runtime しか使えない場合のみ `intra_runtime_subagent` を記録する
-  (cross_agent を僭称しない)。
-- **FLAG 後の軽作業是正は同 PR 内で往復する** (PO ルール 2026-09-14、正本: `../CLAUDE.md`
-  §FLAG 後の限定是正と merge)。Codex 著 PR では Claude Opus (blind-reviewer) が FLAG → Codex が
-  同 PR 内で是正 → Opus が新 exact head を再検。Claude 著 PR では Sol が FLAG → Claude (Sonnet 是正、
-  別 session) → Sol が再検 → Claude control lane が wrapper merge。review の族分離は変えない。
+作業は下位モデルへ委ね、判断層を厚くする。review は成果物を書いていない family の上位モデルで行う。本文は C §委譲と判断層 (委譲・review するとき)。
 
 ### あなたが○○なら (指揮モデル別の振る舞い、PO ルール 2026-10-09)
 
-指揮 (orchestration) を担当するモデルは、自分の行に従う。PO が `/model` でどのモデルを選んでも
-指揮が回るようにするためであり、迷った判断は **1 段上のモデルへ相談する**。
-
-| あなたが | 迷った判断・難所 | レビュー・UI デザイン判断 | 通常の作業 | 軽い作業 |
-|---|---|---|---|---|
-| Fable | 自分で決めて記録する。技術判断だけ Sol に相談する (`ut-tdd advisor`)。PO 前のエスカレーションと大規模設計の相談役でもある | 委譲経路 (`ut-tdd claude --role` / `ut-tdd codex --role`、Opus / Sol) | Haiku (難所は Sonnet) | Haiku |
-| Opus | 計画と判断は自分でせず、全て Fable へ投げる (`ut-tdd advisor` の `--decision design` / `progress` / `uiux`、技術判断は Sol)。自分の仕事は、誰に振るかを決めることと、結果を抜き取りで検収して PO へ報告することだけ | closing review は委譲経路 (`ut-tdd claude --role` / `ut-tdd codex --role`) | Haiku (難所は Sonnet) | Haiku |
-| Sonnet | Opus に相談する (Agent tool の汎用の型に `model: opus` を渡す。相談の回答は closing の根拠にしない) | 委譲経路 (`ut-tdd claude --role <role>`、Opus) | Haiku (難所は自分) | Haiku |
-| Haiku | 指揮をしない。判断が出たら Sonnet に相談する | ― | ― | 自分 |
-
-- Agent tool の subagent は手を動かす層 (草稿・調査・並列作業) であり、closing の権限を持たない。レビューの verdict・merge の根拠は
-  委譲経路 (`ut-tdd claude|codex --role <role>`) と review custody だけが持つ (`../CLAUDE.md` §Model / Effort Routing の 2 層)。
-- 「通常の作業」は手を動かす作業全般 (型が決まった書き物・通常の文書修正・基準が明示できるコード・テストの編集) で、
-  既定は Haiku、難所 (自明でない実装・設計文書の起草・基準が全部は明示できない編集・決まった UI デザインの実装) は Sonnet。
-  「軽い作業」は読む・確かめる・集める作業 (gh の状態確認・grep・CI の見張り・CI ログの要約・diff の確認) で Haiku。
-  意味・完了の判定は任せない。例は短く挙げただけで、範囲・委譲する形としない形・
-  Haiku の文脈上限の正本は `../CLAUDE.md` §Model / Effort Routing。
-- どの行でも変えないもの: モデル割当は Model / Effort Routing (`../CLAUDE.md`) と
-  `src/team/delegation-routing.ts` の機械強制に従う。review の族分離 (Codex 著 → Claude Opus、
-  Claude 著 → Codex Sol) は指揮モデルに依らない。PO へ上げてよい条件は `../CLAUDE.md`
-  §PO 判断への反射的エスカレーション禁止 のまま (相談しても割れた trade-off と高影響境界だけ)。
-- 根拠 (2026-10-09 実測): Sonnet で control lane を回した間に、古い wake 通知への 1 行返事に
-  数十ターンを使い、自分で決めるべき canary.7 の時期を PO に尋ね、#939 の再検が遅れた。
-  1 段上へ相談する経路が無かったことが原因である。
-- 根拠 (PO 2026-11-11): 原則 Sonnet か Haiku へ振り、指揮は発見の判断と処理に専念する。Haiku 5.5 の性能向上で主力に
-  押し上げ、難所に Sonnet、判断と検証に Opus、PO 前の相談と大規模設計に Fable を置く。コストを下げ、速度と精度を上げる。
-- ルールであって機械強制ではない。同じ失敗が再発したら、SessionStart で指揮モデルの行を表示する
-  仕組みを検討する。
+指揮モデル別の相談先と委譲先の表。本文は C §あなたが○○なら (指揮を担うとき)。
 
 ### lane 間の依頼
 
-止まったら待たずに依頼をかける規律は `../CLAUDE.md` §lane 間の依頼 が正本 (両ランタイム共通)。
+止まったら待たずに依頼をかける。正本は `../CLAUDE.md` §lane 間の依頼 (本文は C §lane 間の依頼)。
 
 ### 唯一の回避条件: 利用上限による停止
 
-上記の委譲・cross-review 構造を外してよいのは (「あなたが○○なら」の表の Sonnet 行の自己実行は
-委譲構造の一部であり、ここでいう回避ではない)、**担当すべき family / tier のモデルが
-利用上限 (rate / usage cap) で停止していて実行できないときだけ**。それ以外の理由
-(急ぎ・面倒・コスト・自分で書いた方が速い) は回避理由にならない。
-
-回避する場合は理由を記録する (どのモデルが、いつ、どの上限で止まったか)。回避のまま
-`cross_agent` を称してはならない — 上限で別 family を使えなかった場合は
-`intra_runtime_subagent` として記録し、上限解除後に cross review を取り直す。
+委譲・cross-review の構造を外してよいのは、担当 family のモデルが利用上限で停止したときだけ。本文は C §唯一の回避条件: 利用上限による停止。
 
 ## Native Tool Invocation
 
@@ -191,26 +100,7 @@ plain fenced command for a human to run if the native tool is unavailable.
 
 ## Subagent Guard
 
-`PreToolUse(Agent|Task)` uses:
-
-```bash
-node "${CLAUDE_PROJECT_DIR}/.claude/hooks/agent-guard.ts"
-```
-
-Rules (contract: `docs/design/harness/L6-function-design/agent-guard-delegation-boundary.md`):
-
-1. An envelope without `tool_name` is blocked and cannot be bypassed.
-2. `subagent_type` must be one of the generic types below (exact, case-sensitive). The
-   harness keeps no subagent definition files (#1002); expertise is passed per task as
-   skills, decision packs, and design excerpts.
-3. Agent calls without an explicit, normalizable model are blocked.
-4. `fable` is not allowed in the Agent tool (the apex tier stays with the delegation path).
-5. The guard has no model floor. The floor for judgement gates lives in
-   `REVIEW_GATE_ROLES` (`src/team/delegation-routing.ts`).
-6. A subagent has no closing authority: its output is never a review verdict or a merge
-   basis. Closing review goes through `ut-tdd claude|codex --role <role>` and review custody.
-7. Bypass is allowed only with `UT_TDD_ALLOW_RAW_AGENT=1` (type / model / fable checks only)
-   and must leave evidence. Invalid stdin JSON or unverifiable state fails closed.
+`PreToolUse(Agent|Task)` uses `node "${CLAUDE_PROJECT_DIR}/.claude/hooks/agent-guard.ts"`. Rules 1-7 and `blind-reviewer`: C §Subagent Guard の規則本文. A subagent has no closing authority; `fable` is not allowed; bypass only with `UT_TDD_ALLOW_RAW_AGENT=1`.
 
 Allowlist:
 
@@ -219,53 +109,13 @@ Allowlist:
 - `Plan`
 - `claude`
 
-`blind-reviewer` is a judgement-gate role name, not an Agent tool subagent. It is invoked
-through `ut-tdd claude|codex --role blind-reviewer` and judges the artifact against spec
-and self-run tests only, with the author's claims, self-assessment, intent, prior
-verdicts, and identity withheld by the orchestrator when it builds the packet. In
-`hybrid` the blind review runs on the provider that did not author the change; single-runtime
-modes record `intra_runtime_subagent` evidence instead. FLAG 後の軽作業の是正は
-author family が同 PR 内で行い、同じ非著者 reviewer が新 exact head を再検する。契約改訂へ
-戻すのは上位契約の齟齬だけ (`../CLAUDE.md` §FLAG 後の限定是正と merge)。
-
 ## Parallel Task Limit
 
-Tasks that do not depend on each other may be submitted in parallel, default
-upper limit **8** concurrent subagent slots for in-lane parallelism through the Agent tool
-(`DEFAULT_MAX_PARALLEL` in `src/runtime/agent-slots.ts`, IMP-050). `agent-slots` records fire/release and
-warns when active slots reach this limit; it does not hard-block above it
-(fail-open advisory, not a fail-close gate). This restores the reference that
-`src/runtime/agent-slots.ts` and `docs/design/harness/L6-function-design/agent-slots.md`
-point back to (PLAN-RECOVERY-12, issue #85).
+Default upper limit **8** concurrent subagent slots (`DEFAULT_MAX_PARALLEL`, `src/runtime/agent-slots.ts`, fail-open advisory). 本文は C §Parallel Task Limit の本文。
 
 ## Guard Rules
 
-- Escalate before changing authentication, authorization, payments, PII,
-  licenses, production infrastructure, destructive operations, or external API
-  assumptions.
-- `PreToolUse(Edit|Write|MultiEdit)` blocks edits to uncommitted files not
-  touched by the current Claude session. This prevents one runtime from
-  overwriting the other runtime's in-flight work. Override with
-  `UT_TDD_ALLOW_FOREIGN_EDIT=1` (env, human/out-of-band) or, mid-session, by
-  writing a non-empty reason to `.ut-tdd/state/foreign-edit-override`; marker
-  bypasses are audited to `.ut-tdd/logs/foreign-edit-overrides.jsonl`. An empty
-  marker does not bypass (no silent override without a recorded reason). The
-  marker is **one-shot**: it is consumed (deleted) on the foreign edit it
-  authorizes, so a stale marker cannot keep bypassing the guard. The env
-  override is human-managed and not consumed.
-- The foreign-edit-override marker is **not scoped to the session that wrote
-  it**: any process reading `.ut-tdd/state/foreign-edit-override` before it is
-  consumed can spend it — it is first-come, first-served across concurrent
-  sessions, not an authorization tied to the writer's own next foreign edit
-  (observed 2026-07-17T01:33:51, a separate session consumed another
-  session's marker; see `.ut-tdd/logs/foreign-edit-overrides.jsonl`).
-- Do not treat `legacy local state/` as active runtime state.
-- Do not write secrets, PII, or credentials into docs, examples, or audit
-  evidence.
-- Respect explicit fail-open / fail-close hook design; do not ignore hook
-  failures silently.
-- Native Windows behavior is first-class. WSL2 is optional compatibility, not a
-  required condition.
+Escalate before auth / payments / PII / licenses / production / destructive / external API changes. foreign-edit override (`UT_TDD_ALLOW_FOREIGN_EDIT=1` or one-shot `.ut-tdd/state/foreign-edit-override` with a reason) is not session-scoped. 本文は C §Guard Rules の本文。
 
 ## Cutover Boundary
 
@@ -285,6 +135,7 @@ The projection writer and its tests are here.
 - `.ut-tdd/` is writable generated runtime state.
 - `.claude/settings.json` uses package-local commands only.
 - Personal absolute paths are not required for normal operation.
+
 
 ## UT-TDD Adapter Rule Markers
 
