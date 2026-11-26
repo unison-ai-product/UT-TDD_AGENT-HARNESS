@@ -28,7 +28,7 @@ issue: 1490
 | --- | --- | --- | --- | --- | --- |
 | `applyReconciliation` | `(db: HarnessDb, plan: ReconciliationPlan) => void` | `db` は `runSqliteTransaction` の有効な transaction 内にあり、`plan` は evidence と既存行の突合後に組み立てられている。追加行は `GateRunRow` の6列または `ExpectedWorkflowRow` の9列を持つ。 | 各追加行の全列名・値が共通行検査を通った場合だけ、それぞれの raw `INSERT` が行われる。拒否または INSERT 制約違反は失敗を transaction 境界へ伝え、transaction 開始時の DB 状態へ rollback する。 | 検査対象は実際に各 INSERT へ渡す全列である。検査拒否の診断・保存先に拒否値を含めず、検査失敗後に処理を継続しない。upsert は使わない。 | `CANDIDATE-U-GPRV-001`, `CANDIDATE-U-GPRV-002` |
 
-`CANDIDATE-U-GPRV-001` の secret-like 入力は、JSON 証跡から `gate_runs` / `workflow_runs` の各保存列へ投影された値を指す。各経路で削除を先行させ、`workflow_runs` のケースでは先行する正常な `gate_runs` 追加も行わせたうえで拒否し、rollback 後の両テーブルの列値が開始時と同一であることを確認する。`CANDIDATE-U-GPRV-002` は通常の repo-relative `evidence_path` を含む期待行の保存と、同一主キーの `INSERT` 拒否および既存行不変を確認する。両 oracle は対になる L7 にケースごとの fixture と観測条件を定める。
+`CANDIDATE-U-GPRV-001` は `gate_runs` と `workflow_runs` の各保存経路で行検査が拒否し、transaction rollback が開始時の状態を保つことを確認する。JSON 証跡は gate 経路の入力とし、workflow 経路は検査対象行を独立して制御する。`CANDIDATE-U-GPRV-002` は通常の repo-relative `evidence_path` を含む期待行の保存と、同一主キーの `INSERT` 拒否および既存行不変を確認する。ケースごとの入力生成と先行操作の観測条件は対になる L7 に定める。
 
 ### 2.2 保存前の行検査
 
@@ -37,7 +37,7 @@ issue: 1490
 | 書き込み先 | 検査する全列 | 入力の由来 |
 | --- | --- | --- |
 | `gate_runs` | `gate_run_id`, `gate_id`, `plan_id`, `status`, `checked_at`, `evidence_path` | 合成された期待行の値。通常の証跡では JSON 証跡から投影された値と証跡パスを含む。 |
-| `workflow_runs` | `workflow_run_id`, `plan_id`, `drive_run_id`, `workflow`, `phase`, `ready_status`, `blocked_reason`, `human_required`, `checked_at` | 対応する routine-gate 期待行の値。gate の ID・状態・時刻、照合対象の PLAN から合成される。 |
+| `workflow_runs` | `workflow_run_id`, `plan_id`, `drive_run_id`, `workflow`, `phase`, `ready_status`, `blocked_reason`, `human_required`, `checked_at` | 対応する routine-gate 期待行の値。gate の ID・状態・時刻、照合対象の PLAN から合成される。検査単体の拒否確認では L7 が制御する期待行を使う。 |
 
 JSON 証跡から上記の列へ取り込んだ文字列は検査対象である。テーブル列へ保存しない証跡 payload はこの行検査の対象外であり、既存の証跡入力検証の責務を変えない。正常なリポジトリ相対 `evidence_path` などの通常値は誤拒否しない。
 
