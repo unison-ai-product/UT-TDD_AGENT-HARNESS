@@ -175,7 +175,13 @@ advisor unavailableの証跡を添えてPOへ上げる。高影響境界に該�
 
 ## GitHub Issue Hierarchy
 
-本文は G の同名の節 (Issue を起票・分割するとき)。
+- 正本は `docs/governance/github-issue-hierarchy.md`。
+- 新規 Issue の前に既存の成果目標を検索し、bounded slice は GitHub の正式な sub-issue にする。
+- top-level Issue は独立した成果目標だけに限定し、`Related` や本文の `Parent: #N` を親子関係の
+  代替にしない。
+- canonical parent は 1 件。別系統は横断リンクに留め、無関係な移行をブロッカー化しない。
+- 親 Issue は必須子 Issue と親固有 AC の両方が完了するまで close しない。
+- PR 本文の `Closes #N` と `Refs #N` の使い分けは正本 §4 に従う (本ファイルへ本文を複製しない)。
 
 ## Canonical Commands
 

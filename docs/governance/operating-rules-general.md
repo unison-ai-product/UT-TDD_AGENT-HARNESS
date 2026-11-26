@@ -55,16 +55,6 @@ GitHub の Issue / PR / Discussion のタイトル、本文、コメント、レ
 要点と対応内容を日本語で併記する。Claude / Codex のどちらが起票・更新してもこの規則を適用し、既存記載を更新する際は
 無関係なスコープを広げず、変更対象のタイトル・本文・コメントだけを日本語化する。
 
-## GitHub Issue Hierarchy
-
-- 正本は `docs/governance/github-issue-hierarchy.md`。
-- 新規 Issue の前に既存の成果目標を検索し、bounded slice は GitHub の正式な sub-issue にする。
-- top-level Issue は独立した成果目標だけに限定し、`Related` や本文の `Parent: #N` を親子関係の
-  代替にしない。
-- canonical parent は 1 件。別系統は横断リンクに留め、無関係な移行をブロッカー化しない。
-- 親 Issue は必須子 Issue と親固有 AC の両方が完了するまで close しない。
-- PR 本文の `Closes #N` と `Refs #N` の使い分けは正本 §4 に従う (本ファイルへ本文を複製しない)。
-
 ## Canonical Docs (正本文書の一覧)
 
 - `docs/governance/ut-tdd-agent-harness-concept_v3.1.md`
