@@ -35,6 +35,12 @@ SessionStart の Memory 読取、inbox 復旧、復旧後の要約の間でも�
 HEAD と作業ツリー、origin の検証は既存 loader が担当する。root の symlink / escape 検査、
 typed deny、エラー時の各呼び出し元の扱い、Memory と inbox の保存先は従来の契約に従う。
 
-SessionStart は既存の event append と後続処理の順序、同期処理、設定の 30 秒を維持する。
-digest の PR 検査と inbox 復旧の GitHub 呼び出しは別の契約で扱う。
-[Issue #1938 の進行判断](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/1938#issuecomment-7126608255)
+SessionStart は既存の event append と後続処理の順序、同期処理、source settings の 30 秒を維持する。
+Pack consumer の 60 秒設定とは別の値である。起動時は inbox の PR state 照合 (`gh pr view`)
+と digest の post-merge backstop 走査 (`gh api`) を行わない。それぞれの状態は digest に
+「未照合」と個別に示し、未照合を PR の完了・承認や検知 0 件と扱わない。durable な terminal
+事実が無い inbox review は pending のまま保持する。inbox の通常観測は既存の
+`hook claude-memory-wake` 実行時に行い、post-merge backstop は既存の独立した feedback 側の
+実行時に走査する。共有 timeout、review custody、merge gate は変更しない。
+
+[Issue #1938 の進行判断](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/1938#issuecomment-7181940852)
