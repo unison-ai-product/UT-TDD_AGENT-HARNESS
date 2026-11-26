@@ -10,26 +10,11 @@ Separation of responsibilities:
 
 ## コミュニケーション (報連相)
 
-チャット上の報連相 (報告・連絡・相談) は **日本語** で行う (PO ルール、2026-06-22)。
-進捗報告・調査結論・選択肢提示・確認依頼など PO へ向けた chat 出力は日本語を既定とし、
-見出し・箇条書きラベルも日本語を優先する。これは Claude / Codex 両ランタイム共通のルール
-(`CLAUDE.md` / `.claude/CLAUDE.md` と同一)。
-
-ただし成果物はそれぞれの規約に従う: コード/識別子/commit message は従来どおり、ファイル名は
-英語 (文字化け回避)、技術用語・コマンド・Issue ID・パスは原語のまま埋め込んでよい (無理に和訳しない)。
-
-**ドキュメント本文 (`docs/` 配下の ADR / design / test-design / governance 等) は日本語で書く**
-(PO ルール、2026-06-30。Claude / Codex 両ランタイム共通)。コード・識別子・コマンド・Issue ID・パスは
-英語/原語のまま。Windows 文字化けは UTF-8 化 (`.editorconfig` charset=utf-8 / `.gitattributes` eol=lf) と
-`readability` gate (mojibake fail-close) で防ぐ前提であり、**文字化け回避を理由に doc を英語化しない**。
+本文は docs/governance/operating-rules-codex.md §コミュニケーション (報連相) (chat と docs の言語を決めるとき)。
 
 ### 設計判断エリシテーション (PO ルール 2026-07-13)
 
-PO への質問は **設計判断 (trade-off が実在する方式選択 / spec 未確定点) に限る**。
-進捗確認・実行許可・自力で確定できる事実は聞かない (可逆作業は進める)。聞き方は
-`docs/governance/design-decision-elicitation.md` の共通フォーマットに従う。Codex には
-構造化質問ツールが無いため、`## 設計判断依頼` 見出し + 選択肢表 (案 / 得るもの / 失うもの、
-推奨を先頭に「(推奨)」+ 理由 1 行) の markdown を出力して停止する。採択結果は設計文書、GitHub Issue または ADR に記録する (skill: `skills/design-decision-elicitation.md`)。
+本文は docs/governance/operating-rules-codex.md §設計判断エリシテーション (PO ルール 2026-07-13) (PO へ設計判断を質問するとき)。
 
 ## Core Reads
 
@@ -46,25 +31,9 @@ their workflow.
 - `docs/adr/ADR-001-ut-tdd-harness-redesign-and-language.md` - redesign policy and TypeScript/Node implementation language
 - `docs/governance/README.md` - canonical / reference / archive boundary under governance
 - `docs/governance/operating-rules-review-merge.md` / `operating-rules-delegation-routing.md` / `operating-rules-general.md` - rule text moved verbatim out of `CLAUDE.md` (PO 2026-11-26); `CLAUDE.md` keeps headings and one-line pointers. Read the one a pointer names when its condition applies; they are canonical for both runtimes.
+- `docs/governance/operating-rules-codex.md` - Codex-specific rule text moved verbatim out of this file (PO 2026-11-26); `AGENTS.md` keeps headings, one-line pointers, Core Reads, Session Start, Hooks, and the adapter markers.
 
-Migration snapshots and inventories are not Core Reads. Read `docs/migration/`
-only when migration, gap audit, or regression-source inspection requires it. Do
-not treat it as UT-TDD runtime state or execution paths.
-
-Do not load `docs/design/harness/L3-functional/roadmap.md` as a normal startup
-read. The verification roadmap is read dynamically only at V-model freeze
-boundaries when a verification cycle is being run. Normal work follows the
-Forward descent path from L0 to L14.
-
-ADR-001 is binding: The previous framework is a design source only. UT-TDD core implementation is
-TypeScript/Node. old W1-W3a Python is not ported as product runtime.
-Thin `.ps1` / `.sh` entrypoints may call the compiled or Node-based TypeScript
-core. The language of repositories governed by UT-TDD is independent of the
-harness implementation language.
-
-`docs/archive/` is not canonical; it is historical material only. The HELIX
-vendor snapshot has been removed now that the fork is complete (see
-`docs/migration/helix-fork-completion-plan.md` §11).
+Core Reads の補足 (migration の読み方・roadmap・ADR-001・archive) は docs/governance/operating-rules-codex.md §Core Reads の補足段落 (Core Reads を超えて読むとき)。
 
 ## Session Start
 
@@ -77,157 +46,23 @@ vendor snapshot has been removed now that the fork is complete (see
 
 ## TL Driven Mode
 
-When Codex CLI is used without another active runtime, act as the technical lead
-for the current slice. This does not replace Claude Code; it means Codex can
-execute, verify, and make gate decisions in `codex-only` or `standalone` modes.
-
-- Carry design, implementation, review, tests, and verification through when
-  feasible.
-- Read relevant existing files before editing.
-- Match existing structure, naming, and test placement.
-- State gate outcomes in the final response when the change size requires them.
-- Escalate before changing production infrastructure, authentication,
-  authorization, payment, PII, secrets, licensing, external APIs, or other
-  high-impact environment assumptions.
+本文は docs/governance/operating-rules-codex.md §TL Driven Mode (Codex が他ランタイム無しで指揮するとき)。
 
 ## UT-TDD Workflow
 
-- Forward: `plan` -> `pair-freeze` -> `implement` -> `trace-freeze` -> `review` -> `accept`
-- Reverse: `R0` → `R1` → `R2` → `R3` → `R4` → Forward への合流 (`docs/process/modes/reverse.md`)
-- Scrum / PoC: `S0 backlog` -> `S1 plan` -> `S2 poc` -> `S3 verify` -> `S4 decide`
-- Additive change: preserve existing design and add deltas through `add-design`
-  / `add-impl`.
-- Handover: use `.ut-tdd/handover/` as the session / cross-runtime handover
-  source.
+本文は docs/governance/operating-rules-codex.md §UT-TDD Workflow (工程の流れを確かめるとき)。
 
 ## Codex / Claude Code Harness
 
-Codex and Claude Code are managed by UT-TDD Agent Harness through contract
-plans, local CLIs, and hooks. They are not direct API calls in this product.
-
-Runtime modes:
-
-- `standalone`
-- `claude-only`
-- `codex-only`
-- `hybrid`
-
-Canonical commands:
-
-- Codex execution: `ut-tdd codex --role <role> --task "..."`
-- Claude prompt generation: `ut-tdd claude --role <role> --task "..."` (without `--execute` it is a dry run)
-- Team delegation: `ut-tdd team run --definition .ut-tdd/teams/<team>.yaml`
-- Task classification: `ut-tdd task classify --text "..."`
-- Skill recommendation: `ut-tdd skill suggest --text "..."`
-- Review packet: `ut-tdd review --uncommitted`
-- Handover: `ut-tdd handover`
-- Status: `ut-tdd status`
-- Doctor: `ut-tdd doctor`
-
-When multiple AI runtimes are available, separate creation from judgement.
-Design decisions, judgement gates, and R4 merge decisions should go through a
-different runtime / model family (MUST in `hybrid`; same-family reviewers are
-rejected, `same_family_reviewer_denied` in `src/feedback/review-admission-check.ts`).
-In single-runtime modes, record
-`intra_runtime_subagent` as the review substitute and leave evidence.
-
-lane 間の依頼 (止まったら待たずに control / ほかの lane / PO へ依頼をかける) は
-`CLAUDE.md` §lane 間の依頼 が正本。
+本文は docs/governance/operating-rules-codex.md §Codex / Claude Code Harness (runtime mode・正規コマンド・creation/judgement 分離を確かめるとき)。
 
 ### あなたが○○なら (Codex 指揮モデル別の振る舞い、PO ルール 2026-10-09)
 
-Codex 側で使うモデルは GPT-6 の Astra / Sol / Terra / Luna の 4 つだけである (委譲経路の ID の正本は
-`src/team/model-policy.ts` の `MODEL_IDS`)。自分の行に従い、解けない判断は **1 段上へ相談する**。
-
-| あなたが | 解けない判断・難所 | やること | 仲間 (下に回す先) |
-|---|---|---|---|
-| Astra (`gpt-6-astra`) | ― | 常用しない。Sol から、超局所の難所の相談だけを受ける | ― |
-| Sol (`gpt-6.1-sol`) | どうしても解けないときだけ Astra に相談する | 常用。自分で判断し、control lane (Claude) と相談しながら Luna に振り、上がってきた成果を検収する | Luna |
-| Terra (`gpt-6.1-terra`) | フロントエンド・UI と設計の判断だけ Sol に相談する | 指揮。Claude 側の Sonnet と同じ位置づけで、チケットを分けて Luna に振り、上がってきた成果を検収し、Issue / PR に返事する。実装は自分でせず Luna に任せる | Luna |
-| Luna (`gpt-6-luna`) | Sol に相談する | worker。control lane の指示を受けて実装・テスト実装・文書修正・探索を行う | Luna の subagent (手を動かす層。仲間を増やして並列に戦う) |
-
-- Sol の「検収」は PR を出す前の族内チェックであり、closing review の代わりにしない。Codex 著の成果物の
-  closing review は従来どおり Claude Opus が行う (§Blind review role、`CLAUDE.md` §FLAG 後の限定是正と merge)。
-- Luna の仲間 (subagent) は手を動かす層であり、closing の権限を持たない。判断する層 (closing review・advisor・merge) は委譲経路 (`ut-tdd claude|codex --role <role>`) と review custody だけが持つ (正本: `CLAUDE.md` §Model / Effort Routing の 2 層)。
-- Astra は `MODEL_IDS` に未登録であり、相談するときは明示の `--model gpt-6-astra` で呼ぶ。
-- Terra は GUI lane の指揮でだけ使い、`MODEL_IDS` には登録しない (委譲経路の role には割り当てない)。
-  Terra が指揮しても、Codex 著の成果物の closing review は Claude Opus が行い、指揮の検収はその代わりにならない。
-  worker は Luna のまま変えない (PO 2026-10-27)。
-- PO へ上げてよい条件は `CLAUDE.md` §PO 判断への反射的エスカレーション禁止 のまま。
-- Claude 側の同じ表は `.claude/CLAUDE.md` §委譲と判断層 にある。
+本文は docs/governance/operating-rules-codex.md §あなたが○○なら (Codex 指揮モデル別の振る舞い、PO ルール 2026-10-09) (自分の指揮モデルの行動と相談先を確かめるとき)。
 
 ### Blind review role (`--role blind-reviewer`)
 
-`ut-tdd codex --role blind-reviewer --task "<packet>"` is the Codex side of blind
-review. `blind-reviewer` / `blind-review` are read-only delegation roles: the
-review session must stay non-destructive (review-guard enforces it), so the role
-inspects and reports — it never implements or edits off-task.
-
-The role judges the artifact, not the author's account. When you build the packet,
-withhold the author's claims, self-assessment, stated intent, prior verdicts, and
-identity/runtime. Run two lanes and report them separately:
-
-- **claim-blind (main)**: artifact + spec/AC + tests you run yourself. Judge
-  whether the artifact satisfies the spec regardless of what the author claims.
-  Prose claims (`N green`, `blast radius 0`, `fully covered`) are not evidence
-  (`coding ≠ substance`, PLAN-L7-89); if they appear in the packet, flag and
-  disregard them and re-derive the verdict from spec + test results.
-- **spec-blind (safety net)**: artifact only, spec withheld too. Judge internal
-  soundness (self-contradiction, obvious bugs, uncovered boundaries, dead code).
-  Requirement satisfaction is out of scope for this lane.
-
-Use the valid-attack taxonomy and citation-only refutation from
-`skills/adversarial-review.md`; verdict is FLAG (an
-un-refuted attack), PASS (all attacks refuted by citation), or PASS-WEAK (no
-attack found, with a trial log of at least three attempted attacks). In `hybrid`,
-route blind review to the provider that did not author the change so
-attacker/defender providers stay separated. The Claude counterpart is
-`ut-tdd claude --role blind-reviewer` (a delegation-path role, not an Agent tool subagent; the harness keeps no subagent definition files, #1002).
-
-FLAG 後の**軽作業の是正は同 PR 内で往復する** (PO ルール 2026-09-14、正本: `CLAUDE.md`
-§FLAG 後の限定是正と merge)。Codex 著 PR では Claude Opus が FLAG → Codex (Luna、別 session)
-が同 PR 内で是正 → Opus が新 exact head を再検。Claude 著 PR では Sol が FLAG → Claude が
-是正 → Sol が再検し、Claude control lane が wrapper merge する。blind-reviewer role 自体は
-read-only のまま。契約改訂へ戻すのは上位契約の齟齬だけ。
-
-Model / effort routing defaults (task-kind ベース、PO rule 2026-07-14):
-
-- Codex (GPT-6 の 4 モデルだけ、PO 2026-10-09 / 2026-10-27): 実装/テスト実装/ドキュメント修正/軽量探索 =
-  Luna (`gpt-6-luna`、effort `high`); 検証/設計/判断 = Sol (`gpt-6.1-sol`、effort `low`);
-  GUI lane の指揮 = Terra (`gpt-6.1-terra`。フロントエンド・UI と設計の判断だけ Sol に相談する);
-  超局所の難所の相談だけ = Astra (`gpt-6-astra`、常用しない)。指揮モデル別の振る舞いは
-  `AGENTS.md` §Codex / Claude Code Harness の「あなたが○○なら」の表。
-- Claude (PO 2026-11-11): 手を動かす作業の主力 = Haiku (`claude-haiku-5-5`);
-  難所 (自明でない実装・設計ドキュメント起草) = Sonnet (`claude-sonnet-5-5`);
-  判断と検証・UI デザインの判断・レビュー = Opus (`claude-opus-5-5`);
-  PO 前のエスカレーションと大規模設計の相談 = Fable。詳細は `CLAUDE.md` §Model / Effort Routing。
-- 並列の軽量レーンは Luna の subagent と Claude Haiku が担う (手を動かす層。closing の権限を持たない。正本: `CLAUDE.md` §Model / Effort Routing の 2 層)。
-- Effort はモデル別基準ラダー (PO rule 2026-07-28) が既定: Sol/Fable = `low`、
-  Opus/Sonnet = `middle`、Luna = `high`。回答が浅い時は
-  **まず effort を 1 段、その先はモデルを上げる** (`escalateShallowResponse`):
-  Sol/Fable → `middle`、Opus/Sonnet → `high`、そこでも浅ければ
-  Sonnet→Opus `middle` / Opus・Luna・Fable→Sol `low`。**`xhigh` は既定として配らない** (PO rule 2026-07-28:
-  「xhigh 以上はモデルを上げたほうがいい」)。ラダー外 (haiku 等) は従来既定
-  (Claude `high` / GPT `middle`)。明示 `--effort xhigh` は有効で、UI/UX は
-  task-kind 例外 (PO rule 2026-07-08)。
-- Design/implementation review uses a top reviewer model: GPT frontier
-  (`gpt-6.1-sol`) or Claude Opus (`claude-opus-5-5`) or above, behind the
-  explicit frontier gate.
-- 正規委譲経路 (`ut-tdd codex/claude --role <role>`) は上記 routing を機械強制する
-  (PLAN-L7-255、`src/team/delegation-routing.ts`): 未登録 role は fail-close、
-  判断ゲート role (reviewer / blind-reviewer / qa / tl 等) は族内 frontier reviewer tier
-  へ固定、worker role は intent 推定既定。明示 `--model`/`--effort` が常に優先。
-  effort は codex にも argv (`-c model_reasoning_effort=...`) で実注入される。
-- advisor (PO rule 2026-07-29、2026-07-14 の行列を supersede): **技術判断**
-  (実装方式 / トラブルシューティング) は `gpt-6.1-sol` 一次 (fallback Fable)、
-  **設計・進行判断** (設計方式 / レーン選択 / 優先順位 / 段取り) と
-  **デザイン/UI 判断** は `claude-fable-5-2` 一次 (次点 `gpt-6.1-sol`)。
-  判断種別は `--decision design|progress|implementation|troubleshooting|uiux`
-  で明示でき、省略時は task 文から推論する (進行語は technical 語より優先)。
-  迷う場合は `ut-tdd advisor --task "..." --current-model <model>` を使い、
-  実相談は `--execute` を付ける。
-
-Do not add legacy commands as current company/product execution paths.
+本文は docs/governance/operating-rules-codex.md §Blind review role (`--role blind-reviewer`) (blind review・FLAG 是正・model/effort routing・advisor を扱うとき)。
 
 ## Hooks (Codex orchestrator parity)
 
@@ -278,32 +113,11 @@ calls.
 
 ## Skills
 
-- Read only the relevant `SKILL.md` for matching triggers.
-- Do not bulk-load all skills.
-- Resolve `references/` relative to the skill directory.
-- Pack / runtime skill content lives under root `skills/` so runnable skill
-  assets are separated from explanatory `docs/` content.
-- `src/skill-engine/` is TypeScript implementation code for skill
-  recommendation / injection / scaffolding. It is not a skill content directory
-  and should stay under `src/` with the rest of the harness core.
-- Legacy-derived skill material under `docs/skills/` is source-repo reference /
-  migration material unless a task explicitly targets it. Do not treat it as the
-  Pack runtime skill root.
+本文は docs/governance/operating-rules-codex.md §Skills (skill を読み込むとき)。
 
 ## Distribution Repository
 
-- Source development repo: `unison-ai-product/UT-TDD_AGENT-HARNESS`.
-- Clean distribution Pack repo:
-  `unison-ai-product/UT-TDD_AGENT-HARNESS-Pack`
-  (`https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS-Pack`).
-- When publishing clean Pack artifacts, push/export to the Pack repo, not back
-  into the source development repo.
-- Standard local propagation from this source repo to an existing Pack checkout
-  is `ut-tdd distribution sync-pack --repo-dir <Pack checkout>`.
-  Use `--prune-local` only when intentionally removing local files that are not
-  part of the clean Pack artifact set. The command must not commit or push;
-  inspect its output and perform any Pack repo commit / push as a separate,
-  human-reviewed step.
+本文は docs/governance/operating-rules-codex.md §Distribution Repository (Pack を配布するとき)。
 
 ## 設計と作業の正本
 
@@ -311,79 +125,23 @@ calls.
 
 ## Editing Rules
 
-- Read target files before editing them.
-- When reading tracked prose or source through PowerShell, specify UTF-8 explicitly
-  (for example `Get-Content -Encoding utf8`) or use Node filesystem reads.
-  Do not trust bare `Get-Content` / ANSI-default output for Japanese text; display
-  mojibake can become real file corruption if copied back into docs. Repository
-  gates enforce UTF-8 no-BOM and mojibake fail-close through `readability`.
-- Match existing code structure, naming, and test placement.
-- 最小実装を優先する: 要件を満たす最短の解を選び、投機的な型・契約・層・機能の積み増し (over-engineering) をしない。object-oriented DDD はドメインを小さく凝集させ code 量を減らすための手段であって ceremony を増やすためではない。DDD が code を膨張させているなら設計を疑う。正本は `docs/governance/coding-rules.md` の「最小実装原則」。
-- Treat existing uncommitted changes and **commits made by the other runtime
-  (Claude)** as legitimate work; do not revert/reset/checkout them without
-  explicit instruction.
-- Do not write secrets, PII, or credentials into docs, rules, examples, or audit
-  evidence.
+本文は docs/governance/operating-rules-codex.md §Editing Rules (編集・UTF-8 読み取りをするとき)。
 
 ## Git Rules (hybrid 多ランタイム協調)
 
-- Use Conventional Commits. Stage explicit paths only (`git add <path>`; never
-  `git add -A` / `git add .`).
-- PR merge は必ず `ut-tdd pr merge --pr <N>` 経由とし、`gh pr merge` の直叩きで迂回しない。
-- **history を書き換える前に `git log` / `git reflog` を確認**し、もう一方のランタイム
-  (Claude) の commit を `reset` / `revert` / `checkout` / force で破棄・デグレさせない。
-  working tree の foreign 変更は既定で「相手ランタイムの正規作業」とみなす。判断不能なら
-  revert せず PO 確認。
-- 自分の成果は相手の commit の上に積み、相手のファイルに触れない。
-- **commit 直前に `git status` + `git diff --staged` (or `ut-tdd review --staged` /
-  `--uncommitted`)** で、authored した意図ファイルのみが staged であることを検証する。
-- push 済み履歴は破壊しない。
-- **引き継ぎ・検証の基準点は commit/push 済 HEAD ただ一つ**。hybrid では working tree を
-  相手ランタイムが常時書き換えるため、full tree の計測値は transient で非正本。検証は HEAD
-  (+ 自分の意図変更のみ) に固定し、測定値が動いたら相手を疑う前に自分の baseline を疑う
-  (foreign tree の transient を相手の退行と帰責しない)。引き継ぎ feedback は harness.db
-  (`feedback_events`、PLAN-L7-110) から受け取り、stale 化する prose handover を正本にしない。
-- **永続教訓は共有 HARNESS メモリへ昇格する** (`ut-tdd memory add`、正本 `.ut-tdd/memory/`、
-  PLAN-L7-189)。PO ルール・教訓・落とし穴をランタイム私的メモリや chat 止まりにしない。
-  **メモリファイルの手書き作成は禁止** — frontmatter (memory_id/kind/title/tags/updated_at)
-  欠落は db rebuild が fail-close し CI が赤化する (2026-07-28 実例: PR #167)。必ず
-  `ut-tdd memory add` 経由で書く。
-  エピソード状態 (進捗・次の一手) はメモリに書かず、DB/HEAD 由来の digest に任せる
-  (stale 化する層を作らない)。
+本文は docs/governance/operating-rules-codex.md §Git Rules (hybrid 多ランタイム協調) (commit・merge・memory 記録をするとき)。
 
 ## GitHub Issue Hierarchy
 
-- 正本は `docs/governance/github-issue-hierarchy.md`。
-- 新規 Issue の前に既存の成果目標を検索し、bounded slice は GitHub の正式な sub-issue にする。
-- top-level Issue は独立した成果目標だけに限定し、`Related` や本文の `Parent: #N` を親子関係の
-  代替にしない。
-- canonical parent は 1 件。別系統は横断リンクに留め、無関係な移行をブロッカー化しない。
-- 親 Issue は必須子 Issue と親固有 AC の両方が完了するまで close しない。
+本文は docs/governance/operating-rules-codex.md §GitHub Issue Hierarchy (Issue を起票・分割するとき)。
 
 ## Doctor Invocation Discipline (PLAN-L7-442)
 
-`ut-tdd doctor` は長時間の **singleton** 検査。2 本目以降は exit 2
-(保持者 pid 付き) で fail-fast する。
-
-doctor の共有動作と書き込み境界は、root `CLAUDE.md` の §Shared Guard Discipline を参照。
-
-- exit 2 (already running) は **実行中 doctor の完了を待つ**。再試行しない。
-  起動形を変えた再実行 (`node -e` / `--json` / `runDoctor` 直呼び) もしない。
-  再試行嵐はマシンを飢餓させる (2026-07-16 incident: doctor 16 本並列、
-  物理メモリ残 31MB)。
-- 一部だけ要るなら scoped 実行 (`--scope toolchain`、テスト内の check 関数直呼び)
-  を優先する。
+本文は docs/governance/operating-rules-codex.md §Doctor Invocation Discipline (PLAN-L7-442) (doctor を実行するとき)。
 
 ## Test Rules
 
-- Docs changes: use `rg` to check old assumptions such as WSL2-required wording,
-  migration-source-as-current wording, personal absolute paths, and mojibake
-  markers.
-- Bash changes: `bash -n <changed-script>`.
-- PowerShell changes: `powershell -NoProfile -ExecutionPolicy Bypass -File <changed-script>`.
-- TypeScript core changes: `tsc --noEmit` plus targeted `vitest`.
-- CLI / hook changes: smoke test Windows PowerShell and POSIX shell paths when
-  relevant.
+本文は docs/governance/operating-rules-codex.md §Test Rules (検証手順を選ぶとき)。
 
 ## Local Overrides
 
