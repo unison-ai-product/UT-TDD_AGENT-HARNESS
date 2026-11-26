@@ -301,6 +301,7 @@ describe("SessionStart project identity reads", () => {
     ensureTrackedProjectIdentity(root, "fixture/session-start-independent-observation");
     const project = resolveProjectMemoryRoot(root);
     if (!project.ok) throw new Error(project.reason);
+    const requestDigest = "a".repeat(16);
     const entry = buildClaudeProviderReviewInboxEntry({
       memory: SESSION_MEMORY,
       projectId: project.projectId,
@@ -308,8 +309,8 @@ describe("SessionStart project identity reads", () => {
       workspaceId: claudeWorkspaceId(root),
       producer: { provider: "codex", sessionId: "codex-observation" },
       target: { scope: "session", provider: "claude", sessionId: "wake-observation" },
-      requestDigest: "a".repeat(16),
-      requestPath: ".ut-tdd/review/requests/wake-observation.json",
+      requestDigest,
+      requestPath: `.ut-tdd/review/requests/${requestDigest}.json`,
       pr: 1998,
       exactHead: "c".repeat(40),
       reviewRevision: "wake-observation",
@@ -331,6 +332,18 @@ describe("SessionStart project identity reads", () => {
       });
       expect(wake.kind).toBe("timeout");
       expect(observedPr).toBe(entry.pr);
+      const inboxRoot = join(project.runtimeBusRoot, "claude-memory-wake");
+      const markers = readdirSync(inboxRoot).filter((name) => name.endsWith(".terminal.json"));
+      expect(
+        markers.map((name) => JSON.parse(readFileSync(join(inboxRoot, name), "utf8"))),
+      ).toEqual([
+        expect.objectContaining({
+          reason: "pr_merged",
+          requestDigest,
+          pr: entry.pr,
+          exactHead: entry.exactHead,
+        }),
+      ]);
 
       const commands: Array<{ file: string; args: readonly string[] }> = [];
       const backstop = scanPostMergeBackstop({
