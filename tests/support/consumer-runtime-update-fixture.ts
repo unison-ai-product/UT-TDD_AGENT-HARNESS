@@ -8,6 +8,7 @@ import {
   mkdtempSync,
   readdirSync,
   readFileSync,
+  realpathSync,
   rmSync,
   statSync,
   writeFileSync,
@@ -269,7 +270,7 @@ export function runtimeUpdateActivePointer(root: string): {
   readonly bundlePath: string;
   readonly bytes: Buffer;
 } {
-  const path = join(root, ".ut-tdd", "runtime", "activation", "active.json");
+  const path = realpathSync.native(join(root, ".ut-tdd", "runtime", "activation", "active.json"));
   const bytes = readFileSync(path);
   return {
     path,

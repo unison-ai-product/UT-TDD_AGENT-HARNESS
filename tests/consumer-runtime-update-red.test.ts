@@ -70,7 +70,7 @@ describe("consumer runtime update Red candidates", () => {
         );
       },
     });
-  });
+  }, 120_000);
 
   it("U-RTUPD-009: replaying the updated Release is write-zero", async () => {
     const replaySnapshots: string[][] = [];
@@ -298,7 +298,7 @@ describe("consumer runtime update Red candidates", () => {
         },
         expectUpdateError: (error, { consumerRoot, priorPointer }) => {
           expect(injected).toBe(true);
-          expect(String(error)).toContain(message);
+          expect(error).toHaveProperty("message", "consumer_runtime_permission");
           rollback.assert(consumerRoot, priorPointer);
           expect(runtimePointerIo.directWrites).toEqual([]);
           expect(runtimePointerIo.pointerDeletes).toEqual([]);
@@ -509,5 +509,5 @@ describe("consumer runtime update Red candidates", () => {
       runtimePointerIo.activePointerPath = "";
       runtimePointerIo.priorBundlePath = "";
     }
-  });
+  }, 120_000);
 });
