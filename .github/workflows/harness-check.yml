@@ -9,7 +9,7 @@
 # トリガは §7.5-7.6 の「全 PR 共通 aggregate harness-check」契約に従い pull_request を base 限定しない
 # (stacked PR (base≠main) を除外しない — issue #57 / PLAN-L6-82)。solo main 直開発の即 dogfood 用に `push: [main]` を維持する。
 #
-# 現状実装される subjob = branch-type guard + typecheck + db rebuild + 全回帰 (vitest) + biome lint + audit quality + doctor。
+# Linux checks are split by responsibility into classify, PR-discipline, static, and regression jobs.
 # この source workflow の `npm run test` / raw vitest 全量回帰は source-only governance docs を前提にする。
 # clean Pack workflow は `docs/templates/github/common/pack-harness-check.yml` の Pack smoke test と setup-smoke doctor を使う。
 #
@@ -46,8 +46,10 @@ concurrency:
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
-  harness-check-linux:
+  classify:
     runs-on: ubuntu-latest
+    outputs:
+      lane: ${{ steps.classify.outputs.lane }}
     steps:
       - name: checkout
         uses: actions/checkout@v5
@@ -62,13 +64,6 @@ jobs:
 
       - name: install deps (frozen)
         run: npm ci --no-audit --no-fund
-
-      - name: oracle baseline ratchet (required on every PR)
-        if: ${{ github.event_name == 'pull_request' }}
-        env:
-          ORACLE_RATCHET_EVENT_NAME: ${{ github.event_name }}
-          ORACLE_RATCHET_MERGE_SHA: ${{ github.sha }}
-        run: node scripts/oracle-baseline-ratchet.mjs
 
       # PLAN-L7-455: 変更ファイル分類 (doc-only lane 判定、fail-close)。判定不能・新種 path は
       # 必ず "full" になる。ロジック本体は src/github/change-lane.ts (unit test 済み)。
@@ -95,6 +90,31 @@ jobs:
           name: harness-lane-${{ steps.lane-evidence.outputs.leg }}-attempt-${{ github.run_attempt }}
           path: ${{ runner.temp }}/lane-evidence.json
           if-no-files-found: error
+
+  harness-check-pr-discipline:
+    needs: [classify]
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: setup node (harness 実行系の正式 runtime、PLAN-L7-462 step 2)
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24.22.3"
+          cache: npm
+
+      - name: install deps (frozen)
+        run: npm ci --no-audit --no-fund
+
+      - name: oracle baseline ratchet (required on every PR)
+        if: ${{ github.event_name == 'pull_request' }}
+        env:
+          ORACLE_RATCHET_EVENT_NAME: ${{ github.event_name }}
+          ORACLE_RATCHET_MERGE_SHA: ${{ github.sha }}
+        run: node scripts/oracle-baseline-ratchet.mjs
 
       - name: branch-type guard (commitlint / poc / hotfix)
         env:
@@ -128,17 +148,69 @@ jobs:
             node src/cli.ts privacy-scan check --mode diff --base "$BASE_SHA" --head "$HEAD_SHA" --fail-close
           fi
 
+  harness-check-static:
+    needs: [classify]
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: setup node (harness 実行系の正式 runtime、PLAN-L7-462 step 2)
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24.22.3"
+          cache: npm
+
+      - name: install deps (frozen)
+        run: npm ci --no-audit --no-fund
+
       - name: typecheck (tsc --noEmit)
-        if: ${{ steps.classify.outputs.lane == 'full' }}
+        if: ${{ needs.classify.outputs.lane == 'full' }}
         run: npm run typecheck
 
+      # doc lane では全回帰の代わりに doc 系 check (readability / rule-drift) のみ実行する。
+      - name: doc lane checks (readability / rule-drift)
+        if: ${{ needs.classify.outputs.lane == 'doc' }}
+        run: npm run test:doc-lane
+
+      - name: doc lane source doctor
+        if: ${{ needs.classify.outputs.lane == 'doc' }}
+        run: node src/cli.ts doctor --profile source-doc-lane
+
+      - name: lint (biome)
+        run: npm run lint
+
+      - name: audit quality (gate findings)
+        if: ${{ needs.classify.outputs.lane == 'full' }}
+        run: node src/cli.ts audit quality --include-tests --limit 20
+
+  harness-check-linux:
+    needs: [classify]
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: setup node (harness 実行系の正式 runtime、PLAN-L7-462 step 2)
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24.22.3"
+          cache: npm
+
+      - name: install deps (frozen)
+        run: npm ci --no-audit --no-fund
+
       - name: db rebuild (deterministic projection)
-        if: ${{ steps.classify.outputs.lane == 'full' }}
+        if: ${{ needs.classify.outputs.lane == 'full' }}
         run: node src/cli.ts db rebuild --json
 
       - name: doctor (governance hard gates)
         # Full doctor is required for the source lane; the doc-only lane skips it.
-        if: ${{ steps.classify.outputs.lane == 'full' }}
+        if: ${{ needs.classify.outputs.lane == 'full' }}
         # PLAN-L7-461: 実測結果を envelope として書き出し、同一 job の vitest fence が
         # doctor を二重実行せず消費できるようにする。消費は宣言済み portable surface
         # (HEAD / producer root / ref map / options / check ID 集合 / producer identity)
@@ -151,7 +223,7 @@ jobs:
           --result-file "$UT_TDD_DOCTOR_RESULT_FILE"
 
       - name: test — 全回帰 (vitest run)
-        if: ${{ steps.classify.outputs.lane == 'full' }}
+        if: ${{ needs.classify.outputs.lane == 'full' }}
         # PLAN-L7-461: fence は上の doctor step の envelope を消費する。宣言した surface
         # (root / options) と一致しなければ従来どおり自走する (fail-close)。
         env:
@@ -161,22 +233,6 @@ jobs:
           PAIR_RETIREMENT_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           PAIR_RETIREMENT_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: npm run test
-
-      # doc lane では全回帰の代わりに doc 系 check (readability / rule-drift) のみ実行する。
-      - name: doc lane checks (readability / rule-drift)
-        if: ${{ steps.classify.outputs.lane == 'doc' }}
-        run: npm run test:doc-lane
-
-      - name: doc lane source doctor
-        if: ${{ steps.classify.outputs.lane == 'doc' }}
-        run: node src/cli.ts doctor --profile source-doc-lane
-
-      - name: lint (biome)
-        run: npm run lint
-
-      - name: audit quality (gate findings)
-        if: ${{ steps.classify.outputs.lane == 'full' }}
-        run: node src/cli.ts audit quality --include-tests --limit 20
 
       # PLAN-L7-451 W3: 人間向け projection。判定正本は上の gate 実測であり、
       # summary 生成は常に exit 0 (失敗で CI を red にしない)。
@@ -349,11 +405,11 @@ jobs:
           if-no-files-found: error
 
   # PLAN-RECOVERY-15 / issue #97: Branch Protection が参照する唯一の Required
-  # Status Check。片脚が failure / cancelled / skipped の場合も必ず起動して Red にする。
-  # doc lane で個別 step が skip されても、この aggregate job 自体は変更種別に依らず常に
-  # 生成される (PLAN-L7-455 の必須制約)。
+  # Status Check。いずれかの必須 job が failure / cancelled / skipped の場合も必ず起動して Red にする。
+  # doc lane で個別 step が skip されても、各 Linux job と aggregate job は常に
+  # 生成される (PLAN-L7-455 / #1981 の必須制約)。
   harness-check:
-    needs: [harness-check-linux, harness-check-windows, node-generation-linux, node-generation-windows]
+    needs: [classify, harness-check-pr-discipline, harness-check-static, harness-check-linux, harness-check-windows, node-generation-linux, node-generation-windows]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     steps:
@@ -374,7 +430,24 @@ jobs:
           path: node-generation-evidence
 
       - name: require harness and Node generation success
-        run: test "${{ needs.harness-check-linux.result }}" = "success" && test "${{ needs.harness-check-windows.result }}" = "success" && test "${{ needs.node-generation-linux.result }}" = "success" && test "${{ needs.node-generation-windows.result }}" = "success"
+        env:
+          CLASSIFY_RESULT: ${{ needs.classify.result }}
+          CLASSIFY_LANE: ${{ needs.classify.outputs.lane }}
+          PR_DISCIPLINE_RESULT: ${{ needs.harness-check-pr-discipline.result }}
+          STATIC_RESULT: ${{ needs.harness-check-static.result }}
+          LINUX_RESULT: ${{ needs.harness-check-linux.result }}
+          WINDOWS_RESULT: ${{ needs.harness-check-windows.result }}
+          NODE_GENERATION_LINUX_RESULT: ${{ needs.node-generation-linux.result }}
+          NODE_GENERATION_WINDOWS_RESULT: ${{ needs.node-generation-windows.result }}
+        run: |
+          test "$CLASSIFY_RESULT" = "success"
+          test "$CLASSIFY_LANE" = "full" || test "$CLASSIFY_LANE" = "doc"
+          test "$PR_DISCIPLINE_RESULT" = "success"
+          test "$STATIC_RESULT" = "success"
+          test "$LINUX_RESULT" = "success"
+          test "$WINDOWS_RESULT" = "success"
+          test "$NODE_GENERATION_LINUX_RESULT" = "success"
+          test "$NODE_GENERATION_WINDOWS_RESULT" = "success"
 
       - name: admit exact Node generation run
         run: node scripts/node-generation-ci-aggregate.mjs

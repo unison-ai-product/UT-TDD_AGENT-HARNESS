@@ -7,11 +7,11 @@ import { parse as parseYaml } from "yaml";
 import {
   ATTESTATION_WORKFLOW_FILE,
   aggregateHarnessResultsPass,
+  aggregateNodeGenerationResultsPass,
   analyzeGithubCiPolicy,
   type GithubWorkflowDoc,
   githubCiPolicyMessages,
   loadGithubCiPolicyDocs,
-  REQUIRED_AGGREGATE_COMMAND,
   resolveGithubCiRuntimeProfile,
 } from "../src/lint/github-ci-policy.ts";
 import { workflowNodeVersion } from "./support/github-workflow-fixture.ts";
@@ -62,54 +62,11 @@ jobs:
         run: node src/cli.ts doctor --profile source-doc-lane
 `;
 
-// PLAN-L7-455 (troubleshoot): 実運用に近い形 (classify step + full/doc lane 条件付き step) の
-// runtime leg fixture。skip 可能な step は保守的 allowlist (typecheck/db rebuild/full
-// tests/audit quality/full doctor) に限定し、github guard / lint は lane に依らず常に実行する。
-const SOURCE_LEG_WORKFLOW_WITH_LANE = `
-name: harness-check
-on:
-  push:
-    branches: [main]
-  pull_request:
-permissions:
-  contents: read
-concurrency:
-  group: harness-check-\${{ github.workflow }}-\${{ github.head_ref || github.ref }}
-  cancel-in-progress: \${{ github.ref != 'refs/heads/main' }}
-jobs:
-  harness-check:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-      - uses: oven-sh/setup-bun@v2
-      - run: bun install --frozen-lockfile
-      - name: classify changed files
-        id: classify
-        run: |
-          node src/cli.ts github classify-changes \
-            --event-name "\${{ github.event_name }}" \
-            --head-sha "\${{ github.sha }}" \
-            --base-sha "\${{ github.event.pull_request.base.sha }}" \
-            --before-sha "\${{ github.event.before }}" \
-            --github-output "$GITHUB_OUTPUT"
-      - run: bun src/cli.ts github guard
-      - if: ${LANE_FULL_IF}
-        run: bun run typecheck
-      - if: ${LANE_FULL_IF}
-        run: bun src/cli.ts db rebuild --json
-      - if: ${LANE_FULL_IF}
-        run: bun run test
-      - if: ${LANE_DOC_IF}
-        run: bun run test:doc-lane
-      - name: doc lane source doctor
-        if: ${LANE_DOC_IF}
-        run: node src/cli.ts doctor --profile source-doc-lane
-      - run: bun run lint
-      - if: ${LANE_FULL_IF}
-        run: bun src/cli.ts audit quality --include-tests
-      - if: ${LANE_FULL_IF}
-        run: bun src/cli.ts doctor
-`;
+const DOWNSTREAM_LANE_FULL_IF = "$" + "{{ needs.classify.outputs.lane == 'full' }}";
+const DOWNSTREAM_LANE_DOC_IF = "$" + "{{ needs.classify.outputs.lane == 'doc' }}";
+const AGGREGATE_NEEDS =
+  "classify, harness-check-pr-discipline, harness-check-static, harness-check-linux, harness-check-windows, node-generation-linux, node-generation-windows";
+const AGGREGATE_NEEDS_YAML = `[${AGGREGATE_NEEDS}]`;
 
 const PACK_WORKFLOW = `
 name: harness-check
@@ -139,70 +96,6 @@ jobs:
       - run: node .ut-tdd/bin/ut-tdd.mjs doctor --setup-smoke
 `;
 
-const LEGACY_SOURCE_WORKFLOW = `${SOURCE_LEG_WORKFLOW.replace("  harness-check:", "  harness-check-linux:")}
-  harness-check-windows:
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v5
-      - uses: oven-sh/setup-bun@v2
-      - run: bun install --frozen-lockfile
-      - name: classify changed files
-        id: classify
-        shell: bash
-        run: |
-          node src/cli.ts github classify-changes \
-            --event-name "\${{ github.event_name }}" \
-            --head-sha "\${{ github.sha }}" \
-            --base-sha "\${{ github.event.pull_request.base.sha }}" \
-            --before-sha "\${{ github.event.before }}" \
-            --github-output "$GITHUB_OUTPUT"
-      - run: bun run typecheck
-      - run: bun run test
-      - run: bun run lint
-      - name: doc lane source doctor
-        if: ${LANE_DOC_IF}
-        run: node src/cli.ts doctor --profile source-doc-lane
-  harness-check:
-    needs: [harness-check-linux, harness-check-windows]
-    if: \${{ always() }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Require Linux and Windows success
-        run: ${REQUIRED_AGGREGATE_COMMAND}
-`;
-
-const LEGACY_SOURCE_WORKFLOW_WITH_LANE = `${SOURCE_LEG_WORKFLOW_WITH_LANE.replace("  harness-check:", "  harness-check-linux:")}
-  harness-check-windows:
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v5
-      - uses: oven-sh/setup-bun@v2
-      - run: bun install --frozen-lockfile
-      - name: classify changed files
-        id: classify
-        shell: bash
-        run: |
-          node src/cli.ts github classify-changes \
-            --event-name "\${{ github.event_name }}" \
-            --head-sha "\${{ github.sha }}" \
-            --base-sha "\${{ github.event.pull_request.base.sha }}" \
-            --before-sha "\${{ github.event.before }}" \
-            --github-output "$GITHUB_OUTPUT"
-      - run: bun run typecheck
-      - run: bun run test
-      - run: bun run lint
-      - name: doc lane source doctor
-        if: ${LANE_DOC_IF}
-        run: node src/cli.ts doctor --profile source-doc-lane
-  harness-check:
-    needs: [harness-check-linux, harness-check-windows]
-    if: \${{ always() }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Require Linux and Windows success
-        run: ${REQUIRED_AGGREGATE_COMMAND}
-`;
-
 // repo 読みの入口を 1 箇所へ集約する (doctor test-repository-isolation の callsite 契約)。
 const REPO_ROOT = process.cwd();
 const SOURCE_WORKFLOW = readFileSync(
@@ -210,7 +103,6 @@ const SOURCE_WORKFLOW = readFileSync(
   "utf8",
 );
 const SOURCE_WORKFLOW_WITH_LANE = SOURCE_WORKFLOW;
-void [LEGACY_SOURCE_WORKFLOW, LEGACY_SOURCE_WORKFLOW_WITH_LANE];
 
 function replaceRequired(source: string, from: string | RegExp, to: string): string {
   expect(source).toMatch(
@@ -301,21 +193,26 @@ describe("github-ci-policy lint", () => {
 
   it("U-CIPOL-015: requires the aggregate gate to depend on every runtime leg", () => {
     for (const missing of [
+      "classify",
+      "harness-check-pr-discipline",
+      "harness-check-static",
       "harness-check-linux",
       "harness-check-windows",
       "node-generation-linux",
       "node-generation-windows",
     ] as const) {
-      const remaining = [
+      const required = [
+        "classify",
+        "harness-check-pr-discipline",
+        "harness-check-static",
         "harness-check-linux",
         "harness-check-windows",
         "node-generation-linux",
         "node-generation-windows",
-      ]
-        .filter((leg) => leg !== missing)
-        .join(", ");
+      ];
+      const remaining = required.filter((leg) => leg !== missing).join(", ");
       const workflow = SOURCE_WORKFLOW.replace(
-        "needs: [harness-check-linux, harness-check-windows, node-generation-linux, node-generation-windows]",
+        `needs: ${AGGREGATE_NEEDS_YAML}`,
         `needs: [${remaining}]`,
       );
       const result = analyzeGithubCiPolicy(docs(workflow));
@@ -324,7 +221,7 @@ describe("github-ci-policy lint", () => {
         file: ".github/workflows/harness-check.yml",
         profile: "source",
         reason: "invalid_aggregate_needs",
-        detail: `harness-check.needs must equal harness-check-linux,harness-check-windows,node-generation-linux,node-generation-windows (missing=${missing})`,
+        detail: `harness-check.needs must equal ${AGGREGATE_NEEDS.replaceAll(", ", ",")} (missing=${missing})`,
       });
     }
   });
@@ -345,27 +242,45 @@ describe("github-ci-policy lint", () => {
     });
   });
 
-  it("U-CIPOL-017: requires explicit success guards for both runtime results", () => {
-    for (const missing of ["harness-check-linux", "harness-check-windows"] as const) {
-      const workflow = SOURCE_WORKFLOW.replace(`\${{ needs.${missing}.result }}`, "success");
+  it("U-CIPOL-017: requires explicit success guards for every runtime result", () => {
+    const resultBindings = [
+      ["CLASSIFY_RESULT", "needs.classify.result"],
+      ["PR_DISCIPLINE_RESULT", "needs.harness-check-pr-discipline.result"],
+      ["STATIC_RESULT", "needs.harness-check-static.result"],
+      ["LINUX_RESULT", "needs.harness-check-linux.result"],
+      ["WINDOWS_RESULT", "needs.harness-check-windows.result"],
+      ["NODE_GENERATION_LINUX_RESULT", "needs.node-generation-linux.result"],
+      ["NODE_GENERATION_WINDOWS_RESULT", "needs.node-generation-windows.result"],
+    ] as const;
+    for (const [variable, binding] of resultBindings) {
+      const workflow = SOURCE_WORKFLOW.replace(
+        new RegExp(`^\\s+${variable}: \\$\\{\\{ ${binding.replaceAll(".", "\\.")} \\}\\}$`, "m"),
+        `${variable}: success`,
+      );
       const result = analyzeGithubCiPolicy(docs(workflow));
 
       expect(result.violations).toContainEqual({
         file: ".github/workflows/harness-check.yml",
         profile: "source",
         reason: "missing_aggregate_result_guard",
-        detail: `aggregate verdict must require needs.${missing}.result == success`,
+        detail: `aggregate verdict must require ${binding} == success`,
       });
     }
   });
 
-  it("U-CIPOL-018: accepts only the two-leg success result matrix", () => {
-    expect(
-      aggregateHarnessResultsPass({
-        "harness-check-linux": "success",
-        "harness-check-windows": "success",
-      }),
-    ).toBe(true);
+  it("U-CIPOL-018: accepts only successful harness and Node generation results", () => {
+    const harnessJobs = [
+      "classify",
+      "harness-check-pr-discipline",
+      "harness-check-static",
+      "harness-check-linux",
+      "harness-check-windows",
+    ];
+    const nodeJobs = ["node-generation-linux", "node-generation-windows"];
+    const harnessSuccessful = Object.fromEntries(harnessJobs.map((job) => [job, "success"]));
+    const nodeSuccessful = Object.fromEntries(nodeJobs.map((job) => [job, "success"]));
+    expect(aggregateHarnessResultsPass(harnessSuccessful)).toBe(true);
+    expect(aggregateNodeGenerationResultsPass(nodeSuccessful)).toBe(true);
     for (const state of [
       "failure",
       "cancelled",
@@ -376,32 +291,24 @@ describe("github-ci-policy lint", () => {
       "unknown",
       "",
     ]) {
-      expect(
-        aggregateHarnessResultsPass({
-          "harness-check-linux": state,
-          "harness-check-windows": "success",
-        }),
-      ).toBe(false);
-      expect(
-        aggregateHarnessResultsPass({
-          "harness-check-linux": "success",
-          "harness-check-windows": state,
-        }),
-      ).toBe(false);
+      for (const job of harnessJobs)
+        expect(aggregateHarnessResultsPass({ ...harnessSuccessful, [job]: state })).toBe(false);
+      for (const job of nodeJobs)
+        expect(aggregateNodeGenerationResultsPass({ ...nodeSuccessful, [job]: state })).toBe(false);
     }
   });
 
   it("U-CIPOL-019: rejects aggregate scripts that observe results without failing closed", () => {
     const echoOnly = replaceRequired(
       SOURCE_WORKFLOW,
-      `run: ${REQUIRED_AGGREGATE_COMMAND}`,
-      `run: echo "\${{ needs.harness-check-linux.result }} \${{ needs.harness-check-windows.result }}"`,
+      '          test "$LINUX_RESULT" = "success"',
+      '          echo "$LINUX_RESULT"',
     );
     expect(analyzeGithubCiPolicy(docs(echoOnly)).violations).toContainEqual({
       file: ".github/workflows/harness-check.yml",
       profile: "source",
       reason: "missing_aggregate_result_guard",
-      detail: "aggregate verdict must require needs.harness-check-linux.result == success",
+      detail: "aggregate verdict must require needs.classify.result == success",
     });
 
     const continueOnError = replaceRequired(
@@ -415,8 +322,8 @@ describe("github-ci-policy lint", () => {
 
     const expressionContinueOnError = replaceRequired(
       SOURCE_WORKFLOW,
-      "    needs: [harness-check-linux, harness-check-windows, node-generation-linux, node-generation-windows]",
-      `    continue-on-error: ${"$" + "{{ true }}"}\n    needs: [harness-check-linux, harness-check-windows, node-generation-linux, node-generation-windows]`,
+      `    needs: ${AGGREGATE_NEEDS_YAML}`,
+      `    continue-on-error: ${"$" + "{{ true }}"}\n    needs: ${AGGREGATE_NEEDS_YAML}`,
     );
     expect(
       analyzeGithubCiPolicy(docs(expressionContinueOnError)).violations.map(
@@ -1201,8 +1108,8 @@ describe("github-ci-policy lint", () => {
       const result = analyzeGithubCiPolicy(
         docs(
           SOURCE_WORKFLOW_WITH_LANE.replace(
-            "  harness-check-linux:\n    runs-on: ubuntu-latest",
-            "  harness-check-linux:\n    env:\n      GITHUB_OUTPUT: other\n    runs-on: ubuntu-latest",
+            "  classify:\n    runs-on: ubuntu-latest",
+            "  classify:\n    env:\n      GITHUB_OUTPUT: other\n    runs-on: ubuntu-latest",
           ),
         ),
       );
@@ -1255,8 +1162,8 @@ describe("github-ci-policy lint", () => {
         docs(
           replaceRequired(
             SOURCE_WORKFLOW_WITH_LANE,
-            "      - name: branch-type guard (commitlint / poc / hotfix)",
-            `${duplicate}      - name: branch-type guard (commitlint / poc / hotfix)`,
+            "      - name: write harness lane evidence",
+            `${duplicate}      - name: write harness lane evidence`,
           ),
         ),
       );
@@ -1334,7 +1241,13 @@ describe("github-ci-policy lint", () => {
           ),
         ),
       );
-      expect(result.violations.map((v) => v.reason)).toContain("missing_doc_lane_doctor");
+      expect(result.violations).toContainEqual({
+        file: ".github/workflows/harness-check.yml",
+        profile: "source",
+        reason: "missing_runtime_leg",
+        detail:
+          "jobs.harness-check-static must match its fail-close Linux split manifest and need exactly classify",
+      });
     });
 
     it.each([
@@ -1432,7 +1345,7 @@ describe("github-ci-policy lint", () => {
         SOURCE_WORKFLOW_WITH_LANE,
         "      - name: branch-type guard (commitlint / poc / hotfix)",
         `      - name: branch-type guard (commitlint / poc / hotfix)
-        if: ${LANE_FULL_IF}`,
+        if: ${DOWNSTREAM_LANE_FULL_IF}`,
       );
       const result = analyzeGithubCiPolicy(docs(guardSkipped));
 
@@ -1442,7 +1355,7 @@ describe("github-ci-policy lint", () => {
         profile: "source",
         reason: "forbidden_lane_skip_step",
         detail:
-          "jobs.harness-check-linux step \"branch-type guard (commitlint / poc / hotfix)\" is conditioned on lane=='full' but is not on the doc-lane skip allowlist",
+          "jobs.harness-check-pr-discipline step \"branch-type guard (commitlint / poc / hotfix)\" is conditioned on lane=='full' but is not on the doc-lane skip allowlist",
       });
     });
 
@@ -1451,7 +1364,7 @@ describe("github-ci-policy lint", () => {
         SOURCE_WORKFLOW_WITH_LANE,
         "      - name: lint (biome)\n        run: npm run lint",
         `      - name: lint (biome)
-        if: ${LANE_FULL_IF}
+        if: ${DOWNSTREAM_LANE_FULL_IF}
         run: npm run lint`,
       );
       const result = analyzeGithubCiPolicy(docs(lintSkipped));
@@ -1465,8 +1378,8 @@ describe("github-ci-policy lint", () => {
       const doctorMisrouted = replaceRequired(
         SOURCE_WORKFLOW_WITH_LANE,
         // PLAN-L7-461: doctor step は if の直後に envelope 用 env を持つ。lane 条件だけを差し替える。
-        `        if: ${LANE_FULL_IF}\n        # PLAN-L7-461`,
-        `        if: ${LANE_DOC_IF}\n        # PLAN-L7-461`,
+        `        if: ${DOWNSTREAM_LANE_FULL_IF}\n        # PLAN-L7-461`,
+        `        if: ${DOWNSTREAM_LANE_DOC_IF}\n        # PLAN-L7-461`,
       );
       const result = analyzeGithubCiPolicy(docs(doctorMisrouted));
 
@@ -1474,16 +1387,16 @@ describe("github-ci-policy lint", () => {
       expect(result.violations).toContainEqual({
         file: ".github/workflows/harness-check.yml",
         profile: "source",
-        reason: "forbidden_lane_skip_step",
+        reason: "missing_runtime_leg",
         detail:
-          "jobs.harness-check-linux step \"doctor (governance hard gates)\" is a required full-lane check but is conditioned on lane=='doc'",
+          "jobs.harness-check-linux must match its fail-close Linux split manifest and need exactly classify",
       });
     });
 
     it("U-CIPOL-024: 負例 — rejects a non-canonical lane condition expression", () => {
       const garbled = replaceRequired(
         SOURCE_WORKFLOW_WITH_LANE,
-        `        if: ${LANE_FULL_IF}\n        run: npm run typecheck\n`,
+        `        if: ${DOWNSTREAM_LANE_FULL_IF}\n        run: npm run typecheck\n`,
         `        if: ${"$" + "{{ steps.classify.outputs.lane != 'doc' }}"}\n        run: npm run typecheck\n`,
       );
       const result = analyzeGithubCiPolicy(docs(garbled));
@@ -1501,7 +1414,7 @@ describe("github-ci-policy lint", () => {
     it("U-CIPOL-025: 負例 — rejects a job-level lane skip on a runtime leg (aggregate must always be reachable)", () => {
       const jobLevelSkip = SOURCE_WORKFLOW_WITH_LANE.replace(
         "  harness-check-linux:\n    runs-on: ubuntu-latest",
-        `  harness-check-linux:\n    if: ${LANE_FULL_IF}\n    runs-on: ubuntu-latest`,
+        `  harness-check-linux:\n    if: ${DOWNSTREAM_LANE_FULL_IF}\n    runs-on: ubuntu-latest`,
       );
       const result = analyzeGithubCiPolicy(docs(jobLevelSkip));
 

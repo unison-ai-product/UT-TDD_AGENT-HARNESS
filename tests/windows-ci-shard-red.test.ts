@@ -270,14 +270,27 @@ describe("Issue #1063 Windows leg 3 shard contract (登録 + Red)", () => {
       expect(reasons).toContain("invalid_aggregate_needs");
     });
 
+    const successfulHarnessResults = {
+      classify: "success",
+      "harness-check-pr-discipline": "success",
+      "harness-check-static": "success",
+      "harness-check-linux": "success",
+    };
+
+    it("CANDIDATE-U-CISHARD-005: passes when all harness jobs succeed", () => {
+      expect(
+        aggregateHarnessResultsPass({ ...successfulHarnessResults, [WINDOWS]: "success" }),
+      ).toBe(true);
+    });
+
     it.each([
       "failure",
       "cancelled",
       "skipped",
       undefined,
     ])("CANDIDATE-U-CISHARD-005: does not pass when the Windows matrix result is %s", (windowsResult) => {
-      const results: Record<string, string> = {
-        "harness-check-linux": "success",
+      const results = {
+        ...successfulHarnessResults,
         ...(windowsResult === undefined ? {} : { [WINDOWS]: windowsResult }),
       };
       expect(aggregateHarnessResultsPass(results)).toBe(false);
