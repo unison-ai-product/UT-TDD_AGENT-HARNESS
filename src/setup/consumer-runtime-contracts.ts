@@ -13,6 +13,7 @@ export interface SetupConsumerRuntimeInput {
   readonly admission: ConsumerLocalRuntimeAdmission;
   readonly compiled_esm: Uint8Array;
   readonly node_bootstrap_receipt: Uint8Array;
+  readonly prior_bundle?: ConsumerNodeRuntimeBundle;
   readonly prior_bundle_digest?: string;
   readonly prior_history_tip_digest?: string;
   readonly history_sequence?: number;

@@ -8,6 +8,7 @@ import {
   mkdtempSync,
   readdirSync,
   readFileSync,
+  realpathSync,
   rmSync,
   statSync,
   writeFileSync,
@@ -254,14 +255,10 @@ export function copyRuntimeUpdateInstallerCase(fixture: RuntimeFixture): {
   readonly consumerRoot: string;
 } {
   const root = mkdtempSync(join(tmpdir(), "ut-tdd-packrt-installer-case-"));
-  const releaseDir = join(root, "release");
   const consumerRoot = join(root, "consumer");
-  mkdirSync(releaseDir, { recursive: true });
-  mkdirSync(consumerRoot, { recursive: true });
-  for (const name of readdirSync(fixture.releaseDir))
-    cpSync(join(fixture.releaseDir, name), join(releaseDir, name));
-  gitInitWithCommit(consumerRoot);
-  return { root, releaseDir, consumerRoot };
+  cpSync(fixture.consumerRoot, consumerRoot, { recursive: true });
+  // The seed has only one committed file and no runtime identity; only immutable A assets are shared.
+  return { root, releaseDir: fixture.releaseDir, consumerRoot };
 }
 
 export function runtimeUpdateActivePointer(root: string): {
@@ -269,7 +266,7 @@ export function runtimeUpdateActivePointer(root: string): {
   readonly bundlePath: string;
   readonly bytes: Buffer;
 } {
-  const path = join(root, ".ut-tdd", "runtime", "activation", "active.json");
+  const path = realpathSync.native(join(root, ".ut-tdd", "runtime", "activation", "active.json"));
   const bytes = readFileSync(path);
   return {
     path,
