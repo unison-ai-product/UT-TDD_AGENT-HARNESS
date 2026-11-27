@@ -43,7 +43,7 @@ issue: 930
 - `installConsumerNodeRuntime(input, isMainRoot) => InstallResult`: 既存の setup の本体に、判定済みの `isMainRoot` を渡すよう拡張する。main root では別の版を `updated` として通し、worktree に別の版がある場合だけ `consumer_runtime_update_unsupported` で拒否する。同じ版の再実行は `already-installed` (§3 手順 6、§9 決定 b)。
 - `assertLauncherCompatible(priorBundle, newBundle) => void` (新設): bundle のファイル集合と history の field の形式が変わらないことを、切り替えの前に確かめる。非互換は既存の検証失敗の符号で拒否する (§9.1)。
 - `publishActivePointer(activation, newBundle) => ActivePointerResult` (新設): 手順 4 の atomic な置き換え (一時ファイル + rename)。rename の前の失敗は旧 pointer と mode を保つ。復元できない失敗と rename の後の失敗は `consumer_runtime_indeterminate` (§4、§9 技術 4)。
-- `deriveOperationId(tag, generationId) => string`: 既存。`hash(tag + NUL + generationId)` の決定的な生成を新 generation でも使う (§9 技術 2)。
+- `deriveOperationId(tag, generationId) => string` (新設の名前。実体は `consumer-runtime-install.ts` の operationId 生成): `hash(tag + NUL + generationId)` の決定的な生成を新 generation でも使う (§9 技術 2)。
 
 - pre: Release の検証に成功している。新 bundle の identity・receipt・ファイル digest の検査に成功している (§3 手順 1〜3)。同じ `release_id` で artifact が違う入力は拒否する (§9 技術 3)。
 - post: 成功時は active pointer が新 generation を指し、旧 generation の bundle は byte 同一のまま残る (§5)。失敗時 (indeterminate を除く) は consumer tree が実行前と同一である (§4)。
