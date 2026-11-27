@@ -162,44 +162,41 @@ describe("consumer runtime update Red candidates", () => {
   });
 
   const windowsRestoreTest = process.platform === "win32" ? it.fails : it.skip;
-  windowsRestoreTest(
-    "U-RTUPD-003: pointer mode restore failure is indeterminate",
-    async () => {
-      try {
-        await runOracle({
-          beforeUpdate: ({ priorPointer }) => {
-            runtimePointerIo.enabled = true;
-            runtimePointerIo.failRenameWithEperm = true;
-            runtimePointerIo.failPointerModeRestore = true;
-            runtimePointerIo.renameEpermRaised = false;
-            runtimePointerIo.restorePointerMode = Number(statSync(priorPointer.path).mode & 0o777);
-            runtimePointerIo.activePointerPath = priorPointer.path;
-            runtimePointerIo.renameCalls = [];
-            runtimePointerIo.directWrites = [];
-            runtimePointerIo.pointerDeletes = [];
-            runtimePointerIo.observations = [];
-          },
-          expectUpdateError: (error, { priorPointer }) => {
-            expect(String(error)).toContain("consumer_runtime_indeterminate");
-            expect(runtimePointerIo.renameCalls).toHaveLength(1);
-            expect(readFileSync(priorPointer.path)).toEqual(priorPointer.bytes);
-            expect(runtimePointerIo.directWrites).toEqual([]);
-            expect(runtimePointerIo.pointerDeletes).toEqual([]);
-            expect(runtimePointerIo.observations.length).toBeGreaterThanOrEqual(2);
-            expect(new Set(runtimePointerIo.observations)).toEqual(
-              new Set([priorPointer.bytes.toString("utf8")]),
-            );
-          },
-        });
-      } finally {
-        runtimePointerIo.enabled = false;
-        runtimePointerIo.failRenameWithEperm = false;
-        runtimePointerIo.failPointerModeRestore = false;
-        runtimePointerIo.renameEpermRaised = false;
-        runtimePointerIo.activePointerPath = "";
-      }
-    },
-  );
+  windowsRestoreTest("U-RTUPD-003: pointer mode restore failure is indeterminate", async () => {
+    try {
+      await runOracle({
+        beforeUpdate: ({ priorPointer }) => {
+          runtimePointerIo.enabled = true;
+          runtimePointerIo.failRenameWithEperm = true;
+          runtimePointerIo.failPointerModeRestore = true;
+          runtimePointerIo.renameEpermRaised = false;
+          runtimePointerIo.restorePointerMode = Number(statSync(priorPointer.path).mode & 0o777);
+          runtimePointerIo.activePointerPath = priorPointer.path;
+          runtimePointerIo.renameCalls = [];
+          runtimePointerIo.directWrites = [];
+          runtimePointerIo.pointerDeletes = [];
+          runtimePointerIo.observations = [];
+        },
+        expectUpdateError: (error, { priorPointer }) => {
+          expect(String(error)).toContain("consumer_runtime_indeterminate");
+          expect(runtimePointerIo.renameCalls).toHaveLength(1);
+          expect(readFileSync(priorPointer.path)).toEqual(priorPointer.bytes);
+          expect(runtimePointerIo.directWrites).toEqual([]);
+          expect(runtimePointerIo.pointerDeletes).toEqual([]);
+          expect(runtimePointerIo.observations.length).toBeGreaterThanOrEqual(2);
+          expect(new Set(runtimePointerIo.observations)).toEqual(
+            new Set([priorPointer.bytes.toString("utf8")]),
+          );
+        },
+      });
+    } finally {
+      runtimePointerIo.enabled = false;
+      runtimePointerIo.failRenameWithEperm = false;
+      runtimePointerIo.failPointerModeRestore = false;
+      runtimePointerIo.renameEpermRaised = false;
+      runtimePointerIo.activePointerPath = "";
+    }
+  });
 
   it.fails("U-RTUPD-003: post-publication fsync failure does not roll back", async () => {
     try {

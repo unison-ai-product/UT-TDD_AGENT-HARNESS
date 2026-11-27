@@ -2182,5 +2182,4 @@ describe("Pack consumer runtime release installer", () => {
       removeInstallerFixtureTree(missingBundle.root);
     }
   });
-
 });
