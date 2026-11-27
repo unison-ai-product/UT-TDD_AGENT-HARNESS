@@ -76,12 +76,25 @@ export function createSetupConsumerRuntimeInput(input: {
   readonly admission: ConsumerLocalRuntimeAdmission;
   readonly compiledEsm: Uint8Array;
   readonly nodeBootstrapReceipt: Uint8Array;
+  readonly prior?: CommittedConsumerRuntimePrior;
 }): SetupConsumerRuntimeInput {
   return {
     identity: input.identity,
     admission: input.admission,
     compiled_esm: input.compiledEsm,
     node_bootstrap_receipt: input.nodeBootstrapReceipt,
+    ...(input.prior
+      ? {
+          prior_bundle: input.prior.bundle,
+          prior_bundle_digest: input.prior.bundle.bundle_digest,
+          prior_history_tip_digest: input.prior.historyTipDigest,
+          history_sequence: input.prior.historySequence + 1,
+          prior_history: input.prior.historyBytes,
+          prior_identity: input.prior.bundle.identity,
+          prior_pointer: input.prior.priorPointer,
+          operation_kind: "update" as const,
+        }
+      : {}),
   };
 }
 
