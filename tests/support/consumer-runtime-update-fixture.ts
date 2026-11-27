@@ -216,7 +216,7 @@ export async function createRuntimeUpdateFixture(): Promise<RuntimeFixture> {
   const producerRoot = join(root, "producer-build");
   const generation = await buildExactHeadNodeGeneration(producerRoot);
   const compiledBytes = readFileSync(generation.compiledCliPath);
-  rmSync(producerRoot, { recursive: true, force: true });
+  removeRuntimeUpdateFixtureTree(producerRoot);
   const receipt = sealReceipt({
     ...receiptUnsigned,
     compiled_cli: { ...receiptUnsigned.compiled_cli, sha256: hashHex(compiledBytes) },
