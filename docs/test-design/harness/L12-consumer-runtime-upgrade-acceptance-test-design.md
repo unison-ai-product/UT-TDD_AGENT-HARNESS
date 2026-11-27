@@ -39,6 +39,7 @@ canary.10 候補の版切替と手動 pointer rollback は、この fixture で 
   (`sha256:bb00b13e38d5ac978f8e65e8091fa578aa1de4a3e981f67032c79bd54e8cd019`) であり、runtime JSON の内部 attestation digest
   (`sha256:ae63ec343665166a672609f43cf6e0c659afa862082b90bfae7e4052f954cf93`) と混同しない。
   外部 anchor は公開記録から別途固定し、asset 内の値だけを信頼根にしない。
+- **本書の `doctor` の意味** (2026-11-27 control 決定、#2023): 本書の手順と合格条件で「`doctor` が成功」と書くときは、consumer の導入・起動判定である `doctor --setup-smoke` が exit 0 (`checked=23, failed=0`) になることを指す (`docs/reference/setup-guide.md` §2 と同じ判定)。フラグなしの `doctor` は consumer の設計文書全体を検査するため、導入直後の consumer では赤になり得る。フラグなしの `doctor` は合格条件にしない。ただし、切替の前後と手動 rollback の後にそれぞれ実行し、exit code と失敗した検査の一覧を証跡に残す。切替によって、失敗した検査の一覧に新しい項目が増えた場合は FAIL とする (版上げによる退行の検出)。
 - main root は canary.7 runtime で `status` と `doctor` が成功すること。fixture は実際の
   `git worktree add` で linked worktree を作る。runtime 有り worktree は `--worktree` を持たない
   canary.7 の公開 launcher を使い、fixture 初期化に限って linked cwd から旧
