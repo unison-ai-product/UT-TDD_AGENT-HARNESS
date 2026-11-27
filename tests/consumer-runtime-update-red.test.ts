@@ -55,11 +55,28 @@ describe("consumer runtime update Red candidates", () => {
   );
 
   it("U-RTUPD-001: updates main runtime and retains prior generation", async () => {
-    await runOracle();
+    await runOracle({
+      afterUpdate: ({ priorPointer, nextPointer }) => {
+        expect(nextPointer.bytes).not.toEqual(priorPointer.bytes);
+        expect(readFileSync(join(priorPointer.bundlePath, "ut-tdd.mjs"))).toEqual(
+          fixture.compiledBytes,
+        );
+      },
+    });
   });
 
   it("U-RTUPD-009: replaying the updated Release is write-zero", async () => {
-    await runOracle({ assertIdempotentReplay: true, snapshotTree: snapshotRuntimeUpdateTree });
+    const replaySnapshots: string[][] = [];
+    await runOracle({
+      assertIdempotentReplay: true,
+      snapshotTree: (root) => {
+        const snapshot = snapshotRuntimeUpdateTree(root);
+        replaySnapshots.push(snapshot);
+        return snapshot;
+      },
+    });
+    expect(replaySnapshots).toHaveLength(2);
+    expect(replaySnapshots[1]).toEqual(replaySnapshots[0]);
   });
 
   it("U-RTUPD-003: actual active pointer EPERM is attempted once", async () => {

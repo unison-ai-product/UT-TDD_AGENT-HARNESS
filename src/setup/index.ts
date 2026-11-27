@@ -449,7 +449,17 @@ export async function installConsumerRuntimeRelease(input: {
 
 export const setupConsumerWorktreeRuntime = (
   input: Parameters<typeof setupConsumerWorktreeRuntimeImpl>[0],
-) => setupConsumerWorktreeRuntimeImpl(input, installConsumerRuntimeRelease);
+) =>
+  setupConsumerWorktreeRuntimeImpl(input, ({ fault, ...release }) =>
+    installConsumerRuntimeRelease({
+      ...release,
+      fault:
+        fault &&
+        ((barrier) => {
+          if (barrier === "afterRuntimePublishBeforeLauncher") fault(barrier);
+        }),
+    }),
+  );
 
 function hasActiveConsumerRuntime(runtimeRoot: string): boolean {
   return existsSync(join(runtimeRoot, "activation", "active.json"));
