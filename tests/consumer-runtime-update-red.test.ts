@@ -1,7 +1,6 @@
-import { execFileSync, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join } from "node:path";
 import { expect, it, vi } from "vitest";
 import * as setupApi from "../src/setup/index.ts";
 import {
@@ -18,6 +17,7 @@ import {
   createRuntimeUpdateRollbackOracle,
   registerLauncherCompatibilityRejectionTests,
 } from "./support/consumer-runtime-update-red-helper.ts";
+import { registerConsumerRuntimeUpdateWorktreeOracles } from "./support/consumer-runtime-update-worktree-oracles.ts";
 import { describe, heavyAfterAll, heavyBeforeAll } from "./support/hook-bounds.ts";
 
 vi.mock("node:fs", async (importOriginal) => {
@@ -77,6 +77,7 @@ describe("consumer runtime update Red candidates", () => {
           runtimePointerIo.renameCalls = [];
           runtimePointerIo.tempWrites = [];
           runtimePointerIo.directWrites = [];
+          runtimePointerIo.pointerDeletes = [];
           runtimePointerIo.observations = [];
           treeBefore = snapshotRuntimeUpdateTree(consumerRoot);
           priorMode = statSync(priorPointer.path, { bigint: true }).mode;
@@ -84,6 +85,12 @@ describe("consumer runtime update Red candidates", () => {
         expectUpdateError: (error, { consumerRoot, priorPointer }) => {
           expect(error).toBeDefined();
           expect(runtimePointerIo.renameCalls).toHaveLength(1);
+          expect(runtimePointerIo.directWrites).toEqual([]);
+          expect(runtimePointerIo.pointerDeletes).toEqual([]);
+          expect(runtimePointerIo.observations).not.toHaveLength(0);
+          expect(new Set(runtimePointerIo.observations)).toEqual(
+            new Set([priorPointer.bytes.toString("utf8")]),
+          );
           const rename = runtimePointerIo.renameCalls[0];
           if (!rename) throw new Error("expected one active pointer rename");
           expect(rename.destination).toBe(priorPointer.path.replaceAll("\\", "/"));
@@ -231,20 +238,38 @@ describe("consumer runtime update Red candidates", () => {
   ])("CANDIDATE-U-RTUPD-002: $name", async ({ barrier, message }) => {
     const rollback = createRuntimeUpdateRollbackOracle(snapshotRuntimeUpdateTree);
     let injected = false;
-    await runOracle({
-      beforeUpdate: rollback.beforeUpdate,
-      updateFault: (point) => {
-        if (point === barrier) {
-          injected = true;
-          throw new Error(message);
-        }
-      },
-      expectUpdateError: (error, { consumerRoot, priorPointer }) => {
-        expect(injected).toBe(true);
-        expect(String(error)).toContain(message);
-        rollback.assert(consumerRoot, priorPointer);
-      },
-    });
+    try {
+      await runOracle({
+        beforeUpdate: ({ consumerRoot, priorPointer }) => {
+          rollback.beforeUpdate({ consumerRoot, priorPointer });
+          runtimePointerIo.enabled = true;
+          runtimePointerIo.activePointerPath = priorPointer.path;
+          runtimePointerIo.directWrites = [];
+          runtimePointerIo.pointerDeletes = [];
+          runtimePointerIo.observations = [];
+        },
+        updateFault: (point) => {
+          if (point === barrier) {
+            injected = true;
+            throw new Error(message);
+          }
+        },
+        expectUpdateError: (error, { consumerRoot, priorPointer }) => {
+          expect(injected).toBe(true);
+          expect(String(error)).toContain(message);
+          expect(runtimePointerIo.directWrites).toEqual([]);
+          expect(runtimePointerIo.pointerDeletes).toEqual([]);
+          expect(runtimePointerIo.observations).not.toHaveLength(0);
+          expect(new Set(runtimePointerIo.observations)).toEqual(
+            new Set([priorPointer.bytes.toString("utf8")]),
+          );
+          rollback.assert(consumerRoot, priorPointer);
+        },
+      });
+    } finally {
+      runtimePointerIo.enabled = false;
+      runtimePointerIo.activePointerPath = "";
+    }
   });
 
   it("CANDIDATE-U-RTUPD-002: wrong external anchor denies before writing", async () => {
@@ -294,95 +319,7 @@ describe("consumer runtime update Red candidates", () => {
     });
   });
 
-  it.fails("CANDIDATE-U-RTUPD-005: worktree remains pinned to A and refuses B replacement", async () => {
-    let worktreeRoot = "";
-    let worktreeBefore: string[] = [];
-    await runOracle({
-      beforeUpdate: async ({ consumerRoot }) => {
-        worktreeRoot = join(dirname(consumerRoot), "linked-worktree");
-        execFileSync("git", ["worktree", "add", "--quiet", worktreeRoot, "HEAD"], {
-          cwd: consumerRoot,
-        });
-        await setupApi.setupConsumerWorktreeRuntime({
-          currentRoot: consumerRoot,
-          worktreePath: worktreeRoot,
-          releaseDirectory: fixture.releaseDir,
-          expectedConsumerDigest: fixture.anchor,
-        });
-        worktreeBefore = snapshotRuntimeUpdateTree(worktreeRoot);
-      },
-      afterUpdate: async ({ consumerRoot, nextFixture, priorPointer }) => {
-        const mainPointerBeforeAttempt = runtimeUpdateActivePointer(consumerRoot).bytes;
-        const commonDir = resolve(
-          consumerRoot,
-          execFileSync("git", ["rev-parse", "--git-common-dir"], {
-            cwd: consumerRoot,
-            encoding: "utf8",
-          }).trim(),
-        );
-        const cacheRoot = join(commonDir, "ut-tdd", "runtime-cache");
-        const cacheBefore = existsSync(cacheRoot) ? snapshotRuntimeUpdateTree(cacheRoot) : [];
-        await expect(
-          setupApi.setupConsumerWorktreeRuntime({
-            currentRoot: consumerRoot,
-            worktreePath: worktreeRoot,
-            releaseDirectory: nextFixture.releaseDir,
-            expectedConsumerDigest: nextFixture.anchor,
-          }),
-        ).rejects.toThrow("consumer_runtime_update_unsupported");
-        expect(snapshotRuntimeUpdateTree(worktreeRoot)).toEqual(worktreeBefore);
-        expect(runtimeUpdateActivePointer(consumerRoot).bytes).toEqual(mainPointerBeforeAttempt);
-        expect(runtimeUpdateActivePointer(consumerRoot).bytes).not.toEqual(priorPointer.bytes);
-        expect(existsSync(cacheRoot) ? snapshotRuntimeUpdateTree(cacheRoot) : []).toEqual(
-          cacheBefore,
-        );
-      },
-    });
-  });
-
-  it.fails("CANDIDATE-U-RTUPD-006: an A-pinned linked worktree keeps running after main moves to B", async () => {
-    let worktreeRoot = "";
-    let worktreePointerBytes: Buffer = Buffer.alloc(0);
-    let worktreeBundleBytes: Buffer = Buffer.alloc(0);
-    let worktreeBefore: string[] = [];
-    await runOracle({
-      beforeUpdate: async ({ consumerRoot }) => {
-        worktreeRoot = join(dirname(consumerRoot), "linked-worktree");
-        execFileSync("git", ["worktree", "add", "--quiet", worktreeRoot, "HEAD"], {
-          cwd: consumerRoot,
-        });
-        await setupApi.setupConsumerWorktreeRuntime({
-          currentRoot: consumerRoot,
-          worktreePath: worktreeRoot,
-          releaseDirectory: fixture.releaseDir,
-          expectedConsumerDigest: fixture.anchor,
-        });
-        const pointer = runtimeUpdateActivePointer(worktreeRoot);
-        worktreePointerBytes = pointer.bytes;
-        worktreeBundleBytes = readFileSync(join(pointer.bundlePath, "ut-tdd.mjs"));
-        worktreeBefore = snapshotRuntimeUpdateTree(worktreeRoot);
-      },
-      afterUpdate: ({ nextPointer }) => {
-        const pointer = runtimeUpdateActivePointer(worktreeRoot);
-        expect(pointer.bytes).toEqual(worktreePointerBytes);
-        expect(readFileSync(join(pointer.bundlePath, "ut-tdd.mjs"))).toEqual(worktreeBundleBytes);
-        expect(worktreeBundleBytes).toEqual(fixture.compiledBytes);
-        expect(snapshotRuntimeUpdateTree(worktreeRoot)).toEqual(worktreeBefore);
-        expect(nextPointer.bytes).not.toEqual(worktreePointerBytes);
-        const launch = spawnSync(
-          process.execPath,
-          [join(worktreeRoot, ".ut-tdd", "bin", "ut-tdd.mjs"), "status", "--json"],
-          {
-            cwd: worktreeRoot,
-            encoding: "utf8",
-            windowsHide: true,
-            env: { ...process.env, CI: "true" },
-          },
-        );
-        expect(launch.status, launch.stderr).toBe(0);
-      },
-    });
-  });
+  registerConsumerRuntimeUpdateWorktreeOracles({ getFixture: () => fixture, runOracle });
 
   it.fails("CANDIDATE-U-RTUPD-007: operation ID and history bind B to A", async () => {
     await runOracle({

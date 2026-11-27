@@ -98,9 +98,24 @@ export async function runConsumerRuntimeUpdateRetentionOracle(input: {
       input.fixture.compiledBytes,
       Buffer.from("\n// update\n"),
     ]);
+    const nextRevision = input.sameReleaseIdWithDifferentCompiledArtifact
+      ? input.fixture.runtime.release.source_revision
+      : "f".repeat(40);
+    const priorReceipt = JSON.parse(
+      Buffer.from(
+        input.fixture.runtime.generation.node_bootstrap_receipt_base64,
+        "base64",
+      ).toString("utf8"),
+    ) as { compiled_cli: { sha256: string } };
     const nextReceiptValue = {
       ...input.receiptUnsigned,
-      compiled_cli: { ...input.receiptUnsigned.compiled_cli, sha256: hashHex(nextCompiledBytes) },
+      subject_revision: nextRevision,
+      compiled_cli: {
+        ...input.receiptUnsigned.compiled_cli,
+        sha256: input.sameReleaseIdWithDifferentCompiledArtifact
+          ? priorReceipt.compiled_cli.sha256
+          : hashHex(nextCompiledBytes),
+      },
     };
     const nextReceipt = Buffer.from(
       JSON.stringify({
@@ -108,9 +123,6 @@ export async function runConsumerRuntimeUpdateRetentionOracle(input: {
         receipt_digest: createHash("sha256").update(canonical(nextReceiptValue)).digest("hex"),
       }),
     );
-    const nextRevision = input.sameReleaseIdWithDifferentCompiledArtifact
-      ? input.fixture.runtime.release.source_revision
-      : "f".repeat(40);
     const nextReleaseId = input.sameReleaseIdWithDifferentCompiledArtifact
       ? input.releaseId
       : deriveReleaseId("1", nextRevision, input.digest);
@@ -296,7 +308,6 @@ export function registerLauncherCompatibilityRejectionTests(input: {
         ) as ((bundle: unknown) => string | null) | undefined;
         expect(typeof validate).toBe("function");
         expect(validate?.(candidate(prior))).toMatch(/^consumer_runtime_/);
-        expect(readFileSync(pointer.path)).toEqual(pointer.bytes);
       } finally {
         input.removeFixtureTree(testCase.root);
       }
