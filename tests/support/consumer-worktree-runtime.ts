@@ -55,12 +55,14 @@ export function runConsumerWorktreeCommand(
   cwd: string,
   args: readonly string[],
   options: {
+    readonly entrypoint?: string;
     readonly sourceCli?: boolean;
     readonly input?: string;
     readonly env?: NodeJS.ProcessEnv;
   } = {},
 ) {
-  const entrypoint = options.sourceCli ? CLI : join(cwd, ".ut-tdd", "bin", "ut-tdd.mjs");
+  const entrypoint =
+    options.entrypoint ?? (options.sourceCli ? CLI : join(cwd, ".ut-tdd", "bin", "ut-tdd.mjs"));
   return spawnSync(process.execPath, [entrypoint, ...args], {
     cwd,
     encoding: "utf8",
