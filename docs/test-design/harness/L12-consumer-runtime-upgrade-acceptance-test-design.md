@@ -25,14 +25,12 @@ control が指定した canary.10 公開の事前条件 (Issue #2023 comments 72
 公開済み canary.7 の配布物を使う隔離 fixture は
 `scripts/rehearse-upgrade-canary-fixture.mjs` が作る。fixture 作成は main consumer に
 canary.7 を導入し、linked worktree を複数作り、1 本に canary.7 runtime を導入し、別の 1 本は
-runtime 無しにし、実際に tracked file を dirty にするところまでである。canary.10 の package、
-版切替、手動 pointer rollback、Claude session 中の切替、公開、または実 consumer の操作は
-fixture script の責務外であり、別途リハーサル承認と手順に従う。
+runtime 無しにし、tracked file を dirty にする。canary.10 候補での版切替と手動 pointer rollback は
+この fixture を使い、§3 の受入手順に沿って確認する。
 
 ## 2. リハーサルの前提と開始条件
 
-- 対象は `C:\\dev` 配下に新規作成する disposable な repository だけとする。既存 consumer、
-  source repository、Pack checkout、既存の canary.7 probe は対象にしない。
+- 対象は `C:\dev` 配下に新規作成する disposable な repository とする。
 - canary.7 の 5 asset (`.tar.gz`、`.tar.gz.sha256`、`.ut-tdd.mjs`、
   `.consumer-runtime.json`、`.consumer.sha256`) を同じ公開 tag のものとして受け取り、
   §4.1 / §6 の blob と SHA-256 検証が PASS であること。fixture script は公開 Release API の
