@@ -17,10 +17,11 @@ import { removeTestTree } from "./support/temp-tree.ts";
  */
 
 const REPO_ROOT = process.cwd();
+const PR_DISCIPLINE_JOB = "harness-check-pr-discipline";
 const PROTECTION_IF = "$" + "{{ github.event_name == 'pull_request' }}";
 const BASE_SHA_EXPR = "$" + "{{ github.sha }}^1";
 const GITHUB_SHA_EXPR = "$" + "{{ github.sha }}";
-const FULL_LANE_IF = "$" + "{{ steps.classify.outputs.lane == 'full' }}";
+const FULL_LANE_IF = "$" + "{{ needs.classify.outputs.lane == 'full' }}";
 
 interface GateApi {
   IMPLEMENTATION_PATH_PREFIXES: readonly string[];
@@ -87,7 +88,7 @@ function mutateWorkflow(content: string, mutate: (workflow: WorkflowShape) => vo
 
 function withProtectionStep(content: string): string {
   return mutateWorkflow(content, (workflow) => {
-    const steps = workflow.jobs["harness-check-linux"].steps;
+    const steps = workflow.jobs[PR_DISCIPLINE_JOB].steps;
     const existing = steps.filter((step) => step.run?.includes("github design-protection"));
     if (existing.length > 1) throw new Error("fixture contains duplicate design-protection steps");
     if (existing.length === 1) return;
@@ -137,9 +138,9 @@ describe("design-protection L7 candidate Red (PR #981)", () => {
       readFileSync(join(REPO_ROOT, ".github/workflows/harness-check.yml"), "utf8"),
     );
     const removed = mutateWorkflow(baseline, (workflow) => {
-      workflow.jobs["harness-check-linux"].steps = workflow.jobs[
-        "harness-check-linux"
-      ].steps.filter((step) => !step.run?.includes("github design-protection"));
+      workflow.jobs[PR_DISCIPLINE_JOB].steps = workflow.jobs[PR_DISCIPLINE_JOB].steps.filter(
+        (step) => !step.run?.includes("github design-protection"),
+      );
     });
     const removedResult = policyWithRuntime(removed);
     expect(removedResult.violations).toContainEqual(
@@ -156,7 +157,7 @@ describe("design-protection L7 candidate Red (PR #981)", () => {
     );
 
     const skipped = mutateWorkflow(baseline, (workflow) => {
-      const step = workflow.jobs["harness-check-linux"].steps.find((item) =>
+      const step = workflow.jobs[PR_DISCIPLINE_JOB].steps.find((item) =>
         item.run?.includes("github design-protection"),
       );
       if (!step) throw new Error("proposed step missing from fixture");
@@ -170,10 +171,10 @@ describe("design-protection L7 candidate Red (PR #981)", () => {
     );
   });
 
-  it("U-DPROT-024: workflowとruntime manifestに正しいLinux stepがあればpolicy OK", () => {
+  it("U-DPROT-024: workflowとruntime manifestに正しいPR-discipline stepがあればpolicy OK", () => {
     const actual = readFileSync(join(REPO_ROOT, ".github/workflows/harness-check.yml"), "utf8");
     const workflow = parseYaml(actual) as WorkflowShape;
-    const installed = workflow.jobs["harness-check-linux"].steps.filter((step) =>
+    const installed = workflow.jobs[PR_DISCIPLINE_JOB].steps.filter((step) =>
       step.run?.includes("github design-protection"),
     );
     // A synthetic extra step can be ignored by the old policy. Require the
@@ -195,7 +196,7 @@ describe("design-protection L7 candidate Red (PR #981)", () => {
       [
         "if missing",
         mutateWorkflow(proposed, (workflow) => {
-          const step = workflow.jobs["harness-check-linux"].steps.find((item) =>
+          const step = workflow.jobs[PR_DISCIPLINE_JOB].steps.find((item) =>
             item.run?.includes("github design-protection"),
           );
           if (!step) throw new Error("proposed step missing from fixture");
@@ -205,7 +206,7 @@ describe("design-protection L7 candidate Red (PR #981)", () => {
       [
         "always",
         mutateWorkflow(proposed, (workflow) => {
-          const step = workflow.jobs["harness-check-linux"].steps.find((item) =>
+          const step = workflow.jobs[PR_DISCIPLINE_JOB].steps.find((item) =>
             item.run?.includes("github design-protection"),
           );
           if (!step) throw new Error("proposed step missing from fixture");
@@ -215,7 +216,7 @@ describe("design-protection L7 candidate Red (PR #981)", () => {
       [
         "before branch-type guard",
         mutateWorkflow(proposed, (workflow) => {
-          const steps = workflow.jobs["harness-check-linux"].steps;
+          const steps = workflow.jobs[PR_DISCIPLINE_JOB].steps;
           const index = steps.findIndex((step) => step.run?.includes("github design-protection"));
           const [step] = steps.splice(index, 1);
           const branchGuard = steps.findIndex((item) => item.name?.startsWith("branch-type guard"));
@@ -223,19 +224,19 @@ describe("design-protection L7 candidate Red (PR #981)", () => {
         }),
       ],
       [
-        "after typecheck",
+        "after privacy scan",
         mutateWorkflow(proposed, (workflow) => {
-          const steps = workflow.jobs["harness-check-linux"].steps;
+          const steps = workflow.jobs[PR_DISCIPLINE_JOB].steps;
           const index = steps.findIndex((step) => step.run?.includes("github design-protection"));
           const [step] = steps.splice(index, 1);
-          const typecheck = steps.findIndex((item) => item.run?.includes("npm run typecheck"));
-          steps.splice(typecheck + 1, 0, step);
+          const privacyScan = steps.findIndex((item) => item.name?.startsWith("privacy scan"));
+          steps.splice(privacyScan + 1, 0, step);
         }),
       ],
       [
         "continue on error",
         mutateWorkflow(proposed, (workflow) => {
-          const step = workflow.jobs["harness-check-linux"].steps.find((item) =>
+          const step = workflow.jobs[PR_DISCIPLINE_JOB].steps.find((item) =>
             item.run?.includes("github design-protection"),
           );
           if (!step) throw new Error("proposed step missing from fixture");
@@ -261,7 +262,7 @@ describe("design-protection L7 candidate Red (PR #981)", () => {
     const workflow = parseYaml(
       readFileSync(join(REPO_ROOT, ".github/workflows/harness-check.yml"), "utf8"),
     ) as WorkflowShape;
-    const steps = workflow.jobs["harness-check-linux"].steps.filter((step) =>
+    const steps = workflow.jobs[PR_DISCIPLINE_JOB].steps.filter((step) =>
       step.run?.includes("github design-protection"),
     );
     expect(steps).toHaveLength(1);

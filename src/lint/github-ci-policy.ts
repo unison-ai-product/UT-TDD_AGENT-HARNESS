@@ -2,10 +2,17 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { parse as parseYaml } from "yaml";
 import {
+  sourceAggregateSteps,
+  sourceLinuxPolicyProblems,
+  sourceLinuxStepManifests,
+  sourceRequiredSteps,
+} from "./github-ci-linux-split.ts";
+
+export { REQUIRED_AGGREGATE_COMMAND } from "./github-ci-linux-split.ts";
+
+import {
   githubExpression,
-  harnessAggregateSteps,
   harnessLaneEvidenceSteps,
-  LINUX_FULL_REGRESSION_ENV,
   runtimeLegShapeProblems,
   WINDOWS_SHARD_REGRESSION_STEPS,
 } from "./github-ci-windows-shard.ts";
@@ -76,6 +83,7 @@ interface WorkflowJob {
   "continue-on-error"?: unknown;
   env?: unknown;
   needs?: unknown;
+  outputs?: unknown;
   if?: unknown;
   "runs-on"?: unknown;
   strategy?: unknown;
@@ -265,17 +273,30 @@ function pushViolation({
   violations.push({ file: doc.file, profile: doc.profile, reason, detail });
 }
 
-const HARNESS_LEGS = ["harness-check-linux", "harness-check-windows"] as const;
+const HARNESS_LEGS = ["harness-check-windows"] as const;
 const NODE_GENERATION_LEGS = ["node-generation-linux", "node-generation-windows"] as const;
 const RUNTIME_LEGS = [...HARNESS_LEGS, ...NODE_GENERATION_LEGS] as const;
+const SOURCE_LINUX_LEGS = [
+  "classify",
+  "harness-check-pr-discipline",
+  "harness-check-static",
+  "harness-check-linux",
+] as const;
+const AGGREGATE_LEGS = [
+  ...SOURCE_LINUX_LEGS,
+  "harness-check-windows",
+  ...NODE_GENERATION_LEGS,
+] as const;
 
 // PLAN-L7-455 (troubleshoot): doc-only lane 絞り込みが検証弱化にならないことを fail-close 検査する。
 // 正準の lane 条件式のみを許可し (非正準式は即 violation)、"full" 限定でしか skip してよい
 // step は保守的 allowlist に限定する。allowlist 外の step (github guard / lint / checkout 等)
 // が lane 条件を持つこと自体を drift として検出する。
-const LANE_REFERENCE_NEEDLE = "steps.classify.outputs.lane";
-const LANE_FULL_ONLY_IF = "$" + "{{ steps.classify.outputs.lane == 'full' }}";
-const LANE_DOC_ONLY_IF = "$" + "{{ steps.classify.outputs.lane == 'doc' }}";
+const LANE_REFERENCE_NEEDLE = "classify.outputs.lane";
+const LANE_FULL_ONLY_IF = "$" + "{{ needs.classify.outputs.lane == 'full' }}";
+const LANE_DOC_ONLY_IF = "$" + "{{ needs.classify.outputs.lane == 'doc' }}";
+const WINDOWS_LANE_FULL_ONLY_IF = "$" + "{{ steps.classify.outputs.lane == 'full' }}";
+const WINDOWS_LANE_DOC_ONLY_IF = "$" + "{{ steps.classify.outputs.lane == 'doc' }}";
 const DOC_LANE_DOCTOR = "node src/cli.ts doctor --profile source-doc-lane";
 const DB_REBUILD = "node src/cli.ts db rebuild --json";
 // 注意: 素朴な部分文字列一致だと "npm run test" が doc lane 専用の
@@ -323,7 +344,7 @@ function isFailCloseStep(step: WorkflowStep): boolean {
 
 function hasCanonicalDocLaneDoctor(step: WorkflowStep): boolean {
   return (
-    step.if === LANE_DOC_ONLY_IF &&
+    step.if === WINDOWS_LANE_DOC_ONLY_IF &&
     normalizedRun(step.run) === DOC_LANE_DOCTOR &&
     step.shell === undefined &&
     step.env === undefined &&
@@ -377,75 +398,9 @@ const nodeGenerationUploadStep = (lane: (typeof NODE_GENERATION_LEGS)[number]) =
       "if-no-files-found": "error",
     },
   });
+const SOURCE_LINUX_STEP_MANIFESTS = sourceLinuxStepManifests(commonRuntimeSteps, classifyFields);
+
 const RUNTIME_STEP_MANIFESTS: Record<(typeof RUNTIME_LEGS)[number], readonly object[]> = {
-  "harness-check-linux": [
-    ...commonRuntimeSteps,
-    step("oracle baseline ratchet (required on every PR)", {
-      if: githubExpression("github.event_name == 'pull_request'"),
-      env: {
-        ORACLE_RATCHET_EVENT_NAME: githubExpression("github.event_name"),
-        ORACLE_RATCHET_MERGE_SHA: githubExpression("github.sha"),
-      },
-      run: "node scripts/oracle-baseline-ratchet.mjs",
-    }),
-    step("classify changed files (doc lane vs full, fail-close)", classifyFields),
-    ...harnessLaneEvidenceSteps("linux"),
-    step("branch-type guard (commitlint / poc / hotfix)", {
-      env: {
-        HEAD_REF: githubExpression("github.head_ref || github.ref_name"),
-        BASE_REF: githubExpression("github.base_ref || 'main'"),
-        PR_TITLE: githubExpression(
-          "github.event_name == 'pull_request' && github.event.pull_request.title || ''",
-        ),
-        PR_BODY: githubExpression("github.event.pull_request.body || ''"),
-      },
-      run: `printf '%s\\n' "$PR_BODY" > .ut-tdd-pr-body.txt
-node src/cli.ts github guard --head-ref "$HEAD_REF" --base-ref "$BASE_REF" --pr-title "$PR_TITLE" --pr-body-file .ut-tdd-pr-body.txt`,
-    }),
-    step("design-protection (実装 PR の設計書書き換え拒否、fail-close)", {
-      if: githubExpression("github.event_name == 'pull_request'"),
-      env: { BASE_SHA: `${githubExpression("github.sha")}^1` },
-      run: `node src/cli.ts github design-protection --base "$BASE_SHA" --head "${githubExpression("github.sha")}"`,
-    }),
-    step("privacy scan (email の形、fail-close)", {
-      env: {
-        EVENT_NAME: githubExpression("github.event_name"),
-        BASE_SHA: githubExpression("github.event.pull_request.base.sha"),
-        HEAD_SHA: githubExpression("github.event.pull_request.head.sha"),
-      },
-      run: `node src/cli.ts privacy-scan check --mode tree --fail-close
-if [ "$EVENT_NAME" = "pull_request" ]; then
-  node src/cli.ts privacy-scan check --mode diff --base "$BASE_SHA" --head "$HEAD_SHA" --fail-close
-fi`,
-    }),
-    run("typecheck (tsc --noEmit)", "npm run typecheck", LANE_FULL_ONLY_IF),
-    run("db rebuild (deterministic projection)", DB_REBUILD, LANE_FULL_ONLY_IF),
-    step("doctor (governance hard gates)", {
-      if: LANE_FULL_ONLY_IF,
-      env: {
-        UT_TDD_DOCTOR_RESULT_FILE: `${githubExpression("runner.temp")}/ut-tdd-doctor-result.json`,
-      },
-      run: 'node src/cli.ts doctor --result-file "$UT_TDD_DOCTOR_RESULT_FILE"',
-    }),
-    step("test — 全回帰 (vitest run)", {
-      if: LANE_FULL_ONLY_IF,
-      env: LINUX_FULL_REGRESSION_ENV,
-      run: "npm run test",
-    }),
-    run("doc lane checks (readability / rule-drift)", "npm run test:doc-lane", LANE_DOC_ONLY_IF),
-    run("doc lane source doctor", DOC_LANE_DOCTOR, LANE_DOC_ONLY_IF),
-    run("lint (biome)", "npm run lint"),
-    run(
-      "audit quality (gate findings)",
-      "node src/cli.ts audit quality --include-tests --limit 20",
-      LANE_FULL_ONLY_IF,
-    ),
-    run(
-      "job summary (UT-TDD projection)",
-      'node src/cli.ts github summary >> "$GITHUB_STEP_SUMMARY"',
-      REQUIRED_AGGREGATE_IF,
-    ),
-  ],
   "harness-check-windows": [
     ...commonRuntimeSteps,
     step("classify changed files (doc lane vs full, fail-close)", {
@@ -453,11 +408,19 @@ fi`,
       shell: "bash",
     }),
     ...harnessLaneEvidenceSteps("windows"),
-    run("typecheck (tsc --noEmit)", "npm run typecheck", LANE_FULL_ONLY_IF),
-    run("db rebuild (deterministic projection on Windows SQLite)", DB_REBUILD, LANE_FULL_ONLY_IF),
+    run("typecheck (tsc --noEmit)", "npm run typecheck", WINDOWS_LANE_FULL_ONLY_IF),
+    run(
+      "db rebuild (deterministic projection on Windows SQLite)",
+      DB_REBUILD,
+      WINDOWS_LANE_FULL_ONLY_IF,
+    ),
     ...WINDOWS_SHARD_REGRESSION_STEPS,
-    run("doc lane source checks", DOC_LANE_DOCTOR, LANE_DOC_ONLY_IF),
-    run("doctor (toolchain scope)", "node src/cli.ts doctor --scope toolchain", LANE_FULL_ONLY_IF),
+    run("doc lane source checks", DOC_LANE_DOCTOR, WINDOWS_LANE_DOC_ONLY_IF),
+    run(
+      "doctor (toolchain scope)",
+      "node src/cli.ts doctor --scope toolchain",
+      WINDOWS_LANE_FULL_ONLY_IF,
+    ),
   ],
   "node-generation-linux": [
     ...commonNodeGenerationSteps,
@@ -481,6 +444,17 @@ function canonicalSemantic(value: unknown, key = ""): unknown {
         .map(([childKey, child]) => [childKey, canonicalSemantic(child, childKey)]),
     );
   return value;
+}
+
+function sourceFailCloseSemantic(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(sourceFailCloseSemantic);
+  const record = recordValue(value);
+  if (!record) return value;
+  return Object.fromEntries(
+    Object.entries(record)
+      .filter(([key, child]) => key !== "continue-on-error" || child !== false)
+      .map(([key, child]) => [key, sourceFailCloseSemantic(child)]),
+  );
 }
 
 function checkLaneSkipSafety(input: {
@@ -529,7 +503,6 @@ function checkLaneSkipSafety(input: {
       producer?.if !== undefined ||
       producer?.env !== undefined ||
       !isFailCloseStep(producer) ||
-      (name === "harness-check-linux" && producer?.shell !== undefined) ||
       (name === "harness-check-windows" && producer?.shell !== "bash")
     ) {
       pushViolation({
@@ -573,7 +546,11 @@ function checkLaneSkipSafety(input: {
       if (typeof ifValue !== "string" || !ifValue.includes(LANE_REFERENCE_NEEDLE)) continue;
       const label = step.name ?? step.run ?? step.uses ?? "(unnamed step)";
       const text = stepText(step);
-      if (ifValue === LANE_FULL_ONLY_IF) {
+      const fullOnlyIf =
+        name === "harness-check-windows" ? WINDOWS_LANE_FULL_ONLY_IF : LANE_FULL_ONLY_IF;
+      const docOnlyIf =
+        name === "harness-check-windows" ? WINDOWS_LANE_DOC_ONLY_IF : LANE_DOC_ONLY_IF;
+      if (ifValue === fullOnlyIf) {
         if (!matchesLaneSkipAllowlist(text)) {
           pushViolation({
             violations: input.violations,
@@ -584,7 +561,7 @@ function checkLaneSkipSafety(input: {
         }
         continue;
       }
-      if (ifValue === LANE_DOC_ONLY_IF) {
+      if (ifValue === docOnlyIf) {
         if (matchesLaneSkipAllowlist(text)) {
           pushViolation({
             violations: input.violations,
@@ -605,15 +582,41 @@ function checkLaneSkipSafety(input: {
   }
 }
 
-const aggregateResultExpression = (leg: (typeof RUNTIME_LEGS)[number]): string =>
-  ["$", `{{ needs.${leg}.result }}`].join("");
-
-export const REQUIRED_AGGREGATE_COMMAND = RUNTIME_LEGS.map(
-  (leg) => `test "${aggregateResultExpression(leg)}" = "success"`,
-).join(" && ");
+function checkSourceRuntimeLegs(input: {
+  jobs: Record<string, unknown>;
+  doc: GithubWorkflowDoc;
+  violations: GithubCiPolicyViolation[];
+}): void {
+  const legs = RUNTIME_LEGS.map((name) => recordValue(input.jobs[name]) as WorkflowJob | null);
+  for (const [index, leg] of legs.entries()) {
+    const name = RUNTIME_LEGS[index];
+    const runner = name === "node-generation-linux" ? "ubuntu-latest" : "windows-latest";
+    const validSteps =
+      Array.isArray(leg?.steps) && leg.steps.length > 0 && leg.steps.every(workflowStep);
+    const continuesOnError =
+      (!!leg && ![undefined, false].includes(leg["continue-on-error"] as undefined | false)) ||
+      (Array.isArray(leg?.steps) &&
+        leg.steps.some(
+          (step) =>
+            ![undefined, false].includes(
+              recordValue(step)?.["continue-on-error"] as undefined | false,
+            ),
+        ));
+    if (leg?.["runs-on"] === runner && validSteps && !continuesOnError) continue;
+    pushViolation({
+      violations: input.violations,
+      doc: input.doc,
+      reason: "missing_runtime_leg",
+      detail: leg
+        ? `jobs.${name} must run on ${runner} with non-empty fail-close steps`
+        : `jobs.${name}`,
+    });
+  }
+  checkLaneSkipSafety({ legs, doc: input.doc, violations: input.violations });
+}
 
 export function aggregateHarnessResultsPass(results: Record<string, string>): boolean {
-  return HARNESS_LEGS.every((leg) => results[leg] === "success");
+  return [...SOURCE_LINUX_LEGS, "harness-check-windows"].every((leg) => results[leg] === "success");
 }
 
 export function aggregateNodeGenerationResultsPass(results: Record<string, string>): boolean {
@@ -625,42 +628,31 @@ function checkRuntimeAggregate(input: {
   doc: GithubWorkflowDoc;
   violations: GithubCiPolicyViolation[];
 }): WorkflowJob | null {
-  const legs = RUNTIME_LEGS.map((name) => recordValue(input.jobs[name]) as WorkflowJob | null);
-  for (const [index, leg] of legs.entries()) {
-    const name = RUNTIME_LEGS[index];
-    if (!leg) {
-      pushViolation({
-        violations: input.violations,
-        doc: input.doc,
-        reason: "missing_runtime_leg",
-        detail: `jobs.${name}`,
-      });
-      continue;
-    }
-    const expectedRunner =
-      name === "harness-check-linux" || name === "node-generation-linux"
-        ? "ubuntu-latest"
-        : "windows-latest";
-    const validSteps =
-      Array.isArray(leg.steps) && leg.steps.length > 0 && leg.steps.every(workflowStep);
-    const continuesOnError =
-      ![undefined, false].includes(leg["continue-on-error"] as undefined | false) ||
-      (Array.isArray(leg.steps) &&
-        leg.steps.some(
-          (step) =>
-            ![undefined, false].includes(
-              recordValue(step)?.["continue-on-error"] as undefined | false,
-            ),
-        ));
-    if (leg["runs-on"] === expectedRunner && validSteps && !continuesOnError) continue;
+  checkSourceRuntimeLegs(input);
+  const stepsOf = (job: unknown): Record<string, unknown>[] => {
+    const steps = recordValue(job)?.steps;
+    return Array.isArray(steps) && steps.every(workflowStep)
+      ? (steps as WorkflowStep[] as Record<string, unknown>[])
+      : [];
+  };
+  const splitProblems = sourceLinuxPolicyProblems({
+    jobs: input.jobs,
+    manifests: SOURCE_LINUX_STEP_MANIFESTS,
+    fullCondition: LANE_FULL_ONLY_IF,
+    docCondition: LANE_DOC_ONLY_IF,
+    stepsOf,
+    failClose: (step) => isFailCloseStep(step as WorkflowStep),
+    semantic: (value) => canonicalSemantic(sourceFailCloseSemantic(value)),
+    matchesFullOnly: matchesLaneSkipAllowlist,
+    stepText: (step) => stepText(step as WorkflowStep),
+  });
+  for (const problem of splitProblems)
     pushViolation({
       violations: input.violations,
       doc: input.doc,
-      reason: "missing_runtime_leg",
-      detail: `jobs.${name} must run on ${expectedRunner} with non-empty fail-close steps`,
+      reason: problem.reason,
+      detail: problem.detail,
     });
-  }
-  checkLaneSkipSafety({ legs, doc: input.doc, violations: input.violations });
   const aggregateValue = input.jobs["harness-check"];
   const aggregate = recordValue(aggregateValue) as WorkflowJob | null;
   if (aggregateValue === undefined) {
@@ -686,14 +678,14 @@ function checkRuntimeAggregate(input: {
     });
   } else {
     const needs = stringValues(aggregate.needs);
-    const missing = RUNTIME_LEGS.filter((leg) => !needs?.includes(leg));
-    const exact = needs?.length === RUNTIME_LEGS.length && missing.length === 0;
+    const missing = AGGREGATE_LEGS.filter((leg) => !needs?.includes(leg));
+    const exact = needs?.length === AGGREGATE_LEGS.length && missing.length === 0;
     if (!exact) {
       pushViolation({
         violations: input.violations,
         doc: input.doc,
         reason: "invalid_aggregate_needs",
-        detail: `harness-check.needs must equal ${RUNTIME_LEGS.join(",")} (missing=${missing.join(",") || "none"})`,
+        detail: `harness-check.needs must equal ${AGGREGATE_LEGS.join(",")} (missing=${missing.join(",") || "none"})`,
       });
     }
     if (aggregate.if !== REQUIRED_AGGREGATE_IF) {
@@ -708,9 +700,9 @@ function checkRuntimeAggregate(input: {
       Array.isArray(aggregate.steps) && aggregate.steps.every(workflowStep) ? aggregate.steps : [];
     const failCloseDisabled =
       ![undefined, false].includes(aggregate["continue-on-error"] as undefined | false) ||
-      JSON.stringify(canonicalSemantic(aggregateSteps)) !==
-        JSON.stringify(canonicalSemantic(harnessAggregateSteps(REQUIRED_AGGREGATE_COMMAND)));
-    for (const leg of failCloseDisabled ? RUNTIME_LEGS : []) {
+      JSON.stringify(canonicalSemantic(sourceFailCloseSemantic(aggregateSteps))) !==
+        JSON.stringify(canonicalSemantic(sourceAggregateSteps()));
+    for (const leg of failCloseDisabled ? AGGREGATE_LEGS : []) {
       pushViolation({
         violations: input.violations,
         doc: input.doc,
@@ -719,7 +711,7 @@ function checkRuntimeAggregate(input: {
       });
     }
   }
-  return legs[0];
+  return recordValue(input.jobs["harness-check-linux"]) as WorkflowJob | null;
 }
 
 function checkHarnessTriggers(input: {
@@ -1047,7 +1039,8 @@ export function analyzeGithubCiPolicy(docs: GithubWorkflowDoc[]): GithubCiPolicy
       continue;
     }
     const requiresRuntimeAggregate = doc.role === "runtime" && doc.profile === "source";
-    const jobValue = jobs?.[requiresRuntimeAggregate ? "harness-check-linux" : "harness-check"];
+    const jobName = requiresRuntimeAggregate ? "harness-check-linux" : "harness-check";
+    const jobValue = jobs[jobName];
     const job = requiresRuntimeAggregate
       ? checkRuntimeAggregate({ jobs, doc, violations })
       : (recordValue(jobValue) as WorkflowJob | null);
@@ -1056,10 +1049,7 @@ export function analyzeGithubCiPolicy(docs: GithubWorkflowDoc[]): GithubCiPolicy
         violations,
         doc,
         reason: jobValue === undefined ? "missing_job" : "malformed_workflow_shape",
-        detail:
-          jobValue === undefined
-            ? `jobs.${requiresRuntimeAggregate ? "harness-check-linux" : "harness-check"}`
-            : `jobs.${requiresRuntimeAggregate ? "harness-check-linux" : "harness-check"} must be a mapping`,
+        detail: `jobs.${jobName}${jobValue === undefined ? "" : " must be a mapping"}`,
       });
       continue;
     }
@@ -1094,11 +1084,13 @@ export function analyzeGithubCiPolicy(docs: GithubWorkflowDoc[]): GithubCiPolicy
         violations,
         doc,
         reason: "malformed_workflow_shape",
-        detail: `jobs.${requiresRuntimeAggregate ? "harness-check-linux" : "harness-check"}.steps must be an array of mappings`,
+        detail: `jobs.${jobName}.steps must be an array of mappings`,
       });
       continue;
     }
-    const steps = job.steps as WorkflowStep[];
+    const steps = requiresRuntimeAggregate
+      ? (sourceRequiredSteps(jobs, workflowStep) as WorkflowStep[])
+      : (job.steps as WorkflowStep[]);
     if (doc.role === "source_template" || doc.role === "setup_builtin") continue;
     const profileSpec = GITHUB_CI_PROFILE_SPECS[doc.profile];
     for (const spec of profileSpec.requiredSteps) {

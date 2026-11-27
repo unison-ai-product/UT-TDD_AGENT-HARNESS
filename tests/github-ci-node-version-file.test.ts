@@ -129,17 +129,24 @@ describe("Issue #1873 node-version-file Red oracles", () => {
   it.fails("CANDIDATE-U-CIPOL-048: setup-node must come after checkout in each job", () => {
     expectRealShape(["runtime"]);
     expectGreenShape();
-    expectViolation(
-      mutate("runtime", (content) => {
-        const wf = parseYaml(content) as { jobs: Record<string, { steps: unknown[] }> };
-        const steps = wf.jobs["harness-check-linux"]?.steps ?? [];
-        const checkout = steps.findIndex((s) => JSON.stringify(s).includes("actions/checkout"));
-        const setup = steps.findIndex((s) => JSON.stringify(s).includes("actions/setup-node"));
-        expect(checkout).toBeGreaterThanOrEqual(0);
-        expect(setup).toBeGreaterThan(checkout);
-        [steps[checkout], steps[setup]] = [steps[setup], steps[checkout]];
-        return stringifyYaml(wf);
-      }),
-    );
+    for (const jobId of [
+      "classify",
+      "harness-check-pr-discipline",
+      "harness-check-static",
+      "harness-check-linux",
+    ]) {
+      expectViolation(
+        mutate("runtime", (content) => {
+          const wf = parseYaml(content) as { jobs: Record<string, { steps: unknown[] }> };
+          const steps = wf.jobs[jobId]?.steps ?? [];
+          const checkout = steps.findIndex((s) => JSON.stringify(s).includes("actions/checkout"));
+          const setup = steps.findIndex((s) => JSON.stringify(s).includes("actions/setup-node"));
+          expect(checkout, `${jobId} checkout`).toBeGreaterThanOrEqual(0);
+          expect(setup, `${jobId} setup-node`).toBeGreaterThan(checkout);
+          [steps[checkout], steps[setup]] = [steps[setup], steps[checkout]];
+          return stringifyYaml(wf);
+        }),
+      );
+    }
   });
 });
