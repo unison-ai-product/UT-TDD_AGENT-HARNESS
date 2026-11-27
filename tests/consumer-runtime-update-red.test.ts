@@ -54,15 +54,15 @@ describe("consumer runtime update Red candidates", () => {
       }),
   );
 
-  it.fails("U-RTUPD-001: updates main runtime and retains prior generation", async () => {
+  it("U-RTUPD-001: updates main runtime and retains prior generation", async () => {
     await runOracle();
   });
 
-  it.fails("U-RTUPD-009: replaying the updated Release is write-zero", async () => {
+  it("U-RTUPD-009: replaying the updated Release is write-zero", async () => {
     await runOracle({ assertIdempotentReplay: true, snapshotTree: snapshotRuntimeUpdateTree });
   });
 
-  it.fails("U-RTUPD-003: actual active pointer EPERM is attempted once", async () => {
+  it("U-RTUPD-003: actual active pointer EPERM is attempted once", async () => {
     let treeBefore = [] as string[];
     let priorMode: bigint | number | undefined;
     try {
@@ -114,7 +114,7 @@ describe("consumer runtime update Red candidates", () => {
     }
   });
 
-  it.fails("U-RTUPD-010: active pointer is published by one atomic rename", async () => {
+  it("U-RTUPD-010: active pointer is published by one atomic rename", async () => {
     try {
       await runOracle({
         beforeUpdate: ({ priorPointer }) => {
@@ -161,7 +161,7 @@ describe("consumer runtime update Red candidates", () => {
     }
   });
 
-  const windowsRestoreTest = process.platform === "win32" ? it.fails : it.skip;
+  const windowsRestoreTest = process.platform === "win32" ? it : it.skip;
   windowsRestoreTest("U-RTUPD-003: pointer mode restore failure is indeterminate", async () => {
     try {
       await runOracle({
@@ -198,7 +198,7 @@ describe("consumer runtime update Red candidates", () => {
     }
   });
 
-  it.fails("U-RTUPD-003: post-publication fsync failure does not roll back", async () => {
+  it("U-RTUPD-003: post-publication fsync failure does not roll back", async () => {
     try {
       await runOracle({
         beforeUpdate: ({ priorPointer }) => {
@@ -241,7 +241,7 @@ describe("consumer runtime update Red candidates", () => {
     }
   });
 
-  it.fails.each([
+  it.each([
     {
       name: "pre-publication failure restores the consumer tree",
       barrier: "atomicRenameActivePointerCAS",
@@ -339,7 +339,7 @@ describe("consumer runtime update Red candidates", () => {
 
   registerConsumerRuntimeUpdateWorktreeOracles({ getFixture: () => fixture, runOracle });
 
-  it.fails("U-RTUPD-007: operation ID and history bind B to A", async () => {
+  it("U-RTUPD-007: operation ID and history bind B to A", async () => {
     await runOracle({
       afterUpdate: ({ priorPointer, nextPointer, nextFixture }) => {
         const priorManifest = JSON.parse(
@@ -375,7 +375,7 @@ describe("consumer runtime update Red candidates", () => {
     });
   });
 
-  it.fails("U-RTUPD-008: compatible updates retain launcher and seven-file bundle shape", async () => {
+  it("U-RTUPD-008: compatible updates retain launcher and seven-file bundle shape", async () => {
     let priorLauncher: Buffer = Buffer.alloc(0);
     await runOracle({
       beforeUpdate: ({ consumerRoot }) => {
@@ -426,7 +426,7 @@ describe("consumer runtime update Red candidates", () => {
     removeFixtureTree: removeRuntimeUpdateFixtureTree,
   });
 
-  it.fails("U-RTUPD-011: failed bundle cleanup is indeterminate", async () => {
+  it("U-RTUPD-011: failed bundle cleanup is indeterminate", async () => {
     let treeBefore = [] as string[];
     let priorBundleFiles: Array<readonly [string, Buffer]> = [];
     let priorMode = 0n;
