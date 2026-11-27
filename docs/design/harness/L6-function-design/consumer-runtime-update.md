@@ -34,6 +34,20 @@ issue: 930
 5. launcher (`.ut-tdd/bin/ut-tdd.mjs`) は pointer を介して bundle を解決するので、版上げで launcher を書き換えない (互換の判定は §9.1)。
 6. 同じ版 (release_id・artifact_set_digest・compiled_esm_digest・generation_id が全て一致) の再実行は、従来どおり `already-installed` の idempotent とする。
 
+### 3.1 契約上の関数シグネチャ
+
+版上げが依存・新設する関数を次に挙げる (名前は契約上のもの。既存は実装済みの名前、新設は本書が足す)。
+
+- `verifyConsumerRuntimeReleaseAssets(assets, anchorDigest) => VerifiedRelease`: 既存。外部 anchor の digest に対して新 asset を検証する。失敗は既存の検証失敗の符号 (§3 手順 1、§9 決定 b)。
+- `isLinkedWorktreeCheckout(root) => boolean`: 既存。setup の入口で 1 回だけ main root か否かを判定し、結果は明示の引数で下層へ渡す (§9 決定 b)。
+- `installConsumerNodeRuntime(input, isMainRoot) => InstallResult`: 既存の setup の本体に、判定済みの `isMainRoot` を渡すよう拡張する。main root では別の版を `updated` として通し、worktree に別の版がある場合だけ `consumer_runtime_update_unsupported` で拒否する。同じ版の再実行は `already-installed` (§3 手順 6、§9 決定 b)。
+- `assertLauncherCompatible(priorBundle, newBundle) => void` (新設): bundle のファイル集合と history の field の形式が変わらないことを、切り替えの前に確かめる。非互換は既存の検証失敗の符号で拒否する (§9.1)。
+- `publishActivePointer(activation, newBundle) => ActivePointerResult` (新設): 手順 4 の atomic な置き換え (一時ファイル + rename)。rename の前の失敗は旧 pointer と mode を保つ。復元できない失敗と rename の後の失敗は `consumer_runtime_indeterminate` (§4、§9 技術 4)。
+- `deriveOperationId(tag, generationId) => string`: 既存。`hash(tag + NUL + generationId)` の決定的な生成を新 generation でも使う (§9 技術 2)。
+
+- pre: Release の検証に成功している。新 bundle の identity・receipt・ファイル digest の検査に成功している (§3 手順 1〜3)。同じ `release_id` で artifact が違う入力は拒否する (§9 技術 3)。
+- post: 成功時は active pointer が新 generation を指し、旧 generation の bundle は byte 同一のまま残る (§5)。失敗時 (indeterminate を除く) は consumer tree が実行前と同一である (§4)。
+
 ## 4. active pointer の切り替えと失敗時の挙動
 
 - 失敗は手順 1〜3 のどこでも起こりうる。手順 4 の前に失敗した場合、active pointer は旧 generation を指したままで、consumer tree は実行前と同一である (新 bundle の書きかけは巻き戻す)。
