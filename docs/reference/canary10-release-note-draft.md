@@ -15,7 +15,7 @@
 導入済みの runtime を、新しい版の asset で **main root の中で** 上げられるようになりました。新しい clone を作り直す必要はありません。
 
 - 新しい版の asset 5 つで `setup --solo --consumer-runtime-release` を流し直すと、新しい版へ切り替わります。
-- 切り替えは、新しい版の検証と bundle の検証がすべて通った後にだけ行われます。途中で失敗した場合は、旧版がそのまま動きます。
+- 切り替えは、新しい版の検証と bundle の検証がすべて通った後にだけ行われます。切り替えより前に失敗した場合は、旧版がそのまま動きます。切り替えの後の失敗と、復元できなかった失敗は `consumer_runtime_indeterminate` で止まり、どちらの版が動くかは保証しません (setup-guide.md §3)。
 - launcher (`.ut-tdd/bin/ut-tdd.mjs`) は書き換えません。
 - 旧版の bundle は消さずに残ります。
 - 同じ版を指定した場合は `already-installed` で、何も変わりません。
@@ -46,13 +46,14 @@ linked worktree の中で `setup --solo --consumer-runtime-release` を実行す
 
 1. **Windows で新しい導入**: 新しい空の directory と、origin のある新しい git repository を作り、公開した asset だけで導入します。`setup-guide.md` §1〜§2 の手順で `setup` と `doctor --setup-smoke` を流し、どちらも exit 0 になることを確かめます。手順は `pack-release-runbook.md` §8 のとおりです。
 2. **既存の repository での版上げ (canary.7 から)**: canary.7 を入れた既存の repository で、main root の中で canary.10 の asset を使って版上げします。版上げの前後で launcher の bytes が変わらないこと、`status` と `doctor` が成功することを確かめます。
-3. **旧 pointer への手動の戻し**: 切り替え後に、保存しておいた旧 `active.json` の bytes で pointer を手で戻し、旧版の `status` と `doctor` が動くことを確かめます。手動の戻し手順は設計で定めていないため、この確認は受入の項目として行います。
+3. **旧 pointer への手動の戻し (受入担当が、受入専用に作って捨てる fixture の中だけで行う)**: 利用中の repository では行わないでください。L12 AT-CANARY-UPGRADE-002 の隔離 fixture の中で、切り替え後に、保存しておいた旧 `active.json` の bytes で pointer を手で戻し、旧版の `status` と `doctor` が動くことを確かめます。手動の戻し手順は設計で定めていないため、この確認は受入の項目として行います。
 4. **VS Code の session の確認**: 切り替えをまたぐ session で、cold 1 回と warm 2 回の順で hook の判定を確かめます。計測の手順は、受入テスト設計 (AT-CANARY-UPGRADE-005) とセッション開始の順序の設計 (AT-835-008) に従います。
 
 ## 再導入の注意
 
 - 版上げを使えないとき (canary.7 以前からの移行、または版上げが失敗したとき) は、`docs/reference/setup-guide.md` の「新しい clone へ入れ直す手順」を使ってください。
-- 古い clone から移すもの (未 push の commit、`.ut-tdd/state/`、evidence) は、自動では移りません。移行は手動で行い、古い clone は削除せず別の directory へ移してください。
+- 未 push の commit は、新しい clone を作る前に push してください。
+- 古い clone の `.ut-tdd/` (`.ut-tdd/state/` や evidence) は、新しい clone に引き継がれません。新しい clone へ移す方法は検証していないので、移すことは勧めません (setup-guide.md §3)。古い clone は削除せず、別の directory へ移して残してください。
 
 ## 5 つの asset と sha256
 

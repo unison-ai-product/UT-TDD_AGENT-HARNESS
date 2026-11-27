@@ -96,6 +96,8 @@ GitHub で Pack リポジトリを **Watch → Custom → Releases** に設定�
 
 導入済みの runtime を、main root の中で新しい版へ上げます。新しい clone は作りません。
 
+版上げを行うのは、**新しい版の asset に入っている setup** です。canary.10 以降の asset で流したときだけ版上げになります。canary.9 以前の asset の setup は、main root でも `consumer_runtime_update_unsupported` で止まります (#930 より前の動き)。
+
 1. 新しい版の asset 5 つだけを、**新しく作った空のフォルダ**に置きます (§1 の表と同じ 5 つです)。作業用のフォルダや、ほかのファイルがあるフォルダは指定しないでください。
 2. **main root** で実行します。linked worktree では実行しないでください。`<consumer anchor>` には、**新しい版の** release notes にある consumer anchor を入れます。
 
@@ -113,7 +115,7 @@ setup は、次の順で進みます。
 - 検証がすべて通った後にだけ、`active.json` を 1 回の rename で新しい版へ切り替えます。
 - `.ut-tdd/bin/ut-tdd.mjs` は書き換えません。
 
-どこかで失敗した場合は、`active.json` は切り替わらず、旧版がそのまま動きます。
+`active.json` の切り替えより前に失敗した場合は、`active.json` は切り替わらず、旧版がそのまま動きます。切り替えの後に失敗した場合 (後始末や fsync の失敗など) と、旧版へ復元できなかった場合は、`consumer_runtime_indeterminate` で止まります。このとき `active.json` が新しい版を指したままのことがあり、どちらの版が動くかは保証しません。下の表のとおり、同じコマンドを繰り返さずに人に渡してください。
 
 **旧版の残し方**: 切り替え後も、旧版の bundle は消さずに残ります。残す世代数の上限と、古い版の掃除はまだ決めていません ([#481](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/481))。
 
