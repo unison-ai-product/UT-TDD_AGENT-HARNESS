@@ -203,7 +203,7 @@ node src/cli.ts distribution release-plan --tag <v0.2.0-canary.N> --json   # 手
 
 ## 9. 既存の利用者の再導入 (新しい clone へ)
 
-新しい版へは、本書の標準手順として **新しい clone に入れ直します** (既存の clone の中を更新する手順は定めません)。
+canary.10 以降の版へは、本書の標準手順として **main root でその場の版上げを行います** (`setup-guide.md` §3 の「その場で新しい版へ上げる手順」)。版上げを使えないとき (canary.9 以前からの移行、または版上げが失敗したとき) は、代わりの手順として **新しい clone に入れ直します**。以下はその手順です。
 
 1. 新しい空の directory に clone し、`setup-guide.md` の手順で新しい版を入れます。
 2. 古い clone から、必要な commit を push してから移します。**古い clone に残るもの (自動では移りません)**:
