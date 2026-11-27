@@ -22,13 +22,12 @@ control が指定した canary.10 公開の事前条件 (Issue #2023 comments 72
 公開前に実 consumer 形状で確認する運用受入だけを所有し、AT-DIST-003 や
 `docs/test-design/harness/L12-pack-internal-canary-test-design.md` を改訂しない。
 
-公開済み canary.7 の配布物を使う隔離 fixture は、別 PR #2026 の
-`scripts/rehearse-upgrade-canary-fixture.mjs` が作る。fixture code の根拠は同 PR の exact head
-`edc562d80ef012058a80e07794cf9848be6516a0` である。本書の実行は PR #2026 の merge を依存とし、
-fixture は merge 後の exact merge commit から作る。merge commit は未取得のため、ここでは SHA を
-指定しない。fixture は main consumer に canary.7 を導入し、linked worktree を複数作り、1 本には
-canary.7 runtime、別の 1 本には runtime を入れず、tracked file を dirty にする。canary.10 候補での
-版切替と手動 pointer rollback は、この fixture を使って §3 の手順で確認する。
+隔離 fixture は PR #2026 の `tests/fixtures/rehearse-upgrade-canary-fixture.mjs` で定義される
+(PR head `ee7ce989d14b96412b140f84cda53ef1635d5153`)。受入実行の fixture source revision / 計測対象は
+同 PR の merge commit `64e4f9657b5aba565d2e85f2a303e2d99e354c6a` とする。fixture は main consumer に
+canary.7 を導入し、linked
+worktree を複数作り、1 本に canary.7 runtime、別の 1 本に runtime 無し、tracked dirty file を用意する。
+canary.10 候補の版切替と手動 pointer rollback は、この fixture で §3 の手順に沿って確認する。
 
 ## 2. リハーサルの前提と開始条件
 
