@@ -16,7 +16,7 @@ export function registerConsumerRuntimeUpdateWorktreeOracles(input: {
   readonly getFixture: () => RuntimeFixture;
   readonly runOracle: RunOracle;
 }): void {
-  it.fails("CANDIDATE-U-RTUPD-005: worktree remains pinned to A and refuses B replacement", async () => {
+  it.fails("U-RTUPD-005 U-PACKRT-010: worktree remains pinned to A and refuses B replacement", async () => {
     const fixture = input.getFixture();
     let worktreeRoot = "";
     let absentWorktreeRoot = "";
@@ -103,7 +103,7 @@ export function registerConsumerRuntimeUpdateWorktreeOracles(input: {
     });
   });
 
-  it.fails("CANDIDATE-U-RTUPD-006: an A-pinned linked worktree keeps running after main moves to B", async () => {
+  it.fails("U-RTUPD-006: an A-pinned linked worktree keeps running after main moves to B", async () => {
     const fixture = input.getFixture();
     let worktreeRoot = "";
     let cacheAPath = "";

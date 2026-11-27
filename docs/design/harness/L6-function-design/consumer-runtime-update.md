@@ -10,7 +10,7 @@ next_pair_freeze: L7
 issue: 930
 ---
 
-> **L6 contract marker**: 本書は consumer の main root で runtime の版を上げる入口 (setup の流し直し) と、active pointer の切り替え、失敗時の挙動、旧 generation の保持を凍結する契約である。oracle ID は対の L7 に `CANDIDATE-U-RTUPD-*` として仮採番のまま置く (共有 L7 への正式採番は別 PR)。#481 (自動検出・rollback ほか) の範囲は §8 に分け、切り替えの方式は本書を #481 が再利用する。行番号は 2026-11-26 の `origin/main` で測った。
+> **L6 contract marker**: 本書は consumer の main root で runtime の版を上げる入口 (setup の流し直し) と、active pointer の切り替え、失敗時の挙動、旧 generation の保持を凍結する契約である。対応 oracle は対の L7 の `U-RTUPD-001`〜`011`。共有の `function-spec.md` と L7 unit-test index への登録は #2016 (#1970 の契約) の merge 後に行う。#481 (自動検出・rollback ほか) の範囲は §8 に分け、切り替えの方式は本書を #481 が再利用する。行番号は 2026-11-26 の `origin/main` で測った。
 
 # consumer runtime の版上げ — 関数設計 (issue #930)
 
@@ -71,9 +71,9 @@ issue: 930
 
 | path:line | 現状 | 新しい期待 |
 | --- | --- | --- |
-| `tests/pack-consumer-runtime-release.test.ts:2224` (main root に別の tag の Release を setup し直す) | `consumer_runtime_update_unsupported` で非 0、consumer tree が実行前と同一 | 検証に成功した新 Release なら exit 0 で、active pointer が新 generation を指し、旧 generation の bundle が byte 同一のまま残る。失敗系は別の oracle (対の L7 §3 の `CANDIDATE-U-RTUPD-*`) で足す |
+| `tests/pack-consumer-runtime-release.test.ts:2224` (main root に別の tag の Release を setup し直す) | `consumer_runtime_update_unsupported` で非 0、consumer tree が実行前と同一 | 検証に成功した新 Release なら exit 0 で、active pointer が新 generation を指し、旧 generation の bundle が byte 同一のまま残る (`U-RTUPD-001`)。失敗系は対の L7 §3 の `U-RTUPD-002`〜`004`、`007`〜`011` が固定する |
 | `tests/consumer-worktree-setup-red.test.ts:470` (`U-CWTRT-005` の worktree 側、`it` は :462) | worktree で `consumer_runtime_update_unsupported` | **改訂しない**。worktree の拒否を維持する oracle として残す |
-| `docs/test-design/harness/L7-pack-consumer-runtime-release-install-test-design.md:32` の `CANDIDATE-U-PACKRT-010` | 別 tag の Release を `consumer_runtime_update_unsupported` で拒否し、更新は #364 とする | 期待を「main root では版上げが成功し pointer が切り替わる。拒否は worktree に別の版がある場合に限る」へ改める。#364 への参照は #930 / #481 に置き換える。共有の L7 文書なので、改訂は #2016 の merge 後 (§10 の後続) |
+| `docs/test-design/harness/L7-pack-consumer-runtime-release-install-test-design.md:32` の `CANDIDATE-U-PACKRT-010` | 別 tag の Release を `consumer_runtime_update_unsupported` で拒否し、更新は #364 とする | 本 slice で期待を「main root では版上げが成功し pointer が切り替わる。拒否は worktree に別の版がある場合に限る」へ改める。#364 への参照は #930 / #481 に置き換える。#2016 merge 後に行う共有 `function-spec.md` と L7 unit-test index の更新とは分ける |
 | `docs/reference/setup-guide.md:90-91` (「いまの canary 版の制約」の 2 項目目)、`:93-122` (「新しい clone へ入れ直す手順」とその注意 `:95`・`:113-114`・`:122`)、`:143` (トラブルシュート表)、`:193` (符号の表) | 「新しい版で上書きできない。新しい clone へ入れ直す」「`consumer_runtime_update_unsupported` はすでに別の版が入っている」 | main root では setup の流し直しで版を上げられる手順へ改める。`consumer_runtime_update_unsupported` の説明を「worktree に別の版がある場合」へ絞る。Green の PR と同時に改める |
 | `docs/design/harness/L6-function-design/consumer-worktree-runtime.md:28` | 「既に別の版が入っている repo へ違う版を入れると拒否される (#930)」 | #930 は main root の版上げに限ると明記する (worktree の拒否は維持) |
 
@@ -81,7 +81,7 @@ control の指示にあった `setup-guide.md` の `:108`・`:158` は、2026-11
 
 `src/setup/index.ts:524` / `:534` / `:548` の拒否は、「main root での、検証済みの別 generation」では通し、worktree 経路と、検証に落ちた入力では拒否のまま残す。判定の分け方は §9 決定 b に従う。
 
-設計書保護の三段階 (`CLAUDE.md` §PR スコープ規律 5) に従い、上の oracle は契約 PR → Red (`it.fails`) → Green の順で改める。共有文書 (`function-spec.md`、L7 test-design) への追記は #2016 (#1970 の契約) の merge 後に出す。
+設計書保護の三段階 (`CLAUDE.md` §PR スコープ規律 5) に従い、上の oracle は契約 PR → Red (`it.fails`) → Green の順で改める。#2023 の control 指示により、専用 L7 の正式 ID と `CANDIDATE-U-PACKRT-010` 契約を先に整え、共有文書 (`function-spec.md`、L7 unit-test index) への追記は #2016 (#1970 の契約) の merge 後に出す。
 
 ## 8. #481 で扱うこと (本書の範囲外)
 
@@ -102,7 +102,7 @@ control の指示にあった `setup-guide.md` の `:108`・`:158` は、2026-11
 
 **設計**
 
-- **(a) worktree の追従**: 追従手段は別 Issue。本書は「main と版が合わない worktree は旧版のまま動く」と明記し、oracle を 1 本足す (§6、対の L7 `CANDIDATE-U-RTUPD-006`)。
+- **(a) worktree の追従**: 追従手段は別 Issue。本書は「main と版が合わない worktree は旧版のまま動く」と明記し、oracle を 1 本足す (§6、対の L7 `U-RTUPD-006`)。
 - **(b) 拒否の符号**: 新しい符号は足さない。`consumer_runtime_update_unsupported` は「worktree に別の版がある」専用として残す。main で検証に落ちた入力は既存の検証失敗の符号で落ちる。main root か否かは setup の入口で 1 回だけ、既存の `isLinkedWorktreeCheckout` (git-dir ≠ git-common-dir、`src/memory/project-memory-root.ts:174-186`) の事実から判定し、明示の引数で下へ渡す。下層 (`src/setup/index.ts:524` / `:534` の検査) は git を再判定しない。
   - 注記: `src/setup/consumer-worktree-runtime.ts:171-178` の `mainWorktreeCommonDir` も同じ判定 (git-dir と common-dir の一致) を持つ。実装時に 2 つを 1 つへ寄せるかは Refactor の段で決める。
 - **(c) downgrade**: #930 では拒否しない。`release_id` は hash で順序を持たず、新旧を判定する材料が無い。外部 anchor の digest を人が渡すこと自体が明示指定であり、手動の再 setup は同じ pointer 切り替えの別の入口とする。順序と「明示しない downgrade の拒否」は #481 の契約のまま (§8)。
@@ -129,7 +129,7 @@ control の実測 (使い捨ての consumer、公開済みの canary.8 と canar
 
 1. **linked worktree を cwd にした `setup --solo --consumer-runtime-release`**: **確認済み**。入口で拒否されず、worktree に main と違う版が入る (§10.1)。
 2. **新旧 Release 間の launcher の互換**: **完了**。launcher は canary.8 と canary.9 で byte 同一で、canary.8 から canary.9 の範囲では据え置きが成り立つ (§9.1)。
-3. **Windows の EPERM の再現**: **再現していない**。契約の決定 (自動で再試行しない、rename の前の失敗は旧 pointer と mode を保つ、復元できない場合と rename の後の失敗は indeterminate) は変えず、対の L7 の Windows の oracle (`CANDIDATE-U-RTUPD-003`) で固定する。実 OS の再現は Green の段で、その oracle が実 Windows で通ることをもって確かめる。
+3. **Windows の EPERM の再現**: **再現していない**。契約の決定 (自動で再試行しない、rename の前の失敗は旧 pointer と mode を保つ、復元できない場合と rename の後の失敗は indeterminate) は変えず、対の L7 の Windows の oracle (`U-RTUPD-003`) で固定する。実 OS の再現は Green の段で、その oracle が実 Windows で通ることをもって確かめる。
 
 ### 10.1 実測 1 の結果: 確認済み、#2018 で塞ぐ
 
@@ -140,4 +140,4 @@ control の実測 (使い捨ての consumer、公開済みの canary.8 と canar
   - D: canary.8 の main root で canary.9 を入れると `consumer_runtime_update_unsupported` で拒否され (exit 1)、`active.json` の sha256 は前後で同じ。main root の拒否は効いている。
 - 終了コード 2 は origin remote が無いための `identity_repository_unbound` で、worktree と関係なく main でも同じ。runtime の導入はその前に済んでおり取り消されない。
 - **#930 の Green の前提**: **#2018 の修正を #930 の Green の前提に置く**。#2018 は、setup の入口で linked worktree かを git の事実 (§9 決定 b の判定) から判定し、worktree からの `--consumer-runtime-release` の導入を塞ぐ。#930 が main root の拒否 (`:524` / `:534`) を開ける前に、この穴が塞がっていなければならない (開けると、worktree の既存 runtime への版違いの上書きが通る)。
-- 対の L7 の `CANDIDATE-U-RTUPD-005` (worktree の拒否の維持) と `006` (main と版が合わない worktree は旧版のまま動く) は、#2018 の修正後の挙動と整合させる。005 は worktree を cwd にした `setup --solo --consumer-runtime-release` が、runtime の有無にかかわらず入口で拒否されることを含む。
+- 対の L7 の `U-RTUPD-005` (worktree の拒否の維持) と `006` (main と版が合わない worktree は旧版のまま動く) は、#2018 の修正後の挙動と整合させる。005 は worktree を cwd にした `setup --solo --consumer-runtime-release` が、runtime の有無にかかわらず入口で拒否されることを含む。
