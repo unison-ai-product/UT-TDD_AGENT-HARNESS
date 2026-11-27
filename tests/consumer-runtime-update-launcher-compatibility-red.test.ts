@@ -77,6 +77,11 @@ function addHistoryFormatV2(bytes: Uint8Array): Buffer {
     "operation_kind: record.operation_kind,\n      prior_bundle_digest: record.prior_bundle_digest,",
     "operation_kind: record.operation_kind,\n      ...(record.history_format_version === 2 ? { history_format_version: 2 } : {}),\n      prior_bundle_digest: record.prior_bundle_digest,",
   );
+  replaceUnique(
+    "launcher history tip digest projection",
+    "operation_kind: history.operation_kind, prior_bundle_digest: history.prior_bundle_digest,",
+    "operation_kind: history.operation_kind, ...(history.history_format_version === 2 ? { history_format_version: 2 } : {}), prior_bundle_digest: history.prior_bundle_digest,",
+  );
   return Buffer.from(source, "utf8");
 }
 
