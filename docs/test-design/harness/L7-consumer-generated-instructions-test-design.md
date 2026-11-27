@@ -5,13 +5,13 @@ executed_at_layer: L7
 artifact_type: test_design
 pair_artifact: docs/design/harness/L6-function-design/consumer-generated-instructions.md
 status: confirmed
-updated: 2026-11-25
+updated: 2026-11-27
 issue: 1524
 ---
 
 # consumer 生成指示文の呼び出し表記 テスト設計 (issue #1524)
 
-`CANDIDATE-` は未昇格の oracle であり、実装 PR で `U-CGENI-*` へ昇格する。
+`CANDIDATE-` は未昇格の oracle である。001〜007 は候補 ID のまま保持し、§3.5 の 008〜010 は正式 ID (`U-CGENI-008`〜`010`) で宣言する。
 
 ## 1. 共通 fixture
 

@@ -10,7 +10,7 @@ next_pair_freeze: L7
 issue: 1524
 ---
 
-> **L6 contract marker**: 本書は setup が consumer に生成する指示文 (managed block・`.claude/commands/*`・生成 workflow・生成 agent text) の呼び出し表記の契約である (未実装の目標契約)。oracle (CANDIDATE-U-CGENI-001〜) は `docs/test-design/harness/L7-consumer-generated-instructions-test-design.md` が固定する。行番号は 2026-11-04 の `origin/main` で測った。
+> **L6 contract marker**: 本書は setup が consumer に生成する指示文 (managed block・`.claude/commands/*`・生成 workflow・生成 agent text) の呼び出し表記の契約である (未実装の目標契約)。oracle は `docs/test-design/harness/L7-consumer-generated-instructions-test-design.md` が固定し、001〜007 は候補 ID、§3.5 の 008〜010 は正式 ID (`U-CGENI-008`〜`010`) である。行番号は 2026-11-04 の `origin/main` で測った。
 
 # consumer 生成指示文の呼び出し表記 — 関数設計 (issue #1524)
 
@@ -92,4 +92,4 @@ hybrid の consumer で Codex lane が返事を共有 memory に書いても、C
 - pre: 渡す consumer の状態は `package.json` の有無と scripts の集合だけである (§4)。
 - post: 生成された全ファイルに bare の `ut-tdd <args>` が現れず、setup doctor の表記は `doctor --profile consumer-setup-smoke` の 1 種類である (§3.3、§4)。
 - invariant: 接頭辞の文字列は生成器の中で 1 か所だけ定義される (§4)。
-- oracle: CANDIDATE-U-CGENI-001〜010 が上記を固定する (008〜010 は §3.5)。
+- oracle: `CANDIDATE-U-CGENI-001`〜`007` と正式 ID `U-CGENI-008`〜`010` が上記を固定する (008〜010 は §3.5)。
