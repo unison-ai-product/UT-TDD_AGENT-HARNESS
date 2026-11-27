@@ -22,11 +22,13 @@ control が指定した canary.10 公開の事前条件 (Issue #2023 comments 72
 公開前に実 consumer 形状で確認する運用受入だけを所有し、AT-DIST-003 や
 `docs/test-design/harness/L12-pack-internal-canary-test-design.md` を改訂しない。
 
-公開済み canary.7 の配布物を使う隔離 fixture は
-`scripts/rehearse-upgrade-canary-fixture.mjs` が作る。fixture 作成は main consumer に
-canary.7 を導入し、linked worktree を複数作り、1 本に canary.7 runtime を導入し、別の 1 本は
-runtime 無しにし、tracked file を dirty にする。canary.10 候補での版切替と手動 pointer rollback は
-この fixture を使い、§3 の受入手順に沿って確認する。
+公開済み canary.7 の配布物を使う隔離 fixture は、別 PR #2026 の
+`scripts/rehearse-upgrade-canary-fixture.mjs` が作る。fixture code の根拠は同 PR の exact head
+`edc562d80ef012058a80e07794cf9848be6516a0` である。本書の実行は PR #2026 の merge を依存とし、
+fixture は merge 後の exact merge commit から作る。merge commit は未取得のため、ここでは SHA を
+指定しない。fixture は main consumer に canary.7 を導入し、linked worktree を複数作り、1 本には
+canary.7 runtime、別の 1 本には runtime を入れず、tracked file を dirty にする。canary.10 候補での
+版切替と手動 pointer rollback は、この fixture を使って §3 の手順で確認する。
 
 ## 2. リハーサルの前提と開始条件
 
@@ -47,6 +49,8 @@ runtime 無しにし、tracked file を dirty にする。canary.10 候補での
   に保存され、その SHA-256 と pointer が指す bundle の内容一覧を記録すること。
 - runtime 有り worktree の tracked sentinel は実際に変更され、`git status --short` に変更として
   表示されること。sentinel はリハーサル中に checkout/reset で破棄しない。
+- AT-CANARY-UPGRADE-006 の runtime 無し worktree 拒否確認は、AT-CANARY-UPGRADE-004 が同じ
+  worktree に canary.10 を導入する前に行い、拒否後に runtime が無いままである証跡を取る。
 - canary.10 候補の公開前承認条件: 公開対象 source commit の `harness-check` が green、#930
   と #2018 の Green が非著者 closing review PASS 後に merge 済み、AT-CANARY-UPGRADE-001〜006 が
   全て PASS、runbook §4.1 blob 照合と §6 SHA-256 が一致していること。ひとつでも欠ける場合は公開しない。
@@ -59,8 +63,8 @@ runtime 無しにし、tracked file を dirty にする。canary.10 候補での
 | `AT-CANARY-UPGRADE-002` | 旧版保持と手動 pointer rollback | 切替前後で旧 active bundle の全 file bytes / digest を比較する。切替後の disposable consumer で、保存した canary.7 `active.json` の完全な bytes を用いて手で旧 pointer に戻し、canary.7 launcher から `status` と `doctor` を起動する。確認後、必要なら候補側 pointer に戻す。 | 旧 bundle が欠落・変更なく残り、手動復元した pointer が canary.7 bundle を指し、旧版 `status` / `doctor` が成功する。復元前後の pointer bytes、bundle file inventory + SHA-256、command 出力を保存。pointer の部分書換え・旧 bundle の再生成は FAIL。 |
 | `AT-CANARY-UPGRADE-003` | すでに canary.7 runtime がある linked worktree と tracked dirty sentinel | main の版上げ前後で runtime 有り worktree の runtime tree / pointer と `fixture/dirty-sentinel.txt` の bytes / SHA-256 / `git status --short` を採取し、その worktree から launcher を起動する。 | worktree runtime tree / pointer と dirty sentinel の bytes が切替前後で byte 同一で、sentinel は切替後も tracked modification として残り、canary.7 `status` が起動する。main と worktree は root-bound manifest / history が異なり得るため bundle tree 全体の一致は要求せず、`release_id`・`artifact_set_digest`・`compiled_esm_digest` と compiled `ut-tdd.mjs` bytes で同じ版と判定する。各 root の pointer / launcher / bundle の独立した前後 SHA-256 snapshot を保存する。 |
 | `AT-CANARY-UPGRADE-004` | runtime 無し worktree と runtime 再導入経路 | runtime 無しの linked worktree で launcher / active pointer が存在しないことを確認し、切替後に main launcher から `setup --worktree <path>` を行う。次に AT-003 の切替前後 evidence を保存してから、同じ fixture の runtime-old worktree の `.ut-tdd/` を別途退避し、そこにも main launcher から `setup --worktree <path>` を行う。旧 pointer / bundle を新 root へコピーしない。 | 両経路で main の pin に一致する canary.10 runtime が入り、`status` と guard hook が成功する。削除・再導入の対象は専用 disposable worktree のみ。worktree の release identity、launcher / pointer SHA-256、status / hook 結果を保存。異版を残したままの更新・main 以外からの Release 取得は FAIL。 |
-| `AT-CANARY-UPGRADE-005` | Claude session 継続中の切替 | 対象 disposable consumer 上で Claude session が開始済みの状態を記録し、session を終了せず main runtime を切り替える。切替の前後で両 guard hook を実行する。 | session が維持され、前後で hook が正しい runtime から起動し正常系を許可、禁止系を拒否する。session の同一性を確認できる記録、各 hook の実 command / exit code / stderr を保存。session の再起動や hook 配線欠落は FAIL。 |
-| `AT-CANARY-UPGRADE-006` | consumer 独自 script と #2018 入口拒否 | disposable consumer に tracked custom script を置き、linked worktree から `setup --solo --consumer-runtime-release ...` を実行する。 | `worktree_entry_options_invalid` で拒否され、main / worktree runtime tree は不変。script が旧入口に依存する場合は release note に置換 command を記載する。実行結果、前後の tree digest、release note の該当箇所を保存。拒否が通過する、または必要な移行案内が無い場合は FAIL。 |
+| `AT-CANARY-UPGRADE-005` | 人操作による VS Code Claude の cold / warm 受入 | 人が VS Code で Claude を操作する。main 切替前に開始した session で `Edit` と `Agent` を使い、各 `PreToolUse` を発火させる。その session を開いたまま切り替え、切替後にも同じ tool use を行う。続いて VS Code を完全に終了し、新しく起動した VS Code の同じウィンドウで AT-835-008 ([L7-session-start-order-test-design.md](L7-session-start-order-test-design.md)) と同じ順で cold 1 回 → warm 2 回を直列に計測する。各回で `Edit` と `Agent` の許可系と拒否系を実際の tool use で確認する。 | 切替をまたぐ session は前後で同一 session ID。cold 1 回と後続 warm 2 回は切替後の同じ extension host で順に完了し、全 tool use で期待どおりの hook 判定が返る。操作記録に host identity、session ID、cold / warm 種別、計測と各 hook の開始・終了時刻、所要時間、許可 / 拒否、exit / message、launcher SHA-256、active bundle の `release_id` / `compiled_esm_digest` と compiled bytes digest を残す。 |
+| `AT-CANARY-UPGRADE-006` | consumer 独自 script と #2018 入口拒否 | disposable consumer の独自 script に `node <candidate-assets>/v0.2.0-canary.10.ut-tdd.mjs setup --solo --consumer-runtime-release <candidate-assets> --expected-consumer-digest <anchor>` を設定する。版付き Release asset は絶対 path で直接起動し、runtime-old と、AT-004 の setup 前の runtime-absent の各 cwd で script を実行する。 | 両 linked cwd で `worktree_entry_options_invalid`、exit 1 が返り、前後の main / worktree runtime tree と runtime-absent の runtime 無し状態が一致する。script と Release asset の SHA-256、cwd、実 command、前後の tree digest、出力と exit code を記録する。旧入口を使っている運用向けに、release note に `setup --worktree <path>` への置換を記載する。 |
 | `AT-CANARY-UPGRADE-007` | 公開対象と事前承認条件 | 公開対象 source SHA の `harness-check`、#930 / #2018 の merge SHA と非著者 closing review、AT-CANARY-UPGRADE-001〜006 の結果、runbook §4.1 の C1 blob 照合、§6 の 5 asset SHA-256 を照合する。 | 全項目が対象 canary.10 候補の exact SHA / asset に結びついて PASS。check run URL、merge / review evidence、AT evidence、blob SHA、5 asset SHA と外部 anchor を公開判断 packet に記録。欠落・別 SHA・再利用した古い canary の証跡は FAIL。 |
 
 ## 4. 判定と証跡
