@@ -5,7 +5,7 @@ executed_at_layer: L7
 artifact_type: test_design
 pair_artifact: docs/design/harness/L6-function-design/consumer-worktree-runtime.md
 status: confirmed
-updated: 2026-11-10
+updated: 2026-11-27
 issue: 1525
 ---
 
@@ -41,10 +41,15 @@ issue: 1525
 | `U-CWTRT-013` | 欠落 × guard は block のまま (Issue #1602) | 入力: 同じ状態で argv `hook agent-guard` / `hook work-guard`。期待: 各々 exit 2、stderr に符号と案内文 (`setup --worktree <絶対パス>`) を含む。`U-CWTRT-007` / `009` と同じ観測であり、既存ケースの実装を共有してよい。テストレベル: unit。反例: 三分割の導入で guard まで exit 0 に寄せる実装。 |
 | `U-CWTRT-014` | 欠落 × 集合外は fail-close (Issue #1602) | 入力: 同じ状態で argv `status` と、未知の hook 名 (`hook unknown-hook`)、および argv 無し。期待: 各々 exit 0 でなく非 0 (案内文と exit 2)。他の deny 符号 (`consumer_runtime_digest_mismatch` など) は従来どおり exit 78 で、三分割の対象にならない。テストレベル: unit。反例: 欠落なら一律 exit 0 にする実装 (runtime が無いのに `status` が成功に見える偽の緑)、集合を前方一致や部分一致で広げる実装。 |
 | `U-CWTRT-015` | (b) の集合の単一定義源 (Issue #1602) | 入力: `src/lint/project-hook.ts` の hook 定義と `renderConsumerNodeWrapper()` の出力 (静的)。期待: (b) の集合が、`onFailure: "block"` を持たない hook の `wrapperArgs` の先頭 2 語 (launcher の後ろ) と過不足なく一致する。launcher の生成物が、その集合を生成時に埋め込んだもの以外に手書きの hook 名の一覧を持たない (hook 定義に無い名前の文字列リテラルの一覧が無い)。定義側に hook を足すと launcher の集合も変わる (定義を 1 つ増やした入力で生成し直して確かめる)。テストレベル: unit (静的照合)。反例: launcher に独自の一覧をべた書きして lint の定義と乖離する実装。 |
+| `CANDIDATE-U-CWTRT-016` | linked worktree の solo 入口: main に runtime が無い (Issue #2018) | 入力: 一時 repo に main と linked worktree を作り、main には何も入れない。cwd を linked worktree にして `setup --solo --consumer-runtime-release <正当な Release directory> --expected-consumer-digest <正当な anchor>` を流す。期待: `worktree_entry_options_invalid` で exit 1、メッセージに `setup --worktree <worktree の絶対パス>` を含む。worktree の `.ut-tdd/` (active pointer・bundle・launcher)・main・共有キャッシュ・他の worktree の存在・path 構造・bytes が実行前の snapshot と一致する。対照: 同じ状態から `setup --worktree` を流すと `worktree_entry_main_not_activated` (004) になる。反例: 入口で拒否せず worktree に独立した runtime を作る実装 (2026-11-27 の実測 A)、Release 検証や identity bootstrap の後で拒否して書き込みを残す実装。 |
+| `CANDIDATE-U-CWTRT-017` | linked worktree の solo 入口: main に同じ版がある (Issue #2018) | 入力: main に版 A が有効、linked worktree、cwd は linked worktree。版 A の正当な Release directory と anchor で `setup --solo --consumer-runtime-release ...` を流す。期待: `worktree_entry_options_invalid` で exit 1 (同じ版でも拒否。通す側の例外を作らない)、書き込みは 016 と同じく snapshot と一致する。対照: 同じ入力を `setup --worktree <path> --consumer-runtime-release ... --expected-consumer-digest ...` に変えると 002 の (c) どおり成功する。反例: 版が一致すれば solo 入口でも通す実装 (入口が 2 つになり照合が二重になる)、拒否の代わりに main の bundle をコピーして成功させる実装。 |
+| `CANDIDATE-U-CWTRT-018` | linked worktree の solo 入口: main に違う版がある (Issue #2018) | 入力: main に版 A が有効、linked worktree、cwd は linked worktree。版 B の正当な Release directory と anchor で `setup --solo --consumer-runtime-release ...` を流す。期待: `worktree_entry_options_invalid` で exit 1 (`consumer_runtime_update_unsupported` でも `worktree_entry_pin_mismatch` でもない。入口の拒否であり版の照合まで進まない)、worktree に runtime・launcher が残らず、main の active pointer と bundle の bytes が版 A のまま不変。判定は git-dir ≠ git-common-dir の事実 1 つで入口で 1 回だけ行い、下層へ明示の引数で渡す (下層の呼び出しに判定済みの値が渡り、下層が git を再度呼ばないことを spy で確かめる)。main root の cwd での版 B の導入の結果は本 oracle では変えない (main root の挙動は #930 の `CANDIDATE-U-RTUPD-001` / `005` が持つ。いまは `consumer_runtime_update_unsupported`)。反例: worktree に版 B が入る実装 (実測 C)、install 後の `worktree_entry_pin_mismatch` の rollback に頼って落とす実装、下層が独自に git を再判定する実装。 |
 
 ## 4. 段の扱い
 
 - `U-CWTRT-001`〜`010` は既存の正式 oracle である。ここでは変更しない。登録＋Red の `it.fails` を維持し、実装 PR で実装完了したケースを `it` に戻す。
 - `U-CWTRT-011` (Issue #1592) は 2026-11-16 に正式 oracle へ昇格した (src を含まない昇格 PR で接頭辞 `CANDIDATE-` を外し、テストの引用も同時に改めた)。同期 fault を注入する rollback の期待は Red (`it.fails`) として登録済みで、前提確認と成功対照は `it.fails` の外で実施する。Green の実装 PR で `it` に戻す。実装は新規 install のみ hook を 1 回通し、`already-installed` は hook を呼ばない。
 - `U-CWTRT-012`〜`015` (Issue #1602) は 2026-11-10 に正式 oracle へ昇格した (src を含まない昇格 PR で接頭辞 `CANDIDATE-` を外し、テストの引用も同時に改めた)。まだ成り立たない期待 (012・015) は Red (`it.fails`) として登録し、Green の実装 PR で `it` に戻す。現行の実装で既に成り立つ期待 (013・014) は `it` で登録する (成り立つ期待に `it.fails` を付けると失敗するため)。設計書保護の三段階に従う。`U-CWTRT-013` は既存の `U-CWTRT-007` と観測が重なるため、実装時は共有の fixture を使い、重複する assert を増やさない。
+- `CANDIDATE-U-CWTRT-016`〜`018` (Issue #2018、設計 §3.1) は候補である。設計の凍結後、src を含まない昇格 PR で接頭辞 `CANDIDATE-` を外し、Red (`it.fails`) で登録する。
+- **改訂する既存の凍結 oracle**: `U-CWTRT-005` (pin を変えない)。既存の期待は 1 つも弱めない。追加するのは「cwd が linked worktree のときの `setup --solo --consumer-runtime-release` は worktree へ入れる経路に含まれず、入口で拒否される (`CANDIDATE-U-CWTRT-016`〜`018`)」の 1 文で、005 の「worktree に版 B が入る経路が無い」の範囲を solo 入口へ広げるものである。`U-CWTRT-002` (c) の「版 A を指す正当な明示の Release 入力」は `--worktree` の経路についての期待であり、変えない。005 の「worktree に既に別の版があれば `consumer_runtime_update_unsupported`」は、追従手段 (設計 §3.2 未決) が決まるまで維持する。`U-CWTRT-001`〜`004`・`006`〜`015` は変えない。
 - 受け入れには、実際の Claude Code で runtime の無い worktree の Edit が案内つきで止まることを 1 回確かめた記録を含める (自動テストの oracle ではない)。
