@@ -64,8 +64,8 @@ function addHistoryFormatV2(bytes: Uint8Array): Buffer {
   );
   replaceUnique(
     "history parser",
-    'if (Object.keys(parsed).sort().join("\\0") !== required.slice().sort().join("\\0"))\n      throw new Error("invalid history");',
-    'if (required.some((key) => !(key in parsed)) || Object.keys(parsed).some((key) => !required.includes(key) && key !== "history_format_version") || (Object.hasOwn(parsed, "history_format_version") && parsed.history_format_version !== 2))\n      throw new Error("invalid history");',
+    'Object.keys(parsed).sort().join("\\0") !== required.slice().sort().join("\\0")',
+    'required.some((key) => !(key in parsed)) || Object.keys(parsed).some((key) => !required.includes(key) && key !== "history_format_version") || (Object.hasOwn(parsed, "history_format_version") && parsed.history_format_version !== 2)',
   );
   replaceUnique(
     "launcher history digest projection",
