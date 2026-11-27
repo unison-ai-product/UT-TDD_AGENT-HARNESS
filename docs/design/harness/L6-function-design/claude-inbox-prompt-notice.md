@@ -99,8 +99,8 @@ host timeout は5秒とし、本契約と L7 の oracle に固定する。既存
 | `CANDIDATE-U-CPNOTICE-001` | §3、protocol post: 有効通知の固定出力・exit 0 | L7 §3、unit / hook-process fixture |
 | `CANDIDATE-U-CPNOTICE-002` | §2.2・§3、protocol pre/post: 空・不正・未対応時の無通知 | L7 §3、unit / hook-process fixture |
 | `CANDIDATE-U-CPNOTICE-003` | §2.2・protocol invariant: 本文等を読まず、foreign scope を通知対象にしない | L7 §2〜§3、I/O と状態差分の観測 |
-| `CANDIDATE-U-CPNOTICE-004` | §2.1: 同じ宛先の通知済み世代と `wx` による並行抑止 | L7 §3、順次・同時 hook-process fixture |
-| `CANDIDATE-U-CPNOTICE-005` | §2.1・§2.3: 新着、同一 ID の resume、clear と Stop との競合 | L7 §3、新着・resume・clear・競合後の再観測 fixture |
+| `CANDIDATE-U-CPNOTICE-004` | §2.1: Stop との競合、次 prompt での再観測、同じ ID の resume で再通知しないこと | L7 §3、順次・同時 hook-process・競合後の再観測 fixture |
+| `CANDIDATE-U-CPNOTICE-005` | §2.1・§2.3: resume / clear 時の宛先キーと通知済み世代の保持 | L7 §3、resume・clear の宛先キー保持 fixture |
 | `CANDIDATE-U-CPNOTICE-006` | §3・§4、protocol post と host-level failure: fail-open | L7 §3〜§4、例外 fixture と host 起動失敗 / timeout |
 | `CANDIDATE-U-CPNOTICE-007` | §5: fresh / legacy Pack 設定と Codex 非追加 | L7 §3、source / Pack / mirror 構成検査 |
 | `CANDIDATE-U-CPNOTICE-008` | §4・protocol invariant: 5秒の host 上限と hot-path 制約 | L7 §3、設定・依存境界検査 |
