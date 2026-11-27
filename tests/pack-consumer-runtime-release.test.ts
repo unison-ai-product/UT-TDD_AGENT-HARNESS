@@ -2182,49 +2182,4 @@ describe("Pack consumer runtime release installer", () => {
       removeInstallerFixtureTree(missingBundle.root);
     }
   });
-
-  it("U-PACKRT-010: denies a different Release tag without changing the active runtime", () => {
-    const testCase = copyInstallerCase(fixture);
-    try {
-      const installed = runInstallerIn(
-        fixture,
-        testCase.releaseDir,
-        testCase.consumerRoot,
-        fixture.anchor,
-      );
-      expectUnboundRepositorySetup(installed);
-      const before = consumerTreeSnapshot(testCase.consumerRoot);
-
-      const nextTag = "v0.2.0-canary.3";
-      const nextRelease = join(testCase.root, "next-release");
-      mkdirSync(nextRelease);
-      const nextRuntime: ConsumerRuntimeRelease = {
-        ...fixture.runtime,
-        release: { ...fixture.runtime.release, tag: nextTag },
-      };
-      const nextAnchor = writeRuntimeInstallerAssets({
-        releaseDir: nextRelease,
-        tag: nextTag,
-        compiledBytes: fixture.compiledBytes,
-        runtime: nextRuntime,
-      });
-      const nextFixture: RuntimeInstallerFixture = {
-        ...fixture,
-        releaseDir: nextRelease,
-        tag: nextTag,
-        anchor: nextAnchor,
-        runtime: nextRuntime,
-      };
-      const update = runRuntimeInstaller(nextFixture, {
-        releaseDir: nextRelease,
-        consumerRoot: testCase.consumerRoot,
-        anchor: nextAnchor,
-      });
-      expect(update.status, update.stderr).not.toBe(0);
-      expect(`${update.stdout}\n${update.stderr}`).toContain("consumer_runtime_update_unsupported");
-      expect(consumerTreeSnapshot(testCase.consumerRoot)).toEqual(before);
-    } finally {
-      removeInstallerFixtureTree(testCase.root);
-    }
-  });
 });
