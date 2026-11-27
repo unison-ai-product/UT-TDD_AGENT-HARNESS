@@ -1,5 +1,12 @@
 import { createHash } from "node:crypto";
-import { existsSync, readdirSync, readFileSync, statSync, unlinkSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  readdirSync,
+  readFileSync,
+  statSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { dirname, join } from "node:path";
 import { expect, it, vi } from "vitest";
 import * as setupApi from "../src/setup/index.ts";

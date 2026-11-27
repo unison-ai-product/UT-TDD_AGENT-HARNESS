@@ -247,7 +247,7 @@ export function createConsumerRuntimeOnlyInstaller<TSnapshot>(ports: {
   ): Promise<SetupResult> => {
     ports.assertSetupRuntimeRoot(input.identity, repoRoot);
     const launcher = captureRuntimeLauncher(repoRoot).launcher;
-    if (!launcher) throw new Error("consumer_runtime_update_unsupported:launcher_missing");
+    if (!launcher) throw new Error("consumer_runtime_setup_snapshot:launcher");
 
     const consumerRuntime = await ports.installConsumerRuntimeFromSetup({ ...input, fault });
     if (!consumerRuntime.result.ok) throw new Error(consumerRuntime.result.reason);
