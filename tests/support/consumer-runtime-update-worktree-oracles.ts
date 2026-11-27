@@ -142,9 +142,12 @@ export function registerConsumerRuntimeUpdateWorktreeOracles(input: {
         const cachedAssets = Object.values(setupApi.releaseArtifactFileNames(fixture.tag));
         expect(readdirSync(cacheAPath).sort()).toEqual([...cachedAssets].sort());
         for (const name of cachedAssets) {
-          expect(readFileSync(join(cacheAPath, name))).toEqual(
-            readFileSync(join(fixture.releaseDir, name)),
-          );
+          expect(
+            readFileSync(join(cacheAPath, name)).equals(
+              readFileSync(join(fixture.releaseDir, name)),
+            ),
+            name,
+          ).toBe(true);
         }
         const manifest = JSON.parse(
           readFileSync(join(pointer.bundlePath, "bundle-manifest.json"), "utf8"),
@@ -168,8 +171,10 @@ export function registerConsumerRuntimeUpdateWorktreeOracles(input: {
         expect(pointer.bytes).toEqual(worktreePointerBytes);
         expect(pointerValue.bundle_path).toBe(pointer.bundlePath);
         expect(pointerValue.entry_path).toBe(join(pointer.bundlePath, "ut-tdd.mjs"));
-        expect(readFileSync(join(pointer.bundlePath, "ut-tdd.mjs"))).toEqual(worktreeBundleBytes);
-        expect(worktreeBundleBytes).toEqual(fixture.compiledBytes);
+        expect(
+          readFileSync(join(pointer.bundlePath, "ut-tdd.mjs")).equals(worktreeBundleBytes),
+        ).toBe(true);
+        expect(worktreeBundleBytes.equals(fixture.compiledBytes)).toBe(true);
         expect(snapshotRuntimeUpdateTree(worktreeRoot)).toEqual(worktreeBefore);
         expect(snapshotRuntimeUpdateTree(cacheAPath)).toEqual(cacheABefore);
         expect(nextPointer.bytes).not.toEqual(worktreePointerBytes);

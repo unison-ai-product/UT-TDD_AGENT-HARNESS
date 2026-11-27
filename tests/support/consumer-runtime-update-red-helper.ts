@@ -213,12 +213,12 @@ export async function runConsumerRuntimeUpdateRetentionOracle(input: {
       nextFixture,
     });
     expect(nextPointer.bytes).not.toEqual(priorPointer.bytes);
-    expect(readFileSync(join(nextPointer.bundlePath, "ut-tdd.mjs"))).toEqual(nextCompiledBytes);
-    expect(
-      readdirSync(priorPointer.bundlePath)
-        .sort()
-        .map((name) => [name, readFileSync(join(priorPointer.bundlePath, name))]),
-    ).toEqual(priorFiles);
+    expect(readFileSync(join(nextPointer.bundlePath, "ut-tdd.mjs")).equals(nextCompiledBytes)).toBe(
+      true,
+    );
+    expect(readdirSync(priorPointer.bundlePath).sort()).toEqual(priorFiles.map(([name]) => name));
+    for (const [name, bytes] of priorFiles)
+      expect(readFileSync(join(priorPointer.bundlePath, name)).equals(bytes), name).toBe(true);
     const status = spawnSync(
       process.execPath,
       [join(nextPointer.bundlePath, "ut-tdd.mjs"), "status", "--json"],
