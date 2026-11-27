@@ -13,19 +13,35 @@ export const runtimePointerIo = {
   cleanupCalls: [] as string[],
   tempWrites: [] as string[],
   directWrites: [] as string[],
+  pointerDeletes: [] as string[],
   observations: [] as string[],
 };
 
 export function createRuntimeUpdateFsSpy(actual: typeof import("node:fs")) {
   const normalized = (path: unknown) => String(path).replaceAll("\\", "/");
   const observe = () => {
-    if (runtimePointerIo.enabled && actual.existsSync(runtimePointerIo.activePointerPath))
+    const path = runtimePointerIo.activePointerPath;
+    if (runtimePointerIo.enabled && path)
       runtimePointerIo.observations.push(
-        actual.readFileSync(runtimePointerIo.activePointerPath, "utf8"),
+        actual.existsSync(path) ? actual.readFileSync(path, "utf8") : "",
       );
+  };
+  const tracksPointerOrParent = (path: unknown) => {
+    const target = normalized(path).replace(/\/$/, "");
+    const pointer = normalized(runtimePointerIo.activePointerPath).replace(/\/$/, "");
+    return target === pointer || pointer.startsWith(`${target}/`);
   };
   return {
     ...actual,
+    readFileSync: (...args: Parameters<typeof actual.readFileSync>) => {
+      const result = actual.readFileSync(...args);
+      if (
+        runtimePointerIo.enabled &&
+        normalized(args[0]) === normalized(runtimePointerIo.activePointerPath)
+      )
+        runtimePointerIo.observations.push(result.toString());
+      return result;
+    },
     writeFileSync: (...args: Parameters<typeof actual.writeFileSync>) => {
       const target = normalized(args[0]);
       if (runtimePointerIo.enabled) {
@@ -58,7 +74,13 @@ export function createRuntimeUpdateFsSpy(actual: typeof import("node:fs")) {
       const writes =
         typeof flags === "string"
           ? /[wax+]/.test(flags)
-          : (Number(flags) & (actual.constants.O_WRONLY | actual.constants.O_RDWR)) !== 0;
+          : (Number(flags) &
+              (actual.constants.O_WRONLY |
+                actual.constants.O_RDWR |
+                actual.constants.O_CREAT |
+                actual.constants.O_TRUNC |
+                actual.constants.O_APPEND)) !==
+            0;
       if (
         runtimePointerIo.enabled &&
         writes &&
@@ -102,6 +124,10 @@ export function createRuntimeUpdateFsSpy(actual: typeof import("node:fs")) {
     renameSync: (...args: Parameters<typeof actual.renameSync>) => {
       const source = normalized(args[0]);
       const destination = normalized(args[1]);
+      if (runtimePointerIo.enabled && tracksPointerOrParent(args[0])) {
+        runtimePointerIo.pointerDeletes.push(source);
+        observe();
+      }
       if (
         runtimePointerIo.enabled &&
         destination === normalized(runtimePointerIo.activePointerPath)
@@ -126,6 +152,10 @@ export function createRuntimeUpdateFsSpy(actual: typeof import("node:fs")) {
     },
     rmSync: (...args: Parameters<typeof actual.rmSync>) => {
       const target = normalized(args[0]);
+      if (runtimePointerIo.enabled && tracksPointerOrParent(args[0])) {
+        runtimePointerIo.pointerDeletes.push(target);
+        observe();
+      }
       if (
         runtimePointerIo.enabled &&
         runtimePointerIo.failBundleCleanup &&
@@ -135,7 +165,27 @@ export function createRuntimeUpdateFsSpy(actual: typeof import("node:fs")) {
         runtimePointerIo.cleanupCalls.push(target);
         throw Object.assign(new Error("injected new bundle cleanup EPERM"), { code: "EPERM" });
       }
-      return actual.rmSync(...args);
+      const result = actual.rmSync(...args);
+      if (runtimePointerIo.enabled && tracksPointerOrParent(args[0])) observe();
+      return result;
+    },
+    unlinkSync: (...args: Parameters<typeof actual.unlinkSync>) => {
+      if (runtimePointerIo.enabled && tracksPointerOrParent(args[0])) {
+        runtimePointerIo.pointerDeletes.push(normalized(args[0]));
+        observe();
+      }
+      const result = actual.unlinkSync(...args);
+      if (runtimePointerIo.enabled && tracksPointerOrParent(args[0])) observe();
+      return result;
+    },
+    rmdirSync: (...args: Parameters<typeof actual.rmdirSync>) => {
+      if (runtimePointerIo.enabled && tracksPointerOrParent(args[0])) {
+        runtimePointerIo.pointerDeletes.push(normalized(args[0]));
+        observe();
+      }
+      const result = actual.rmdirSync(...args);
+      if (runtimePointerIo.enabled && tracksPointerOrParent(args[0])) observe();
+      return result;
     },
   };
 }

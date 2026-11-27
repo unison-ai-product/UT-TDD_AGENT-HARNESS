@@ -3606,13 +3606,13 @@ program
           const suffix = ".ut-tdd.mjs";
           if (!moduleName.endsWith(suffix))
             throw new Error("consumer_runtime_self_digest_mismatch");
-          const tag = moduleName.slice(0, -suffix.length);
           const result = await installConsumerRuntimeRelease({
             releaseDirectory: opts.consumerRuntimeRelease,
             expectedConsumerDigest: opts.expectedConsumerDigest,
             consumerRoot: realpathSync.native(process.cwd()),
-            tag,
+            tag: moduleName.slice(0, -suffix.length),
             executingModulePath: fileURLToPath(import.meta.url),
+            isLinkedWorktree: isLinkedWorktreeCheckout(process.cwd()),
             setupDeps: () => nodeSetupDeps(realpathSync.native(process.cwd())),
           });
           if (reportExistingRuntime(result)) return;

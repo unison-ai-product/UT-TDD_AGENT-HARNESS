@@ -27,6 +27,7 @@ import { releaseArtifactFileNames } from "./distribution.ts";
 const RELEASE_ID = /^rel-sha256:([a-f0-9]{64})$/;
 
 export type ConsumerWorktreeRuntimeErrorCode =
+  | "worktree_entry_options_invalid"
   | "worktree_entry_not_linked"
   | "worktree_entry_main_not_activated"
   | "worktree_entry_cache_missing"
@@ -40,6 +41,20 @@ export class ConsumerWorktreeRuntimeError extends Error {
     this.name = "ConsumerWorktreeRuntimeError";
     this.code = code;
   }
+}
+
+export function verifySoloConsumerRuntimeRelease(
+  input: Parameters<typeof verifyConsumerRuntimeReleaseAssets>[0] & {
+    readonly isLinkedWorktree?: boolean;
+    readonly consumerRoot: string;
+  },
+) {
+  if (input.isLinkedWorktree)
+    throw new ConsumerWorktreeRuntimeError(
+      "worktree_entry_options_invalid",
+      `linked worktrees cannot use --consumer-runtime-release; run setup --worktree "${resolve(input.consumerRoot)}"`,
+    );
+  return verifyConsumerRuntimeReleaseAssets(input);
 }
 
 export interface ConsumerRuntimePin {
