@@ -29,8 +29,8 @@ vi.mock("node:fs", async (importOriginal) => {
 describe("consumer runtime update Red candidates", () => {
   let fixture: RuntimeFixture;
 
-  heavyBeforeAll("pack", () => {
-    fixture = createRuntimeUpdateFixture();
+  heavyBeforeAll("pack", async () => {
+    fixture = await createRuntimeUpdateFixture();
   });
 
   heavyAfterAll("teardown", () => {

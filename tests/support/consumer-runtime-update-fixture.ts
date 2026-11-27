@@ -25,6 +25,7 @@ import {
   releaseArtifactFileNames,
   validateConsumerRuntimeRelease,
 } from "../../src/setup/index.ts";
+import { buildExactHeadNodeGeneration } from "./pack-consumer-runtime.ts";
 
 const revision = "a".repeat(40);
 const digest = digestMaterializedReleaseEntries([
@@ -205,26 +206,17 @@ export function writeRuntimeUpdateAssets(input: {
   return `sha256:${hashHex(checksum)}`;
 }
 
-export function createRuntimeUpdateFixture(): RuntimeFixture {
+export async function createRuntimeUpdateFixture(): Promise<RuntimeFixture> {
   const root = mkdtempSync(join(tmpdir(), "ut-tdd-packrt-installer-"));
   const releaseDir = join(root, "release");
   const consumerRoot = join(root, "consumer");
   mkdirSync(releaseDir, { recursive: true });
   mkdirSync(consumerRoot, { recursive: true });
   gitInitWithCommit(consumerRoot);
-  const names = releaseArtifactFileNames("v0.2.0-canary.2");
-  const compiledPath = join(releaseDir, names.compiledEsm);
-  const metafilePath = `${compiledPath}.metafile.json`;
-  execFileSync(
-    process.execPath,
-    [join(process.cwd(), "scripts", "build-node.mjs"), compiledPath, metafilePath],
-    {
-      cwd: process.cwd(),
-      encoding: "utf8",
-      windowsHide: true,
-    },
-  );
-  const compiledBytes = readFileSync(compiledPath);
+  const producerRoot = join(root, "producer-build");
+  const generation = await buildExactHeadNodeGeneration(producerRoot);
+  const compiledBytes = readFileSync(generation.compiledCliPath);
+  rmSync(producerRoot, { recursive: true, force: true });
   const receipt = sealReceipt({
     ...receiptUnsigned,
     compiled_cli: { ...receiptUnsigned.compiled_cli, sha256: hashHex(compiledBytes) },
@@ -245,7 +237,6 @@ export function createRuntimeUpdateFixture(): RuntimeFixture {
     compiledBytes,
     runtime,
   });
-  rmSync(metafilePath, { force: true });
   return {
     root,
     releaseDir,
