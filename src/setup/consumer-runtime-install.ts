@@ -6,6 +6,7 @@ import {
   type ConsumerLocalRuntimeAdmission,
 } from "./consumer-local-runtime-admission.ts";
 import {
+  bundlePathFor,
   type ConsumerNodeRuntimeBundle,
   type ConsumerNodeRuntimeIdentity,
   type ConsumerNodeRuntimePriorPointer,
@@ -152,9 +153,15 @@ function readCommittedRuntimePointer(runtimeRoot: string): {
 
 function readCommittedRuntimeBundle(
   runtimeRoot: string,
+  consumerRoot: string,
   pointer: CommittedRuntimePointerValue,
 ): ConsumerNodeRuntimeBundle {
   const runtimeRealPath = realpathSync.native(runtimeRoot);
+  if (!isStrictlyContainedPath(runtimeRealPath, pointer.bundle_path)) {
+    if (isCopiedCommittedRuntime(runtimeRealPath, consumerRoot, pointer))
+      throw new Error("consumer_runtime_receipt_mismatch");
+    throw new Error("consumer_runtime_identity_mismatch");
+  }
   const bundleRealPath = realpathSync.native(pointer.bundle_path);
   if (!isStrictlyContainedPath(runtimeRealPath, bundleRealPath))
     throw new Error("consumer_runtime_identity_mismatch");
@@ -209,6 +216,38 @@ function assertCommittedRuntimeFiles(bundle: ConsumerNodeRuntimeBundle): void {
   }
 }
 
+function isCopiedCommittedRuntime(
+  runtimeRoot: string,
+  consumerRoot: string,
+  pointer: CommittedRuntimePointerValue,
+): boolean {
+  try {
+    const operationId = basename(dirname(pointer.bundle_path));
+    if (basename(dirname(dirname(pointer.bundle_path))) !== "bundles") return false;
+    const localPath = resolve(runtimeRoot, "bundles", operationId, basename(pointer.bundle_path));
+    if (!isStrictlyContainedPath(runtimeRoot, localPath)) return false;
+    const localRealPath = realpathSync.native(localPath);
+    if (!isStrictlyContainedPath(runtimeRoot, localRealPath)) return false;
+    const manifestRealPath = realpathSync.native(resolve(localRealPath, "bundle-manifest.json"));
+    if (!isStrictlyContainedPath(runtimeRoot, manifestRealPath)) return false;
+    const bundle = JSON.parse(readFileSync(manifestRealPath, "utf8")) as ConsumerNodeRuntimeBundle;
+    if (
+      validateConsumerNodeRuntimeBundle(bundle) ||
+      bundle.bundle_path !== pointer.bundle_path ||
+      bundle.bundle_path !== bundlePathFor(bundle.identity, bundle.bundle_digest) ||
+      bundle.bundle_digest !== pointer.bundle_digest ||
+      pointer.entry_path !== resolve(bundle.bundle_path, "ut-tdd.mjs")
+    )
+      return false;
+    return (
+      bundle.identity.consumer_root !== realpathSync.native(consumerRoot) ||
+      bundle.identity.runtime_root !== runtimeRoot
+    );
+  } catch {
+    return false;
+  }
+}
+
 function readCommittedRuntimeHistory(bundle: ConsumerNodeRuntimeBundle): {
   readonly bytes: Buffer;
   readonly tipDigest: string;
@@ -238,7 +277,7 @@ export function readCommittedConsumerRuntimePrior(input: {
 }): CommittedConsumerRuntimePrior {
   try {
     const pointer = readCommittedRuntimePointer(input.runtimeRoot);
-    const bundle = readCommittedRuntimeBundle(input.runtimeRoot, pointer.value);
+    const bundle = readCommittedRuntimeBundle(input.runtimeRoot, input.consumerRoot, pointer.value);
     assertCommittedRuntimeReceipt(bundle, input.consumerRoot, input.runtimeRoot);
     assertCommittedRuntimeFiles(bundle);
     const history = readCommittedRuntimeHistory(bundle);
