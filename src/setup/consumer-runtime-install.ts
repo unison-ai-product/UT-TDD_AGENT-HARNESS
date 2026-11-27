@@ -1,13 +1,17 @@
-import { existsSync, realpathSync } from "node:fs";
-import { basename, dirname, resolve } from "node:path";
+import { existsSync, readFileSync, realpathSync, statSync } from "node:fs";
+import { basename, dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import { parseNodeBootstrapReceiptBytes } from "../runtime/node-bootstrap.ts";
 import {
   admitConsumerLocalRuntime,
   type ConsumerLocalRuntimeAdmission,
 } from "./consumer-local-runtime-admission.ts";
 import {
+  type ConsumerNodeRuntimeBundle,
   type ConsumerNodeRuntimeIdentity,
+  type ConsumerNodeRuntimePriorPointer,
   digestConsumerRuntimeBytes,
+  digestConsumerRuntimeValue,
+  validateConsumerNodeRuntimeBundle,
 } from "./consumer-node-runtime.ts";
 import type {
   ConsumerRuntimeReleaseInstallResult,
@@ -18,6 +22,10 @@ import type { verifyConsumerRuntimeReleaseAssets } from "./consumer-runtime-rele
 import type { ConsumerRuntimePin } from "./consumer-worktree-runtime.ts";
 import { cacheConsumerRuntimeRelease, mainWorktreeCommonDir } from "./consumer-worktree-runtime.ts";
 import type { ReleaseChannelAttestation } from "./release-channel-adapter.ts";
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
 
 export function consumerReleaseAttestation(
   document: ReturnType<typeof verifyConsumerRuntimeReleaseAssets>["document"],
@@ -83,6 +91,140 @@ export function createSetupConsumerRuntimeInput(input: {
     compiled_esm: input.compiledEsm,
     node_bootstrap_receipt: input.nodeBootstrapReceipt,
   };
+}
+
+export interface CommittedConsumerRuntimePrior {
+  readonly bundle: ConsumerNodeRuntimeBundle;
+  readonly historyBytes: Uint8Array;
+  readonly historySequence: number;
+  readonly historyTipDigest: string;
+  readonly priorPointer: ConsumerNodeRuntimePriorPointer;
+}
+
+export function readCommittedConsumerRuntimePrior(input: {
+  readonly consumerRoot: string;
+  readonly runtimeRoot: string;
+}): CommittedConsumerRuntimePrior {
+  try {
+    const pointerPath = resolve(input.runtimeRoot, "activation", "active.json");
+    const pointerBytes = readFileSync(pointerPath);
+    const pointer: unknown = JSON.parse(pointerBytes.toString("utf8"));
+    if (
+      !isRecord(pointer) ||
+      Object.keys(pointer).sort().join("\0") !== "bundle_digest\0bundle_path\0entry_path" ||
+      typeof pointer.bundle_digest !== "string" ||
+      typeof pointer.bundle_path !== "string" ||
+      typeof pointer.entry_path !== "string" ||
+      pointer.bundle_path !== resolve(pointer.bundle_path) ||
+      pointer.entry_path !== resolve(pointer.entry_path)
+    )
+      throw new Error("consumer_runtime_identity_mismatch");
+
+    const bundlePath = pointer.bundle_path;
+    const runtimeRealPath = realpathSync.native(input.runtimeRoot);
+    const bundleRealPath = realpathSync.native(bundlePath);
+    const bundleRelativePath = relative(runtimeRealPath, bundleRealPath);
+    if (
+      bundleRelativePath === "" ||
+      bundleRelativePath === ".." ||
+      isAbsolute(bundleRelativePath) ||
+      bundleRelativePath.startsWith(`..${sep}`)
+    )
+      throw new Error("consumer_runtime_identity_mismatch");
+
+    const bundle = JSON.parse(
+      readFileSync(resolve(bundlePath, "bundle-manifest.json"), "utf8"),
+    ) as ConsumerNodeRuntimeBundle;
+    if (validateConsumerNodeRuntimeBundle(bundle))
+      throw new Error("consumer_runtime_identity_mismatch");
+    if (
+      pointer.bundle_digest !== bundle.bundle_digest ||
+      pointer.bundle_path !== bundle.bundle_path ||
+      !sameCanonicalSetupPath(pointer.entry_path, resolve(bundle.bundle_path, "ut-tdd.mjs"))
+    )
+      throw new Error("consumer_runtime_identity_mismatch");
+
+    const storedReceipt = JSON.parse(
+      readFileSync(resolve(bundlePath, "consumer-receipt.json"), "utf8"),
+    ) as Record<string, unknown>;
+    const rawConsumer = storedReceipt.consumer;
+    const storedConsumer =
+      rawConsumer && typeof rawConsumer === "object" && !Array.isArray(rawConsumer)
+        ? (rawConsumer as Record<string, unknown>)
+        : undefined;
+    const identity = bundle.identity;
+    if (
+      !storedConsumer ||
+      !sameCanonicalSetupPath(String(storedConsumer.consumerRoot ?? ""), input.consumerRoot) ||
+      !sameCanonicalSetupPath(String(storedConsumer.runtimeRoot ?? ""), input.runtimeRoot)
+    )
+      throw new Error("consumer_runtime_receipt_mismatch");
+    if (
+      storedReceipt.identity_digest !== digestConsumerRuntimeValue(identity) ||
+      storedReceipt.operation_id !== identity.operation_id ||
+      !sameCanonicalSetupPath(identity.consumer_root, input.consumerRoot) ||
+      !sameCanonicalSetupPath(identity.runtime_root, input.runtimeRoot) ||
+      storedConsumer.productId !== identity.product_id ||
+      storedConsumer.materializerVersion !== identity.materializer_version ||
+      storedConsumer.releaseId !== identity.release_id ||
+      storedConsumer.sourceRevision !== identity.subject_revision ||
+      storedConsumer.artifactSetDigest !== identity.artifact_set_digest
+    )
+      throw new Error("consumer_runtime_receipt_mismatch");
+
+    for (const [name, expectedDigest] of Object.entries(bundle.files)) {
+      const path = resolve(bundlePath, name);
+      const fileRealPath = realpathSync.native(path);
+      const relativeFilePath = relative(bundleRealPath, fileRealPath);
+      if (
+        relativeFilePath === "" ||
+        relativeFilePath === ".." ||
+        isAbsolute(relativeFilePath) ||
+        relativeFilePath.startsWith(`..${sep}`) ||
+        digestConsumerRuntimeBytes(readFileSync(path)) !== expectedDigest
+      )
+        throw new Error("consumer_runtime_identity_mismatch");
+    }
+
+    const historyBytes = readFileSync(resolve(bundlePath, "history.jsonl"));
+    const historyLines = historyBytes.toString("utf8").split("\n");
+    if (historyLines.at(-1) !== "" || historyLines.length !== bundle.history_sequence + 2)
+      throw new Error("consumer_runtime_identity_mismatch");
+    const historyTip = JSON.parse(historyLines.at(-2) ?? "null") as unknown;
+    if (
+      !isRecord(historyTip) ||
+      historyTip.history_sequence !== bundle.history_sequence ||
+      typeof historyTip.record_digest !== "string" ||
+      !/^sha256:[a-f0-9]{64}$/.test(historyTip.record_digest)
+    )
+      throw new Error("consumer_runtime_identity_mismatch");
+    const unsignedHistoryTip = { ...historyTip };
+    delete unsignedHistoryTip.record_digest;
+    if (digestConsumerRuntimeValue(unsignedHistoryTip) !== historyTip.record_digest)
+      throw new Error("consumer_runtime_identity_mismatch");
+
+    const priorPointer = {
+      bytes: pointerBytes,
+      mode: statSync(pointerPath).mode & 0o777,
+      digest: digestConsumerRuntimeBytes(pointerBytes),
+    };
+    return {
+      bundle,
+      historyBytes,
+      historySequence: bundle.history_sequence,
+      historyTipDigest: historyTip.record_digest,
+      priorPointer,
+    };
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      ["consumer_runtime_receipt_mismatch", "consumer_runtime_identity_mismatch"].some((reason) =>
+        error.message.includes(reason),
+      )
+    )
+      throw error;
+    throw new Error("consumer_runtime_identity_mismatch");
+  }
 }
 
 import type { SealedReleaseAggregatePlan } from "./release-aggregate-admission.ts";
