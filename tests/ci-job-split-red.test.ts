@@ -76,7 +76,7 @@ describe("Issue #1981 Red: harness-check Linux job split", () => {
     expect(planDiffers(inheritedEnv, "full", "pull_request")).toBe(true);
   });
 
-  it("CANDIDATE-U-CISPLIT-001: fixed pre-split manifest matches all four lane/event plans", () => {
+  it("U-CISPLIT-001: fixed pre-split manifest matches all four lane/event plans", () => {
     for (const lane of ["full", "doc"] as const) {
       for (const event of ["pull_request", "push"] as const) {
         expect(plansEqual(extractExecutionPlan(workflow, lane, event), manifest[lane][event])).toBe(
@@ -86,30 +86,30 @@ describe("Issue #1981 Red: harness-check Linux job split", () => {
     }
   });
 
-  it.fails("CANDIDATE-U-CISPLIT-002: required-check removal changes the plan after split", () => {
+  it("U-CISPLIT-002: required-check removal changes the plan after split", () => {
     for (const mutated of mutations.removed)
       expect(planDiffers(mutated, "full", "pull_request")).toBe(true);
     assertSplitJobs();
   });
 
-  it.fails("CANDIDATE-U-CISPLIT-003: lane/event condition changes alter the plan after split", () => {
+  it("U-CISPLIT-003: lane/event condition changes alter the plan after split", () => {
     for (const mutated of mutations.condition)
       expect(planDiffers(mutated, "full", "push")).toBe(true);
     assertSplitJobs();
   });
 
-  it.fails("CANDIDATE-U-CISPLIT-004: duplicating a check across Linux jobs changes the plan", () => {
+  it("U-CISPLIT-004: duplicating a check across Linux jobs changes the plan", () => {
     expect(planDiffers(mutations.duplicateLint, "full", "push")).toBe(true);
     assertSplitJobs();
   });
 
-  it.fails("CANDIDATE-U-CISPLIT-005: command and environment changes alter the plan after split", () => {
+  it("U-CISPLIT-005: command and environment changes alter the plan after split", () => {
     for (const mutated of mutations.inputs)
       expect(planDiffers(mutated, "full", "pull_request")).toBe(true);
     assertSplitJobs();
   });
 
-  it.fails("CANDIDATE-U-CISPLIT-006: aggregate fails for any skipped job in either lane", () => {
+  it("U-CISPLIT-006: aggregate fails for any skipped job in either lane", () => {
     const success = allSuccess();
     for (const lane of ["full", "doc"] as const) {
       expectAggregateExit(lane, success, 0);
@@ -118,7 +118,7 @@ describe("Issue #1981 Red: harness-check Linux job split", () => {
     }
   });
 
-  it.fails("CANDIDATE-U-CISPLIT-007: aggregate rejects invalid lanes and unsuccessful classify", () => {
+  it("U-CISPLIT-007: aggregate rejects invalid lanes and unsuccessful classify", () => {
     const success = allSuccess();
     for (const lane of ["", "Full", "docs", "unknown"])
       expectAggregateExit(lane, success, "nonzero");
@@ -128,7 +128,7 @@ describe("Issue #1981 Red: harness-check Linux job split", () => {
     expectAggregateExit("doc", success, 0);
   });
 
-  it.fails("CANDIDATE-U-CISPLIT-008: aggregate fails on failure or cancellation from any job", () => {
+  it("U-CISPLIT-008: aggregate fails on failure or cancellation from any job", () => {
     const success = allSuccess();
     for (const jobId of expectedAggregateNeeds) {
       for (const result of ["failure", "cancelled"])
@@ -136,7 +136,7 @@ describe("Issue #1981 Red: harness-check Linux job split", () => {
     }
   });
 
-  it.fails("CANDIDATE-U-CISPLIT-009: aggregate structure and its three mutations are rejected", () => {
+  it("U-CISPLIT-009: aggregate structure and its three mutations are rejected", () => {
     for (const mutated of aggregateMutations)
       expect(aggregateStructureViolations(mutated).length).toBeGreaterThan(0);
     expect(aggregateStructureViolations(workflow)).toEqual([]);
@@ -144,7 +144,7 @@ describe("Issue #1981 Red: harness-check Linux job split", () => {
     expect(Object.keys(workflow.jobs)).toEqual(expect.arrayContaining(expectedSplitJobs));
   });
 
-  it.fails("CANDIDATE-U-CISPLIT-010: classify runs once in its Linux job and is consumed through needs", () => {
+  it("U-CISPLIT-010: classify runs once in its Linux job and is consumed through needs", () => {
     const calls = (parsed: typeof workflow) =>
       linuxJobs(parsed).flatMap(([jobId, job]) =>
         (job.steps ?? [])
@@ -172,7 +172,7 @@ describe("Issue #1981 Red: harness-check Linux job split", () => {
     expect(JSON.stringify(workflow.jobs)).not.toMatch(/outputs\.lane\s*!=/);
   });
 
-  it.fails("CANDIDATE-U-CISPLIT-011: step placement, handoffs, and order match the split", () => {
+  it("U-CISPLIT-011: step placement, handoffs, and order match the split", () => {
     expect(stepPlacementViolations(mutations.movedDoctor)).toContain(
       "job:doctor (governance hard gates):harness-check-static",
     );
@@ -185,7 +185,7 @@ describe("Issue #1981 Red: harness-check Linux job split", () => {
     }
   });
 
-  it.fails("CANDIDATE-U-CISPLIT-012: step/job continuation mutations fail while explicit false passes", () => {
+  it("U-CISPLIT-012: step/job continuation mutations fail while explicit false passes", () => {
     for (const mutated of continueOnErrorMutations.mutations)
       expect(continueOnErrorViolations(mutated).length).toBeGreaterThan(0);
     expect(continueOnErrorViolations(continueOnErrorMutations.explicitFalse)).toEqual([]);

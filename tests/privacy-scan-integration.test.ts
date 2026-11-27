@@ -246,8 +246,8 @@ describe("privacy scan candidate oracles (adapters and live repository)", () => 
     const workflows = join(authorRoot, ".github", "workflows");
     const harness = readFileSync(join(workflows, "harness-check.yml"), "utf8");
     const job = harness.slice(
-      harness.indexOf("  harness-check-linux:"),
-      harness.indexOf("\n  harness-check-windows:"),
+      harness.indexOf("  harness-check-pr-discipline:"),
+      harness.indexOf("\n  harness-check-static:"),
     );
     const start = job.indexOf("privacy-scan check");
     expect(start).toBeGreaterThan(-1);

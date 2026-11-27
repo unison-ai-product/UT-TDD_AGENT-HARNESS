@@ -10,7 +10,7 @@ next_pair_freeze: L7
 issue: 1525
 ---
 
-> **L6 contract marker**: 本書は consumer の linked git worktree へ runtime を入れる入口、runtime が無いときの guard 失敗の案内、および新規 install の launcher 公開前失敗に対する transaction rollback を凍結する (未実装の目標契約)。版の更新と別の版へのロールバックは #930 / #481 の範囲であり、本書は扱わない。oracle (`U-CWTRT-001`〜`011`) は `docs/test-design/harness/L7-consumer-worktree-runtime-test-design.md` が固定する (導入途中の rollback 境界の `U-CWTRT-011` は 2026-11-16 に候補 ID から正式 ID へ昇格、Issue #1592)。行番号は 2026-11-04 の `origin/main` で測った。
+> **L6 contract marker**: 本書は consumer の linked git worktree へ runtime を入れる入口、runtime が無いときの guard 失敗の案内、および新規 install の launcher 公開前失敗に対する transaction rollback を凍結する (未実装の目標契約)。版の更新と別の版へのロールバックは #930 / #481 の範囲であり、本書は扱わない。oracle (`U-CWTRT-001`〜`011`) は `docs/test-design/harness/L7-consumer-worktree-runtime-test-design.md` が固定する (導入途中の rollback 境界の `U-CWTRT-011` は 2026-11-16 に候補 ID から正式 ID へ昇格、Issue #1592)。行番号は 2026-11-04 の `origin/main` で測った。2026-11-27 (Issue #2018) に §3.1 (linked worktree からの `setup --solo --consumer-runtime-release` の入口拒否) と §3.2 (未決) を追加した (§3.1 status: confirmed、oracle は `U-CWTRT-016`〜`018`)。
 
 # consumer worktree の runtime 入口 — 関数設計 (issue #1525)
 
@@ -41,6 +41,34 @@ consumer は runtime と launcher (`.ut-tdd/bin/ut-tdd.mjs`) を commit しな�
 5. **pin を変えない**: main の active pointer、キャッシュ、他の worktree には書かない。違う版を入れる経路は無い (版の更新は #930 / #481)。worktree に別の版が既にあるときは `consumer_runtime_update_unsupported` のままにする。
 6. **成功時**: launcher (`.ut-tdd/bin/ut-tdd.mjs`) と runtime が worktree に揃い、guard が動く。成功の出力は導入した版と digest の 1 行である。
 
+### 3.1 決定 1 の補足: linked worktree から `setup --solo --consumer-runtime-release` を流したとき (Issue #2018、status: confirmed)
+
+**問題 (2026-11-27 の実行確認、#2018)**: §3 は `--worktree` の経路だけが main の pin を照合する。いまの `setup --solo --consumer-runtime-release <dir> --expected-consumer-digest <digest>` は cwd が linked worktree でも入口で拒否されず (`src/cli.ts:3598-3615` に linked worktree の判定が無く、`expectedPin` も渡されない。`assertConsumerRuntimePinMatches` は `expectedPin` が無いと何もしない、`src/setup/consumer-worktree-runtime.ts:66-79`)、main と違う版が worktree に入る (main が canary.8、worktree に canary.9 を確認)。§5 の「入れる版は main の active pointer の版と常に一致する」が、この入口では成り立たない。
+
+**規則 (決定)**: cwd が linked worktree のとき、`setup --solo --consumer-runtime-release` は **main の runtime の有無・版にかかわらず、入口で常に拒否する**。worktree へ runtime を入れる経路は `setup --worktree <path>` (§3) の 1 本だけとする。
+
+1. **判定は入口で 1 回、git の事実から**: `setup` の action 入口 (`--consumer-runtime-release` の分岐 `src/cli.ts:3598` に入る前) で、既存の `isLinkedWorktreeCheckout(process.cwd())` (git-dir ≠ git-common-dir、`src/memory/project-memory-root.ts:174-186`) を 1 回だけ呼ぶ。結果 (`isLinkedWorktree: boolean`) は明示の引数として `installConsumerRuntimeRelease` 以下へ渡す。下層は git を再判定しない (#930 契約 PR #2017 (未 merge、head `ad973dad`) の `docs/design/harness/L6-function-design/consumer-runtime-update.md` §9 決定 b と同じ方式)。`src/setup/consumer-worktree-runtime.ts:171-178` の `mainWorktreeCommonDir` が同じ判定を持つので、2 つを 1 つへ寄せるかは Refactor の段で決める (本書では寄せない)。判定が false の経路 (main worktree、git 管理外、git が失敗する場合) は従来どおりで、挙動を変えない。
+2. **拒否の符号**: 新しい符号は足さない。既存の `worktree_entry_options_invalid` (`src/setup/consumer-worktree-cli.ts:56`、exit 1) を使う。意味 (この setup の option の組み合わせは、この checkout では使えない) が合う (現行の用途は `--worktree` と他 option の併用の拒否)。メッセージは「linked worktree では `--consumer-runtime-release` を使えない。`setup --worktree <この worktree の絶対パス>` を使う」と、実行すべきコマンドを 1 つ名指しする (§4 の案内と同じ型)。`worktree_entry_not_linked` は逆の意味 (対象が linked でない) なので使わない。`consumer_runtime_update_unsupported` は「worktree に別の版がある」専用として残し (#930 契約 §9 決定 b)、この拒否には使わない。
+3. **拒否のときは何も書かない**: 入口の拒否は Release の検証・identity bootstrap・runtime の実体化より前で行う。worktree・main・キャッシュ・他の worktree に何も残さない (§5 の最初の項目と同じ)。
+4. **「main に runtime が無い / 同じ版 / 違う版」の 3 つで挙動を分けない**。選んだ案と却下した案:
+   - 案 A (採用): 常に拒否する。入口の判定は git の事実 1 つだけで、main の pointer を読まない。main の版と照合する logic は `--worktree` の §3 手順 2〜4 に既にあり、二重に持たない。#930 の L7 PR #2017 (未 merge、head `ad973dad`) の `docs/test-design/harness/L7-consumer-runtime-update-test-design.md` の `CANDIDATE-U-RTUPD-005` (「runtime の有無にかかわらず入口で拒否」) と一致する。
+   - 案 B (却下): main の pin と同じ版のときだけ通す。`--worktree` と差の無い入口が 2 つになり、pin 一致の照合を solo の経路にも複製する (最小実装原則に反する)。照合に失敗した場合は install 後の rollback (§3 手順 4) が要り、入口拒否より書き込みを伴う。
+   - 案 C (却下): main に runtime が無いとき worktree への導入を許す。worktree から入れた版が事実上の pin になり、§3 手順 2 の「正本は main」に反する。
+5. **main に runtime が無いとき**: 本節の拒否は変わらない。利用者は `setup --worktree <path>` へ案内され、そこで `worktree_entry_main_not_activated` (§3 手順 2、`src/setup/consumer-worktree-runtime.ts:253`・`:261`) が出て main での setup を案内される。案内が 1 段多くなるが、符号と案内文を新設せずに済む。
+6. **#930 との関係**: 本節が参照する #930 の契約と oracle は PR #2017 (未 merge、head `ad973dad`) にあり、#2017 の merge 後に main の path へ結び直す。#930 の Green は main root の拒否 (`src/setup/index.ts:524` / `:534`) を開ける。本節の入口拒否が先に入っていることがその前提である (PR #2017 (未 merge、head `ad973dad`) の `docs/design/harness/L6-function-design/consumer-runtime-update.md` §10.1)。
+
+### 3.2 未決: 既存 worktree を新しい main の pin へ追従させる手段 (#2018 の 2 つ目の範囲、status: 未決)
+
+#930 で main が新 generation へ切り替わると、既に別の版が入っている worktree は旧版のまま動く (#930 契約 §6)。`setup --worktree` を流すと `consumer_runtime_update_unsupported` で拒否される (`U-CWTRT-005`)。追従の手段は本書では決めない。選択肢と trade-off を記録する。
+
+| 案 | 内容 | trade-off |
+|---|---|---|
+| 1 | worktree の `.ut-tdd/` の runtime を消してから `setup --worktree` を流し直す (手動、契約の変更なし) | 契約も実装も変えない。消している間は guard が止まる (§4 の案内)。利用者の手順に頼る |
+| 2 | `setup --worktree <path> --update` を足し、main の現 pin と worktree の版が違うときだけ、worktree の pointer を main の pin へ切り替える | main の pin だけを入力にするので §5 の不変条件 (版を選べる入力が無い) は保てる。`U-CWTRT-005` の「worktree に既に別の版があれば `consumer_runtime_update_unsupported`」を改訂する。#930 の pointer 切り替え (generation の保持・EPERM・launcher 互換) を worktree へ再利用する設計が要る |
+| 3 | launcher が起動時に main の pin と自分の版を比べ、違えば警告だけ出す | 追従はしないが、旧版で動き続ける状態が見える。launcher の変更になり、launcher 互換 (#930 §9.1) に影響する |
+
+案 2・3 は §3〜§5 と凍結 oracle `U-CWTRT-005` の改訂を伴う。推奨は未定で、別 Issue または #2018 の後続で `ut-tdd advisor` (design) に掛けて決める。本 PR の範囲外であり、§3.1 の入口拒否には影響しない。
+
 ## 4. 決定 2: runtime が無いときの案内
 
 案内は「実行すべきコマンドを 1 つ名指しする 1 つの文」で、guard の block 理由として Claude Code の UI へ届く。届く経路は既存の guard と同じ stderr + exit 2 である (§2)。
@@ -61,7 +89,7 @@ consumer は runtime と launcher (`.ut-tdd/bin/ut-tdd.mjs`) を commit しな�
 - `setup --worktree` は、成功する場合を除き、worktree・main・キャッシュのどれにも何も残さない (失敗時は巻き戻す)。
 - 新規 install の transaction は runtime の capture から launcher の公開までを覆う。`installConsumerRuntimeFromSetup` が `result.ok` で成功を返した直後、launcher (`.ut-tdd/bin/ut-tdd.mjs`) を公開する前に、内部だけの optional injection 型 `ConsumerWorktreeSetupFault = (barrier: "afterRuntimePublishBeforeLauncher") => void` が設定されていれば、その barrier で transaction の `try` 内からちょうど 1 回呼ぶ。`setupConsumerWorktreeRuntime` から Release install と runtime-only transaction を通る内部 composition に渡せるようにし、本番の capture/restore を差し替えない。この seam は既定で未設定であり、通常経路の動作を変えない。同期 throw は launcher 公開前の失敗として同じ本番 capture/restore rollback に流し、worktree・main・cache・他 worktree を呼び出し前の状態へ戻す。restore 自体が失敗した場合は復元成功と偽らず `consumer_runtime_indeterminate` で fail-close する。利用者向け CLI / Pack API option や environment variable として公開しない。
 - fault seam は新規 install (`status: "installed"`) の境界専用である。Release installer が `already-installed` を返す idempotent 経路では呼ばず、既存 runtime を障害注入 rollback の対象にしない。launcher の通常公開と fault seam が無い場合の成功経路は従来どおりである。
-- 入れる版は main の active pointer の版と常に一致する。キャッシュ・引数・環境変数から版を選べる経路は無い。
+- 入れる版は main の active pointer の版と常に一致する。キャッシュ・引数・環境変数から版を選べる経路は無い。linked worktree から `setup --solo --consumer-runtime-release` を流しても worktree に runtime は入らない (入口で拒否、§3.1、Issue #2018)。
 - guard (a) と CLI の直接起動 (c) の案内の経路は常に exit 非 0 であり、`MODULE_NOT_FOUND` のスタックを block 理由にしない。記録 / session hook (b) は exit 0 で、block にならない (2026-11-10、Issue #1602)。
 - **exit code の境界** (Issue #1525、2026-11-05 に確定):
 
@@ -82,6 +110,7 @@ consumer は runtime と launcher (`.ut-tdd/bin/ut-tdd.mjs`) を commit しな�
 - main worktree 向けの共有 runtime (main は従来の setup のまま)。
 - Codex の hook (`.codex/hooks.json`) の新規配線。ただし launcher の三分割 (§4) は Codex が launcher を直接起動する経路にもそのまま効く (Issue #1602)。
 - Release asset のネットワーク取得。
+- 既存 worktree を新しい main の pin へ追従させる手段 (§3.2 未決)。
 
 ## 7. 受け入れ
 

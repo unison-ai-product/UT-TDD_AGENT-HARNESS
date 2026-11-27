@@ -33,7 +33,7 @@ type Workflow = {
 const WORKFLOW_PATH = join(".github", "workflows", "harness-check.yml");
 const HEAD_SNAPSHOT_ROOT = headSnapshotRoot();
 const SOURCE_WORKFLOW_PATH = join(HEAD_SNAPSHOT_ROOT, WORKFLOW_PATH);
-const SOURCE_POLICY_PATH = join(HEAD_SNAPSHOT_ROOT, "src", "lint", "github-ci-policy.ts");
+const SOURCE_POLICY_PATH = join(HEAD_SNAPSHOT_ROOT, "src", "lint", "github-ci-linux-split.ts");
 const SOURCE_WORKFLOW = readFileSync(SOURCE_WORKFLOW_PATH, "utf8");
 const SOURCE_TEMPLATE = readFileSync(
   join(HEAD_SNAPSHOT_ROOT, "docs", "templates", "github", "common", "harness-check.yml"),
@@ -487,7 +487,7 @@ describe("consumer CI workflow registered Red oracles (#1522 / #1523)", () => {
     expect(guards).toHaveLength(1);
     expect(policyLines.length).toBeGreaterThan(0);
     expect(SOURCE_WORKFLOW_PATH).toContain(".github");
-    expect(SOURCE_POLICY_PATH).toContain("github-ci-policy.ts");
+    expect(SOURCE_POLICY_PATH).toContain("github-ci-linux-split.ts");
   });
 
   it("U-CICONS-013: source harness-check calls range guard without precomputed subjects", () => {
