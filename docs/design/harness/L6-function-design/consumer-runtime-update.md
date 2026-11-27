@@ -1,7 +1,7 @@
 ---
 layer: L6
 artifact_type: design_doc
-status: draft
+status: confirmed
 sub_doc: function-spec
 artifact_role: topic_consumer_runtime_update
 pair_artifact: docs/test-design/harness/L7-consumer-runtime-update-test-design.md
@@ -10,7 +10,7 @@ next_pair_freeze: L7
 issue: 930
 ---
 
-> **L6 contract marker (草案 WIP)**: 本書は consumer の main root で runtime の版を上げる入口 (setup の流し直し) と、active pointer の切り替え、失敗時の挙動、旧 generation の保持を凍結する予定の草案である。pair-freeze 前であり、oracle ID は対の L7 に `CANDIDATE-U-RTUPD-*` として仮採番。#481 (自動検出・rollback ほか) の範囲は §8 に分け、切り替えの方式は本書を #481 が再利用する。行番号は 2026-11-26 の `origin/main` で測った。
+> **L6 contract marker**: 本書は consumer の main root で runtime の版を上げる入口 (setup の流し直し) と、active pointer の切り替え、失敗時の挙動、旧 generation の保持を凍結する契約である。oracle ID は対の L7 に `CANDIDATE-U-RTUPD-*` として仮採番のまま置く (共有 L7 への正式採番は別 PR)。#481 (自動検出・rollback ほか) の範囲は §8 に分け、切り替えの方式は本書を #481 が再利用する。行番号は 2026-11-26 の `origin/main` で測った。
 
 # consumer runtime の版上げ — 関数設計 (issue #930)
 

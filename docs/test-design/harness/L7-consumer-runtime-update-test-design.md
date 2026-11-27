@@ -4,7 +4,7 @@ layer: L7
 executed_at_layer: L7
 artifact_type: test_design
 pair_artifact: docs/design/harness/L6-function-design/consumer-runtime-update.md
-status: draft
+status: confirmed
 updated: 2026-11-27
 issue: 930
 ---
@@ -13,7 +13,7 @@ issue: 930
 
 ## 1. 位置付け
 
-対になる設計文書は `docs/design/harness/L6-function-design/consumer-runtime-update.md` (草案) の §3 版上げの流れ、§4 切り替えと失敗、§5 旧 generation の保持、§6 worktree の扱い、§9 採択した決定である。pair-freeze 前の草案であり、oracle ID は仮採番 (`CANDIDATE-U-RTUPD-*`) である。共有の `docs/test-design/harness/L7-unit-test-design.md` と `function-spec.md` には触れない。それらへの追記は #2016 (#1970 の契約) の merge 後に別 PR で出す。
+対になる設計文書は `docs/design/harness/L6-function-design/consumer-runtime-update.md` の §3 版上げの流れ、§4 切り替えと失敗、§5 旧 generation の保持、§6 worktree の扱い、§9 採択した決定である。oracle ID は仮採番 (`CANDIDATE-U-RTUPD-*`) である。共有の `docs/test-design/harness/L7-unit-test-design.md` と `function-spec.md` には触れない。それらへの追記は #2016 (#1970 の契約) の merge 後に別 PR で出す。
 
 凍結済み oracle のうち、`tests/pack-consumer-runtime-release.test.ts:2224` (`CANDIDATE-U-PACKRT-010` の実体) は本書の 001 で置き換える。`tests/consumer-worktree-setup-red.test.ts:470` (`U-CWTRT-005`) は改めず、004 と 006 がその維持を補う。
 
