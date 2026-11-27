@@ -157,16 +157,18 @@ function readCommittedRuntimeBundle(
   pointer: CommittedRuntimePointerValue,
 ): ConsumerNodeRuntimeBundle {
   const runtimeRealPath = realpathSync.native(runtimeRoot);
+  let bundlePath = pointer.bundle_path;
   if (!isStrictlyContainedPath(runtimeRealPath, pointer.bundle_path)) {
-    if (isCopiedCommittedRuntime(runtimeRealPath, consumerRoot, pointer))
-      throw new Error("consumer_runtime_receipt_mismatch");
-    throw new Error("consumer_runtime_identity_mismatch");
+    const local = localCommittedRuntimePath(runtimeRealPath, consumerRoot, pointer);
+    if (!local) throw new Error("consumer_runtime_identity_mismatch");
+    if (local.copied) throw new Error("consumer_runtime_receipt_mismatch");
+    bundlePath = local.bundlePath;
   }
-  const bundleRealPath = realpathSync.native(pointer.bundle_path);
+  const bundleRealPath = realpathSync.native(bundlePath);
   if (!isStrictlyContainedPath(runtimeRealPath, bundleRealPath))
     throw new Error("consumer_runtime_identity_mismatch");
   const bundle = JSON.parse(
-    readFileSync(resolve(pointer.bundle_path, "bundle-manifest.json"), "utf8"),
+    readFileSync(resolve(bundlePath, "bundle-manifest.json"), "utf8"),
   ) as ConsumerNodeRuntimeBundle;
   if (
     validateConsumerNodeRuntimeBundle(bundle) ||
@@ -216,20 +218,20 @@ function assertCommittedRuntimeFiles(bundle: ConsumerNodeRuntimeBundle): void {
   }
 }
 
-function isCopiedCommittedRuntime(
+function localCommittedRuntimePath(
   runtimeRoot: string,
   consumerRoot: string,
   pointer: CommittedRuntimePointerValue,
-): boolean {
+): { readonly bundlePath: string; readonly copied: boolean } | undefined {
   try {
     const operationId = basename(dirname(pointer.bundle_path));
-    if (basename(dirname(dirname(pointer.bundle_path))) !== "bundles") return false;
+    if (basename(dirname(dirname(pointer.bundle_path))) !== "bundles") return undefined;
     const localPath = resolve(runtimeRoot, "bundles", operationId, basename(pointer.bundle_path));
-    if (!isStrictlyContainedPath(runtimeRoot, localPath)) return false;
+    if (!isStrictlyContainedPath(runtimeRoot, localPath)) return undefined;
     const localRealPath = realpathSync.native(localPath);
-    if (!isStrictlyContainedPath(runtimeRoot, localRealPath)) return false;
+    if (!isStrictlyContainedPath(runtimeRoot, localRealPath)) return undefined;
     const manifestRealPath = realpathSync.native(resolve(localRealPath, "bundle-manifest.json"));
-    if (!isStrictlyContainedPath(runtimeRoot, manifestRealPath)) return false;
+    if (!isStrictlyContainedPath(runtimeRoot, manifestRealPath)) return undefined;
     const bundle = JSON.parse(readFileSync(manifestRealPath, "utf8")) as ConsumerNodeRuntimeBundle;
     if (
       validateConsumerNodeRuntimeBundle(bundle) ||
@@ -238,13 +240,15 @@ function isCopiedCommittedRuntime(
       bundle.bundle_digest !== pointer.bundle_digest ||
       pointer.entry_path !== resolve(bundle.bundle_path, "ut-tdd.mjs")
     )
-      return false;
-    return (
-      bundle.identity.consumer_root !== realpathSync.native(consumerRoot) ||
-      bundle.identity.runtime_root !== runtimeRoot
-    );
+      return undefined;
+    return {
+      bundlePath: localRealPath,
+      copied:
+        !sameCanonicalSetupPath(bundle.identity.consumer_root, consumerRoot) ||
+        !sameCanonicalSetupPath(bundle.identity.runtime_root, runtimeRoot),
+    };
   } catch {
-    return false;
+    return undefined;
   }
 }
 
