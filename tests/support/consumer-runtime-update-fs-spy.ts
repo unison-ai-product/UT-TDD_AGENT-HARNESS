@@ -1,6 +1,4 @@
-import { vi } from "vitest";
-
-export const runtimePointerIo = vi.hoisted(() => ({
+export const runtimePointerIo = {
   enabled: false,
   failRenameWithEperm: false,
   failPointerModeRestore: false,
@@ -16,7 +14,7 @@ export const runtimePointerIo = vi.hoisted(() => ({
   tempWrites: [] as string[],
   directWrites: [] as string[],
   observations: [] as string[],
-}));
+};
 
 export function createRuntimeUpdateFsSpy(actual: typeof import("node:fs")) {
   const normalized = (path: unknown) => String(path).replaceAll("\\", "/");
