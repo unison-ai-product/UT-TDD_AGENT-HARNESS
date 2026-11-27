@@ -75,7 +75,7 @@
   "tests/forward-escape-issue-contract.test.ts": { "lines": 816, "functionExcess": null },
   "tests/forward/evidence-policy.test.ts": { "lines": 570, "functionExcess": null },
   "tests/forward/fsm.test.ts": { "lines": 626, "functionExcess": null },
-  "tests/github-ci-policy.test.ts": { "lines": 1557, "functionExcess": null },
+  "tests/github-ci-policy.test.ts": { "lines": 1562, "functionExcess": null },
   "tests/l6-completion.test.ts": { "lines": 518, "functionExcess": null },
   "tests/l6-fr-coverage.test.ts": { "lines": 611, "functionExcess": null },
   "tests/live-review-projection.test.ts": { "lines": 601, "functionExcess": null },

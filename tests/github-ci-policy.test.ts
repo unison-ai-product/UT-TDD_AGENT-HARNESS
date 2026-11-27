@@ -1017,8 +1017,7 @@ describe("github-ci-policy lint", () => {
             step.uses = "actions/setup-node@v3";
           },
         ),
-        "missing_lane_producer",
-        "jobs.classify must match its fail-close Linux split manifest and bind outputs.lane to steps.classify.outputs.lane",
+        "classify",
       ],
       [
         "post-producer run mutation",
@@ -1030,8 +1029,7 @@ describe("github-ci-policy lint", () => {
             step.run = "npm run lint && true";
           },
         ),
-        "missing_runtime_leg",
-        "jobs.harness-check-static must match its fail-close Linux split manifest and need exactly classify",
+        "harness-check-static",
       ],
       [
         "install append",
@@ -1043,8 +1041,7 @@ describe("github-ci-policy lint", () => {
             step.run = "npm ci --no-audit --no-fund && echo extra";
           },
         ),
-        "missing_lane_producer",
-        "jobs.classify must match its fail-close Linux split manifest and bind outputs.lane to steps.classify.outputs.lane",
+        "classify",
       ],
       [
         "doc-check mutation",
@@ -1056,8 +1053,7 @@ describe("github-ci-policy lint", () => {
             step.run = "npm run test:doc-lane --changed";
           },
         ),
-        "missing_runtime_leg",
-        "jobs.harness-check-static must match its fail-close Linux split manifest and need exactly classify",
+        "harness-check-static",
       ],
       [
         "with value mutation",
@@ -1069,16 +1065,24 @@ describe("github-ci-policy lint", () => {
             (step.with as Record<string, unknown>).cache = "yarn";
           },
         ),
-        "missing_runtime_leg",
-        "jobs.harness-check-static must match its fail-close Linux split manifest and need exactly classify",
+        "harness-check-static",
       ],
-    ])("U-CIPOL-019a: rejects runtime step manifest mutation: %s", (_label, workflow, reason, detail) => {
-      expect(analyzeGithubCiPolicy(docs(workflow)).violations).toContainEqual({
+    ])("U-CIPOL-019a: rejects runtime step manifest mutation: %s", (_label, workflow, jobName) => {
+      const violations = analyzeGithubCiPolicy(docs(workflow)).violations;
+      expect(violations).toContainEqual({
         file: ".github/workflows/harness-check.yml",
         profile: "source",
-        reason,
-        detail,
+        reason: "missing_runtime_leg",
+        detail: `jobs.${jobName}.steps must exactly match the ordered canonical semantic manifest`,
       });
+      if (jobName === "classify") {
+        expect(violations).toContainEqual({
+          file: ".github/workflows/harness-check.yml",
+          profile: "source",
+          reason: "missing_lane_producer",
+          detail: "jobs.classify requires the canonical classify producer",
+        });
+      }
     });
 
     it("U-CIPOL-019aa: preserves command-separator newline", () => {
@@ -1112,7 +1116,7 @@ describe("github-ci-policy lint", () => {
         profile: "source",
         reason: "missing_runtime_leg",
         detail:
-          "jobs.harness-check-static must match its fail-close Linux split manifest and need exactly classify",
+          "jobs.harness-check-static.steps must exactly match the ordered canonical semantic manifest",
       });
     });
 
@@ -1308,20 +1312,21 @@ describe("github-ci-policy lint", () => {
     });
 
     it("U-CIPOL-020b: rejects a doc lane without the source-only doctor profile", () => {
-      const result = analyzeGithubCiPolicy(
-        docs(
-          SOURCE_WORKFLOW_WITH_LANE.replace(
-            "        run: node src/cli.ts doctor --profile source-doc-lane\n",
-            "",
-          ),
-        ),
+      const withoutDocDoctor = mutateJob(
+        SOURCE_WORKFLOW_WITH_LANE,
+        "harness-check-static",
+        (job) => {
+          const steps = job.steps as Record<string, unknown>[];
+          job.steps = steps.filter((step) => step.name !== "doc lane source doctor");
+        },
       );
+      const result = analyzeGithubCiPolicy(docs(withoutDocDoctor));
       expect(result.violations).toContainEqual({
         file: ".github/workflows/harness-check.yml",
         profile: "source",
         reason: "missing_runtime_leg",
         detail:
-          "jobs.harness-check-static must match its fail-close Linux split manifest and need exactly classify",
+          "jobs.harness-check-static.steps must exactly match the ordered canonical semantic manifest",
       });
     });
 
@@ -1411,7 +1416,7 @@ describe("github-ci-policy lint", () => {
         profile: "source",
         reason: "missing_runtime_leg",
         detail:
-          "jobs.harness-check-static must match its fail-close Linux split manifest and need exactly classify",
+          "jobs.harness-check-static.steps must exactly match the ordered canonical semantic manifest",
       });
     });
     it("U-CIPOL-021: accepts a real-shaped workflow with canonical full/doc lane step conditions", () => {
@@ -1468,9 +1473,9 @@ describe("github-ci-policy lint", () => {
       expect(result.violations).toContainEqual({
         file: ".github/workflows/harness-check.yml",
         profile: "source",
-        reason: "missing_runtime_leg",
+        reason: "forbidden_lane_skip_step",
         detail:
-          "jobs.harness-check-linux must match its fail-close Linux split manifest and need exactly classify",
+          "jobs.harness-check-linux step \"doctor (governance hard gates)\" is a required full-lane check but is conditioned on lane=='doc'",
       });
     });
 
