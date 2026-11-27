@@ -65,12 +65,11 @@ describe("consumer runtime update Red candidates", () => {
     await runOracle({
       afterUpdate: ({ priorPointer, nextPointer }) => {
         expect(nextPointer.bytes).not.toEqual(priorPointer.bytes);
-        expect(readFileSync(join(priorPointer.bundlePath, "ut-tdd.mjs"))).toEqual(
-          fixture.compiledBytes,
-        );
+        const priorEntry = readFileSync(join(priorPointer.bundlePath, "ut-tdd.mjs"));
+        expect(priorEntry.equals(fixture.compiledBytes)).toBe(true);
       },
     });
-  }, 120_000);
+  });
 
   it("U-RTUPD-009: replaying the updated Release is write-zero", async () => {
     const replaySnapshots: string[][] = [];
@@ -494,11 +493,13 @@ describe("consumer runtime update Red candidates", () => {
           expect(existsSync(cleanupPath)).toBe(true);
           expect(readFileSync(priorPointer.path)).toEqual(priorPointer.bytes);
           expect(statSync(priorPointer.path, { bigint: true }).mode).toBe(priorMode);
-          expect(
-            readdirSync(priorPointer.bundlePath)
-              .sort()
-              .map((name) => [name, readFileSync(join(priorPointer.bundlePath, name))]),
-          ).toEqual(priorBundleFiles);
+          expect(readdirSync(priorPointer.bundlePath).sort()).toEqual(
+            priorBundleFiles.map(([name]) => name),
+          );
+          for (const [name, bytes] of priorBundleFiles) {
+            const actual = readFileSync(join(priorPointer.bundlePath, name));
+            expect(actual.equals(bytes), name).toBe(true);
+          }
           expect(snapshotRuntimeUpdateTree(consumerRoot)).not.toEqual(treeBefore);
         },
       });
@@ -509,5 +510,5 @@ describe("consumer runtime update Red candidates", () => {
       runtimePointerIo.activePointerPath = "";
       runtimePointerIo.priorBundlePath = "";
     }
-  }, 120_000);
+  });
 });
