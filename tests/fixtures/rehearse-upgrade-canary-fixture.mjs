@@ -40,7 +40,7 @@ const ASSET_NAMES = [
 function usage() {
   process.stdout.write(
     [
-      "Usage: node scripts/rehearse-upgrade-canary-fixture.mjs [options]",
+      "Usage: node tests/fixtures/rehearse-upgrade-canary-fixture.mjs [options]",
       "",
       "Options:",
       `  --assets <dir>      Verified published ${TAG} five-asset directory (required)`,
