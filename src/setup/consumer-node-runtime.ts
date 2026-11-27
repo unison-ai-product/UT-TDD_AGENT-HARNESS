@@ -1,16 +1,13 @@
 import { createHash } from "node:crypto";
 import {
   chmodSync,
-  closeSync,
   existsSync,
-  fsyncSync,
   mkdirSync,
-  openSync,
   readFileSync,
   realpathSync,
   renameSync,
+  rmdirSync,
   rmSync,
-  statSync,
   writeFileSync,
 } from "node:fs";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
@@ -19,6 +16,16 @@ import {
   parseNodeBootstrapReceiptBytes,
 } from "../runtime/node-bootstrap.ts";
 import { CONSUMER_RUNTIME_ABSENT_WRAPPER_SOURCE } from "./consumer-runtime-absent-guidance.ts";
+import {
+  createRuntimeDirectories,
+  fsyncDirectory,
+  type PointerSnapshot,
+  publishActivePointer,
+  readPointer,
+  removeRuntimeCandidate,
+  samePointer,
+  UnpublishedPointerError,
+} from "./consumer-runtime-filesystem.ts";
 
 const DIGEST = /^sha256:[a-f0-9]{64}$/;
 const REVISION = /^[a-f0-9]{40}$/;
@@ -705,48 +712,10 @@ process.exit(result.status ?? 1);
 `;
 }
 
-type PointerSnapshot = { readonly bytes: Buffer; readonly mode: number } | null;
-
 export interface ConsumerNodeRuntimeReconcileInput {
   readonly identity: ConsumerNodeRuntimeIdentity;
   readonly bundle: ConsumerNodeRuntimeBundle;
   readonly prior: PointerSnapshot;
-}
-
-function fsyncFile(path: string): void {
-  let fd: number | undefined;
-  try {
-    fd = openSync(path, "r");
-    try {
-      fsyncSync(fd);
-    } catch (error) {
-      if (process.platform !== "win32") throw error;
-    }
-  } finally {
-    if (fd !== undefined) closeSync(fd);
-  }
-}
-
-function fsyncDirectory(path: string): void {
-  let fd: number | undefined;
-  try {
-    fd = openSync(path, "r");
-    try {
-      fsyncSync(fd);
-    } catch (error) {
-      // Windows does not expose directory handles as fsync targets. File
-      // contents are still flushed and the pointer rename remains atomic; do
-      // not turn a supported Windows install into a false success elsewhere.
-      if (process.platform !== "win32") throw error;
-    }
-  } catch (error) {
-    // Windows may reject opening a directory even though the files and the
-    // atomic rename are durable. Treat that platform limitation like a
-    // rejected directory fsync, but never hide it on POSIX.
-    if (process.platform !== "win32") throw error;
-  } finally {
-    if (fd !== undefined) closeSync(fd);
-  }
 }
 
 function ensureRealContained(parent: string, child: string): void {
@@ -772,19 +741,8 @@ function dirnameOf(path: string): string {
   return index <= 0 ? path.slice(0, 1) : path.slice(0, index);
 }
 
-function readPointer(pointerPath: string): PointerSnapshot {
-  if (!existsSync(pointerPath)) return null;
-  const bytes = readFileSync(pointerPath);
-  return { bytes, mode: statSync(pointerPath).mode & 0o777 };
-}
-
 function pointerBytes(bundle: ConsumerNodeRuntimeBundle): Buffer {
   return Buffer.from(`${canonical(pointerValue(bundle))}\n`, "utf8");
-}
-
-function samePointer(left: PointerSnapshot, right: PointerSnapshot): boolean {
-  if (left === null || right === null) return left === right;
-  return left.mode === right.mode && left.bytes.equals(right.bytes);
 }
 
 function parsePointerSnapshot(bytes: Uint8Array): Record<string, string> {
@@ -1038,9 +996,17 @@ export function createConsumerNodeRuntimeFilesystemPorts(
   const state: {
     prior: PointerSnapshot;
     sealed: boolean;
+    staged: boolean;
     locked: boolean;
     bundleManifest: string | null;
-  } = { prior: null, sealed: false, locked: false, bundleManifest: null };
+  } = { prior: null, sealed: false, staged: false, locked: false, bundleManifest: null };
+  const createdDirectories: string[] = [];
+  const destroyPrivateStaging = (path: string): void => {
+    if (resolve(path) !== resolve(stage)) throw new Error("consumer_runtime_external_path");
+    if (state.sealed) removeRuntimeCandidate(bundle.bundle_path);
+    if (state.staged) rmSync(path, { recursive: true, force: false });
+    for (const directory of [...createdDirectories].reverse()) rmdirSync(directory);
+  };
   const fault = (name: string) => options.fault?.(name);
   const requirePayloadDigest = (name: keyof ConsumerNodeRuntimePayloads, file: string) => {
     const bytes = payloads[name];
@@ -1088,7 +1054,11 @@ export function createConsumerNodeRuntimeFilesystemPorts(
         // The orchestrator can only mark its lock as acquired after this port
         // resolves. If an injected/real failure occurs after mkdir, release
         // the physical lock here so the failed admission cannot strand it.
-        rmSync(lockPath, { recursive: true, force: false });
+        try {
+          rmSync(lockPath, { recursive: true, force: false });
+        } catch (cleanupError) {
+          throw new AggregateError([error, cleanupError], "consumer_runtime_indeterminate");
+        }
         state.locked = false;
         throw error;
       }
@@ -1101,10 +1071,20 @@ export function createConsumerNodeRuntimeFilesystemPorts(
     createPrivateStaging: (path) => {
       if (resolve(path) !== resolve(stage)) throw new Error("consumer_runtime_external_path");
       ensureRealContained(identity.runtime_root, path);
-      mkdirSync(dirnameOf(path), { recursive: true });
-      mkdirSync(path, { recursive: false });
-      state.bundleManifest = null;
-      fault("createPrivateStaging");
+      try {
+        createRuntimeDirectories(dirnameOf(path), createdDirectories);
+        mkdirSync(path);
+        state.staged = true;
+        state.bundleManifest = null;
+        fault("createPrivateStaging");
+      } catch (error) {
+        try {
+          destroyPrivateStaging(path);
+        } catch (cleanupError) {
+          throw new AggregateError([error, cleanupError], "consumer_runtime_indeterminate");
+        }
+        throw error;
+      }
     },
     writeGenerationAndReceipt: (path, candidate) => {
       if (resolve(path) !== resolve(stage) || candidate.bundle_digest !== bundle.bundle_digest)
@@ -1126,29 +1106,20 @@ export function createConsumerNodeRuntimeFilesystemPorts(
       parseHistoryRecords(files["history.jsonl"]);
       verifyRuntimePayloads(identity, bundle, payloads);
       for (const [name, bytes] of Object.entries(files))
-        writeFileSync(join(path, name), bytes, { mode: 0o444 });
+        writeFileSync(join(path, name), bytes, { mode: 0o444, flush: true });
       const manifest = {
         ...bundle,
         files: { ...bundle.files },
       };
       writeFileSync(join(path, "bundle-manifest.json"), `${canonical(manifest)}\n`, {
         mode: 0o444,
+        flush: true,
       });
       state.bundleManifest = canonical(manifest);
       fault("writeGenerationAndReceipt");
     },
     fsyncStaging: (path) => {
       if (!state.bundleManifest || !existsSync(path)) throw new Error("consumer_runtime_absent");
-      for (const name of [
-        "ut-tdd.mjs",
-        "node-bootstrap-receipt.json",
-        "marker.json",
-        "consumer-receipt.json",
-        "history.jsonl",
-        "operation-state.json",
-        "bundle-manifest.json",
-      ])
-        fsyncFile(join(path, name));
       fsyncDirectory(path);
       fault("fsyncStaging");
     },
@@ -1156,72 +1127,33 @@ export function createConsumerNodeRuntimeFilesystemPorts(
       if (resolve(path) !== resolve(stage)) throw new Error("consumer_runtime_external_path");
       const parent = dirnameOf(candidate.bundle_path);
       ensureRealContained(identity.runtime_root, parent);
-      mkdirSync(parent, { recursive: true });
+      createRuntimeDirectories(parent, createdDirectories);
       if (existsSync(candidate.bundle_path)) throw new Error("consumer_runtime_indeterminate");
       fault("sealActivationBundle");
       renameSync(path, candidate.bundle_path);
+      state.staged = false;
       state.sealed = true;
       chmodSync(candidate.bundle_path, 0o555);
       fsyncDirectory(parent);
     },
     atomicRenameActivePointerCAS: (candidate) => {
-      if (!state.sealed) throw new Error("consumer_runtime_indeterminate");
-      const observed = readPointer(pointerPath);
-      if (
-        observed?.mode !== state.prior?.mode ||
-        observed?.bytes?.equals(state.prior?.bytes ?? Buffer.alloc(0)) !== true
-      ) {
-        if (observed !== null || state.prior !== null)
-          throw new Error("consumer_runtime_indeterminate");
-      }
+      if (!state.locked || !state.sealed) throw new Error("consumer_runtime_indeterminate");
       const activation = dirnameOf(pointerPath);
       ensureRealContained(identity.runtime_root, activation);
-      mkdirSync(activation, { recursive: true });
-      const pointerTemp = join(
-        activation,
-        `.active-${identity.operation_id}-${identity.attempt}.tmp`,
-      );
-      if (existsSync(pointerTemp)) throw new Error("consumer_runtime_indeterminate");
-      const bytes = Buffer.from(`${canonical(pointerValue(candidate))}\n`, "utf8");
-      writeFileSync(pointerTemp, bytes, { mode: 0o444 });
-      fsyncFile(pointerTemp);
-      // Windows refuses to replace an existing read-only file with rename(2).
-      // The active pointer remains the single publication point: make only the
-      // old pointer writable for the duration of the atomic replacement, and
-      // restore its exact mode if the pre-rename fault/rename fails. Once the
-      // rename succeeds, any later durability error is indeterminate and must
-      // not be followed by a best-effort rollback to an older pointer.
-      const priorMode = observed?.mode;
-      const needsWindowsWritable = process.platform === "win32" && observed !== null;
-      let madeWindowsWritable = false;
-      let replaced = false;
-      try {
-        if (needsWindowsWritable && priorMode !== undefined) {
-          chmodSync(pointerPath, priorMode | 0o200);
-          madeWindowsWritable = true;
-        }
-        fault("atomicRenameActivePointerCAS");
-        renameSync(pointerTemp, pointerPath);
-        replaced = true;
-        chmodSync(pointerPath, 0o444);
-        fsyncDirectory(activation);
-      } catch (error) {
-        if (!replaced) {
-          try {
-            if (existsSync(pointerTemp)) rmSync(pointerTemp, { force: true });
-          } finally {
-            if (madeWindowsWritable && priorMode !== undefined && existsSync(pointerPath))
-              chmodSync(pointerPath, priorMode);
-          }
-        }
-        throw error;
-      }
+      createRuntimeDirectories(activation, createdDirectories);
+      publishActivePointer({
+        pointerPath,
+        tempPath: join(activation, `.active-${identity.operation_id}-${identity.attempt}.tmp`),
+        bytes: pointerBytes(candidate),
+        prior: state.prior,
+        beforeRename: () => fault("atomicRenameActivePointerCAS"),
+      });
     },
     verifyActiveBundle: (candidate) => {
       const pointer = readPointer(pointerPath);
       if (!pointer) throw new Error("consumer_runtime_absent");
-      const expected = Buffer.from(`${canonical(pointerValue(candidate))}\n`, "utf8");
-      if (!pointer.bytes.equals(expected)) throw new Error("consumer_runtime_indeterminate");
+      if (!pointer.bytes.equals(pointerBytes(candidate)))
+        throw new Error("consumer_runtime_indeterminate");
       const manifest = JSON.parse(
         readFileSync(join(candidate.bundle_path, "bundle-manifest.json"), "utf8"),
       ) as unknown;
@@ -1276,10 +1208,7 @@ export function createConsumerNodeRuntimeFilesystemPorts(
       if (cleanupError !== undefined) throw cleanupError;
       if (faultError !== undefined) throw faultError;
     },
-    destroyPrivateStaging: (path) => {
-      if (resolve(path) !== resolve(stage)) throw new Error("consumer_runtime_external_path");
-      rmSync(path, { recursive: true, force: true });
-    },
+    destroyPrivateStaging,
     quarantinePrivateStaging: (path) => {
       if (resolve(path) !== resolve(stage)) throw new Error("consumer_runtime_external_path");
       const destination = quarantinePathFor(identity, bundle.bundle_digest);
@@ -1400,8 +1329,9 @@ export async function installConsumerNodeRuntime(input: {
       result = { ok: true, status: "committed", bundle };
     }
   } catch (error) {
-    primaryError = error;
-    if (committed || renameStarted) {
+    const unpublished = error instanceof UnpublishedPointerError;
+    primaryError = unpublished ? error.cause : error;
+    if (committed || (renameStarted && !unpublished)) {
       phase = "reconcile";
       try {
         await reconcileOnce();
@@ -1425,16 +1355,23 @@ export async function installConsumerNodeRuntime(input: {
             status: "indeterminate",
             reason: "consumer_runtime_indeterminate",
             phase: "staging",
-            error: { primary: error, cleanup: cleanupError },
+            error: { primary: primaryError, cleanup: cleanupError },
           });
         }
       }
+      const reason =
+        reasonFromError(primaryError) ??
+        (phase === "admission"
+          ? "consumer_runtime_identity_mismatch"
+          : "consumer_runtime_permission");
       result ??= failure({
-        status: phase === "admission" ? "denied" : "failed",
-        reason:
-          phase === "admission"
-            ? (reasonFromError(error) ?? "consumer_runtime_identity_mismatch")
-            : (reasonFromError(error) ?? "consumer_runtime_permission"),
+        status:
+          reason === "consumer_runtime_indeterminate"
+            ? "indeterminate"
+            : phase === "admission"
+              ? "denied"
+              : "failed",
+        reason,
         phase,
         error: primaryError,
       });
