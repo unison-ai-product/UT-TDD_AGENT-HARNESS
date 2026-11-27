@@ -102,19 +102,28 @@ control の指示にあった `setup-guide.md` の `:108`・`:158` は、2026-11
 
 ### 9.1 launcher の互換判定
 
-launcher は pointer の 3 つの key (`bundle_digest`・`bundle_path`・`entry_path`) と、marker / consumer receipt / history / operation の検証を内蔵する (`src/setup/consumer-node-runtime.ts:637-701`)。新 Release の launcher 出力 (`renderConsumerNodeWrapper`) が旧 launcher と byte 同一なら据え置く。差があり、旧 launcher が新 bundle の pointer・receipt・history を検証できない (key 集合や記録の形が変わる) 場合は、**切り替えの前に** 既存の検証失敗の符号で拒否する (§9 決定 b。新しい符号は足さない)。どの差を互換とするかの細部は、凍結前の実測 2 (§10) の結果で確定する。
+launcher は pointer の 3 つの key (`bundle_digest`・`bundle_path`・`entry_path`) を読み、bundle の 7 ファイルの存在と、marker / consumer receipt / history / operation の検証 (`history_sequence`・`prior_bundle_digest`・`history_tip_digest` の形式を含む) を内蔵する (`src/setup/consumer-node-runtime.ts:637-701`)。
 
-## 10. 凍結前の実測 (control の指示、実行はいずれも未実施)
+- **互換の定義**: 版上げが、(1) bundle のファイル集合 (7 ファイル) を変えず、(2) launcher が検査する history の field の形式を変えないこと。この 2 つを満たす更新に限り、launcher は据え置く。
+- **非互換の扱い**: どちらかを変える Release は、**切り替えの前に** 既存の検証失敗の符号で拒否する (§9 決定 b。新しい符号は足さない)。
+- **観測 (固定値ではない)**: 公開済みの canary.8 と canary.9 の asset では、`.ut-tdd/bin/ut-tdd.mjs` の bytes が同一だった (11310 bytes、sha256 `3b1c3d67…`、control の実測、2026-11-27)。launcher は版に依らない汎用の実装で、版ごとの違いは bundle 側の `ut-tdd.mjs` にある。この sha256 は観測であり、契約の定数にしない (launcher の実装が変われば値は変わる)。互換の判定は byte 同一ではなく、上の定義で行う。
+- **版の同一性の確かめ方**: `active.json` は `bundle_digest`・`bundle_path`・`entry_path` だけを持ち、`bundle_digest` は導入先の path を含む。同じ版でも導入先ごとに値が違うので、**版の同一性の判定に `bundle_digest` を使わない**。bundle の `ut-tdd.mjs` の bytes (compiled ESM の digest) か receipt で確かめる。対の L7 の 001・006・009 はこの方法で版を見る。
 
-1. **linked worktree を cwd にして `setup --solo --consumer-runtime-release` を流したとき、いまは拒否されるか**: 静読は済み (§10.1)。実行による確認は未実施。
-2. **新旧 Release 間の launcher 互換の起動試験**: 未実施。旧 launcher で新 bundle が起動するか、launcher の byte 差の有無を、実際の Release で確かめる。
-3. **Windows の EPERM の再現**: 未実施。開いた launcher プロセスがある間の rename で `:1204` が失敗し、旧 pointer と mode が保たれるかを確かめる。
+## 10. 凍結前の実測
 
-### 10.1 実測 1 の静読の結果 (実行していない)
+control の実測 (使い捨ての consumer、公開済みの canary.8 と canary.9 の asset、Node v24、2026-11-27、#2018 と PR #2017 のコメント) の結果である。
 
-`origin/main` のコードを読んだ範囲の結論である。
+1. **linked worktree を cwd にした `setup --solo --consumer-runtime-release`**: **確認済み**。入口で拒否されず、worktree に main と違う版が入る (§10.1)。
+2. **新旧 Release 間の launcher の互換**: **完了**。launcher は canary.8 と canary.9 で byte 同一で、canary.8 から canary.9 の範囲では据え置きが成り立つ (§9.1)。
+3. **Windows の EPERM の再現**: **再現していない**。契約の決定 (自動で再試行しない、rename の前の失敗は旧 pointer と mode を保つ、復元できない場合と rename の後の失敗は indeterminate) は変えず、対の L7 の Windows の oracle (`CANDIDATE-U-RTUPD-003`) で固定する。実 OS の再現は Green の段で、その oracle が実 Windows で通ることをもって確かめる。
 
-- `setup --solo --consumer-runtime-release` の入口 (`src/cli.ts:3598-3615`) に、linked worktree の判定は無い。`--worktree` を使わないので `handleConsumerWorktreeSetupOption` (`src/cli.ts:3592`、`src/setup/consumer-worktree-cli.ts:46`) は即 `false` を返し、worktree 用の経路 (main の pin の検査) を通らない。`installConsumerRuntimeRelease` へ `expectedPin` も渡されない (`src/cli.ts:3609-3615`)。`expectedPin` が無いので `assertConsumerRuntimePinMatches` は何も検査しない (`src/setup/consumer-worktree-runtime.ts:66-79`、`src/setup/index.ts:346-351`)。
-- したがって **入口では拒否されない**。拒否が起きうるのは `src/setup/index.ts:359` の `hasActiveConsumerRuntime` が真のとき (worktree に既に runtime が入っているとき) だけで、別の版なら `consumer_runtime_update_unsupported` (`:524` / `:534` / `:548`)。
-- worktree に runtime がまだ無ければ、`:359` の分岐に入らず **通常の新規 install が走る**。`mainWorktreeCommonDir` は linked worktree では `null` を返すので (`src/setup/consumer-worktree-runtime.ts:171-178`)、共有キャッシュには複製されない (`src/setup/consumer-runtime-install.ts:49-50`、`:197-198`)。つまり、**main の pin と無関係な版を worktree へ直接入れられる可能性がある**。
-- 含意: 版上げで `:524` / `:534` の拒否を「main root では通す」に緩めるとき、判定を main root に限らないと、worktree の既存 runtime への上書きが通ってしまう。§9 決定 b の「入口での 1 回の判定と明示の引数」が必要な根拠である。runtime の無い worktree への直接 install が実際に通るかは実行で確かめていない (実測 1 の実行側)。通るなら別の問題であり、確認結果を #930 に残して worktree の別 Issue (§9 決定 a) へ渡す。本書は扱わない。
+### 10.1 実測 1 の結果: 確認済み、#2018 で塞ぐ
+
+- 静読 (`src/cli.ts:3598-3615` に linked worktree の判定が無く、`expectedPin` も渡されない。`src/setup/consumer-worktree-runtime.ts:66-79` の pin 検査は何もしない) が示した仮説は、実行で確認された (#2018)。
+  - A: main に何も入れず linked worktree の中から実行すると、入口で拒否されず、worktree に `active.json` と bundle が作られた。
+  - B: main に入れた後、新しい linked worktree の中から実行しても拒否されず、worktree に独立した `.ut-tdd/` 一式ができた。main の pin と照合した形跡は出力に無い。
+  - C: main に canary.8 を入れ、linked worktree の中から canary.9 を入れると、`consumer_runtime_update_unsupported` は出ず、worktree の bundle の `ut-tdd.mjs` は canary.9 と同じ bytes で、main は canary.8 のまま。**worktree が main の pin と違う版で動く状態を作れる**。`active.json` に release の digest が無く、照合はどこにも出ない。
+  - D: canary.8 の main root で canary.9 を入れると `consumer_runtime_update_unsupported` で拒否され (exit 1)、`active.json` の sha256 は前後で同じ。main root の拒否は効いている。
+- 終了コード 2 は origin remote が無いための `identity_repository_unbound` で、worktree と関係なく main でも同じ。runtime の導入はその前に済んでおり取り消されない。
+- **#930 の Green の前提**: **#2018 の修正を #930 の Green の前提に置く**。#2018 は、setup の入口で linked worktree かを git の事実 (§9 決定 b の判定) から判定し、worktree からの `--consumer-runtime-release` の導入を塞ぐ。#930 が main root の拒否 (`:524` / `:534`) を開ける前に、この穴が塞がっていなければならない (開けると、worktree の既存 runtime への版違いの上書きが通る)。
+- 対の L7 の `CANDIDATE-U-RTUPD-005` (worktree の拒否の維持) と `006` (main と版が合わない worktree は旧版のまま動く) は、#2018 の修正後の挙動と整合させる。005 は worktree を cwd にした `setup --solo --consumer-runtime-release` が、runtime の有無にかかわらず入口で拒否されることを含む。
