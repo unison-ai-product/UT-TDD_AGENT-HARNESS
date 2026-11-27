@@ -201,7 +201,7 @@ describe("Issue #1063 Windows leg 3 shard contract (登録 + Red)", () => {
     expect(
       addedBy(workflow).some(
         ({ reason, detail }) =>
-          reason === "missing_runtime_leg" && detail.includes("harness-check-linux.steps"),
+          reason === "missing_runtime_leg" && detail.includes("harness-check-linux"),
       ),
     ).toBe(true);
   });
@@ -225,33 +225,31 @@ describe("Issue #1063 Windows leg 3 shard contract (登録 + Red)", () => {
   });
 
   describe("CANDIDATE-U-CISHARD-005: aggregate keeps requiring every runtime leg", () => {
-    const windowsGuard = `test "${EXPR_OPEN}needs.${WINDOWS}.result${EXPR_CLOSE}" = "success"`;
+    const windowsGuard = 'test "$WINDOWS_RESULT" = "success"';
     const aggregateRun = (w: Workflow): Step => {
       const step = job(w, "harness-check").steps?.find((candidate) => candidate.run);
       if (!step) throw new Error("aggregate must carry a run step");
       return step;
     };
 
+    function mutateWindowsGuard(replacement: string): Workflow {
+      return mutated((w) => {
+        const step = aggregateRun(w);
+        const run = String(step.run);
+        if (!run.includes(windowsGuard))
+          throw new Error("fixture must contain the Windows result guard");
+        step.run = run.replace(windowsGuard, replacement);
+        if (step.run === run) throw new Error("mutation must change the Windows result guard");
+      });
+    }
+
     it("CANDIDATE-U-CISHARD-005: rejects an aggregate without the Windows result guard", () => {
-      const reasons = addedReasons(
-        mutated((w) => {
-          const step = aggregateRun(w);
-          step.run = String(step.run).replace(`${windowsGuard} && `, "");
-        }),
-      );
+      const reasons = addedReasons(mutateWindowsGuard(""));
       expect(reasons).toContain("missing_aggregate_result_guard");
     });
 
     it("CANDIDATE-U-CISHARD-005: rejects an aggregate that relaxes success to != failure", () => {
-      const reasons = addedReasons(
-        mutated((w) => {
-          const step = aggregateRun(w);
-          step.run = String(step.run).replace(
-            windowsGuard,
-            windowsGuard.replace(" = ", " != ").replace('"success"', '"failure"'),
-          );
-        }),
-      );
+      const reasons = addedReasons(mutateWindowsGuard('test "$WINDOWS_RESULT" != "failure"'));
       expect(reasons).toContain("missing_aggregate_result_guard");
     });
 

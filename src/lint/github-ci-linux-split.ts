@@ -121,6 +121,7 @@ export interface SourceLinuxPolicyProblem {
     | "missing_lane_producer"
     | "missing_runtime_leg"
     | "forbidden_lane_skip_step"
+    | "forbidden_job_level_lane_skip"
     | "malformed_workflow_shape";
   detail: string;
 }
@@ -173,7 +174,55 @@ export function sourceRequiredSteps(
   });
 }
 
-export function sourceLinuxPolicyProblems(input: {
+function laneSkipProblems(
+  name: string,
+  steps: Record<string, unknown>[],
+  input: Pick<
+    SourceLinuxPolicyInput,
+    "fullCondition" | "docCondition" | "matchesFullOnly" | "stepText"
+  >,
+): SourceLinuxPolicyProblem[] {
+  const problems: SourceLinuxPolicyProblem[] = [];
+  for (const step of steps) {
+    const condition = step.if;
+    if (typeof condition !== "string" || !condition.includes("classify.outputs.lane")) continue;
+    const label = String(step.name ?? step.run ?? step.uses ?? "(unnamed step)");
+    const text = input.stepText(step);
+    if (condition !== input.fullCondition && condition !== input.docCondition) {
+      problems.push({
+        job: name,
+        reason: "forbidden_lane_skip_step",
+        detail: `jobs.${name} step "${label}" uses a non-canonical lane condition: ${condition}`,
+      });
+    } else if (condition === input.fullCondition && !input.matchesFullOnly(text)) {
+      problems.push({
+        job: name,
+        reason: "forbidden_lane_skip_step",
+        detail: `jobs.${name} step "${label}" is conditioned on lane=='full' but is not on the doc-lane skip allowlist`,
+      });
+    } else if (condition === input.docCondition && input.matchesFullOnly(text)) {
+      problems.push({
+        job: name,
+        reason: "forbidden_lane_skip_step",
+        detail: `jobs.${name} step "${label}" is a required full-lane check but is conditioned on lane=='doc'`,
+      });
+    }
+  }
+  if (
+    steps.some(
+      (step) => typeof step.if === "string" && step.if.includes("steps.classify.outputs.lane"),
+    )
+  ) {
+    problems.push({
+      job: name,
+      reason: "forbidden_lane_skip_step",
+      detail: `jobs.${name} must consume the classify job output, not reclassify through steps.classify`,
+    });
+  }
+  return problems;
+}
+
+interface SourceLinuxPolicyInput {
   jobs: Record<string, unknown>;
   manifests: Record<string, readonly object[]>;
   fullCondition: string;
@@ -183,7 +232,11 @@ export function sourceLinuxPolicyProblems(input: {
   semantic: (value: unknown) => unknown;
   matchesFullOnly: (text: string) => boolean;
   stepText: (step: Record<string, unknown>) => string;
-}): SourceLinuxPolicyProblem[] {
+}
+
+export function sourceLinuxPolicyProblems(
+  input: SourceLinuxPolicyInput,
+): SourceLinuxPolicyProblem[] {
   const problems: SourceLinuxPolicyProblem[] = [];
   const expectedJobs = [...AGGREGATE_LEGS, "harness-check"].sort();
   const actualJobs = Object.keys(input.jobs).sort();
@@ -206,6 +259,27 @@ export function sourceLinuxPolicyProblems(input: {
     const expectedKeys =
       name === "classify" ? ["runs-on", "outputs", "steps"] : ["runs-on", "needs", "steps"];
     const steps = input.stepsOf(job);
+    if (!job) {
+      problems.push({ job: name, reason: "missing_runtime_leg", detail: `jobs.${name}` });
+      continue;
+    }
+    if (
+      !Array.isArray(job.steps) ||
+      !job.steps.every((step) => input.stepsOf({ steps: [step] }).length === 1)
+    ) {
+      problems.push({
+        job: name,
+        reason: "malformed_workflow_shape",
+        detail: `jobs.${name}.steps must be an array of mappings`,
+      });
+    }
+    if (job.if !== undefined) {
+      problems.push({
+        job: name,
+        reason: "forbidden_job_level_lane_skip",
+        detail: `jobs.${name} must not carry a job-level if (lane classification must stay step-scoped, never skip the whole job)`,
+      });
+    }
     const outputs =
       job?.outputs !== null && typeof job?.outputs === "object" && !Array.isArray(job.outputs)
         ? (job.outputs as Record<string, unknown>)
@@ -230,9 +304,19 @@ export function sourceLinuxPolicyProblems(input: {
     const manifestMatches =
       JSON.stringify(input.semantic(steps)) ===
       JSON.stringify(input.semantic(input.manifests[name]));
-    if (
-      !job ||
+    const invalidJobShape =
       job["runs-on"] !== "ubuntu-latest" ||
+      !keysMatch ||
+      !bindingValid ||
+      steps.some((step) => !input.failClose(step));
+    if (invalidJobShape) {
+      problems.push({
+        job: name,
+        reason: name === "classify" ? "missing_lane_producer" : "missing_runtime_leg",
+        detail: `jobs.${name} must match its fail-close Linux split manifest${name === "classify" ? " and bind outputs.lane to steps.classify.outputs.lane" : " and need exactly classify"}`,
+      });
+    }
+    if (
       !keysMatch ||
       !bindingValid ||
       !steps.length ||
@@ -241,47 +325,17 @@ export function sourceLinuxPolicyProblems(input: {
     ) {
       problems.push({
         job: name,
-        reason: name === "classify" ? "missing_lane_producer" : "missing_runtime_leg",
-        detail: `jobs.${name} must match its fail-close Linux split manifest${name === "classify" ? " and bind outputs.lane to steps.classify.outputs.lane" : " and need exactly classify"}`,
+        reason: "missing_runtime_leg",
+        detail: `jobs.${name}.steps must exactly match the ordered canonical semantic manifest`,
       });
-    }
-    if (name === "classify") continue;
-    for (const step of steps) {
-      const condition = step.if;
-      if (typeof condition !== "string" || !condition.includes("classify.outputs.lane")) continue;
-      const label = String(step.name ?? step.run ?? step.uses ?? "(unnamed step)");
-      const text = input.stepText(step);
-      if (condition !== input.fullCondition && condition !== input.docCondition) {
+      if (name === "classify" && !manifestMatches)
         problems.push({
           job: name,
-          reason: "forbidden_lane_skip_step",
-          detail: `jobs.${name} step "${label}" uses a non-canonical lane condition: ${condition}`,
+          reason: "missing_lane_producer",
+          detail: `jobs.${name} requires the canonical classify producer`,
         });
-      } else if (condition === input.fullCondition && !input.matchesFullOnly(text)) {
-        problems.push({
-          job: name,
-          reason: "forbidden_lane_skip_step",
-          detail: `jobs.${name} step "${label}" is conditioned on lane=='full' but is not on the doc-lane skip allowlist`,
-        });
-      } else if (condition === input.docCondition && input.matchesFullOnly(text)) {
-        problems.push({
-          job: name,
-          reason: "forbidden_lane_skip_step",
-          detail: `jobs.${name} step "${label}" is a required full-lane check but is conditioned on lane=='doc'`,
-        });
-      }
     }
-    if (
-      steps.some(
-        (step) => typeof step.if === "string" && step.if.includes("steps.classify.outputs.lane"),
-      )
-    ) {
-      problems.push({
-        job: name,
-        reason: "forbidden_lane_skip_step",
-        detail: `jobs.${name} must consume the classify job output, not reclassify through steps.classify`,
-      });
-    }
+    if (name !== "classify") problems.push(...laneSkipProblems(name, steps, input));
   }
   return problems;
 }

@@ -14,14 +14,18 @@ import {
   loadGithubCiPolicyDocs,
   resolveGithubCiRuntimeProfile,
 } from "../src/lint/github-ci-policy.ts";
-import { workflowNodeVersion } from "./support/github-workflow-fixture.ts";
+import {
+  mutateJob,
+  mutateJobStep,
+  workflowNodeVersion,
+} from "./support/github-workflow-fixture.ts";
 import { registerPlanret016Oracle } from "./support/planret-s4-review-custody-oracles.ts";
 import { removeTestTree } from "./support/temp-tree.ts";
 
 const AGGREGATE_ALWAYS = "$" + "{{ always() }}";
 // PLAN-L7-455 (troubleshoot): doc-only lane 分岐の canonical if 条件式。
 const LANE_FULL_IF = "$" + "{{ steps.classify.outputs.lane == 'full' }}";
-const LANE_DOC_IF = "$" + "{{ steps.classify.outputs.lane == 'doc' }}";
+const TEMPLATE_LANE_DOC_IF = "$" + "{{ steps.classify.outputs.lane == 'doc' }}";
 
 const SOURCE_LEG_WORKFLOW = `
 name: harness-check
@@ -58,7 +62,7 @@ jobs:
       - run: bun src/cli.ts audit quality --include-tests
       - run: bun src/cli.ts doctor
       - name: doc lane source doctor
-        if: ${LANE_DOC_IF}
+        if: ${TEMPLATE_LANE_DOC_IF}
         run: node src/cli.ts doctor --profile source-doc-lane
 `;
 
@@ -254,8 +258,8 @@ describe("github-ci-policy lint", () => {
     ] as const;
     for (const [variable, binding] of resultBindings) {
       const workflow = SOURCE_WORKFLOW.replace(
-        new RegExp(`^\\s+${variable}: \\$\\{\\{ ${binding.replaceAll(".", "\\.")} \\}\\}$`, "m"),
-        `${variable}: success`,
+        new RegExp(`^(\\s+)${variable}: \\$\\{\\{ ${binding.replaceAll(".", "\\.")} \\}\\}$`, "m"),
+        `$1${variable}: "success"`,
       );
       const result = analyzeGithubCiPolicy(docs(workflow));
 
@@ -634,8 +638,10 @@ describe("github-ci-policy lint", () => {
       detail: "jobs.harness-check must be a mapping",
     });
 
-    for (const replacement of ["steps: {}", "steps: [bogus]"]) {
-      const malformed = SOURCE_WORKFLOW.replace(/ {4}steps:[\s\S]*/, `    ${replacement}`);
+    for (const steps of [{}, ["bogus"]]) {
+      const malformed = mutateJob(SOURCE_WORKFLOW, "harness-check-linux", (job) => {
+        job.steps = steps;
+      });
       expect(analyzeGithubCiPolicy(docs(malformed)).violations).toContainEqual({
         file: ".github/workflows/harness-check.yml",
         profile: "source",
@@ -644,11 +650,10 @@ describe("github-ci-policy lint", () => {
       });
     }
 
-    const malformedStep = replaceRequired(
-      SOURCE_WORKFLOW,
-      "        uses: actions/checkout@v5",
-      "        run: {}",
-    );
+    const malformedStep = mutateJob(SOURCE_WORKFLOW, "harness-check-linux", (job) => {
+      const steps = job.steps as Record<string, unknown>[];
+      steps[0] = { run: {} };
+    });
     expect(analyzeGithubCiPolicy(docs(malformedStep)).violations).toContainEqual({
       file: ".github/workflows/harness-check.yml",
       profile: "source",
@@ -708,11 +713,10 @@ describe("github-ci-policy lint", () => {
     });
 
     for (const step of ["{}", "{ name: bogus }"]) {
-      const malformedStep = replaceRequired(
-        SOURCE_WORKFLOW,
-        "        uses: actions/checkout@v5",
-        `        run: ${step}`,
-      );
+      const malformedStep = mutateJob(SOURCE_WORKFLOW, "harness-check-linux", (job) => {
+        const steps = job.steps as Record<string, unknown>[];
+        steps[0] = { run: step === "{}" ? {} : { name: "bogus" } };
+      });
       expect(analyzeGithubCiPolicy(docs(malformedStep)).violations).toContainEqual({
         file: ".github/workflows/harness-check.yml",
         profile: "source",
@@ -807,7 +811,7 @@ describe("github-ci-policy lint", () => {
       expect(analyzeGithubCiPolicy(loaded).violations).toContainEqual({
         file: ".github/workflows/harness-check.yml",
         profile: "source",
-        reason: "missing_runtime_leg",
+        reason: "missing_job",
         detail: "jobs.harness-check-linux",
       });
     } finally {
@@ -842,9 +846,9 @@ describe("github-ci-policy lint", () => {
     expect(result.violations).toContainEqual({
       file: ".github/workflows/harness-check.yml",
       profile: "source",
-      reason: "missing_runtime_leg",
+      reason: "forbidden_lane_skip_step",
       detail:
-        "jobs.harness-check-linux.steps must exactly match the ordered canonical semantic manifest",
+        "jobs.harness-check-linux step \"doctor (governance hard gates)\" is conditioned on lane=='full' but is not on the doc-lane skip allowlist",
     });
   });
 
@@ -1003,18 +1007,78 @@ describe("github-ci-policy lint", () => {
   // fail-close regression。実運用に近い classify step + lane 条件付き step 構成を対象にする。
   describe("PLAN-L7-455 doc-only lane skip safety", () => {
     it.each([
-      ["pre-producer action swap", "actions/setup-node@v4", "actions/setup-node@v3"],
-      ["post-producer run mutation", "run: npm run lint", "run: npm run lint && true"],
+      [
+        "pre-producer action swap",
+        mutateJobStep(
+          SOURCE_WORKFLOW_WITH_LANE,
+          "classify",
+          (step) => step.uses === "actions/setup-node@v4",
+          (step) => {
+            step.uses = "actions/setup-node@v3";
+          },
+        ),
+        "missing_lane_producer",
+        "jobs.classify must match its fail-close Linux split manifest and bind outputs.lane to steps.classify.outputs.lane",
+      ],
+      [
+        "post-producer run mutation",
+        mutateJobStep(
+          SOURCE_WORKFLOW_WITH_LANE,
+          "harness-check-static",
+          (step) => step.name === "lint (biome)",
+          (step) => {
+            step.run = "npm run lint && true";
+          },
+        ),
+        "missing_runtime_leg",
+        "jobs.harness-check-static must match its fail-close Linux split manifest and need exactly classify",
+      ],
       [
         "install append",
-        "run: npm ci --no-audit --no-fund",
-        "run: npm ci --no-audit --no-fund && echo extra",
+        mutateJobStep(
+          SOURCE_WORKFLOW_WITH_LANE,
+          "classify",
+          (step) => step.name === "install deps (frozen)",
+          (step) => {
+            step.run = "npm ci --no-audit --no-fund && echo extra";
+          },
+        ),
+        "missing_lane_producer",
+        "jobs.classify must match its fail-close Linux split manifest and bind outputs.lane to steps.classify.outputs.lane",
       ],
-      ["doc-check mutation", "npm run test:doc-lane", "npm run test:doc-lane --changed"],
-      ["with value mutation", "cache: npm", "cache: yarn"],
-    ])("U-CIPOL-019a: rejects runtime step manifest mutation: %s", (_label, from, to) => {
-      const result = analyzeGithubCiPolicy(docs(SOURCE_WORKFLOW_WITH_LANE.replace(from, to)));
-      expect(result.violations.map((v) => v.reason)).toContain("missing_runtime_leg");
+      [
+        "doc-check mutation",
+        mutateJobStep(
+          SOURCE_WORKFLOW_WITH_LANE,
+          "harness-check-static",
+          (step) => step.name === "doc lane checks (readability / rule-drift)",
+          (step) => {
+            step.run = "npm run test:doc-lane --changed";
+          },
+        ),
+        "missing_runtime_leg",
+        "jobs.harness-check-static must match its fail-close Linux split manifest and need exactly classify",
+      ],
+      [
+        "with value mutation",
+        mutateJobStep(
+          SOURCE_WORKFLOW_WITH_LANE,
+          "harness-check-static",
+          (step) => step.name === "setup node (harness 実行系の正式 runtime、PLAN-L7-462 step 2)",
+          (step) => {
+            (step.with as Record<string, unknown>).cache = "yarn";
+          },
+        ),
+        "missing_runtime_leg",
+        "jobs.harness-check-static must match its fail-close Linux split manifest and need exactly classify",
+      ],
+    ])("U-CIPOL-019a: rejects runtime step manifest mutation: %s", (_label, workflow, reason, detail) => {
+      expect(analyzeGithubCiPolicy(docs(workflow)).violations).toContainEqual({
+        file: ".github/workflows/harness-check.yml",
+        profile: "source",
+        reason,
+        detail,
+      });
     });
 
     it("U-CIPOL-019aa: preserves command-separator newline", () => {
@@ -1039,12 +1103,17 @@ describe("github-ci-policy lint", () => {
     });
 
     it("U-CIPOL-019b: rejects runtime step reorder", () => {
-      const checkout = `      - name: checkout\n        uses: actions/checkout@v5\n        with:\n          fetch-depth: 0\n\n`;
-      const setup = `      - name: setup node (harness 実行系の正式 runtime、PLAN-L7-462 step 2)\n        uses: actions/setup-node@v4\n        with:\n          node-version: "24.22.3"\n          cache: npm\n\n`;
-      const result = analyzeGithubCiPolicy(
-        docs(SOURCE_WORKFLOW_WITH_LANE.replace(`${checkout}${setup}`, `${setup}${checkout}`)),
-      );
-      expect(result.violations.map((v) => v.reason)).toContain("missing_runtime_leg");
+      const reordered = mutateJob(SOURCE_WORKFLOW_WITH_LANE, "harness-check-static", (job) => {
+        const steps = job.steps as unknown[];
+        [steps[0], steps[1]] = [steps[1], steps[0]];
+      });
+      expect(analyzeGithubCiPolicy(docs(reordered)).violations).toContainEqual({
+        file: ".github/workflows/harness-check.yml",
+        profile: "source",
+        reason: "missing_runtime_leg",
+        detail:
+          "jobs.harness-check-static must match its fail-close Linux split manifest and need exactly classify",
+      });
     });
 
     it.each([
@@ -1129,15 +1198,21 @@ describe("github-ci-policy lint", () => {
           : key === "env"
             ? "{ BASH_ENV: attack }"
             : "{}";
-      const result = analyzeGithubCiPolicy(
-        docs(
-          SOURCE_WORKFLOW_WITH_LANE.replace(
-            "  harness-check-linux:\n    runs-on: ubuntu-latest",
-            `  harness-check-linux:\n    ${key}: ${value}\n    runs-on: ubuntu-latest`,
-          ),
-        ),
-      );
-      expect(result.violations.map((v) => v.reason)).toContain("missing_runtime_leg");
+      const malformed = mutateJob(SOURCE_WORKFLOW_WITH_LANE, "harness-check-static", (job) => {
+        job[key] =
+          key === "defaults"
+            ? { run: { shell: "bash" } }
+            : value === "{}"
+              ? {}
+              : { BASH_ENV: "attack" };
+      });
+      expect(analyzeGithubCiPolicy(docs(malformed)).violations).toContainEqual({
+        file: ".github/workflows/harness-check.yml",
+        profile: "source",
+        reason: "missing_runtime_leg",
+        detail:
+          "jobs.harness-check-static must match its fail-close Linux split manifest and need exactly classify",
+      });
     });
 
     it.each([
@@ -1254,46 +1329,46 @@ describe("github-ci-policy lint", () => {
       [
         "echo",
         `      - name: doc lane source doctor
-        if: ${LANE_DOC_IF}
+        if: ${DOWNSTREAM_LANE_DOC_IF}
         run: node src/cli.ts doctor --profile source-doc-lane`,
         `      - name: doc lane source doctor
-        if: ${LANE_DOC_IF}
+        if: ${DOWNSTREAM_LANE_DOC_IF}
         run: echo "doctor --profile source-doc-lane"`,
       ],
       [
         "control operator",
         `      - name: doc lane source doctor
-        if: ${LANE_DOC_IF}
+        if: ${DOWNSTREAM_LANE_DOC_IF}
         run: node src/cli.ts doctor --profile source-doc-lane`,
         `      - name: doc lane source doctor
-        if: ${LANE_DOC_IF}
+        if: ${DOWNSTREAM_LANE_DOC_IF}
         run: node src/cli.ts doctor --profile source-doc-lane && true`,
       ],
       [
         "other profile",
         `      - name: doc lane source doctor
-        if: ${LANE_DOC_IF}
+        if: ${DOWNSTREAM_LANE_DOC_IF}
         run: node src/cli.ts doctor --profile source-doc-lane`,
         `      - name: doc lane source doctor
-        if: ${LANE_DOC_IF}
+        if: ${DOWNSTREAM_LANE_DOC_IF}
         run: node src/cli.ts doctor --profile source-full`,
       ],
       [
         "extra flag",
         `      - name: doc lane source doctor
-        if: ${LANE_DOC_IF}
+        if: ${DOWNSTREAM_LANE_DOC_IF}
         run: node src/cli.ts doctor --profile source-doc-lane`,
         `      - name: doc lane source doctor
-        if: ${LANE_DOC_IF}
+        if: ${DOWNSTREAM_LANE_DOC_IF}
         run: node src/cli.ts doctor --profile source-doc-lane --json`,
       ],
       [
         "env",
         `      - name: doc lane source doctor
-        if: ${LANE_DOC_IF}
+        if: ${DOWNSTREAM_LANE_DOC_IF}
         run: node src/cli.ts doctor --profile source-doc-lane`,
         `      - name: doc lane source doctor
-        if: ${LANE_DOC_IF}
+        if: ${DOWNSTREAM_LANE_DOC_IF}
         env:
           X: y
         run: node src/cli.ts doctor --profile source-doc-lane`,
@@ -1301,17 +1376,17 @@ describe("github-ci-policy lint", () => {
       [
         "shell",
         `      - name: doc lane source doctor
-        if: ${LANE_DOC_IF}
+        if: ${DOWNSTREAM_LANE_DOC_IF}
         run: node src/cli.ts doctor --profile source-doc-lane`,
         `      - name: doc lane source doctor
-        if: ${LANE_DOC_IF}
+        if: ${DOWNSTREAM_LANE_DOC_IF}
         shell: bash
         run: node src/cli.ts doctor --profile source-doc-lane`,
       ],
       [
         "wrong if",
         `      - name: doc lane source doctor
-        if: ${LANE_DOC_IF}
+        if: ${DOWNSTREAM_LANE_DOC_IF}
         run: node src/cli.ts doctor --profile source-doc-lane`,
         `      - name: doc lane source doctor
         if: false
@@ -1320,10 +1395,10 @@ describe("github-ci-policy lint", () => {
       [
         "continue-on-error",
         `      - name: doc lane source doctor
-        if: ${LANE_DOC_IF}
+        if: ${DOWNSTREAM_LANE_DOC_IF}
         run: node src/cli.ts doctor --profile source-doc-lane`,
         `      - name: doc lane source doctor
-        if: ${LANE_DOC_IF}
+        if: ${DOWNSTREAM_LANE_DOC_IF}
         continue-on-error: true
         run: node src/cli.ts doctor --profile source-doc-lane`,
       ],
@@ -1331,7 +1406,13 @@ describe("github-ci-policy lint", () => {
       const result = analyzeGithubCiPolicy(
         docs(replaceRequired(SOURCE_WORKFLOW_WITH_LANE, from, to)),
       );
-      expect(result.violations.map((v) => v.reason)).toContain("missing_doc_lane_doctor");
+      expect(result.violations).toContainEqual({
+        file: ".github/workflows/harness-check.yml",
+        profile: "source",
+        reason: "missing_runtime_leg",
+        detail:
+          "jobs.harness-check-static must match its fail-close Linux split manifest and need exactly classify",
+      });
     });
     it("U-CIPOL-021: accepts a real-shaped workflow with canonical full/doc lane step conditions", () => {
       const result = analyzeGithubCiPolicy(docs(SOURCE_WORKFLOW_WITH_LANE));
@@ -1412,10 +1493,9 @@ describe("github-ci-policy lint", () => {
     });
 
     it("U-CIPOL-025: 負例 — rejects a job-level lane skip on a runtime leg (aggregate must always be reachable)", () => {
-      const jobLevelSkip = SOURCE_WORKFLOW_WITH_LANE.replace(
-        "  harness-check-linux:\n    runs-on: ubuntu-latest",
-        `  harness-check-linux:\n    if: ${DOWNSTREAM_LANE_FULL_IF}\n    runs-on: ubuntu-latest`,
-      );
+      const jobLevelSkip = mutateJob(SOURCE_WORKFLOW_WITH_LANE, "harness-check-linux", (job) => {
+        job.if = DOWNSTREAM_LANE_FULL_IF;
+      });
       const result = analyzeGithubCiPolicy(docs(jobLevelSkip));
 
       expect(result.ok).toBe(false);
@@ -1553,7 +1633,7 @@ describe("U-OIDBASE-013: Issue #1099 必須PR baseline ratchet", () => {
     const workflow = parseYaml(SOURCE_WORKFLOW) as {
       jobs: Record<string, { if?: string; steps?: Step[] }>;
     };
-    const job = workflow.jobs["harness-check-linux"];
+    const job = workflow.jobs["harness-check-pr-discipline"];
     const ratchetSteps = (job.steps ?? []).filter((step) =>
       step.run?.includes("scripts/oracle-baseline-ratchet.mjs"),
     );
