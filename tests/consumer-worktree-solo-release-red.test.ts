@@ -7,6 +7,8 @@ import {
   createConsumerWorktreeRuntimeFixture,
   runConsumerWorktreeCommand,
   runtimeIdentity,
+  WORKTREE_RUNTIME_TAG,
+  WORKTREE_RUNTIME_TAG_B,
 } from "./support/consumer-worktree-runtime.ts";
 import { snapshotTree } from "./support/consumer-worktree-runtime-010.ts";
 import { heavyAfterAll, heavyBeforeAll } from "./support/hook-bounds.ts";
@@ -41,7 +43,7 @@ describe("linked worktree solo Release entry Red (#2018)", () => {
           "--expected-consumer-digest",
           fixture.anchor,
         ],
-        { sourceCli: true },
+        { entrypoint: join(fixture.release, `${WORKTREE_RUNTIME_TAG}.ut-tdd.mjs`) },
       );
       expect(`${result.stdout}\n${result.stderr}`).toContain("worktree_entry_options_invalid");
       expect(result.status).toBe(1);
@@ -92,7 +94,7 @@ describe("linked worktree solo Release entry Red (#2018)", () => {
         "--expected-consumer-digest",
         fixture.anchor,
       ],
-      { sourceCli: true },
+      { entrypoint: join(fixture.release, `${WORKTREE_RUNTIME_TAG}.ut-tdd.mjs`) },
     );
     expect(`${result.stdout}\n${result.stderr}`).toContain("worktree_entry_options_invalid");
     expect(result.status).toBe(1);
@@ -150,7 +152,7 @@ require("node:module").syncBuiltinESMExports();
           fixture.anchorB,
         ],
         {
-          sourceCli: true,
+          entrypoint: join(fixture.releaseB, `${WORKTREE_RUNTIME_TAG_B}.ut-tdd.mjs`),
           env: { NODE_OPTIONS: nodeOptions, UT_TDD_CWTRT_GIT_TRACE: trace },
         },
       );
