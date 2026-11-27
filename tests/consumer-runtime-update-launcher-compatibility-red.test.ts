@@ -57,20 +57,20 @@ function addHistoryFormatV2(bytes: Uint8Array): Buffer {
     expect(count, `candidate compiled ESM ${name} marker count`).toBe(1);
     source = source.replace(before, after);
   };
-  const replaceUniquePattern = (name: string, pattern: RegExp, replacement: string) => {
-    const matches = source.match(pattern) ?? [];
-    expect(matches.length, `candidate compiled ESM ${name} marker count`).toBe(1);
-    source = source.replace(pattern, replacement);
-  };
   replaceUnique(
     "history writer",
     "operation_kind: operationKind,\n    identity_digest: identityDigest,",
     "operation_kind: operationKind,\n    history_format_version: 2,\n    identity_digest: identityDigest,",
   );
-  replaceUniquePattern(
-    "history parser",
-    /Object\.keys\(parsed\)\.sort\(\)\.join\([^)]*\)\s*!==\s*required\.slice\(\)\.sort\(\)\.join\([^)]*\)/,
-    'required.some((key) => !(key in parsed)) || Object.keys(parsed).some((key) => !required.includes(key) && key !== "history_format_version") || (Object.hasOwn(parsed, "history_format_version") && parsed.history_format_version !== 2)',
+  const parserPattern =
+    /Object\.keys\(parsed\)\.sort\(\)\.join\([^)]*\)\s*!==\s*(required\d*)\.slice\(\)\.sort\(\)\.join\([^)]*\)/;
+  const parserMatches = [...source.matchAll(parserPattern)];
+  expect(parserMatches.length, "candidate compiled ESM history parser marker count").toBe(1);
+  const requiredVariable = parserMatches[0]?.[1];
+  if (!requiredVariable) throw new Error("candidate history parser variable is missing");
+  source = source.replace(
+    parserPattern,
+    `${requiredVariable}.some((key) => !(key in parsed)) || Object.keys(parsed).some((key) => !${requiredVariable}.includes(key) && key !== "history_format_version") || (Object.hasOwn(parsed, "history_format_version") && parsed.history_format_version !== 2)`,
   );
   replaceUnique(
     "launcher history digest projection",
