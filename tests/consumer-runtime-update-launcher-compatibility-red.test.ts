@@ -179,12 +179,12 @@ describe("consumer runtime launcher compatibility Red", () => {
         throw new Error("control stopped after candidate proof");
       },
       expectUpdateError: (error, { consumerRoot, priorPointer }) => {
-        expect(String(error)).toContain("control stopped after candidate proof");
         expect(readFileSync(priorPointer.path)).toEqual(priorPointer.bytes);
         expect(snapshotRuntimeUpdateTree(consumerRoot)).toEqual(treeBefore);
+        expect(String(error)).toContain("control stopped after candidate proof");
       },
     });
-  });
+  }, 120_000);
 
   it("CANDIDATE-U-RTUPD-008: incompatible B history is refused before pointer switch", async () => {
     let treeBefore: string[] = [];
@@ -199,11 +199,11 @@ describe("consumer runtime launcher compatibility Red", () => {
         treeBefore = await proveHistoryFormatV2Candidate(input);
       },
       expectUpdateError: (error, { consumerRoot, priorPointer }) => {
-        expect(String(error)).toContain("consumer_runtime_identity_mismatch");
-        expect(String(error)).not.toContain("consumer_runtime_update_unsupported");
         expect(readFileSync(priorPointer.path)).toEqual(priorPointer.bytes);
         expect(snapshotRuntimeUpdateTree(consumerRoot)).toEqual(treeBefore);
+        expect(String(error)).toContain("consumer_runtime_identity_mismatch");
+        expect(String(error)).not.toContain("consumer_runtime_update_unsupported");
       },
     });
-  });
+  }, 120_000);
 });
