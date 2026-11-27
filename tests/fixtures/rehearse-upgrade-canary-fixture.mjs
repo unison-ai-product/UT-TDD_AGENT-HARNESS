@@ -2,6 +2,7 @@
 // Build an isolated canary.7 consumer fixture for Issue #2023.
 // This script stops before candidate packaging, version switching, or rollback.
 
+import "../../src/runtime/windows-hide.ts";
 import { createHash } from "node:crypto";
 import {
   appendFileSync,
@@ -48,7 +49,7 @@ function usage() {
       "  --help              Show this help",
       "",
       "Creates consumer/, worktrees/runtime-old/, worktrees/runtime-absent/, and",
-      "independent main/worktree evidence snapshots. It does not switch to canary.10.",
+      "independent main/worktree evidence snapshots for the upgrade rehearsal.",
     ].join("\n") + "\n",
   );
 }
