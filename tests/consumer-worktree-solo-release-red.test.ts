@@ -15,14 +15,14 @@ import { heavyAfterAll, heavyBeforeAll } from "./support/hook-bounds.ts";
 
 let fixture: Awaited<ReturnType<typeof createConsumerWorktreeRuntimeFixture>>;
 
-describe("linked worktree solo Release entry Red (#2018)", () => {
+describe("linked worktree solo Release entry (#2018)", () => {
   heavyBeforeAll(["git", 300_000], async () => {
     fixture = await createConsumerWorktreeRuntimeFixture(["solo-no-main-control"]);
   });
 
-  heavyAfterAll("teardown", () => cleanupConsumerWorktreeRuntimeFixture());
+  heavyAfterAll(["teardown", 120_000], () => cleanupConsumerWorktreeRuntimeFixture());
 
-  it.fails("U-CWTRT-016: refuses solo Release entry when main has no runtime", () => {
+  it("U-CWTRT-016: refuses solo Release entry when main has no runtime", () => {
     const mainRuntime = join(fixture.main, ".ut-tdd");
     const savedMainRuntime = join(fixture.main, ".ut-tdd-candidate-016");
     expect(existsSync(savedMainRuntime)).toBe(false);
@@ -78,7 +78,7 @@ describe("linked worktree solo Release entry Red (#2018)", () => {
     }
   });
 
-  it.fails("U-CWTRT-017: refuses solo Release entry when main has the same version", () => {
+  it("U-CWTRT-017: refuses solo Release entry when main has the same version", () => {
     const worktree = fixture.linked["010-prefix"];
     const mainBefore = snapshotTree(fixture.main);
     const worktreeBefore = snapshotTree(worktree);
@@ -107,7 +107,7 @@ describe("linked worktree solo Release entry Red (#2018)", () => {
     expect(existsSync(join(worktree, ".ut-tdd"))).toBe(false);
   });
 
-  it.fails("U-CWTRT-018: refuses solo Release entry when main has a different version", () => {
+  it("U-CWTRT-018: refuses solo Release entry when main has a different version", () => {
     const worktree = fixture.linked["010-length"];
     const mainRuntime = join(fixture.main, ".ut-tdd");
     const mainBefore = snapshotTree(fixture.main);

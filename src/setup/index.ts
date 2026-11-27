@@ -61,13 +61,13 @@ import {
   parseConsumerRuntimeReceipt,
   sameCanonicalSetupPath,
 } from "./consumer-runtime-install.ts";
-import { verifyConsumerRuntimeReleaseAssets } from "./consumer-runtime-release.ts";
 import { createConsumerRuntimeOnlyInstaller } from "./consumer-runtime-transaction.ts";
 import {
   assertConsumerRuntimePinMatches,
   type ConsumerRuntimePin,
   createConsumerRuntimePin,
   setupConsumerWorktreeRuntime as setupConsumerWorktreeRuntimeImpl,
+  verifySoloConsumerRuntimeRelease,
 } from "./consumer-worktree-runtime.ts";
 import {
   bootstrapProjectIdentity,
@@ -320,20 +320,14 @@ export async function installConsumerRuntimeRelease(input: {
   readonly executingModulePath: string;
   readonly setupDeps?: () => SetupDeps;
   readonly expectedPin?: ConsumerRuntimePin;
+  readonly isLinkedWorktree?: boolean;
   readonly runtimeOnly?: boolean;
   readonly fault?: Parameters<typeof installConsumerRuntimeOnly>[2];
 }): Promise<ConsumerRuntimeReleaseInstallResult> {
-  const assets = verifyConsumerRuntimeReleaseAssets({
-    releaseDirectory: input.releaseDirectory,
-    tag: input.tag,
-    expectedConsumerDigest: input.expectedConsumerDigest,
-    executingModulePath: input.executingModulePath,
-  });
-  const document = assets.document;
+  const { document, receiptBytes, compiledEsmBytes } = verifySoloConsumerRuntimeRelease(input);
   const consumerRoot = realpathSync.native(input.consumerRoot);
   const runtimeRoot = join(consumerRoot, ".ut-tdd", "runtime");
-  const release = document.release;
-  const generation = document.generation;
+  const { release, generation } = document;
   const attestation = consumerReleaseAttestation(document);
   const aggregateInput: ReleaseAggregateAdmissionInput = {
     repository: document.admission_input.aggregate_input.repository,
@@ -352,7 +346,7 @@ export async function installConsumerRuntimeRelease(input: {
   });
 
   const { receipt: nodeReceipt, operationId } = parseConsumerRuntimeReceipt({
-    receiptBytes: assets.receiptBytes,
+    receiptBytes,
     tag: release.tag,
     generationId: generation.generation_id,
   });
@@ -411,8 +405,8 @@ export async function installConsumerRuntimeRelease(input: {
   const runtimeInput = createSetupConsumerRuntimeInput({
     identity,
     admission,
-    compiledEsm: assets.compiledEsmBytes,
-    nodeBootstrapReceipt: assets.receiptBytes,
+    compiledEsm: compiledEsmBytes,
+    nodeBootstrapReceipt: receiptBytes,
   });
   return completeConsumerRuntimeInstallation({
     consumerRoot,
