@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync, unlinkSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { expect, it, vi } from "vitest";
 import * as setupApi from "../src/setup/index.ts";
@@ -420,6 +420,21 @@ describe("consumer runtime update Red candidates", () => {
         expect(
           history.every((record) => /^sha256:[a-f0-9]{64}$/.test(String(record.record_digest))),
         ).toBe(true);
+      },
+    });
+  });
+
+  it("rejects a main runtime update with a missing launcher before changing the tree", async () => {
+    let treeBefore: string[] = [];
+    await runOracle({
+      beforeUpdate: ({ consumerRoot }) => {
+        unlinkSync(join(consumerRoot, ".ut-tdd", "bin", "ut-tdd.mjs"));
+        treeBefore = snapshotRuntimeUpdateTree(consumerRoot);
+      },
+      expectUpdateError: (error, { consumerRoot, priorPointer }) => {
+        expect(error).toHaveProperty("message", "consumer_runtime_setup_snapshot:launcher");
+        expect(readFileSync(priorPointer.path)).toEqual(priorPointer.bytes);
+        expect(snapshotRuntimeUpdateTree(consumerRoot)).toEqual(treeBefore);
       },
     });
   });
