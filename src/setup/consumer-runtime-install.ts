@@ -1,5 +1,5 @@
 import { existsSync, readFileSync, realpathSync, statSync } from "node:fs";
-import { basename, dirname, isAbsolute, relative, resolve, sep } from "node:path";
+import { basename, dirname, resolve } from "node:path";
 import { parseNodeBootstrapReceiptBytes } from "../runtime/node-bootstrap.ts";
 import {
   admitConsumerLocalRuntime,
@@ -11,6 +11,7 @@ import {
   type ConsumerNodeRuntimePriorPointer,
   digestConsumerRuntimeBytes,
   digestConsumerRuntimeValue,
+  contained as isStrictlyContainedPath,
   validateConsumerNodeRuntimeBundle,
 } from "./consumer-node-runtime.ts";
 import type {
@@ -114,119 +115,143 @@ export interface CommittedConsumerRuntimePrior {
   readonly priorPointer: ConsumerNodeRuntimePriorPointer;
 }
 
+interface CommittedRuntimePointerValue {
+  readonly bundle_digest: string;
+  readonly bundle_path: string;
+  readonly entry_path: string;
+}
+
+function readCommittedRuntimePointer(runtimeRoot: string): {
+  readonly path: string;
+  readonly bytes: Buffer;
+  readonly value: CommittedRuntimePointerValue;
+} {
+  const path = resolve(runtimeRoot, "activation", "active.json");
+  const bytes = readFileSync(path);
+  const value: unknown = JSON.parse(bytes.toString("utf8"));
+  if (
+    !isRecord(value) ||
+    Object.keys(value).sort().join("\0") !== "bundle_digest\0bundle_path\0entry_path" ||
+    typeof value.bundle_digest !== "string" ||
+    typeof value.bundle_path !== "string" ||
+    typeof value.entry_path !== "string" ||
+    value.bundle_path !== resolve(value.bundle_path) ||
+    value.entry_path !== resolve(value.entry_path)
+  )
+    throw new Error("consumer_runtime_identity_mismatch");
+  return {
+    path,
+    bytes,
+    value: {
+      bundle_digest: value.bundle_digest,
+      bundle_path: value.bundle_path,
+      entry_path: value.entry_path,
+    },
+  };
+}
+
+function readCommittedRuntimeBundle(
+  runtimeRoot: string,
+  pointer: CommittedRuntimePointerValue,
+): ConsumerNodeRuntimeBundle {
+  const runtimeRealPath = realpathSync.native(runtimeRoot);
+  const bundleRealPath = realpathSync.native(pointer.bundle_path);
+  if (!isStrictlyContainedPath(runtimeRealPath, bundleRealPath))
+    throw new Error("consumer_runtime_identity_mismatch");
+  const bundle = JSON.parse(
+    readFileSync(resolve(pointer.bundle_path, "bundle-manifest.json"), "utf8"),
+  ) as ConsumerNodeRuntimeBundle;
+  if (
+    validateConsumerNodeRuntimeBundle(bundle) ||
+    pointer.bundle_digest !== bundle.bundle_digest ||
+    pointer.bundle_path !== bundle.bundle_path ||
+    !sameCanonicalSetupPath(pointer.entry_path, resolve(bundle.bundle_path, "ut-tdd.mjs"))
+  )
+    throw new Error("consumer_runtime_identity_mismatch");
+  return bundle;
+}
+
+function assertCommittedRuntimeReceipt(
+  bundle: ConsumerNodeRuntimeBundle,
+  consumerRoot: string,
+  runtimeRoot: string,
+): void {
+  const receipt = JSON.parse(
+    readFileSync(resolve(bundle.bundle_path, "consumer-receipt.json"), "utf8"),
+  ) as Record<string, unknown>;
+  const consumer = isRecord(receipt.consumer) ? receipt.consumer : undefined;
+  const identity = bundle.identity;
+  if (
+    !consumer ||
+    !sameCanonicalSetupPath(String(consumer.consumerRoot ?? ""), consumerRoot) ||
+    !sameCanonicalSetupPath(String(consumer.runtimeRoot ?? ""), runtimeRoot) ||
+    receipt.identity_digest !== digestConsumerRuntimeValue(identity) ||
+    receipt.operation_id !== identity.operation_id ||
+    !sameCanonicalSetupPath(identity.consumer_root, consumerRoot) ||
+    !sameCanonicalSetupPath(identity.runtime_root, runtimeRoot) ||
+    consumer.productId !== identity.product_id ||
+    consumer.materializerVersion !== identity.materializer_version ||
+    consumer.releaseId !== identity.release_id ||
+    consumer.sourceRevision !== identity.subject_revision ||
+    consumer.artifactSetDigest !== identity.artifact_set_digest
+  )
+    throw new Error("consumer_runtime_receipt_mismatch");
+}
+
+function assertCommittedRuntimeFiles(bundle: ConsumerNodeRuntimeBundle): void {
+  const bundleRealPath = realpathSync.native(bundle.bundle_path);
+  for (const [name, expectedDigest] of Object.entries(bundle.files)) {
+    const path = resolve(bundle.bundle_path, name);
+    if (!isStrictlyContainedPath(bundleRealPath, realpathSync.native(path)))
+      throw new Error("consumer_runtime_identity_mismatch");
+    if (digestConsumerRuntimeBytes(readFileSync(path)) !== expectedDigest)
+      throw new Error("consumer_runtime_identity_mismatch");
+  }
+}
+
+function readCommittedRuntimeHistory(bundle: ConsumerNodeRuntimeBundle): {
+  readonly bytes: Buffer;
+  readonly tipDigest: string;
+} {
+  const bytes = readFileSync(resolve(bundle.bundle_path, "history.jsonl"));
+  const lines = bytes.toString("utf8").split("\n");
+  if (lines.at(-1) !== "" || lines.length !== bundle.history_sequence + 2)
+    throw new Error("consumer_runtime_identity_mismatch");
+  const tip: unknown = JSON.parse(lines.at(-2) ?? "null");
+  if (
+    !isRecord(tip) ||
+    tip.history_sequence !== bundle.history_sequence ||
+    typeof tip.record_digest !== "string" ||
+    !/^sha256:[a-f0-9]{64}$/.test(tip.record_digest)
+  )
+    throw new Error("consumer_runtime_identity_mismatch");
+  const unsignedTip = { ...tip };
+  delete unsignedTip.record_digest;
+  if (digestConsumerRuntimeValue(unsignedTip) !== tip.record_digest)
+    throw new Error("consumer_runtime_identity_mismatch");
+  return { bytes, tipDigest: tip.record_digest };
+}
+
 export function readCommittedConsumerRuntimePrior(input: {
   readonly consumerRoot: string;
   readonly runtimeRoot: string;
 }): CommittedConsumerRuntimePrior {
   try {
-    const pointerPath = resolve(input.runtimeRoot, "activation", "active.json");
-    const pointerBytes = readFileSync(pointerPath);
-    const pointer: unknown = JSON.parse(pointerBytes.toString("utf8"));
-    if (
-      !isRecord(pointer) ||
-      Object.keys(pointer).sort().join("\0") !== "bundle_digest\0bundle_path\0entry_path" ||
-      typeof pointer.bundle_digest !== "string" ||
-      typeof pointer.bundle_path !== "string" ||
-      typeof pointer.entry_path !== "string" ||
-      pointer.bundle_path !== resolve(pointer.bundle_path) ||
-      pointer.entry_path !== resolve(pointer.entry_path)
-    )
-      throw new Error("consumer_runtime_identity_mismatch");
-
-    const bundlePath = pointer.bundle_path;
-    const runtimeRealPath = realpathSync.native(input.runtimeRoot);
-    const bundleRealPath = realpathSync.native(bundlePath);
-    const bundleRelativePath = relative(runtimeRealPath, bundleRealPath);
-    if (
-      bundleRelativePath === "" ||
-      bundleRelativePath === ".." ||
-      isAbsolute(bundleRelativePath) ||
-      bundleRelativePath.startsWith(`..${sep}`)
-    )
-      throw new Error("consumer_runtime_identity_mismatch");
-
-    const bundle = JSON.parse(
-      readFileSync(resolve(bundlePath, "bundle-manifest.json"), "utf8"),
-    ) as ConsumerNodeRuntimeBundle;
-    if (validateConsumerNodeRuntimeBundle(bundle))
-      throw new Error("consumer_runtime_identity_mismatch");
-    if (
-      pointer.bundle_digest !== bundle.bundle_digest ||
-      pointer.bundle_path !== bundle.bundle_path ||
-      !sameCanonicalSetupPath(pointer.entry_path, resolve(bundle.bundle_path, "ut-tdd.mjs"))
-    )
-      throw new Error("consumer_runtime_identity_mismatch");
-
-    const storedReceipt = JSON.parse(
-      readFileSync(resolve(bundlePath, "consumer-receipt.json"), "utf8"),
-    ) as Record<string, unknown>;
-    const rawConsumer = storedReceipt.consumer;
-    const storedConsumer =
-      rawConsumer && typeof rawConsumer === "object" && !Array.isArray(rawConsumer)
-        ? (rawConsumer as Record<string, unknown>)
-        : undefined;
-    const identity = bundle.identity;
-    if (
-      !storedConsumer ||
-      !sameCanonicalSetupPath(String(storedConsumer.consumerRoot ?? ""), input.consumerRoot) ||
-      !sameCanonicalSetupPath(String(storedConsumer.runtimeRoot ?? ""), input.runtimeRoot)
-    )
-      throw new Error("consumer_runtime_receipt_mismatch");
-    if (
-      storedReceipt.identity_digest !== digestConsumerRuntimeValue(identity) ||
-      storedReceipt.operation_id !== identity.operation_id ||
-      !sameCanonicalSetupPath(identity.consumer_root, input.consumerRoot) ||
-      !sameCanonicalSetupPath(identity.runtime_root, input.runtimeRoot) ||
-      storedConsumer.productId !== identity.product_id ||
-      storedConsumer.materializerVersion !== identity.materializer_version ||
-      storedConsumer.releaseId !== identity.release_id ||
-      storedConsumer.sourceRevision !== identity.subject_revision ||
-      storedConsumer.artifactSetDigest !== identity.artifact_set_digest
-    )
-      throw new Error("consumer_runtime_receipt_mismatch");
-
-    for (const [name, expectedDigest] of Object.entries(bundle.files)) {
-      const path = resolve(bundlePath, name);
-      const fileRealPath = realpathSync.native(path);
-      const relativeFilePath = relative(bundleRealPath, fileRealPath);
-      if (
-        relativeFilePath === "" ||
-        relativeFilePath === ".." ||
-        isAbsolute(relativeFilePath) ||
-        relativeFilePath.startsWith(`..${sep}`) ||
-        digestConsumerRuntimeBytes(readFileSync(path)) !== expectedDigest
-      )
-        throw new Error("consumer_runtime_identity_mismatch");
-    }
-
-    const historyBytes = readFileSync(resolve(bundlePath, "history.jsonl"));
-    const historyLines = historyBytes.toString("utf8").split("\n");
-    if (historyLines.at(-1) !== "" || historyLines.length !== bundle.history_sequence + 2)
-      throw new Error("consumer_runtime_identity_mismatch");
-    const historyTip = JSON.parse(historyLines.at(-2) ?? "null") as unknown;
-    if (
-      !isRecord(historyTip) ||
-      historyTip.history_sequence !== bundle.history_sequence ||
-      typeof historyTip.record_digest !== "string" ||
-      !/^sha256:[a-f0-9]{64}$/.test(historyTip.record_digest)
-    )
-      throw new Error("consumer_runtime_identity_mismatch");
-    const unsignedHistoryTip = { ...historyTip };
-    delete unsignedHistoryTip.record_digest;
-    if (digestConsumerRuntimeValue(unsignedHistoryTip) !== historyTip.record_digest)
-      throw new Error("consumer_runtime_identity_mismatch");
-
-    const priorPointer = {
-      bytes: pointerBytes,
-      mode: statSync(pointerPath).mode & 0o777,
-      digest: digestConsumerRuntimeBytes(pointerBytes),
-    };
+    const pointer = readCommittedRuntimePointer(input.runtimeRoot);
+    const bundle = readCommittedRuntimeBundle(input.runtimeRoot, pointer.value);
+    assertCommittedRuntimeReceipt(bundle, input.consumerRoot, input.runtimeRoot);
+    assertCommittedRuntimeFiles(bundle);
+    const history = readCommittedRuntimeHistory(bundle);
     return {
       bundle,
-      historyBytes,
+      historyBytes: history.bytes,
       historySequence: bundle.history_sequence,
-      historyTipDigest: historyTip.record_digest,
-      priorPointer,
+      historyTipDigest: history.tipDigest,
+      priorPointer: {
+        bytes: pointer.bytes,
+        mode: statSync(pointer.path).mode & 0o777,
+        digest: digestConsumerRuntimeBytes(pointer.bytes),
+      },
     };
   } catch (error) {
     if (

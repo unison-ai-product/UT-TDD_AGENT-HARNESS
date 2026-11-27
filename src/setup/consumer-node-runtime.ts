@@ -354,7 +354,7 @@ export function buildConsumerNodeRuntimePayloads(input: {
   };
 }
 
-function contained(parent: string, child: string): boolean {
+export function contained(parent: string, child: string): boolean {
   const rel = relative(resolve(parent), resolve(child));
   return rel !== "" && rel !== ".." && !rel.startsWith(`..${sep}`) && !isAbsolute(rel);
 }
