@@ -10,7 +10,7 @@ next_pair_freeze: L7
 issue: 1525
 ---
 
-> **L6 contract marker**: 本書は consumer の linked git worktree へ runtime を入れる入口、runtime が無いときの guard 失敗の案内、および新規 install の launcher 公開前失敗に対する transaction rollback を凍結する (未実装の目標契約)。版の更新と別の版へのロールバックは #930 / #481 の範囲であり、本書は扱わない。oracle (`U-CWTRT-001`〜`011`) は `docs/test-design/harness/L7-consumer-worktree-runtime-test-design.md` が固定する (導入途中の rollback 境界の `U-CWTRT-011` は 2026-11-16 に候補 ID から正式 ID へ昇格、Issue #1592)。行番号は 2026-11-04 の `origin/main` で測った。2026-11-27 (Issue #2018) に §3.1 (linked worktree からの `setup --solo --consumer-runtime-release` の入口拒否) と §3.2 (未決) を追加した (status: draft。凍結は対の L7 と合わせて行う)。
+> **L6 contract marker**: 本書は consumer の linked git worktree へ runtime を入れる入口、runtime が無いときの guard 失敗の案内、および新規 install の launcher 公開前失敗に対する transaction rollback を凍結する (未実装の目標契約)。版の更新と別の版へのロールバックは #930 / #481 の範囲であり、本書は扱わない。oracle (`U-CWTRT-001`〜`011`) は `docs/test-design/harness/L7-consumer-worktree-runtime-test-design.md` が固定する (導入途中の rollback 境界の `U-CWTRT-011` は 2026-11-16 に候補 ID から正式 ID へ昇格、Issue #1592)。行番号は 2026-11-04 の `origin/main` で測った。2026-11-27 (Issue #2018) に §3.1 (linked worktree からの `setup --solo --consumer-runtime-release` の入口拒否) と §3.2 (未決) を追加した (§3.1 status: confirmed、oracle は `U-CWTRT-016`〜`018`)。
 
 # consumer worktree の runtime 入口 — 関数設計 (issue #1525)
 
@@ -41,7 +41,7 @@ consumer は runtime と launcher (`.ut-tdd/bin/ut-tdd.mjs`) を commit しな�
 5. **pin を変えない**: main の active pointer、キャッシュ、他の worktree には書かない。違う版を入れる経路は無い (版の更新は #930 / #481)。worktree に別の版が既にあるときは `consumer_runtime_update_unsupported` のままにする。
 6. **成功時**: launcher (`.ut-tdd/bin/ut-tdd.mjs`) と runtime が worktree に揃い、guard が動く。成功の出力は導入した版と digest の 1 行である。
 
-### 3.1 決定 1 の補足: linked worktree から `setup --solo --consumer-runtime-release` を流したとき (Issue #2018、status: draft)
+### 3.1 決定 1 の補足: linked worktree から `setup --solo --consumer-runtime-release` を流したとき (Issue #2018、status: confirmed)
 
 **問題 (2026-11-27 の実行確認、#2018)**: §3 は `--worktree` の経路だけが main の pin を照合する。いまの `setup --solo --consumer-runtime-release <dir> --expected-consumer-digest <digest>` は cwd が linked worktree でも入口で拒否されず (`src/cli.ts:3598-3615` に linked worktree の判定が無く、`expectedPin` も渡されない。`assertConsumerRuntimePinMatches` は `expectedPin` が無いと何もしない、`src/setup/consumer-worktree-runtime.ts:66-79`)、main と違う版が worktree に入る (main が canary.8、worktree に canary.9 を確認)。§5 の「入れる版は main の active pointer の版と常に一致する」が、この入口では成り立たない。
 

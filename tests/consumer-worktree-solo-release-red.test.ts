@@ -22,7 +22,7 @@ describe("linked worktree solo Release entry Red (#2018)", () => {
 
   heavyAfterAll("teardown", () => cleanupConsumerWorktreeRuntimeFixture());
 
-  it.fails("CANDIDATE-U-CWTRT-016: refuses solo Release entry when main has no runtime", () => {
+  it.fails("U-CWTRT-016: refuses solo Release entry when main has no runtime", () => {
     const mainRuntime = join(fixture.main, ".ut-tdd");
     const savedMainRuntime = join(fixture.main, ".ut-tdd-candidate-016");
     expect(existsSync(savedMainRuntime)).toBe(false);
@@ -78,7 +78,7 @@ describe("linked worktree solo Release entry Red (#2018)", () => {
     }
   });
 
-  it.fails("CANDIDATE-U-CWTRT-017: refuses solo Release entry when main has the same version", () => {
+  it.fails("U-CWTRT-017: refuses solo Release entry when main has the same version", () => {
     const worktree = fixture.linked["010-prefix"];
     const mainBefore = snapshotTree(fixture.main);
     const worktreeBefore = snapshotTree(worktree);
@@ -107,7 +107,7 @@ describe("linked worktree solo Release entry Red (#2018)", () => {
     expect(existsSync(join(worktree, ".ut-tdd"))).toBe(false);
   });
 
-  it.fails("CANDIDATE-U-CWTRT-018: refuses solo Release entry when main has a different version", () => {
+  it.fails("U-CWTRT-018: refuses solo Release entry when main has a different version", () => {
     const worktree = fixture.linked["010-length"];
     const mainRuntime = join(fixture.main, ".ut-tdd");
     const mainBefore = snapshotTree(fixture.main);
