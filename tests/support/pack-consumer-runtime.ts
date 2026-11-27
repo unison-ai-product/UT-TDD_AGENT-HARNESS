@@ -133,6 +133,16 @@ function installDependencies(root: string): void {
   if (result.status !== 0) throw new Error(`${result.stdout}\n${result.stderr}`);
 }
 
+export async function buildExactHeadNodeGeneration(outputRoot: string) {
+  const producerRoot = process.cwd();
+  const subjectRevision = git(producerRoot, ["rev-parse", "HEAD"]);
+  return buildNodeGeneration({
+    repoRoot: producerRoot,
+    outputRoot,
+    candidateRevision: subjectRevision,
+  });
+}
+
 export async function writeConsumerRuntimeInput(
   packRoot: string,
   consumerRoot: string,
@@ -144,13 +154,7 @@ export async function writeConsumerRuntimeInput(
   // producer bytes from the detached execution snapshot (where npm deps are
   // installed), then feed them to the Pack setup CLI as release materializer
   // input. This is strictly pre-boundary fixture construction.
-  const producerRoot = process.cwd();
-  const subjectRevision = git(producerRoot, ["rev-parse", "HEAD"]);
-  const generation = await buildNodeGeneration({
-    repoRoot: producerRoot,
-    outputRoot: checkout,
-    candidateRevision: subjectRevision,
-  });
+  const generation = await buildExactHeadNodeGeneration(checkout);
   const sealedRoot = join(checkout, "sealed-generation");
   mkdirSync(sealedRoot, { recursive: true });
   cpSync(generation.compiledCliPath, join(sealedRoot, "ut-tdd.mjs"));
