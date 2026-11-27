@@ -281,7 +281,7 @@ export function registerLauncherCompatibilityRejectionTests(input: {
       (prior: Record<string, unknown>) => ({ ...prior, history_sequence: "not-a-number" }),
     ],
   ] as const) {
-    it(`CANDIDATE-U-RTUPD-008 control: incompatible bundle ${title} is denied by existing validator`, async () => {
+    it(`U-RTUPD-008 control: incompatible bundle ${title} is denied by existing validator`, async () => {
       const fixture = input.getFixture();
       const testCase = input.copyInstallerCase(fixture);
       try {

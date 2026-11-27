@@ -54,15 +54,15 @@ describe("consumer runtime update Red candidates", () => {
       }),
   );
 
-  it.fails("CANDIDATE-U-RTUPD-001: updates main runtime and retains prior generation", async () => {
+  it.fails("U-RTUPD-001: updates main runtime and retains prior generation", async () => {
     await runOracle();
   });
 
-  it.fails("CANDIDATE-U-RTUPD-009: replaying the updated Release is write-zero", async () => {
+  it.fails("U-RTUPD-009: replaying the updated Release is write-zero", async () => {
     await runOracle({ assertIdempotentReplay: true, snapshotTree: snapshotRuntimeUpdateTree });
   });
 
-  it.fails("CANDIDATE-U-RTUPD-003: actual active pointer EPERM is attempted once", async () => {
+  it.fails("U-RTUPD-003: actual active pointer EPERM is attempted once", async () => {
     let treeBefore = [] as string[];
     let priorMode: bigint | number | undefined;
     try {
@@ -107,7 +107,7 @@ describe("consumer runtime update Red candidates", () => {
     }
   });
 
-  it.fails("CANDIDATE-U-RTUPD-010: active pointer is published by one atomic rename", async () => {
+  it.fails("U-RTUPD-010: active pointer is published by one atomic rename", async () => {
     try {
       await runOracle({
         beforeUpdate: ({ priorPointer }) => {
@@ -156,7 +156,7 @@ describe("consumer runtime update Red candidates", () => {
 
   const windowsRestoreTest = process.platform === "win32" ? it.fails : it.skip;
   windowsRestoreTest(
-    "CANDIDATE-U-RTUPD-003: pointer mode restore failure is indeterminate",
+    "U-RTUPD-003: pointer mode restore failure is indeterminate",
     async () => {
       try {
         await runOracle({
@@ -185,7 +185,7 @@ describe("consumer runtime update Red candidates", () => {
     },
   );
 
-  it.fails("CANDIDATE-U-RTUPD-003: post-publication fsync failure does not roll back", async () => {
+  it.fails("U-RTUPD-003: post-publication fsync failure does not roll back", async () => {
     try {
       await runOracle({
         beforeUpdate: ({ priorPointer }) => {
@@ -228,7 +228,7 @@ describe("consumer runtime update Red candidates", () => {
       barrier: "writeGenerationAndReceipt",
       message: "injected generation materialization failure",
     },
-  ])("CANDIDATE-U-RTUPD-002: $name", async ({ barrier, message }) => {
+  ])("U-RTUPD-002: $name", async ({ barrier, message }) => {
     const rollback = createRuntimeUpdateRollbackOracle(snapshotRuntimeUpdateTree);
     let injected = false;
     await runOracle({
@@ -247,7 +247,7 @@ describe("consumer runtime update Red candidates", () => {
     });
   });
 
-  it("CANDIDATE-U-RTUPD-002: wrong external anchor denies before writing", async () => {
+  it("U-RTUPD-002: wrong external anchor denies before writing", async () => {
     const rollback = createRuntimeUpdateRollbackOracle(snapshotRuntimeUpdateTree);
     await runOracle({
       useWrongUpdateAnchor: true,
@@ -259,7 +259,7 @@ describe("consumer runtime update Red candidates", () => {
     });
   });
 
-  it("CANDIDATE-U-RTUPD-002: changed compiled byte is denied with a valid anchor", async () => {
+  it("U-RTUPD-002: changed compiled byte is denied with a valid anchor", async () => {
     const rollback = createRuntimeUpdateRollbackOracle(snapshotRuntimeUpdateTree);
     await runOracle({
       beforeUpdate: ({ consumerRoot, priorPointer, nextFixture }) => {
@@ -279,7 +279,7 @@ describe("consumer runtime update Red candidates", () => {
     });
   });
 
-  it("CANDIDATE-U-RTUPD-004: same release ID with changed artifact is denied", async () => {
+  it("U-RTUPD-004: same release ID with changed artifact is denied", async () => {
     let treeBefore = [] as string[];
     await runOracle({
       sameReleaseIdWithDifferentCompiledArtifact: true,
@@ -294,7 +294,7 @@ describe("consumer runtime update Red candidates", () => {
     });
   });
 
-  it.fails("CANDIDATE-U-RTUPD-005: worktree remains pinned to A and refuses B replacement", async () => {
+  it.fails("U-RTUPD-005 U-PACKRT-010: worktree remains pinned to A and refuses B replacement", async () => {
     let worktreeRoot = "";
     let worktreeBefore: string[] = [];
     await runOracle({
@@ -340,7 +340,7 @@ describe("consumer runtime update Red candidates", () => {
     });
   });
 
-  it.fails("CANDIDATE-U-RTUPD-006: an A-pinned linked worktree keeps running after main moves to B", async () => {
+  it.fails("U-RTUPD-006: an A-pinned linked worktree keeps running after main moves to B", async () => {
     let worktreeRoot = "";
     let worktreePointerBytes: Buffer = Buffer.alloc(0);
     let worktreeBundleBytes: Buffer = Buffer.alloc(0);
@@ -384,7 +384,7 @@ describe("consumer runtime update Red candidates", () => {
     });
   });
 
-  it.fails("CANDIDATE-U-RTUPD-007: operation ID and history bind B to A", async () => {
+  it.fails("U-RTUPD-007: operation ID and history bind B to A", async () => {
     await runOracle({
       afterUpdate: ({ priorPointer, nextPointer, nextFixture }) => {
         const priorManifest = JSON.parse(
@@ -420,7 +420,7 @@ describe("consumer runtime update Red candidates", () => {
     });
   });
 
-  it.fails("CANDIDATE-U-RTUPD-008: compatible updates retain launcher and seven-file bundle shape", async () => {
+  it.fails("U-RTUPD-008: compatible updates retain launcher and seven-file bundle shape", async () => {
     let priorLauncher: Buffer = Buffer.alloc(0);
     await runOracle({
       beforeUpdate: ({ consumerRoot }) => {
@@ -471,7 +471,7 @@ describe("consumer runtime update Red candidates", () => {
     removeFixtureTree: removeRuntimeUpdateFixtureTree,
   });
 
-  it.fails("CANDIDATE-U-RTUPD-011: failed bundle cleanup is indeterminate", async () => {
+  it.fails("U-RTUPD-011: failed bundle cleanup is indeterminate", async () => {
     let treeBefore = [] as string[];
     let priorBundleFiles: Array<readonly [string, Buffer]> = [];
     let priorMode = 0n;
