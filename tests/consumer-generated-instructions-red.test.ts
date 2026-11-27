@@ -162,9 +162,7 @@ describe("consumer generated instructions sender guidance (#1072)", () => {
     expect(bullets[0]).toContain("Claude lane に宛てない memory には付けない");
   });
 
-  it.each(
-    FIXTURES,
-  )("U-CGENI-008: %s Claude managed blocks exclude sender guidance", (fixture) => {
+  it.each(FIXTURES)("U-CGENI-008: %s Claude managed blocks exclude sender guidance", (fixture) => {
     for (const path of ["CLAUDE.md", join(".claude", "CLAUDE.md")]) {
       const content = standardFixtures.get(fixture.name)?.read(path);
       expect(content, `${fixture.name} ${path}`).toBeDefined();
@@ -191,9 +189,7 @@ describe("consumer generated instructions sender guidance (#1072)", () => {
     expect(managedBlock(SOURCE_AGENTS_TEMPLATE)).toBe(managedBlock(agents));
   });
 
-  it.each(
-    FIXTURES,
-  )("U-CGENI-010: %s generated hook config has no receiver hook", (fixture) => {
+  it.each(FIXTURES)("U-CGENI-010: %s generated hook config has no receiver hook", (fixture) => {
     const claudeSettings = JSON.parse(
       standardFixtures.get(fixture.name)?.read(join(".claude", "settings.json")) ?? "{}",
     ) as { hooks?: Record<string, unknown> };
@@ -214,9 +210,7 @@ describe("consumer generated instructions sender guidance (#1072)", () => {
     expect(text).not.toMatch(/inbox\s+watch/i);
   });
 
-  it.each(
-    FIXTURES,
-  )("U-CGENI-010: %s preserves the 930-second wake timeout", (fixture) => {
+  it.each(FIXTURES)("U-CGENI-010: %s preserves the 930-second wake timeout", (fixture) => {
     const settings = JSON.parse(
       standardFixtures.get(fixture.name)?.read(join(".claude", "settings.json")) ?? "{}",
     ) as { hooks?: { Stop?: Array<{ hooks?: Array<{ args?: string[]; timeout?: number }> }> } };
