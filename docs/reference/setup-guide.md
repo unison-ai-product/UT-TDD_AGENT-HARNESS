@@ -86,13 +86,52 @@ node .ut-tdd/bin/ut-tdd.mjs setup --dry-run --team --tl-team @org/tl --qa-team @
 新しい版は Pack の [Releases](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS-Pack/releases) で公開します。
 GitHub で Pack リポジトリを **Watch → Custom → Releases** に設定しておくと、公開したときに通知が届きます。
 
-> **いまの canary 版の制約** (どちらも修正予定です)
+> **いまの canary 版の制約と版上げの前提**
 > - release asset から入れた環境では、`ut-tdd status` の更新通知が動きません。`update: check skipped (harness package.json unreadable)` と表示されます ([#867](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/867))。新しい版は、上の Watch で知ってください。
-> - 一度入れた runtime を、新しい版の asset で上書きすることはできません。setup が `consumer_runtime_update_unsupported` で止まり、元の版のまま残ります ([#930](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/930))。新しい版へ移るには、下の「新しい clone へ入れ直す手順」で、新しい clone に入れてください。
+> - **canary.10 から、入れた runtime を main root でその場の新しい版へ上げられます** ([#930](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/930))。手順は下の「その場で新しい版へ上げる手順」にあります。
+> - **canary.9 以前の版から canary.10 へ上げるときは、確認が必要です。** launcher (`.ut-tdd/bin/ut-tdd.mjs`) は版上げで書き換えません。そのため、既存の launcher が新しい bundle と互換である必要があります。互換の条件は、bundle のファイル集合 (7 ファイル) と、launcher が検査する history の形式が変わらないことです。canary.8 と canary.9 の launcher は同一で、この条件を満たすことを確認しています。**canary.7 以前の launcher との互換は、公開前のリハーサル (L12 の AT-CANARY-UPGRADE-001) で確かめ、結果をこの節に書きます。** 確認が取れるまでは、canary.7 以前の環境では「新しい clone へ入れ直す手順」を使ってください。
+> - linked worktree は版上げの対象外です。main を上げても、worktree は旧版のまま動きます。linked worktree から `--consumer-runtime-release` を指定すると、setup は入口で拒否します (`worktree_entry_options_invalid`、[#2018](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/2018))。
 
-### 新しい clone へ入れ直す手順
+### その場で新しい版へ上げる手順 (canary.10 以降)
 
-入れた runtime は、その場で新しい版に更新できません (#930)。新しい版へ移る方法は、プロジェクトの新しい clone を作り、そこへ新しい版を入れ直すことです。
+導入済みの runtime を、main root の中で新しい版へ上げます。新しい clone は作りません。
+
+版上げを行うのは、**新しい版の asset に入っている setup** です。canary.10 以降の asset で流したときだけ版上げになります。canary.9 以前の asset の setup は、main root でも `consumer_runtime_update_unsupported` で止まります (#930 より前の動き)。
+
+1. 新しい版の asset 5 つだけを、**新しく作った空のフォルダ**に置きます (§1 の表と同じ 5 つです)。作業用のフォルダや、ほかのファイルがあるフォルダは指定しないでください。
+2. **main root** で実行します。linked worktree では実行しないでください。`<consumer anchor>` には、**新しい版の** release notes にある consumer anchor を入れます。
+
+   ```sh
+   node <フォルダ>/<版>.ut-tdd.mjs setup --solo --consumer-runtime-release <フォルダ> --expected-consumer-digest <consumer anchor>
+   ```
+
+   成功すると exit 0 で終わり、`.ut-tdd/runtime/activation/active.json` が新しい版を指します。同じ版を指定した場合は `already-installed` で終わり、何も変わりません。
+3. §2 の動作確認チェックリストを実行します (最低限、`node .ut-tdd/bin/ut-tdd.mjs doctor --setup-smoke` が `OK (checked=23, failed=0)` になること)。
+
+setup は、次の順で進みます。
+
+- asset を consumer anchor に対して検証します。
+- 新しい版の bundle を、旧版とは別の場所に作り、検証します。
+- 検証がすべて通った後にだけ、`active.json` を 1 回の rename で新しい版へ切り替えます。
+- `.ut-tdd/bin/ut-tdd.mjs` は書き換えません。
+
+`active.json` の切り替えより前に失敗した場合は、`active.json` は切り替わらず、旧版がそのまま動きます。切り替えの後に失敗した場合 (後始末や fsync の失敗など) と、旧版へ復元できなかった場合は、`consumer_runtime_indeterminate` で止まります。このとき `active.json` が新しい版を指したままのことがあり、どちらの版が動くかは保証しません。下の表のとおり、同じコマンドを繰り返さずに人に渡してください。
+
+**旧版の残し方**: 切り替え後も、旧版の bundle は消さずに残ります。残す世代数の上限と、古い版の掃除はまだ決めていません ([#481](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/481))。
+
+**戻し方**: 戻す手順は定めていません。切り替え後の起動確認と自動の rollback は [#481](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/481) で扱います。
+
+**エラーの意味**
+
+| 符号 | 意味と対処 |
+|---|---|
+| `consumer_runtime_asset_set_mismatch` | 指定したフォルダに 5 つの asset 以外のファイルがあります。5 つだけを入れた空のフォルダを使ってください (§5) |
+| `worktree_entry_options_invalid` | linked worktree で `--consumer-runtime-release` を指定しました。何も書き込まれていません。main root で実行してください |
+| `consumer_runtime_indeterminate` | 切り替えの後始末、または復元を確定できませんでした。同じコマンドを繰り返さず、標準エラー出力の全文を人に渡してください (§5.1) |
+
+### 新しい clone へ入れ直す手順 (canary.7 以前からの移行、または版上げが失敗したとき)
+
+その場での版上げを使えないときの代わりの手順です (canary.7 以前の版から移るとき、または「その場で新しい版へ上げる手順」が失敗したとき)。プロジェクトの新しい clone を作り、そこへ新しい版を入れ直します。
 
 1. プロジェクトの新しい clone を作ります。commit 済みのファイル (設計文書など) は、clone にそのまま付いてきます (origin から clone する場合は、元の clone の commit を先に push してください)。origin remote が必要な点は §0 と同じです。
 2. 新しい clone で、§1 と同じく `.ut-tdd/` を Git の対象から外します (`echo ".ut-tdd/" >> .git/info/exclude`。Windows PowerShell では §1 の `Add-Content` を使います)。
@@ -140,7 +179,9 @@ asset を置いたフォルダに、5 つ以外のファイルやフォルダが
 | setup が `consumer_runtime_anchor_mismatch` で止まる | `--expected-consumer-digest` の値が、その版の release notes の consumer anchor と違います。asset が途中で壊れていないかも確認してください。ファイルは 1 つも書かれていません |
 | setup が exit 2 で `identity_repository_unbound` と出る | origin remote がありません。runtime はすでに入っているので、最初の導入コマンドを流し直しても `already installed` で終わるだけです。`git remote add origin <url>` のあと、`node .ut-tdd/bin/ut-tdd.mjs setup --solo` を実行してください。案内が出たら、`ut-tdd.project.json` を commit します |
 | setup が `consumer_runtime_asset_set_mismatch` で止まる | asset を置いたフォルダに、5 つの asset 以外のファイルがあります。5 つだけを入れた空のフォルダを使ってください |
-| setup が `consumer_runtime_update_unsupported` で止まる | すでに別の版の runtime が入っています。§3 の制約を見てください |
+| setup が `consumer_runtime_update_unsupported` で止まる | linked worktree で、main と違う版の runtime が入っています。版上げは main root で行います (§3) |
+| setup が `worktree_entry_options_invalid` で止まる | linked worktree で `--consumer-runtime-release` を指定しました。何も書き込まれていません。main root で実行してください (§3) |
+| setup が `consumer_runtime_indeterminate` で止まる | 版上げの途中で、切り替えの後始末または復元を確定できませんでした。同じコマンドを繰り返さず、標準エラー出力の全文を人に渡してください (§3、§5.1) |
 | setup が止まっているように見える | 対話シェルで、上書きの確認 (`[y/N]`) を待っています。Enter (=N) を押せば、既存のファイルを残したまま進みます |
 | フラグなしの `doctor` が exit 1 | 異常ではありません (§2)。導入の判定は `doctor --setup-smoke` で行ってください |
 | Windows で hook が Node を見つけられない | §0 の PATH の注記を見てください |
@@ -190,7 +231,7 @@ setup や launcher の標準エラー出力に、`consumer_runtime_...` また�
 | `consumer_runtime_schema_invalid` | `<版>.consumer-runtime.json` が JSON として読めない、または schema が違う | ファイルが途中で切れていないか |
 | `consumer_runtime_release_binding_mismatch` | ファイル名の版と、runtime 文書の中の版が違う | 異なる版の asset を混ぜていないか |
 | `consumer_runtime_self_digest_mismatch` | 実行した `<版>.ut-tdd.mjs` が、runtime 文書の digest と一致しない。ファイル名が `<版>.ut-tdd.mjs` の形でない場合にも出る | 入口のファイル名を変えていないか。asset を取り直すかは人に確認する |
-| `consumer_runtime_update_unsupported` | すでに別の版の runtime が入っている (§3) | 新しい repository を使う。既存の runtime を消さない |
+| `consumer_runtime_update_unsupported` | linked worktree で、main と違う版の runtime が入っている (§3) | 版上げは main root で行う。既存の runtime を消さない |
 | `consumer_runtime_identity_mismatch`、`consumer_runtime_receipt_mismatch` | 入っている runtime が、この repository・この版の記録と合わない | `.ut-tdd/` を手で触らず、人に聞く |
 | `consumer_runtime_absent` | launcher が参照する activation pointer (`.ut-tdd/runtime/activation/active.json`) が無い | `.ut-tdd/runtime/` があるか。無ければ setup が終わっていないので、手順 3 に進む |
 | `consumer_runtime_resolution_denied`、`consumer_runtime_external_path` | runtime の場所の解決が拒否された (repository の外を指している、またはリンク等) | `.ut-tdd/` の中にシンボリックリンクや junction が無いか見る。消さずに人に報告する |
