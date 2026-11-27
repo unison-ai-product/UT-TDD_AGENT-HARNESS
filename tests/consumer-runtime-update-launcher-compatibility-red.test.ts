@@ -57,14 +57,19 @@ function addHistoryFormatV2(bytes: Uint8Array): Buffer {
     expect(count, `candidate compiled ESM ${name} marker count`).toBe(1);
     source = source.replace(before, after);
   };
+  const replaceUniquePattern = (name: string, pattern: RegExp, replacement: string) => {
+    const matches = source.match(pattern) ?? [];
+    expect(matches.length, `candidate compiled ESM ${name} marker count`).toBe(1);
+    source = source.replace(pattern, replacement);
+  };
   replaceUnique(
     "history writer",
     "operation_kind: operationKind,\n    identity_digest: identityDigest,",
     "operation_kind: operationKind,\n    history_format_version: 2,\n    identity_digest: identityDigest,",
   );
-  replaceUnique(
+  replaceUniquePattern(
     "history parser",
-    'Object.keys(parsed).sort().join("\\0") !== required.slice().sort().join("\\0")',
+    /Object\.keys\(parsed\)\.sort\(\)\.join\([^)]*\)\s*!==\s*required\.slice\(\)\.sort\(\)\.join\([^)]*\)/,
     'required.some((key) => !(key in parsed)) || Object.keys(parsed).some((key) => !required.includes(key) && key !== "history_format_version") || (Object.hasOwn(parsed, "history_format_version") && parsed.history_format_version !== 2)',
   );
   replaceUnique(
