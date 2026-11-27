@@ -87,7 +87,7 @@ describe("consumer runtime update Red candidates", () => {
           expect(runtimePointerIo.renameCalls).toHaveLength(1);
           expect(runtimePointerIo.directWrites).toEqual([]);
           expect(runtimePointerIo.pointerDeletes).toEqual([]);
-          expect(runtimePointerIo.observations).not.toHaveLength(0);
+          expect(runtimePointerIo.observations.length).toBeGreaterThanOrEqual(2);
           expect(new Set(runtimePointerIo.observations)).toEqual(
             new Set([priorPointer.bytes.toString("utf8")]),
           );
@@ -175,11 +175,20 @@ describe("consumer runtime update Red candidates", () => {
             runtimePointerIo.restorePointerMode = Number(statSync(priorPointer.path).mode & 0o777);
             runtimePointerIo.activePointerPath = priorPointer.path;
             runtimePointerIo.renameCalls = [];
+            runtimePointerIo.directWrites = [];
+            runtimePointerIo.pointerDeletes = [];
+            runtimePointerIo.observations = [];
           },
           expectUpdateError: (error, { priorPointer }) => {
             expect(String(error)).toContain("consumer_runtime_indeterminate");
             expect(runtimePointerIo.renameCalls).toHaveLength(1);
             expect(readFileSync(priorPointer.path)).toEqual(priorPointer.bytes);
+            expect(runtimePointerIo.directWrites).toEqual([]);
+            expect(runtimePointerIo.pointerDeletes).toEqual([]);
+            expect(runtimePointerIo.observations.length).toBeGreaterThanOrEqual(2);
+            expect(new Set(runtimePointerIo.observations)).toEqual(
+              new Set([priorPointer.bytes.toString("utf8")]),
+            );
           },
         });
       } finally {
@@ -201,11 +210,22 @@ describe("consumer runtime update Red candidates", () => {
           runtimePointerIo.pointerRenameCompleted = false;
           runtimePointerIo.activePointerPath = priorPointer.path;
           runtimePointerIo.renameCalls = [];
+          runtimePointerIo.directWrites = [];
+          runtimePointerIo.pointerDeletes = [];
+          runtimePointerIo.observations = [];
         },
         expectUpdateError: (error, { priorPointer }) => {
           expect(String(error)).toContain("consumer_runtime_indeterminate");
           expect(runtimePointerIo.renameCalls).toHaveLength(1);
+          expect(runtimePointerIo.failPointerFsync).toBe(false);
           expect(readFileSync(priorPointer.path)).not.toEqual(priorPointer.bytes);
+          expect(runtimePointerIo.directWrites).toEqual([]);
+          expect(runtimePointerIo.pointerDeletes).toEqual([]);
+          const [rename] = runtimePointerIo.renameCalls;
+          if (!rename) throw new Error("expected one active pointer rename");
+          expect(new Set(runtimePointerIo.observations)).toEqual(
+            new Set([priorPointer.bytes.toString("utf8"), rename.after]),
+          );
           const published = JSON.parse(readFileSync(priorPointer.path, "utf8")) as {
             bundle_path: string;
           };
@@ -250,6 +270,7 @@ describe("consumer runtime update Red candidates", () => {
         },
         updateFault: (point) => {
           if (point === barrier) {
+            readFileSync(runtimePointerIo.activePointerPath);
             injected = true;
             throw new Error(message);
           }
@@ -257,13 +278,13 @@ describe("consumer runtime update Red candidates", () => {
         expectUpdateError: (error, { consumerRoot, priorPointer }) => {
           expect(injected).toBe(true);
           expect(String(error)).toContain(message);
+          rollback.assert(consumerRoot, priorPointer);
           expect(runtimePointerIo.directWrites).toEqual([]);
           expect(runtimePointerIo.pointerDeletes).toEqual([]);
-          expect(runtimePointerIo.observations).not.toHaveLength(0);
+          expect(runtimePointerIo.observations.length).toBeGreaterThanOrEqual(2);
           expect(new Set(runtimePointerIo.observations)).toEqual(
             new Set([priorPointer.bytes.toString("utf8")]),
           );
-          rollback.assert(consumerRoot, priorPointer);
         },
       });
     } finally {

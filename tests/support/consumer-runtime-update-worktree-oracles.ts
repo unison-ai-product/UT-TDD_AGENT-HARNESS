@@ -43,8 +43,8 @@ export function registerConsumerRuntimeUpdateWorktreeOracles(input: {
       },
       afterUpdate: async ({ consumerRoot, nextFixture, priorPointer }) => {
         const compiledAsset = join(
-          fixture.releaseDir,
-          setupApi.releaseArtifactFileNames(fixture.tag).compiledEsm,
+          nextFixture.releaseDir,
+          setupApi.releaseArtifactFileNames(nextFixture.tag).compiledEsm,
         );
         for (const cwd of [worktreeRoot, absentWorktreeRoot]) {
           const before = snapshotRuntimeUpdateTree(cwd);
@@ -54,12 +54,10 @@ export function registerConsumerRuntimeUpdateWorktreeOracles(input: {
               compiledAsset,
               "setup",
               "--solo",
-              "--worktree",
-              cwd,
               "--consumer-runtime-release",
-              fixture.releaseDir,
+              nextFixture.releaseDir,
               "--expected-consumer-digest",
-              fixture.anchor,
+              nextFixture.anchor,
             ],
             {
               cwd,
@@ -68,11 +66,11 @@ export function registerConsumerRuntimeUpdateWorktreeOracles(input: {
               env: { ...process.env, CI: "true" },
             },
           );
-          expect(launch.status, `${launch.stdout}\n${launch.stderr}`).not.toBe(0);
-          expect(launch.stderr).toContain("worktree_entry_options_invalid");
-          expect(snapshotRuntimeUpdateTree(cwd)).toEqual(before);
+          expect.soft(launch.status, `${launch.stdout}\n${launch.stderr}`).toBe(1);
+          expect.soft(launch.stderr).toContain("worktree_entry_options_invalid");
+          expect.soft(snapshotRuntimeUpdateTree(cwd)).toEqual(before);
           if (cwd === absentWorktreeRoot)
-            expect(existsSync(join(cwd, ".ut-tdd", "runtime"))).toBe(false);
+            expect.soft(existsSync(join(cwd, ".ut-tdd", "runtime"))).toBe(false);
         }
         expect(snapshotRuntimeUpdateTree(worktreeRoot)).toEqual(worktreeBefore);
         expect(snapshotRuntimeUpdateTree(absentWorktreeRoot)).toEqual(absentWorktreeBefore);
@@ -163,7 +161,13 @@ export function registerConsumerRuntimeUpdateWorktreeOracles(input: {
       },
       afterUpdate: ({ nextPointer }) => {
         const pointer = runtimeUpdateActivePointer(worktreeRoot);
+        const pointerValue = JSON.parse(pointer.bytes.toString("utf8")) as {
+          bundle_path: string;
+          entry_path: string;
+        };
         expect(pointer.bytes).toEqual(worktreePointerBytes);
+        expect(pointerValue.bundle_path).toBe(pointer.bundlePath);
+        expect(pointerValue.entry_path).toBe(join(pointer.bundlePath, "ut-tdd.mjs"));
         expect(readFileSync(join(pointer.bundlePath, "ut-tdd.mjs"))).toEqual(worktreeBundleBytes);
         expect(worktreeBundleBytes).toEqual(fixture.compiledBytes);
         expect(snapshotRuntimeUpdateTree(worktreeRoot)).toEqual(worktreeBefore);
@@ -182,6 +186,8 @@ export function registerConsumerRuntimeUpdateWorktreeOracles(input: {
         expect(launch.status, launch.stderr).toBe(0);
         const status = JSON.parse(launch.stdout) as { mode?: unknown };
         expect(typeof status.mode).toBe("string");
+        // status JSON exposes mode, not release identity; pointer->A bundle binding above
+        // and this real launcher invocation together prove the pinned A runtime still runs.
         const manifest = JSON.parse(
           readFileSync(join(pointer.bundlePath, "bundle-manifest.json"), "utf8"),
         ) as { identity: { release_id: string; compiled_esm_digest: string } };

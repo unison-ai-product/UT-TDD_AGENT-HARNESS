@@ -20,9 +20,10 @@ export const runtimePointerIo = {
 export function createRuntimeUpdateFsSpy(actual: typeof import("node:fs")) {
   const normalized = (path: unknown) => String(path).replaceAll("\\", "/");
   const observe = () => {
-    if (runtimePointerIo.enabled && actual.existsSync(runtimePointerIo.activePointerPath))
+    const path = runtimePointerIo.activePointerPath;
+    if (runtimePointerIo.enabled && path)
       runtimePointerIo.observations.push(
-        actual.readFileSync(runtimePointerIo.activePointerPath, "utf8"),
+        actual.existsSync(path) ? actual.readFileSync(path, "utf8") : "",
       );
   };
   const tracksPointerOrParent = (path: unknown) => {
@@ -32,6 +33,15 @@ export function createRuntimeUpdateFsSpy(actual: typeof import("node:fs")) {
   };
   return {
     ...actual,
+    readFileSync: (...args: Parameters<typeof actual.readFileSync>) => {
+      const result = actual.readFileSync(...args);
+      if (
+        runtimePointerIo.enabled &&
+        normalized(args[0]) === normalized(runtimePointerIo.activePointerPath)
+      )
+        runtimePointerIo.observations.push(result.toString());
+      return result;
+    },
     writeFileSync: (...args: Parameters<typeof actual.writeFileSync>) => {
       const target = normalized(args[0]);
       if (runtimePointerIo.enabled) {
@@ -64,7 +74,13 @@ export function createRuntimeUpdateFsSpy(actual: typeof import("node:fs")) {
       const writes =
         typeof flags === "string"
           ? /[wax+]/.test(flags)
-          : (Number(flags) & (actual.constants.O_WRONLY | actual.constants.O_RDWR)) !== 0;
+          : (Number(flags) &
+              (actual.constants.O_WRONLY |
+                actual.constants.O_RDWR |
+                actual.constants.O_CREAT |
+                actual.constants.O_TRUNC |
+                actual.constants.O_APPEND)) !==
+            0;
       if (
         runtimePointerIo.enabled &&
         writes &&
@@ -108,6 +124,10 @@ export function createRuntimeUpdateFsSpy(actual: typeof import("node:fs")) {
     renameSync: (...args: Parameters<typeof actual.renameSync>) => {
       const source = normalized(args[0]);
       const destination = normalized(args[1]);
+      if (runtimePointerIo.enabled && tracksPointerOrParent(args[0])) {
+        runtimePointerIo.pointerDeletes.push(source);
+        observe();
+      }
       if (
         runtimePointerIo.enabled &&
         destination === normalized(runtimePointerIo.activePointerPath)
