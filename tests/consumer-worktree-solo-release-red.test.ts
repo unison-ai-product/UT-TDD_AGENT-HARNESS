@@ -1,4 +1,12 @@
-import { existsSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -15,14 +23,14 @@ import { heavyAfterAll, heavyBeforeAll } from "./support/hook-bounds.ts";
 
 let fixture: Awaited<ReturnType<typeof createConsumerWorktreeRuntimeFixture>>;
 
-describe("linked worktree solo Release entry Red (#2018)", () => {
+describe("linked worktree solo Release entry (#2018)", () => {
   heavyBeforeAll(["git", 300_000], async () => {
     fixture = await createConsumerWorktreeRuntimeFixture(["solo-no-main-control"]);
   });
 
-  heavyAfterAll("teardown", () => cleanupConsumerWorktreeRuntimeFixture());
+  heavyAfterAll(["teardown", 120_000], () => cleanupConsumerWorktreeRuntimeFixture());
 
-  it.fails("U-CWTRT-016: refuses solo Release entry when main has no runtime", () => {
+  it("U-CWTRT-016: refuses solo Release entry when main has no runtime", () => {
     const mainRuntime = join(fixture.main, ".ut-tdd");
     const savedMainRuntime = join(fixture.main, ".ut-tdd-candidate-016");
     expect(existsSync(savedMainRuntime)).toBe(false);
@@ -48,7 +56,7 @@ describe("linked worktree solo Release entry Red (#2018)", () => {
       expect(`${result.stdout}\n${result.stderr}`).toContain("worktree_entry_options_invalid");
       expect(result.status).toBe(1);
       expect(`${result.stdout}\n${result.stderr}`).toContain("setup --worktree");
-      expect(`${result.stdout}\n${result.stderr}`).toContain(worktree);
+      expect(`${result.stdout}\n${result.stderr}`).toContain(realpathSync.native(worktree));
       expect(snapshotTree(fixture.main)).toBe(mainBefore);
       expect(snapshotTree(worktree)).toBe(worktreeBefore);
       expect(snapshotTree(dirname(fixture.cache))).toBe(cacheBefore);
@@ -78,7 +86,7 @@ describe("linked worktree solo Release entry Red (#2018)", () => {
     }
   });
 
-  it.fails("U-CWTRT-017: refuses solo Release entry when main has the same version", () => {
+  it("U-CWTRT-017: refuses solo Release entry when main has the same version", () => {
     const worktree = fixture.linked["010-prefix"];
     const mainBefore = snapshotTree(fixture.main);
     const worktreeBefore = snapshotTree(worktree);
@@ -99,7 +107,7 @@ describe("linked worktree solo Release entry Red (#2018)", () => {
     expect(`${result.stdout}\n${result.stderr}`).toContain("worktree_entry_options_invalid");
     expect(result.status).toBe(1);
     expect(`${result.stdout}\n${result.stderr}`).toContain("setup --worktree");
-    expect(`${result.stdout}\n${result.stderr}`).toContain(worktree);
+    expect(`${result.stdout}\n${result.stderr}`).toContain(realpathSync.native(worktree));
     expect(snapshotTree(fixture.main)).toBe(mainBefore);
     expect(snapshotTree(worktree)).toBe(worktreeBefore);
     expect(snapshotTree(dirname(fixture.cache))).toBe(cacheBefore);
@@ -107,7 +115,7 @@ describe("linked worktree solo Release entry Red (#2018)", () => {
     expect(existsSync(join(worktree, ".ut-tdd"))).toBe(false);
   });
 
-  it.fails("U-CWTRT-018: refuses solo Release entry when main has a different version", () => {
+  it("U-CWTRT-018: refuses solo Release entry when main has a different version", () => {
     const worktree = fixture.linked["010-length"];
     const mainRuntime = join(fixture.main, ".ut-tdd");
     const mainBefore = snapshotTree(fixture.main);
@@ -159,7 +167,7 @@ require("node:module").syncBuiltinESMExports();
       expect(`${result.stdout}\n${result.stderr}`).toContain("worktree_entry_options_invalid");
       expect(result.status).toBe(1);
       expect(`${result.stdout}\n${result.stderr}`).toContain("setup --worktree");
-      expect(`${result.stdout}\n${result.stderr}`).toContain(worktree);
+      expect(`${result.stdout}\n${result.stderr}`).toContain(realpathSync.native(worktree));
       expect(snapshotTree(fixture.main)).toBe(mainBefore);
       expect(readFileSync(join(mainRuntime, "runtime", "activation", "active.json"))).toEqual(
         mainPointerBefore,
@@ -177,7 +185,12 @@ require("node:module").syncBuiltinESMExports();
             .map((line) => JSON.parse(line) as { args: string[]; cwd?: string })
         : [];
       const topologyFlags = calls
-        .filter(({ args, cwd }) => (args[0] === "-C" ? args[1] : cwd) === worktree)
+        .filter(({ args, cwd }) => {
+          const gitRoot = args[0] === "-C" ? args[1] : cwd;
+          return (
+            gitRoot !== undefined && realpathSync.native(gitRoot) === realpathSync.native(worktree)
+          );
+        })
         .flatMap(({ args }) =>
           args.filter((arg) => arg === "--git-dir" || arg === "--git-common-dir"),
         );
