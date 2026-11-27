@@ -1,4 +1,12 @@
-import { existsSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -48,7 +56,7 @@ describe("linked worktree solo Release entry (#2018)", () => {
       expect(`${result.stdout}\n${result.stderr}`).toContain("worktree_entry_options_invalid");
       expect(result.status).toBe(1);
       expect(`${result.stdout}\n${result.stderr}`).toContain("setup --worktree");
-      expect(`${result.stdout}\n${result.stderr}`).toContain(worktree);
+      expect(`${result.stdout}\n${result.stderr}`).toContain(realpathSync.native(worktree));
       expect(snapshotTree(fixture.main)).toBe(mainBefore);
       expect(snapshotTree(worktree)).toBe(worktreeBefore);
       expect(snapshotTree(dirname(fixture.cache))).toBe(cacheBefore);
@@ -99,7 +107,7 @@ describe("linked worktree solo Release entry (#2018)", () => {
     expect(`${result.stdout}\n${result.stderr}`).toContain("worktree_entry_options_invalid");
     expect(result.status).toBe(1);
     expect(`${result.stdout}\n${result.stderr}`).toContain("setup --worktree");
-    expect(`${result.stdout}\n${result.stderr}`).toContain(worktree);
+    expect(`${result.stdout}\n${result.stderr}`).toContain(realpathSync.native(worktree));
     expect(snapshotTree(fixture.main)).toBe(mainBefore);
     expect(snapshotTree(worktree)).toBe(worktreeBefore);
     expect(snapshotTree(dirname(fixture.cache))).toBe(cacheBefore);
@@ -159,7 +167,7 @@ require("node:module").syncBuiltinESMExports();
       expect(`${result.stdout}\n${result.stderr}`).toContain("worktree_entry_options_invalid");
       expect(result.status).toBe(1);
       expect(`${result.stdout}\n${result.stderr}`).toContain("setup --worktree");
-      expect(`${result.stdout}\n${result.stderr}`).toContain(worktree);
+      expect(`${result.stdout}\n${result.stderr}`).toContain(realpathSync.native(worktree));
       expect(snapshotTree(fixture.main)).toBe(mainBefore);
       expect(readFileSync(join(mainRuntime, "runtime", "activation", "active.json"))).toEqual(
         mainPointerBefore,
@@ -177,7 +185,12 @@ require("node:module").syncBuiltinESMExports();
             .map((line) => JSON.parse(line) as { args: string[]; cwd?: string })
         : [];
       const topologyFlags = calls
-        .filter(({ args, cwd }) => (args[0] === "-C" ? args[1] : cwd) === worktree)
+        .filter(({ args, cwd }) => {
+          const gitRoot = args[0] === "-C" ? args[1] : cwd;
+          return (
+            gitRoot !== undefined && realpathSync.native(gitRoot) === realpathSync.native(worktree)
+          );
+        })
         .flatMap(({ args }) =>
           args.filter((arg) => arg === "--git-dir" || arg === "--git-common-dir"),
         );
