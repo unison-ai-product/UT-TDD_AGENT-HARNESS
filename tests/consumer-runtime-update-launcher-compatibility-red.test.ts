@@ -186,7 +186,7 @@ describe("consumer runtime launcher compatibility Red", () => {
     });
   });
 
-  it("CANDIDATE-U-RTUPD-008: incompatible B history is refused before pointer switch", async () => {
+  it("U-RTUPD-008: incompatible B history is refused before pointer switch", async () => {
     let treeBefore: string[] = [];
     await runOracle({
       updateCompiledBytes: addHistoryFormatV2,
