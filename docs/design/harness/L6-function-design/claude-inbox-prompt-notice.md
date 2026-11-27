@@ -72,7 +72,7 @@ host timeout は5秒とし、本契約と L7 の oracle に固定する。既存
 - 新しい `UserPromptSubmit` hook は source Claude 設定、Pack が生成する Claude 設定、および adapter mirror の対応面に配線する。source `.claude/settings.json` を配線するときは `.claude/CLAUDE.md` の hook 一覧も同じ Green で更新する。対応する oracle は `U-RDRIFT-007` である。
 - Codex に `UserPromptSubmit` 相当 hook を追加しない。既存の Codex hook 群、`PostToolUse`、watcher、Stop の wake window / timeout、配布済み sender の操作は既存契約が扱う。sender 側の追加は §2.1 の通知 metadata の投影に限る。
 - 構造ファイルが既に存在する導入先では、setup は既存設定を無断で上書きしない。更新済み設定には通知 hook が配るが、旧設定が本機能なしで動作することを維持する。missing hook を理由に既存導入先を hard-fail させない。
-- `.claude/settings.json` への追加は既存 `CANDIDATE-U-CGENI-010` の「生成物に `UserPromptSubmit` hook がない」という旧 oracle と意図的に衝突する。#1970 の L6/L7 で互換境界を正式改訂し、Green で設定配線と同じ変更として該当 assertion を更新する。凍結まで旧 assertion を維持する。
+- `.claude/settings.json` への追加は既存 `U-CGENI-010` の「生成物に `UserPromptSubmit` hook がない」という旧 oracle と意図的に衝突する。#1970 の L6/L7 で互換境界を正式改訂し、Green で設定配線と同じ変更として該当 assertion を更新する。凍結まで旧 assertion を維持する。
 
 ## 6. 対象外
 
