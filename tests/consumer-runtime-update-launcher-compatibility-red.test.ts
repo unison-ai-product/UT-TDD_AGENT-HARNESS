@@ -2,8 +2,8 @@ import { spawnSync } from "node:child_process";
 import { readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, it } from "vitest";
-import * as setupApi from "../src/setup/index.ts";
 import { verifyConsumerRuntimeReleaseAssets } from "../src/setup/consumer-runtime-release.ts";
+import * as setupApi from "../src/setup/index.ts";
 import {
   copyRuntimeUpdateInstallerCase,
   createRuntimeUpdateFixture,
@@ -13,7 +13,7 @@ import {
   snapshotRuntimeUpdateTree,
 } from "./support/consumer-runtime-update-fixture.ts";
 import { createRuntimeUpdateOracleRunner } from "./support/consumer-runtime-update-red-helper.ts";
-import { heavyAfterAll, heavyBeforeAll, describe } from "./support/hook-bounds.ts";
+import { describe, heavyAfterAll, heavyBeforeAll } from "./support/hook-bounds.ts";
 
 let fixture: RuntimeFixture;
 
@@ -63,7 +63,7 @@ function addHistoryFormatV2(bytes: Uint8Array): Buffer {
     "operation_kind: operationKind,\n    history_format_version: 2,\n    identity_digest: identityDigest,",
   );
   const parserPattern =
-    /Object\.keys\(parsed\)\.sort\(\)\.join\([^)]*\)\s*!==\s*(required\d*)\.slice\(\)\.sort\(\)\.join\([^)]*\)/;
+    /Object\.keys\(parsed\)\.sort\(\)\.join\([^)]*\)\s*!==\s*(required\d*)\.slice\(\)\.sort\(\)\.join\([^)]*\)/g;
   const parserMatches = [...source.matchAll(parserPattern)];
   expect(parserMatches.length, "candidate compiled ESM history parser marker count").toBe(1);
   const requiredVariable = parserMatches[0]?.[1];
@@ -102,7 +102,9 @@ async function proveHistoryFormatV2Candidate(input: {
   const probe = copyRuntimeUpdateInstallerCase(fixture);
   try {
     const freshInstall = invokeReleaseSetup(input.nextFixture, probe.consumerRoot);
-    expect(`${freshInstall.stdout}\n${freshInstall.stderr}`).toContain("identity_repository_unbound");
+    expect(`${freshInstall.stdout}\n${freshInstall.stderr}`).toContain(
+      "identity_repository_unbound",
+    );
     expect(freshInstall.status).toBe(2);
     const bundle = runtimeUpdateActivePointer(probe.consumerRoot);
     const history = readFileSync(join(bundle.bundlePath, "history.jsonl"), "utf8")
