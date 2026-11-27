@@ -150,7 +150,7 @@ afterAll(() => {
 describe("consumer generated instructions sender guidance (#1072)", () => {
   it.each(
     FIXTURES,
-  )("CANDIDATE-U-CGENI-008: %s AGENTS managed block has one sender instruction", (fixture) => {
+  )("U-CGENI-008: %s AGENTS managed block has one sender instruction", (fixture) => {
     const agents = standardFixtures.get(fixture.name)?.read("AGENTS.md");
     expect(agents, `${fixture.name} AGENTS.md`).toBeDefined();
     const bullets = managedBlock(agents ?? "")
@@ -164,7 +164,7 @@ describe("consumer generated instructions sender guidance (#1072)", () => {
 
   it.each(
     FIXTURES,
-  )("CANDIDATE-U-CGENI-008: %s Claude managed blocks exclude sender guidance", (fixture) => {
+  )("U-CGENI-008: %s Claude managed blocks exclude sender guidance", (fixture) => {
     for (const path of ["CLAUDE.md", join(".claude", "CLAUDE.md")]) {
       const content = standardFixtures.get(fixture.name)?.read(path);
       expect(content, `${fixture.name} ${path}`).toBeDefined();
@@ -174,7 +174,7 @@ describe("consumer generated instructions sender guidance (#1072)", () => {
 
   it.each(
     FIXTURES,
-  )("CANDIDATE-U-CGENI-009: %s sender command follows source prefix substitution", (fixture) => {
+  )("U-CGENI-009: %s sender command follows source prefix substitution", (fixture) => {
     const agents = substitutedFixtures.get(fixture.name)?.read("AGENTS.md") ?? "";
     const senderLine = managedBlock(agents)
       .split(/\r?\n/)
@@ -186,14 +186,14 @@ describe("consumer generated instructions sender guidance (#1072)", () => {
 
   it.each(
     FIXTURES,
-  )("CANDIDATE-U-CGENI-009: %s adapter template managed block matches setup output", (fixture) => {
+  )("U-CGENI-009: %s adapter template managed block matches setup output", (fixture) => {
     const agents = standardFixtures.get(fixture.name)?.read("AGENTS.md") ?? "";
     expect(managedBlock(SOURCE_AGENTS_TEMPLATE)).toBe(managedBlock(agents));
   });
 
   it.each(
     FIXTURES,
-  )("CANDIDATE-U-CGENI-010: %s generated hook config has no receiver hook", (fixture) => {
+  )("U-CGENI-010: %s generated hook config has no receiver hook", (fixture) => {
     const claudeSettings = JSON.parse(
       standardFixtures.get(fixture.name)?.read(join(".claude", "settings.json")) ?? "{}",
     ) as { hooks?: Record<string, unknown> };
@@ -206,7 +206,7 @@ describe("consumer generated instructions sender guidance (#1072)", () => {
 
   it.each(
     FIXTURES,
-  )("CANDIDATE-U-CGENI-010: %s generated text and JSON have no receiver-side guidance", (fixture) => {
+  )("U-CGENI-010: %s generated text and JSON have no receiver-side guidance", (fixture) => {
     const generated = standardFixtures.get(fixture.name);
     expect(generated).toBeDefined();
     const text = generatedText(generated?.files ?? new Map(), generated?.repoRoot ?? "");
@@ -216,7 +216,7 @@ describe("consumer generated instructions sender guidance (#1072)", () => {
 
   it.each(
     FIXTURES,
-  )("CANDIDATE-U-CGENI-010: %s preserves the 930-second wake timeout", (fixture) => {
+  )("U-CGENI-010: %s preserves the 930-second wake timeout", (fixture) => {
     const settings = JSON.parse(
       standardFixtures.get(fixture.name)?.read(join(".claude", "settings.json")) ?? "{}",
     ) as { hooks?: { Stop?: Array<{ hooks?: Array<{ args?: string[]; timeout?: number }> }> } };
