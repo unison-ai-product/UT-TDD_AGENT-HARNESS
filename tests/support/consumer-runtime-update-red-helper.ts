@@ -59,6 +59,11 @@ export async function runConsumerRuntimeUpdateRetentionOracle(input: {
   readonly removeFixtureTree: (root: string) => void;
   readonly assertIdempotentReplay?: boolean;
   readonly snapshotTree?: (root: string) => string[];
+  readonly updateCompiledBytes?: (bytes: Uint8Array) => Uint8Array;
+  readonly installUpdate?: (
+    fixture: RuntimeFixture,
+    options: { readonly consumerRoot: string; readonly fault?: (barrier: string) => void },
+  ) => Promise<{ readonly status: "installed" | "already-installed" }>;
   readonly beforeUpdate?: (input: {
     readonly consumerRoot: string;
     readonly priorPointer: ReturnType<typeof runtimeUpdateActivePointer>;
@@ -94,10 +99,9 @@ export async function runConsumerRuntimeUpdateRetentionOracle(input: {
     const nextTag = "v0.2.0-canary.3";
     const nextRelease = join(testCase.root, "next-release");
     mkdirSync(nextRelease);
-    const nextCompiledBytes = Buffer.concat([
-      input.fixture.compiledBytes,
-      Buffer.from("\n// update\n"),
-    ]);
+    const nextCompiledBytes = input.updateCompiledBytes
+      ? Buffer.from(input.updateCompiledBytes(input.fixture.compiledBytes))
+      : Buffer.concat([input.fixture.compiledBytes, Buffer.from("\n// update\n")]);
     const nextRevision = input.sameReleaseIdWithDifferentCompiledArtifact
       ? input.fixture.runtime.release.source_revision
       : "f".repeat(40);
@@ -194,7 +198,7 @@ export async function runConsumerRuntimeUpdateRetentionOracle(input: {
     };
     await input.beforeUpdate?.({ consumerRoot: testCase.consumerRoot, priorPointer, nextFixture });
     try {
-      const result = await input.installRuntime(nextFixture, {
+      const result = await (input.installUpdate ?? input.installRuntime)(nextFixture, {
         consumerRoot: testCase.consumerRoot,
         ...(input.updateFault ? { fault: input.updateFault } : {}),
       });
