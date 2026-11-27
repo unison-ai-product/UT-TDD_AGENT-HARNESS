@@ -10,7 +10,7 @@ next_pair_freeze: L7
 issue: 1970
 ---
 
-> **L6 contract marker**: Claude Code の `UserPromptSubmit` で、現在の会話セッション宛ての未読返事があるとき、入力を止めずに追加文脈を一度通知する契約である。契約と対の oracle は `docs/test-design/harness/L7-claude-inbox-prompt-notice-test-design.md` が定める。本書は起草中で、#1970 の宛先別通知状態と重複抑止の詳細判断が未決のため凍結しない。
+> **L6 contract marker**: Claude Code の `UserPromptSubmit` で、現在の会話セッション宛ての未読返事があるとき、入力を止めずに追加文脈を一度通知する契約である。契約と対の oracle は `docs/test-design/harness/L7-claude-inbox-prompt-notice-test-design.md` が定める。通知専用状態を用いる control の判断を反映した。未読の観測点と Windows host 証跡の確定後に凍結する。
 
 # Claude inbox の prompt 通知 — 関数設計 (issue #1970)
 
@@ -18,34 +18,30 @@ issue: 1970
 
 hybrid の相手 runtime が共有 inbox に返事を書いても、作業中の Claude 会話がその返事に気づかず待ち続けることがある。既存の `Stop` による `claude-memory-wake` は VS Code の Claude を対象にした別経路であり、現在の `UserPromptSubmit` には受信通知がない。各ユーザー入力の開始時に、現セッション宛ての未読返事の有無だけを短く知らせる。
 
-本契約は通知だけを対象とする。返事本文を注入・表示せず、配送、claim、ACK、作業再開の判断は既存の所有境界に残す。
+本契約は対話中の気づきを対象とする。Stop 側の最大15分の待機は対象外である。対象は VS Code の Claude とし、配送、claim、ACK、作業再開の判断は既存の経路が所有する。
 
 ## 2. 判断と前提
 
-### 2.1 #1970 の判断依頼
+### 2.1 採択した通知方式
 
-Codex lane は [#1970 の判断依頼](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/1970#issuecomment-7190275345) で次を提示した。
+通知専用の宛先別 metadata と通知済み記録を採用する。[control の設計判断](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/2016#issuecomment-7207152183)
 
-| 案 | 得るもの | 失うもの |
-|---|---|---|
-| A (推奨): 通知専用の宛先別メタデータと同一セッションの重複抑止記録を認める | 既存 inbox 本文・claim・terminal を開かず、現セッションへの通知を重複抑止できる | 通知専用ローカル状態を許す必要がある |
-| B: あらゆる状態への書き込みを禁じる厳密 stat-only | hook が完全 read-only になる | 現行保存形式では宛先と通知済み状態を区別できず、「一度だけ」を満たせない。凍結できない |
+- 宛先キーは検証済み project namespace と、Claude の正規 session ID の組とする。同じ project 内の別 session、別 project の同じ session ID は別の宛先とする。
+- `publishClaudeInboxEntry` が、宛先を確定して新規 entry を公開したときに、追加の通知 metadata を作る。既存 entry の同じ publish の再試行で通知世代を増やさない。旧い sender が書いた metadata の無い返事は prompt では無通知となり、既存の配送経路で扱う。
+- 同じ宛先では前回通知時より新しい世代を一度だけ通知する。次の入力までに複数届けば固定の一行にまとめる。宛先の通知専用状態に `wx` で排他作成を一度試し、同時入力で負けた側は無通知とする。
+- 同じ session ID の resume は通知済み世代を保持する。既読化・clear は新しい世代を作らず、既に通知した世代を再度通知しない。clear の操作は現在の宛先に限る。既読や clear の観測点と障害時の扱いは §8 で確定する。
 
-このドラフトは A を推奨案として扱い、通知専用状態への読書きを契約境界に含める。メタデータの形式、配置、dedup key / 単位、同一 session での新着・clear・resume 時の再通知規則は決定しない。これらは #1970 の判断を受けて本書と L7 を同時に改訂する。
+### 2.2 宛先を確定する境界
 
-### 2.2 既存境界
-
-- 対象は信頼された project workspace で起きた Claude Code の現在の `UserPromptSubmit` と、非空の現在 session ID である。現在 hook event の検証、trusted workspace / project scope、session ID の検証は既存受信・wake 経路の境界に合わせる。
-- `isClaudeMemoryWakeTarget` が持つ VS Code 限定条件と disable environment variable の境界を保つ。prompt 通知を理由に通常の terminal Claude を wake 対象へ広げたり、disable を迂回したりしない。
-- 既存 inbox entry の JSON 本文を読まず、entry ID / raw ID を出力せず、本文や本文由来の情報を追加文脈へ含めない。`.claim`、terminal、ACK、receipt も読まず、作成・更新・削除しない。
-- 未読判定は通知専用の宛先別 metadata に限る。stat が使えない、metadata が無い・不正・未対応、event / session / workspace 入力が不正、または対象が空である場合は通知しない。欠損や不正から宛先・未読・通知成功を推測しない。
-- 通知 metadata は通知と同一セッションの重複抑止にだけ使う。delivery / ACK の正本や認可情報として使わない。保存形式、保存先、原子的更新方式、寿命、session と unread state の結合方法は本書では定めない。
-- `requireProjectMemoryRoot` は Git を起動し得る。prompt ごとの外部 Git / GitHub / API 起動を新設せず、これを無条件に呼ぶことを実装前提にしない。既存の trusted workspace / root 検証の意味を保ち、hot path は通知 metadata の確認に限定する。
-- 共通 inbox の保存先は、worktree の場所だけでなく、コミット済みの project ID と Git 共通ディレクトリで決まる。launcher の `UT_TDD_REPO_ROOT` は worktree の場所を示す。起動元から通知用の宛先を確定できない場合は無通知とする。通知側で事前に検証した宛先を参照する案は §8 で扱う。[project memory の保存先](../../../../src/memory/project-memory-root.ts)
+- `isClaudeMemoryWakeTarget` の VS Code 起動と無効化設定の条件を受け継ぐ。`hook_event_name` と `session_id` が対象 event と現在の正規 session を示す場合に通知を評価する。
+- `SessionStart` が既存の project 検証で namespace と共有 runtime 保存先を確定し、現在の session ID と結び付けた宛先記録を worktree 配下の固定位置に保存する。resume 時は同じ session ID の記録を検証して更新する。
+- `UserPromptSubmit` は stdin の `session_id` から worktree の宛先記録を導出し、その適用範囲を照合する。記録欠落・不正、session / workspace 不一致、通知対象の stat や通知済み記録の更新失敗では入力を通し無通知とする。
+- `UT_TDD_REPO_ROOT` は worktree の場所を示す。共有 inbox の宛先はコミット済み project ID と Git 共通ディレクトリの検証結果を参照する。prompt ごとの外部 Git / GitHub / API、DB、受信箱の走査は範囲外とする。[project memory の保存先](../../../../src/memory/project-memory-root.ts)
+- 受信箱の entry JSON、claim、terminal、ACK、receipt の内容は開かず、配送の状態を書き換えない。通知 metadata と通知済み記録は通知にのみ使う。
 
 ## 3. 通知の契約
 
-`UserPromptSubmit` が現在 session 宛ての未読返事を確認し、該当通知状態がまだ通知済みでないと判定したときだけ、Claude Code の追加文脈として次の固定 1 行を返す。
+未読の観測点を採る場合、`UserPromptSubmit` は現 session 宛ての通知可能な未読の新着に対し、Claude Code の追加文脈へ次の固定1行を返す。文言は §8 の判断と合わせて凍結する。
 
 > このセッション宛てに未読の返事があります。
 
@@ -59,20 +55,20 @@ Codex lane は [#1970 の判断依頼](https://github.com/unison-ai-product/UT-T
 
 ## 4. 時間予算と計測
 
-host timeout の提案値は 5 秒とし、`docs/design/harness/L6-function-design/hook-timeout-budget.md` の `hookTimeoutSeconds` 正本へ追加する。値の前例は既存 Claude `SubagentStop` hook の 5 秒であり、この前例だけで完走を保証したり実測済みとみなしたりしない。既存 consumer 設定が未更新でも動作を壊す必須 doctor / setup-smoke 条件にはしない。
+host timeout は5秒とし、本契約と L7 の oracle に固定する。既存 `hook-timeout-budget.md` の `REQUIRED` の7項目は必須 hook の一覧である。任意 hook の扱いを共有の予算契約へ加える改訂は別の pair-freeze で行う。
 
-hook の時間は Node / helper の部分時間ではなく、#1938 と同じ host の hook 開始から応答完了までで測る。負荷条件と計測対象を分け、timeout 以内に常に完了するという未計測の主張をしない。5 秒を超える場合は fail-open でその回の通知を落とし、同じ入力で外部 process を起動して retry しない。
+#1938 と同じく、Windows の Claude host 側で hook 開始から応答までを測り、L7 §4 に凍結前の証跡を残す。host が打ち切った回は通知を落とし、Claude は入力を継続する。同じ入力を外部 process で retry しない。凍結前は隔離 fixture で host 応答を検査し、Pack に配布した動作の受入は実装後に記録する。
 
 ## 5. 配布と互換性
 
 - 新しい `UserPromptSubmit` hook は source Claude 設定、Pack が生成する Claude 設定、および adapter mirror の対応面に配線する。実装する entrypoint / 設定形は L7 で固定する。
-- Codex に `UserPromptSubmit` 相当 hook を追加しない。既存の Codex hook 群、`PostToolUse`、watcher、Stop の wake window / timeout、配布済み sender の通知契約は変更しない。
+- Codex に `UserPromptSubmit` 相当 hook を追加しない。既存の Codex hook 群、`PostToolUse`、watcher、Stop の wake window / timeout、配布済み sender の操作は既存契約が扱う。sender 側の追加は §2.1 の通知 metadata の投影に限る。
 - 構造ファイルが既に存在する導入先では、setup は既存設定を無断で上書きしない。更新済み設定には通知 hook が配るが、旧設定が本機能なしで動作することを維持する。missing hook を理由に既存導入先を hard-fail させない。
 - `.claude/settings.json` への追加は既存 `CANDIDATE-U-CGENI-010` の「生成物に `UserPromptSubmit` hook がない」という旧 oracle と意図的に衝突する。#1970 の L6/L7 で互換境界を正式改訂し、Green で設定配線と同じ変更として該当 assertion を更新する。凍結まで旧 assertion を維持する。
 
 ## 6. 対象外
 
-- inbox 本文・raw ID の読み取り、本文の追加文脈への挿入、claim / terminal / ACK / receipt の処理
+- inbox 本文・raw ID の読み取り、本文の追加文脈への挿入、prompt hook による claim / terminal / ACK / receipt の変更
 - sender CLI、送信形式、配送・ACK custody、memory DB schema、既存 inbox の移行
 - Stop hook の挙動、wake window 延長、既存 `claude-memory-wake` の eligibility 変更
 - Codex 設定への新 hook、watcher / daemon / polling process、毎 prompt の外部 GitHub / API 呼び出し
@@ -84,7 +80,7 @@ hook の時間は Node / helper の部分時間ではなく、#1938 と同じ ho
 
 | Function | Signature | pre | post | invariant | oracle |
 |---|---|---|---|---|---|
-| Claude `UserPromptSubmit` hook protocol | `UserPromptSubmit(event, session, workspace) => ClaudeHookProcessResult` | event が現在の `UserPromptSubmit` であり、session が非空の現 session ID、workspace が trusted project scope を表す場合に限って通知を評価する。これらの値の供給・検証方法は未決事項の範囲を越えて固定しない。target 条件は既存 `isClaudeMemoryWakeTarget` の VS Code 条件と disable env 条件を保つ | 現 session 宛ての未読通知があり未通知なら exit 0 と固定形 JSON stdout。その他の通常結果は exit 0・stdout 空。host の launch failure / timeout は hook process result ではなく host 側の入力継続で扱う | 未読判定は宛先別通知 metadata のみから行う。本文・raw ID を出さず、entry 本文・claim・terminal・ACK・receipt / delivery state を読み書きしない。prompt ごとに外部 Git / GitHub / API / DB を起動しない | `CANDIDATE-U-CPNOTICE-001`〜`009`。詳細な trace は下表 |
+| Claude `UserPromptSubmit` hook protocol | `UserPromptSubmit(event, session, workspace) => ClaudeHookProcessResult` | event が現在の `UserPromptSubmit` であり、session が非空の現 session ID、workspace が trusted project scope を表す場合に限って通知を評価する。宛先は `SessionStart` が確認して記録する。target 条件は既存 `isClaudeMemoryWakeTarget` の VS Code 条件と disable env 条件を保つ | 現 session 宛ての未読通知があり未通知なら exit 0 と固定形 JSON stdout。その他の通常結果は exit 0・stdout 空。host の launch failure / timeout は hook process result ではなく host 側の入力継続で扱う | 通知の候補は宛先別 metadata から判断する。entry 本文・claim・terminal・ACK・receipt の内容を開かず、本文・raw ID を出力せず、配送の状態を変えない。prompt ごとに外部 Git / GitHub / API / DB を起動しない | `CANDIDATE-U-CPNOTICE-001`〜`009`。詳細な trace は下表 |
 
 `ClaudeHookProcessResult` は protocol 上の観測値で、hook の応答を `exitCode` と stdout bytes で表す。成功時 stdout は JSON object 1 個だけで、その `hookSpecificOutput.hookEventName` は `UserPromptSubmit`、`hookSpecificOutput.additionalContext` は §3 の固定 1 行である。無通知時 stdout は空とする。両方とも exit code は 0。起動失敗と host timeout はプロセスが結果を返せない場合を含むため、unit result に合成せず host-level coverage とする。
 
@@ -95,19 +91,15 @@ hook の時間は Node / helper の部分時間ではなく、#1938 と同じ ho
 | `CANDIDATE-U-CPNOTICE-001` | §3、protocol post: 有効通知の固定出力・exit 0 | L7 §3、unit / hook-process fixture |
 | `CANDIDATE-U-CPNOTICE-002` | §2.2・§3、protocol pre/post: 空・不正・未対応時の無通知 | L7 §3、unit / hook-process fixture |
 | `CANDIDATE-U-CPNOTICE-003` | §2.2・protocol invariant: 本文等を読まず、foreign scope を通知対象にしない | L7 §2〜§3、I/O と状態差分の観測 |
-| `CANDIDATE-U-CPNOTICE-004` | §2.1・§8: 同一 session の重複 / 並行抑止 (具体的 dedup 単位は未決) | L7 §3、順次・同時 hook-process fixture |
-| `CANDIDATE-U-CPNOTICE-005` | §2.1・§8: 新着 / clear / resume 時の再通知範囲 (未決) | L7 §3、未決扱い。判断後に期待値を追加 |
+| `CANDIDATE-U-CPNOTICE-004` | §2.1: 同じ宛先の通知済み世代と `wx` による並行抑止 | L7 §3、順次・同時 hook-process fixture |
+| `CANDIDATE-U-CPNOTICE-005` | §2.1・§8: 新着と同一 ID の resume、既読・clear の観測点 | L7 §3、新着と resume の fixture、既読・clear は §8 と同時に確定 |
 | `CANDIDATE-U-CPNOTICE-006` | §3・§4、protocol post と host-level failure: fail-open | L7 §3〜§4、例外 fixture と host 起動失敗 / timeout |
 | `CANDIDATE-U-CPNOTICE-007` | §5: fresh / legacy Pack 設定と Codex 非追加 | L7 §3、source / Pack / mirror 構成検査 |
-| `CANDIDATE-U-CPNOTICE-008` | §4・protocol invariant: 5 秒提案値と hot-path 制約 | L7 §3、設定・依存境界検査 |
+| `CANDIDATE-U-CPNOTICE-008` | §4・protocol invariant: 5秒の host 上限と hot-path 制約 | L7 §3、設定・依存境界検査 |
 | `CANDIDATE-U-CPNOTICE-009` | §3・protocol post: 配布設定経由の process 出力 | L7 §3 の子 process 検査、実 Windows / VS Code host は L7 §4 の別証跡 |
 
-## 8. 未決事項
+## 8. 凍結前に決めること
 
-以下は設計判断の採択後に L6 と対の L7 を同時に改訂する。ここを実装者の推測で埋めない。
-
-- 通知 metadata の schema、配置、更新 / 削除方法、障害復旧
-- linked worktree と通常の導入先で、宛先の検証結果を同期 hook の外から渡す場合の供給元、有効範囲および失効条件
-- 重複抑止の単位と、同一 session の複数 prompt / 同時 prompt の競合規則
-- 新着、既読・clear、session resume 後に再通知する条件
-- `CANDIDATE-U-CPNOTICE-005` が固定する re-notification の具体的 oracle
+- 世代の表現と通知済み状態の保持方法、現在の宛先に対する clear、障害からの復旧を定める。通知済み世代を巻き戻さず、通知と次の新着を競合で取り違えない。
+- 通知用 marker を知らない旧 Stop の claim と、marker の無効化失敗を扱う。未読を保証する場合に対象1件のファイル属性を追加で確認してよいか、通知を到着の案内に限定するかを control と決める。
+- 凍結前の Windows host の計測結果を L7 §4 に添える。
